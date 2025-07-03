@@ -218,6 +218,20 @@ func printNodeDetail(w *helpWriter, node *kong.Node, hide bool) {
 	if w.FlagsLast {
 		printFlags()
 	}
+
+	if provider, ok := node.Target.Addr().Interface().(ExamplesProvider); ok {
+		w.Print("")
+		w.Print(underline("Examples") + ":")
+
+		for _, examples := range provider.Examples() {
+			if len(examples) == 0 {
+				continue
+			}
+			w.Print(dimmedColor("  # " + examples[0]))
+			w.Print(dimmedColor("  $ ") + examples[1])
+			w.Print("")
+		}
+	}
 }
 
 func writeCommandList(cmds []*kong.Node, iw *helpWriter) {
