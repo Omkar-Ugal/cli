@@ -10,11 +10,18 @@ import (
 )
 
 var (
+	Blue200    = lipgloss.Color("#bedbff")
 	Blue500    = lipgloss.Color("#2b7fff")
+	Blue800    = lipgloss.Color("#193cb8")
+	Emerald200 = lipgloss.Color("#a4f4cf")
 	Emerald500 = lipgloss.Color("#00bc7d")
+	Emerald800 = lipgloss.Color("#006045")
 	Orange500  = lipgloss.Color("#ff6900")
 	Rose600    = lipgloss.Color("#ec003f")
+	Slate200   = lipgloss.Color("#e2e8f0")
 	Slate400   = lipgloss.Color("#90a1b9")
+	Slate500   = lipgloss.Color("#62748e")
+	Slate800   = lipgloss.Color("#1d293d")
 
 	Primary     = lipgloss.AdaptiveColor{Light: string(Blue500), Dark: string(Blue500)}
 	PrimaryFg   = lipgloss.NewStyle().Foreground(Primary).Render
