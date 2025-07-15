@@ -43,15 +43,34 @@ BIN                ?= unikraft
 
 # Tools
 GO                 ?= go
+CAT                ?= cat
 
 # Go tools
 GOCILINT_VERSION   ?= v2.2.2
 GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
+GORELEASER_VERSION ?= v2.11.0
+GORELEASER         ?= $(GO) run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
+YTT_VERSION        ?= v0.52.0
+YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
 
 # Targets
 .PHONY: all
 all: tidy $(BIN)
 all: ## All targets.
+
+.PHONY: build
+build: $(WORKDIR)/.goreleaser.yaml
+build: ## Build a release.
+	$(Q)$(GORELEASER) release --config $(WORKDIR)/.goreleaser.yaml --skip publish --skip validate --clean
+
+.PHONY: snapshot
+build: $(WORKDIR)/.goreleaser.yaml
+snapshot: ## Build a snapshot release.
+	$(Q)$(GORELEASER) release --config $(WORKDIR)/.goreleaser.yaml --snapshot --skip validate --clean
+
+.PHONY: $(WORKDIR)/.goreleaser.yaml
+$(WORKDIR)/.goreleaser.yaml: $(WORKDIR)/.goreleaser.ytt
+	$(Q)$(CAT) $< | $(YTT) --data-values-env YTT -f- > $@
 
 ifeq ($(DEBUG),y)
 $(BIN): GO_GCFLAGS ?= -N -l
