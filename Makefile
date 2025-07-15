@@ -44,6 +44,10 @@ BIN                ?= unikraft
 # Tools
 GO                 ?= go
 
+# Go tools
+GOCILINT_VERSION   ?= v2.2.2
+GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
+
 # Targets
 .PHONY: all
 all: tidy $(BIN)
@@ -68,6 +72,14 @@ $(BIN): tidy
 		-ldflags='$(GO_LDFLAGS)' \
 		-o $(DISTDIR)/$(@) \
 		$(WORKDIR)/cmd/$(@)
+
+.PHONY: fmt
+fmt: ## Format all files according to linting preferences.
+	$(Q)$(GOCILINT) fmt
+
+.PHONY: cicheck
+cicheck: ## Run CI checks.
+	$(GOCILINT) run
 
 .PHONY: tidy
 tidy: ## Tidy Go modules.
