@@ -1,0 +1,78 @@
+name: build
+
+on:
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - reopened
+    branches:
+    - staging
+    paths:
+    - '**'
+    - '!.github/**'
+    - '.github/workflows/build.yaml'
+    - '!README.md'
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - GOOS: darwin
+          GOARCH: amd64
+        - GOOS: darwin
+          GOARCH: arm64
+        - GOOS: linux
+          GOARCH: amd64
+        - GOOS: linux
+          GOARCH: arm64
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.24.5
+
+    - name: Set Go variables
+      id: goenv
+      run: |
+        {
+          echo "cache=$(go env GOCACHE)"
+          echo "modcache=$(go env GOMODCACHE)"
+          echo "mod=$(go env GOMOD)"
+        } >>"$GITHUB_OUTPUT"
+
+    - name: Go caches
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ steps.goenv.outputs.cache }}
+          ${{ steps.goenv.outputs.modcache }}
+        key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
+        restore-keys: |
+          ${{ github.job }}-${{ runner.os }}-go-
+
+    - name: Build
+      shell: bash
+      run: |
+        VERSION=pr-${{ github.event.number }} GOOS=${{ matrix.GOOS }} GOARCH=${{ matrix.GOARCH }} make
+
+    - name: Upload build artifacts to GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: unikraft-cli-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number}}
+        path: ./dist/unikraft
+        if-no-files-found: error
+        retention-days: 7
+        overwrite: true
