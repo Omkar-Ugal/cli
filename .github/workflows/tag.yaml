@@ -32,8 +32,9 @@ jobs:
       run: |
         git config user.name "Unikraft Bot"
         git config user.email "monkey@unikraft.com"
-        git tag -a "$(make next-stable)" -m "$(make next-stable)"
-        git push -u origin "$(make next-stable)"
+        VERSION=$(make --no-print-directory next-stable)
+        git tag -a "${VERSION}" -m "${VERSION}"
+        git push -u origin "${VERSION}"
 
     - name: Generate next staging version
       shell: bash
@@ -41,5 +42,6 @@ jobs:
       run: |
         git config user.name "Unikraft Bot"
         git config user.email "monkey@unikraft.com"
-        git tag -a "$(make next-staging)" -m "$(make next-staging)"
-        git push -u origin "$(make next-staging)"
+        VERSION=$(make --no-print-directory next-staging)
+        git tag -a "${VERSION}" -m "${VERSION}"
+        git push -u origin "${VERSION}"
