@@ -71,6 +71,10 @@ build: $(WORKDIR)/.goreleaser.yaml
 snapshot: ## Build a snapshot release.
 	$(Q)$(GORELEASER) release --config $(WORKDIR)/.goreleaser.yaml --snapshot --skip validate --clean
 
+.PHONY: goreleaser-yaml
+goreleaser-yaml: ## Generate the GoReleaser configuration file.
+goreleaser-yaml: $(WORKDIR)/.goreleaser.yaml
+
 .PHONY: $(WORKDIR)/.goreleaser.yaml
 $(WORKDIR)/.goreleaser.yaml: $(WORKDIR)/.goreleaser.ytt
 	$(Q)$(CAT) $< | $(YTT) --data-values-env YTT -f- > $@
