@@ -20,7 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-tags: true
+        fetch-depth: 0
+
+    - name: Fetch all tags
+      shell: bash
+      run: git fetch --force --tags
 
     - name: Generate next stable version
       shell: bash
