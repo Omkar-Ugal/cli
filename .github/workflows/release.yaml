@@ -1,0 +1,84 @@
+name: release
+
+on:
+  push:
+    tags:
+    - v*
+
+permissions:
+  contents: write
+  packages: write
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+
+    - name: Generate GoReleaser config (staging)
+      shell: bash
+      run: |
+        if [[ "${GITHUB_REF#refs/tags/v}" == *"staging"* ]]; then
+          YTT_PRERELEASE=true
+          YTT_DEB_EPOCH=1
+          YTT_DEB_PRERELEASE=$(echo "${GITHUB_REF}" | awk -F'staging\\.' '{print $2}')
+        else
+          YTT_PRERELEASE=false
+          YTT_DEB_EPOCH=5
+          YTT_DEB_PRERELEASE=""
+        fi
+
+        YTT_DEB_METADATA="$(git rev-parse --short HEAD)"
+        YTT_DEB_RELEASE=""
+
+        export YTT_PRERELEASE
+        export YTT_DEB_EPOCH
+        export YTT_DEB_PRERELEASE
+        export YTT_DEB_METADATA
+        export YTT_DEB_RELEASE
+        make goreleaser-yaml
+
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v6
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        version: latest
+        args: release --clean
+
+    - name: Publish to APT repository
+      shell: bash
+      run: |
+        COMPONENT=stable
+        if [[ "${GITHUB_REF#refs/tags/v}" == *"staging"* ]]; then
+          COMPONENT=staging
+        fi
+
+        DISTROS=()
+        # Debian
+        DISTROS+=("bullseye")
+        DISTROS+=("bookworm")
+        # Ubuntu
+        DISTROS+=("jammy")
+        DISTROS+=("lunar")
+        DISTROS+=("mantic")
+
+        for DISTRO in "${DISTROS[@]}"; do
+          for DEB in dist/*.deb; do
+            wget "https://pkg.unikraft.com/debian/cli/upload/${DISTRO}/${COMPONENT}" \
+              --http-user "api" \
+              --http-password "${{ secrets.PKG_TOKEN }}" \
+              --method POST \
+              --body-file "${DEB}"
+          done
+        done

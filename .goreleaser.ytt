@@ -1,0 +1,94 @@
+#@ load("@ytt:data", "data")
+
+#@ oses = {
+#@   "darwin": ["amd64", "arm64"],
+#@   "linux": ["amd64", "arm64"],
+#@ }
+
+version: 2
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    include:
+    - ^.*#[[:digit:]]+.*$
+  groups:
+  - title: ⚠️ Breaking Changes
+    regexp: '^[[:xdigit:]]+: [[:lower:]]+(\(.*\))?!:.*$'
+    order: 1
+  - title: "\U0001F680 New Features"
+    regexp: '^[[:xdigit:]]+: feat(\(.*\))?:.*$'
+    order: 2
+  - title: "\U0001F41B Bug Fixes"
+    regexp: '^[[:xdigit:]]+: fix(\(.*\))?:.*$'
+    order: 3
+  - title: "\U0001F4D6 Docs"
+    regexp: '^[[:xdigit:]]+: docs(\(.*\))?:.*$'
+    order: 4
+  - title: "\U0001F916 Bumps"
+    regexp: '^[[:xdigit:]]+: (gomod|build)\(deps\):.*$'
+    order: 5
+  - title: "\U0001F412 Miscellaneous"
+    order: 999
+
+release:
+  github:
+    owner: unikraft
+    name: cli
+  draft: false
+  prerelease: #@ getattr(data.values, "PRERELEASE", True)
+  mode: replace
+  header: |
+    ## Unikraft CLI {{ .Tag }} ({{ .Date }})
+
+builds:
+#@ for os, archs in oses.items():
+#@ for arch in archs:
+- id: #@ "unikraft-{}-{}".format(os, arch)
+  binary: unikraft
+  main: ./cmd/unikraft
+  goos:
+  - #@ os
+  goarch:
+  - #@ arch
+  flags:
+  - -buildmode=pie
+  ldflags:
+  - -s
+  - -w
+  - -extldflags
+  - -static-pie
+  - -X unikraft.com/cli/internal/version.Version={{ .Version }}
+  - -X unikraft.com/cli/internal/version.Commit={{ .Commit }}
+  - -X unikraft.com/cli/internal/version.BuildTime={{ .Date }}
+#@ end
+#@ end
+
+archives:
+#@ for os, archs in oses.items():
+#@ for arch in archs:
+- id: #@ "archive-unikraft-cli-{}-{}".format(os, arch)
+  formats:
+  - tar.gz
+  name_template: unikraft_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+  ids:
+  - #@ "unikraft-{}-{}".format(os, arch)
+#@ end
+#@ end
+
+nfpms:
+- id: deb
+  vendor: Unikraft
+  package_name: unikraft-cli
+  maintainer: Unikraft <support@unikraft.com>
+  description: Unikraft CLI
+  license: BSD-3-Clause
+  bindir: /usr/local/bin
+  homepage: https://unikraft.com
+  formats:
+  - deb
+  epoch: #@ getattr(data.values, "DEB_EPOCH", "1")
+  prerelease: #@ getattr(data.values, "DEB_PRERELEASE", "")
+  version_metadata: #@ getattr(data.values, "DEB_METADATA", "")
+  release: #@ getattr(data.values, "DEB_RELEASE", "")

@@ -1,0 +1,39 @@
+name: tag
+
+on:
+  push:
+    branches:
+    - staging
+    - stable
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Generate next stable version
+      shell: bash
+      if: ${{ github.ref == 'refs/heads/stable' }}
+      run: |
+        git config user.name "Unikraft Bot"
+        git config user.email "monkey@unikraft.com"
+        git tag -a "$(make next-stable)" -m "$(make next-stable)"
+        git push -u origin "$(make next-stable)"
+
+    - name: Generate next staging version
+      shell: bash
+      if: ${{ github.ref == 'refs/heads/staging' }}
+      run: |
+        git config user.name "Unikraft Bot"
+        git config user.email "monkey@unikraft.com"
+        git tag -a "$(make next-staging)" -m "$(make next-staging)"
+        git push -u origin "$(make next-staging)"
