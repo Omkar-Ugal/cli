@@ -44,12 +44,15 @@ BIN                ?= unikraft
 # Tools
 GO                 ?= go
 CAT                ?= cat
+GIT                ?= git
 
 # Go tools
 GOCILINT_VERSION   ?= v2.2.2
 GOCILINT           ?= $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOCILINT_VERSION)
 GORELEASER_VERSION ?= v2.11.0
 GORELEASER         ?= $(GO) run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION)
+SVU_VERSION        ?= v3.2.3
+SVU                ?= $(GO) run github.com/caarlos0/svu/v3@$(SVU_VERSION)
 YTT_VERSION        ?= v0.52.0
 YTT                ?= $(GO) run carvel.dev/ytt/cmd/ytt@$(YTT_VERSION)
 
@@ -104,9 +107,28 @@ cicheck: ## Run CI checks.
 tidy: ## Tidy Go modules.
 	$(Q)$(GO) mod tidy
 
-.PHONY: show-version
-show-version: ## Show the current version of the CLI.
+.PHONY: curr-version
+curr-version: ## Show the current version of the CLI.
 	$(Q)echo "$(VERSION)"
+
+.PHONY: next-stable
+next-stable: PRERELEASE ?=
+next-stable: ## Show the next stable version of the CLI.
+	$(Q)$(SVU) next --v0 --tag.prefix "v" --tag.pattern "v[0-9]*.[0-9]*.[0-9]*" --prerelease "$(PRERELEASE)"
+
+.PHONY: next-staging
+next-staging: ## Show the next staging version of the CLI.
+	$(Q)NEXT=$$($(SVU) current); \
+	if [[ "$$NEXT" == *"staging"* ]]; then \
+		NEXT=$$(echo "$$LAST" | awk -F. '{print $$1 "." $$2 "." $$3 "." $$4 + 1}'); \
+	else \
+		NEXT=$$(PRERELEASE=staging.1 $(MAKE) next-stable); \
+	fi; \
+	echo $$NEXT
+
+.PHONY: last-version
+last-version: ## Show the last version of the CLI.
+	$(Q)$(GIT) describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude='*-*' --abbrev=0 | awk -F. -v OFS=. '{$NF += 1 ; print}'
 
 .PHONY: help
 help: ## Show this help menu and exit.
@@ -118,7 +140,7 @@ help: ## Show this help menu and exit.
 		printf "\033[1mTARGETS\033[0m\n"; \
 	} \
 	/^[a-zA-Z0-9_-]+:.*?##/ { \
-		printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2 \
+		printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 \
 	} \
 	/^##@/ { \
 		printf "\n\033[1m%s\033[0m\n", substr($$0, 5) \
