@@ -47,7 +47,7 @@ jobs:
         if [[ "${TAG}" == *"staging"* ]]; then
           YTT_PRERELEASE=true
           YTT_DEB_EPOCH=1
-          YTT_DEB_PRERELEASE=$(echo "${GITHUB_REF}" | awk -F'staging\\.' '{print $2}')
+          YTT_DEB_PRERELEASE=$(echo "${TAG}" | awk -F'staging\\.' '{print $2}')
         else
           YTT_PRERELEASE=false
           YTT_DEB_EPOCH=5
