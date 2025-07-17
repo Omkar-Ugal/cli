@@ -71,7 +71,7 @@ archives:
 - id: #@ "archive-unikraft-cli-{}-{}".format(os, arch)
   formats:
   - tar.gz
-  name_template: unikraft_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+  name_template: unikraft-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}
   ids:
   - #@ "unikraft-{}-{}".format(os, arch)
 #@ end
