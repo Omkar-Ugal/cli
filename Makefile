@@ -111,9 +111,13 @@ cicheck: ## Run CI checks.
 tidy: ## Tidy Go modules.
 	$(Q)$(GO) mod tidy
 
-.PHONY: curr-version
-curr-version: ## Show the current version of the CLI.
+.PHONY: hash-version
+hash-version: ## Show the version of the CLI based on repo state.
 	$(Q)echo "$(VERSION)"
+
+.PHONY: last-version
+last-version: ## Show the last version of the CLI.
+	$(Q)$(SVU) current
 
 .PHONY: next-stable
 next-stable: PRERELEASE ?=
@@ -130,8 +134,8 @@ next-staging: ## Show the next staging version of the CLI.
 	fi; \
 	echo $$NEXT
 
-.PHONY: last-version
-last-version: ## Show the last version of the CLI.
+.PHONY: last-stable
+last-stable: ## Show the last stable version of the CLI.
 	$(Q)$(GIT) describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude='*-*' --abbrev=0 | awk -F. -v OFS=. '{$NF += 1 ; print}'
 
 .PHONY: help
