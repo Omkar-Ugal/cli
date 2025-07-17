@@ -124,7 +124,7 @@ next-stable: ## Show the next stable version of the CLI.
 next-staging: ## Show the next staging version of the CLI.
 	$(Q)NEXT=$$($(SVU) current); \
 	if [[ "$$NEXT" == *"staging"* ]]; then \
-		NEXT=$$(echo "$$LAST" | awk -F. '{print $$1 "." $$2 "." $$3 "." $$4 + 1}'); \
+		NEXT=$$(echo "$$NEXT" | awk -F. '{print $$1 "." $$2 "." $$3 "." $$4 + 1}'); \
 	else \
 		NEXT=$$(PRERELEASE=staging.1 $(MAKE) next-stable); \
 	fi; \
