@@ -111,8 +111,8 @@ cicheck: ## Run CI checks.
 tidy: ## Tidy Go modules.
 	$(Q)$(GO) mod tidy
 
-.PHONY: curr-version
-curr-version: ## Show the current version of the CLI.
+.PHONY: hash-version
+hash-version: ## Show the version of the CLI based on repo state.
 	$(Q)echo "$(VERSION)"
 
 .PHONY: next-stable
