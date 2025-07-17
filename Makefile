@@ -134,8 +134,8 @@ next-staging: ## Show the next staging version of the CLI.
 	fi; \
 	echo $$NEXT
 
-.PHONY: last-version
-last-version: ## Show the last version of the CLI.
+.PHONY: last-stable
+last-stable: ## Show the last stable version of the CLI.
 	$(Q)$(GIT) describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude='*-*' --abbrev=0 | awk -F. -v OFS=. '{$NF += 1 ; print}'
 
 .PHONY: help
