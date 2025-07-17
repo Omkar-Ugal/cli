@@ -41,7 +41,7 @@ jobs:
         else
           # Fallback: extract latest semver tag from remote
           git fetch --force --tags
-          TAG=$(make --no-print-directories last-version)
+          TAG=$(make --no-print-directory last-version)
         fi
 
         if [[ "${TAG}" == *"staging"* ]]; then
