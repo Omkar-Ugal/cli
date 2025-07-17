@@ -115,6 +115,10 @@ tidy: ## Tidy Go modules.
 hash-version: ## Show the version of the CLI based on repo state.
 	$(Q)echo "$(VERSION)"
 
+.PHONY: last-version
+last-version: ## Show the last version of the CLI.
+	$(Q)$(SVU) current
+
 .PHONY: next-stable
 next-stable: PRERELEASE ?=
 next-stable: ## Show the next stable version of the CLI.
