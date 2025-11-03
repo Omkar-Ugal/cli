@@ -16,6 +16,7 @@ import (
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/version"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 )
 
@@ -39,7 +40,7 @@ func NewRootCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) 
 			NoExpandSubcommands: true,
 		}),
 		kong.Configuration(kongyaml.Loader, filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)),
-		kong.Help(helpPrinter),
+		kong.Help(kingkong.HelpPrinter(version.Version)),
 		kong.WithBeforeReset(func(value *kong.Path) error {
 			if value == nil || value.App == nil || value.App.Flags == nil {
 				return nil
@@ -52,7 +53,7 @@ func NewRootCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) 
 
 				f.Group = &kong.Group{
 					Key:   "flag-global",
-					Title: underline("Global flags") + ":",
+					Title: kingkong.Underline("Global flags") + ":",
 				}
 			}
 
@@ -61,11 +62,11 @@ func NewRootCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) 
 		kong.ExplicitGroups([]kong.Group{
 			{
 				Key:   "flag-global",
-				Title: underline("Global flags") + ":",
+				Title: kingkong.Underline("Global flags") + ":",
 			},
 			{
 				Key:   "flag-local",
-				Title: underline("Subcommand flags") + ":",
+				Title: kingkong.Underline("Subcommand flags") + ":",
 			},
 		}),
 	)
