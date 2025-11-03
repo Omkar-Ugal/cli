@@ -15,8 +15,8 @@ import (
 	kongyaml "github.com/alecthomas/kong-yaml"
 
 	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/log"
 	"unikraft.com/cli/internal/version"
+	"unikraft.com/x/log"
 )
 
 type UnikraftCLI struct {
