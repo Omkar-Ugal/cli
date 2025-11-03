@@ -9,7 +9,7 @@ import (
 	"context"
 	"io"
 
-	"unikraft.com/cli/internal/log"
+	"unikraft.com/x/log"
 )
 
 // DefaultConfigFilename is the default name of the configuration file used by
