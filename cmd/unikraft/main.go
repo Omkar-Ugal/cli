@@ -19,8 +19,8 @@ import (
 	jujuerrors "github.com/juju/errors"
 
 	"unikraft.com/cli/internal/cmd"
-	"unikraft.com/cli/internal/colors"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/x/colors"
 	"unikraft.com/x/log"
 )
 

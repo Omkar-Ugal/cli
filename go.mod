@@ -6,8 +6,8 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/alecthomas/kong v1.12.1
 	github.com/alecthomas/kong-yaml v0.2.0
-	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/juju/errors v1.0.0
+	unikraft.com/x/colors v0.0.0-20251010132444-b0be607b7949
 	unikraft.com/x/kingkong v0.0.0-20251010132444-b0be607b7949
 	unikraft.com/x/log v0.0.0-20251010132444-b0be607b7949
 )
@@ -16,6 +16,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/charmbracelet/colorprofile v0.3.2 // indirect
+	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.10.2 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
@@ -33,6 +34,5 @@ require (
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	unikraft.com/x/colors v0.0.0-20251010132444-b0be607b7949 // indirect
 	unikraft.com/x/guesstermwidth v0.0.0-20251010132444-b0be607b7949 // indirect
 )
