@@ -72,7 +72,7 @@ func logErr(ctx context.Context, msg string) {
 	} else {
 		msg = strings.ReplaceAll(msg, "\n\n", " ")
 		msg = strings.ReplaceAll(msg, "\n", " ")
-		log.G(ctx).Error().Msgf(msg)
+		log.G(ctx).Error().Msg(msg)
 	}
 }
 
