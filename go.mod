@@ -4,7 +4,7 @@ go 1.24.5
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
-	github.com/alecthomas/kong v1.12.1
+	github.com/alecthomas/kong v1.13.0
 	github.com/alecthomas/kong-yaml v0.2.0
 	github.com/juju/errors v1.0.0
 	unikraft.com/x/colors v0.0.0-20251010132444-b0be607b7949
