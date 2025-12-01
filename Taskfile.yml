@@ -1,0 +1,21 @@
+# https://taskfile.dev
+version: 3
+
+includes:
+  go:
+    taskfile: https://github.com/unikraft-cloud/x.git//Taskfile.go.yml?ref=prod-staging
+    vars:
+      go_module: unikraft.com/cli
+
+# TODO: svu?
+
+tasks:
+  default:
+    cmds:
+    - task: cli
+
+  cli:
+    cmds:
+    - task: go:build
+      vars:
+        package: ./cmd/unikraft
