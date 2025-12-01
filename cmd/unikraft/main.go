@@ -37,7 +37,7 @@ func main() {
 		stderr = os.Stderr
 	)
 
-	ctx, err = exec(ctx, args, stdin, stdout, stderr)
+	ctx, err = run(ctx, args, stdin, stdout, stderr)
 
 	switch {
 	case err != nil:
@@ -86,7 +86,7 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 	return method
 }
 
-func exec(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (context.Context, error) {
+func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (context.Context, error) {
 	var err error
 
 	cli, opts := cmd.NewRootCmd(ctx, stdin, stdout, stderr)
