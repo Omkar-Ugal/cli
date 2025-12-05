@@ -1,0 +1,22 @@
+$ unikraft --help
+
+stdout:
+	Usage:
+	  unikraft [flags]
+
+	Version:
+	  dev (GOOS/GOARCH)
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	  -c, --config
+	          Set the configuration file ($UNIKRAFT_CONFIG).
+	      --log-level
+	          Set the logging level ($UNIKRAFT_LOG_LEVEL).
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type
+	          Set the log type ($UNIKRAFT_LOG_TYPE).
+	          [default: text, choice: text,json]
+	  -v, --version
+	          Print version information.
