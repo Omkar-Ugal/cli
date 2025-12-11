@@ -13,33 +13,49 @@ import (
 
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
+	jujuerrors "github.com/juju/errors"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/version"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
+
+	"unikraft.com/cli/internal/cmd/instances"
+	"unikraft.com/cli/internal/cmd/login"
 )
 
 type UnikraftCLI struct {
 	config.Config
 
 	Version version.VersionFlag `group:"flag-global" short:"v" name:"version" help:"Print version information." env:"-"`
+
+	Instances instances.InstancesCmd `cmd:"" help:"View and manage applications."`
+	Login     login.LoginCmd         `cmd:"" help:"Login to Unikraft Cloud."`
+	Logout    login.LogoutCmd        `cmd:"" help:"Logout from Unikraft Cloud."`
 }
 
-func NewRootCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI) {
+func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, error) {
 	cli := UnikraftCLI{}
 
-	kctx := kong.Parse(&cli,
+	helpOptions := kong.HelpOptions{
+		Compact:             true,
+		FlagsLast:           true,
+		NoExpandSubcommands: true,
+	}
+	globalFlagGroup := kong.Group{
+		Key:   "flag-global",
+		Title: kingkong.Underline("Global flags") + ":",
+	}
+
+	configFile := filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)
+
+	parser, err := kong.New(&cli,
 		kong.Name("unikraft"),
 		kong.DefaultEnvars("UNIKRAFT"),
 		kong.UsageOnError(),
 		kong.Writers(stdout, stderr),
-		kong.ConfigureHelp(kong.HelpOptions{
-			Compact:             true,
-			FlagsLast:           true,
-			NoExpandSubcommands: true,
-		}),
-		kong.Configuration(kongyaml.Loader, filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)),
+		kong.ConfigureHelp(helpOptions),
+		kong.Configuration(kongyaml.Loader, configFile),
 		kong.Help(kingkong.HelpPrinter(version.Version)),
 		kong.WithBeforeReset(func(value *kong.Path) error {
 			if value == nil || value.App == nil || value.App.Flags == nil {
@@ -60,16 +76,21 @@ func NewRootCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) 
 			return nil
 		}),
 		kong.ExplicitGroups([]kong.Group{
-			{
-				Key:   "flag-global",
-				Title: kingkong.Underline("Global flags") + ":",
-			},
+			globalFlagGroup,
 			{
 				Key:   "flag-local",
 				Title: kingkong.Underline("Subcommand flags") + ":",
 			},
 		}),
 	)
+	if err != nil {
+		return nil, &cli, jujuerrors.Annotate(err, "initializing kong context")
+	}
+
+	kctx, err := parser.Parse(args)
+	if err != nil {
+		return nil, &cli, jujuerrors.Annotate(err, "parsing arguments")
+	}
 
 	cli.Context = ctx
 	cli.Stdin = stdin
@@ -109,5 +130,5 @@ func NewRootCmd(ctx context.Context, stdin io.Reader, stdout, stderr io.Writer) 
 		Str("built", version.BuildTime).
 		Msg("unikraft CLI")
 
-	return kctx, &cli
+	return kctx, &cli, nil
 }

@@ -1,0 +1,11 @@
+$ unikraft login
+
+stdout:
+	HH:MM INF existing authentication token found, re-authenticating
+	HH:MM INF using authentication token from UKC_TOKEN environment variable
+	HH:MM INF login successful
+
+$ unikraft logout
+
+stdout:
+	HH:MM INF logout successful

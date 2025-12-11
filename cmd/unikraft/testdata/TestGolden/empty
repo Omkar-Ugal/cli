@@ -3,7 +3,7 @@ $ unikraft
 stdout:
 	HH:MM ERR  
 	HH:MM ERR error:
-	HH:MM ERR   no command selected
+	HH:MM ERR   parsing arguments: expected one of "instances", "login", "logout"
 	HH:MM ERR
 
 stderr:

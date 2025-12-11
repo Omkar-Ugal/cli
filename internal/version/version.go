@@ -35,3 +35,14 @@ func String() string {
 		runtime.Version(),
 	)
 }
+
+// UserAgent returns the user agent string for the Unikraft CLI.
+func UserAgent() string {
+	return heredoc.Docf(
+		"unikraft-cli/%s (%s) %s/%s",
+		Version,
+		Commit,
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
+}

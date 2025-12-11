@@ -2,21 +2,40 @@ $ unikraft --help
 
 stdout:
 	Usage:
-	  unikraft [flags]
+	  unikraft <command> [flags]
 
 	Version:
 	  dev (GOOS/GOARCH)
+
+	Commands:
+	  instances
+	          View and manage applications.
+	  login
+	          Login to Unikraft Cloud.
+	  logout
+	          Logout from Unikraft Cloud.
 
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
 	  -c, --config
 	          Set the configuration file ($UNIKRAFT_CONFIG).
+	      --[no-]telemetry
+	          Enable or disable telemetry ($UNIKRAFT_TELEMETRY).
+	          [default: true]
+	      --[no-]emojis
+	          Enable or disable emojis in the CLI output ($UNIKRAFT_EMOJIS).
+	          [default: true]
 	      --log-level
 	          Set the logging level ($UNIKRAFT_LOG_LEVEL).
 	          [default: info, choice: trace,debug,info,warn,error,fatal]
 	      --log-type
 	          Set the log type ($UNIKRAFT_LOG_TYPE).
 	          [default: text, choice: text,json]
+	      --profile
+	          Set the current profile ($UNIKRAFT_PROFILE).
+	          [default: default]
 	  -v, --version
 	          Print version information.
+
+	Run "unikraft <command> --help" for more information on a command.
