@@ -59,12 +59,17 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 			Msg("using authentication token from UKC_TOKEN environment variable")
 		profile.Token = token
 	} else {
-		token, err := cmd.getToken(ctx, profile)
+		resp, err := cmd.getAuth(ctx, profile)
 		if err != nil {
 			return jujuerrors.Annotate(err, "getting authentication token")
 		}
-		profile.Token = token
+		profile.Token = *resp.Token
+		profile.Organization = *resp.OrganizationName
 	}
+
+	log.G(ctx).
+		Warn().
+		Msg("no metros configured; please add them manually")
 
 	cfg.Profile = profile.Name
 	if cfg.Profiles == nil {
@@ -76,14 +81,12 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 		return jujuerrors.Annotate(err, "saving profile")
 	}
 
-	log.G(ctx).
-		Info().
+	log.G(ctx).Info().
 		Msg("login successful")
-
 	return nil
 }
 
-func (cmd *LoginCmd) getToken(ctx context.Context, profile *config.Profile) (string, error) {
+func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.CheckAuthorizationResponseData, error) {
 	server := profile.Controlplane
 	if len(cmd.Controlplane) > 0 {
 		// Override the control plane if one is provided via the command line.
@@ -107,9 +110,9 @@ func (cmd *LoginCmd) getToken(ctx context.Context, profile *config.Profile) (str
 
 	signinResp, err := client.RequestSignin(ctx, getFingerprint(ctx))
 	if err != nil {
-		return "", jujuerrors.Annotate(err, "signing in")
+		return nil, jujuerrors.Annotate(err, "signing in")
 	} else if signinResp.Data == nil {
-		return "", jujuerrors.New("no data received from control plane, please try again")
+		return nil, jujuerrors.New("no data received from control plane, please try again")
 	}
 
 	if config.G(ctx).LogType == log.TextType {
@@ -129,7 +132,7 @@ func (cmd *LoginCmd) getToken(ctx context.Context, profile *config.Profile) (str
 		RequestId: signinResp.Data.RequestId,
 	})
 	if err != nil {
-		return "", jujuerrors.Annotate(err, "checking authorization")
+		return nil, jujuerrors.Annotate(err, "checking authorization")
 	}
 
 	timeout := time.NewTimer(cmd.Timeout)
@@ -182,8 +185,8 @@ func (cmd *LoginCmd) getToken(ctx context.Context, profile *config.Profile) (str
 	<-ctx.Done()
 
 	if event == nil {
-		return "", jujuerrors.New("no event received, please try again")
+		return nil, jujuerrors.New("no event received, please try again")
 	}
 
-	return *event.Data.Token, nil
+	return event.Data, nil
 }
