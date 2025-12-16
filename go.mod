@@ -7,7 +7,7 @@ require (
 	github.com/alecthomas/kong v1.13.0
 	github.com/alecthomas/kong-yaml v0.2.0
 	github.com/juju/errors v1.0.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.11.1
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	unikraft.com/x/colors v0.0.0-20251010132444-b0be607b7949
