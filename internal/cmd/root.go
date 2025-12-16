@@ -17,7 +17,6 @@ import (
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 
-	"unikraft.com/cli/internal/cmd/instances"
 	"unikraft.com/cli/internal/cmd/login"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/version"
@@ -28,9 +27,10 @@ type UnikraftCLI struct {
 
 	Version version.VersionFlag `group:"flag-global" short:"v" name:"version" help:"Print version information." env:"-"`
 
-	Instances instances.InstancesCmd `cmd:"" help:"View and manage applications."`
-	Login     login.LoginCmd         `cmd:"" help:"Login to Unikraft Cloud."`
-	Logout    login.LogoutCmd        `cmd:"" help:"Logout from Unikraft Cloud."`
+	Login  login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
+	Logout login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
+
+	Instances InstancesCmd `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, error) {
@@ -119,6 +119,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 
 	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.Config.LogType, level))
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
+	kctx.BindTo(cli.Context, (*context.Context)(nil))
 
 	log.G(cli.Context).
 		Debug().
