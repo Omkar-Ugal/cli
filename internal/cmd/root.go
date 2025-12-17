@@ -31,6 +31,7 @@ type UnikraftCLI struct {
 	Logout login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
 
 	Instances InstancesCmd `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
+	Volumes   VolumesCmd   `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, error) {
