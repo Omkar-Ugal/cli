@@ -30,6 +30,7 @@ type UnikraftCLI struct {
 	Login  login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
 	Logout login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
 
+	Metros    MetrosCmd    `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
 	Instances InstancesCmd `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
 	Volumes   VolumesCmd   `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
 }
