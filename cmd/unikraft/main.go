@@ -41,7 +41,7 @@ func main() {
 
 	switch {
 	case err != nil:
-		if config.G(ctx).LogType == log.TextType {
+		if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
 			log.G(ctx).Error().Msg(" ")
 			log.G(ctx).Error().Msg(colors.ErrorFg("error:"))
 		}
@@ -56,7 +56,7 @@ func main() {
 			logErr(ctx, err.Error())
 		}
 
-		if config.G(ctx).LogType == log.TextType {
+		if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
 			log.G(ctx).Error().Msg(" ")
 		}
 
@@ -65,7 +65,7 @@ func main() {
 }
 
 func logErr(ctx context.Context, msg string) {
-	if config.G(ctx).LogType == log.TextType {
+	if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
 		for _, line := range strings.Split(msg, "\n") {
 			log.G(ctx).Error().Msgf("  %s", line)
 		}
@@ -87,12 +87,9 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 }
 
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (context.Context, error) {
-	var err error
-
-	cli, opts := cmd.NewRootCmd(ctx, stdin, stdout, stderr)
-	cli, err = cli.Parse(args)
+	cli, opts, err := cmd.NewRootCmd(ctx, args, stdin, stdout, stderr)
 	if err != nil {
-		return ctx, jujuerrors.Annotate(err, "parsing arguments")
+		return ctx, err
 	}
 
 	node := cli.Selected()

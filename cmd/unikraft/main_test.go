@@ -23,6 +23,7 @@ const unikraftCmd = "unikraft"
 type testCase struct {
 	name     string
 	commands [][]string
+	token    bool
 }
 
 var testCases = []testCase{
@@ -38,6 +39,14 @@ var testCases = []testCase{
 		name:     "version",
 		commands: [][]string{{unikraftCmd, "--version"}},
 	},
+	{
+		name: "auth",
+		commands: [][]string{
+			{unikraftCmd, "login"},
+			{unikraftCmd, "logout"},
+		},
+		token: true,
+	},
 }
 
 func TestGolden(t *testing.T) {
@@ -46,6 +55,10 @@ func TestGolden(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.NotEmpty(t, tc.commands, "no commands specified")
+
+			if tc.token && os.Getenv("UKC_TOKEN") == "" {
+				t.Skip("skipping test that requires UKC_TOKEN")
+			}
 
 			output := strings.Builder{}
 			for i, command := range tc.commands {
