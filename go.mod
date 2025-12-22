@@ -14,11 +14,11 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	tailscale.com v1.92.2
-	unikraft.com/cloud/sdk v0.0.0-20251103042404-b09e50e14c30
-	unikraft.com/x/colors v0.0.0-20251010132444-b0be607b7949
-	unikraft.com/x/kingkong v0.0.0-20251201201036-1cebef06df7d
-	unikraft.com/x/log v0.0.0-20251010132444-b0be607b7949
-	unikraft.com/x/ptr v0.0.0-20251211110914-c8a96e562b82
+	unikraft.com/cloud/sdk v0.0.0-20251219175910-1c9c48f2eb4a
+	unikraft.com/x/colors v0.0.0-20251219111438-eeb158984b1e
+	unikraft.com/x/kingkong v0.0.0-20251219111438-eeb158984b1e
+	unikraft.com/x/log v0.0.0-20251219111438-eeb158984b1e
+	unikraft.com/x/ptr v0.0.0-20251219111438-eeb158984b1e
 )
 
 require (
