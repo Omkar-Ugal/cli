@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.10.2
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
+	github.com/google/uuid v1.6.0
 	github.com/juju/ansiterm v1.0.0
 	github.com/juju/errors v1.0.0
 	github.com/lunixbochs/vtclean v1.0.0
@@ -21,6 +22,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	golang.org/x/net v0.47.0
+	golang.org/x/sync v0.18.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
@@ -48,7 +50,6 @@ require (
 	github.com/getsentry/sentry-go v0.36.2 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250813024750-ebf49471dced // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
