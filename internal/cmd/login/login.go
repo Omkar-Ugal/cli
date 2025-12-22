@@ -12,12 +12,11 @@ import (
 
 	jujuerrors "github.com/juju/errors"
 	"github.com/pkg/browser"
+	"unikraft.com/cloud/sdk/controlplane"
+	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
-	"unikraft.com/x/log"
-
-	"unikraft.com/cloud/sdk/controlplane"
 )
 
 type LoginCmd struct {

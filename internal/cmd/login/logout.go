@@ -7,8 +7,9 @@ package login
 
 import (
 	jujuerrors "github.com/juju/errors"
-	"unikraft.com/cli/internal/config"
 	"unikraft.com/x/log"
+
+	"unikraft.com/cli/internal/config"
 )
 
 type LogoutCmd struct{}
