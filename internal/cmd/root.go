@@ -27,8 +27,9 @@ type UnikraftCLI struct {
 
 	Version version.VersionFlag `group:"flag-global" short:"v" name:"version" help:"Print version information." env:"-"`
 
-	Login  login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
-	Logout login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
+	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
+	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
+	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
 
 	Metros    MetrosCmd    `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
 	Instances InstancesCmd `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
