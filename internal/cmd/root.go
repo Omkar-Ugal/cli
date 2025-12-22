@@ -117,7 +117,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		level = log.InfoLevel
 	}
 
-	cli.Context = log.WithLogger(cli.Context, log.New(stdout, cli.Config.LogType, level))
+	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.Config.LogType, level))
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
 
 	log.G(cli.Context).
