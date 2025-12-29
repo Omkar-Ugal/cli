@@ -8,6 +8,7 @@ package cmd
 import (
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/docker/go-units"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/colors"
@@ -32,6 +33,14 @@ type SizeMB int64
 
 func (s SizeMB) String() string {
 	return units.HumanSize(units.MB * float64(s))
+}
+
+type ImageRef[T reference.Reference] struct {
+	Reference T
+}
+
+func (ir ImageRef[T]) String() string {
+	return reference.FamiliarString(ir.Reference)
 }
 
 // InstanceState is a wrapper around platform.InstanceState to automatically

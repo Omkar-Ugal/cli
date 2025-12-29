@@ -39,6 +39,7 @@ type UnikraftCLI struct {
 	Volumes      VolumesCmd      `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
 	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services"`
 	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates"`
+	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images"`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
