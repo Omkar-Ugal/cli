@@ -80,6 +80,19 @@ func CloneFields(fields []Field) []Field {
 	return result
 }
 
+func LookupField(fields []Field, name string) *Field {
+	stopErr := fmt.Errorf("stop iteration")
+	var result *Field
+	_ = walkFields(fields, nil, func(path string, field *Field) error {
+		if path == name {
+			result = field
+			return stopErr
+		}
+		return nil
+	})
+	return result
+}
+
 func unpackFields(fields []Field) []Field {
 	result := make([]Field, 0, len(fields))
 	for _, field := range IterFields(fields) {

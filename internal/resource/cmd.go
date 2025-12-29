@@ -13,6 +13,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/containerd/containerd/v2/pkg/filters"
+	"github.com/lunixbochs/vtclean"
 	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"unikraft.com/cli/internal/kvwriter"
@@ -41,7 +43,8 @@ func (cmd *ResourceCmd[R]) Help() string {
 type FormatOpts struct {
 	// FIXME: not able to pass values beginning with -
 	// https://github.com/alecthomas/kong/issues/290
-	Field []string `short:"f" help:"Specify which fields to include in the output."`
+	Field  []string `short:"f" help:"Specify which fields to include in the output."`
+	Filter []string `help:"Filter output based on a field value (e.g. --filter status=active)." sep:"none"`
 
 	Quiet  bool   `short:"q" help:"Only display resource keys."`
 	Format string `help:"Format the output using a Go template."`
@@ -59,14 +62,24 @@ func (cmd *ResourceListCmd[R]) Help() string {
 }
 
 func (cmd *ResourceListCmd[R]) Run(ctx context.Context) error {
+	filter, err := filters.ParseAll(cmd.Filter...)
+	if err != nil {
+		return err
+	}
+	ctx = WithFilter(ctx, filter)
+
 	var r R
 	var resources []Resource
-	var err error
 	if len(cmd.Name) > 0 {
 		resources, err = r.Get(ctx, cmd.Name)
 	} else {
 		resources, err = r.List(ctx)
 	}
+	if err != nil {
+		return err
+	}
+
+	resources, err = filterResources(resources, filter)
 	if err != nil {
 		return err
 	}
@@ -90,8 +103,19 @@ type ResourceInspectCmd[R GettableResource] struct {
 }
 
 func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context) error {
+	filter, err := filters.ParseAll(cmd.Filter...)
+	if err != nil {
+		return err
+	}
+	ctx = WithFilter(ctx, filter)
+
 	var r R
 	resources, err := r.Get(ctx, cmd.Name)
+	if err != nil {
+		return err
+	}
+
+	resources, err = filterResources(resources, filter)
 	if err != nil {
 		return err
 	}
@@ -106,6 +130,29 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context) error {
 	default:
 		return printInspect(os.Stdout, cmd.Field, resources...)
 	}
+}
+
+func filterResources(resources []Resource, filter filters.Filter) (filtered []Resource, rerr error) {
+	for _, resource := range resources {
+		if filter.Match(filters.AdapterFunc(func(key []string) (string, bool) {
+			fields, err := resource.Fields()
+			if err != nil {
+				if rerr == nil {
+					rerr = fmt.Errorf("failed to get fields for resource %s: %w", resource.Key(), err)
+				}
+				return "", false
+			}
+			field := LookupField(fields, strings.Join(key, "."))
+			if field == nil {
+				return "", false
+			}
+			// HACK: vtclean to remove any escape sequences from rendered output
+			return vtclean.Clean(field.ValueString(), false), true
+		})) {
+			filtered = append(filtered, resource)
+		}
+	}
+	return filtered, rerr
 }
 
 type ResourceRemoveCmd[R DeletableResource] struct {

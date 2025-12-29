@@ -37,6 +37,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 		return nil, fmt.Errorf("profile %q has no metros configured", profile.Name)
 	}
 	metros := profile.Metros
+	metros = filterMetrosFromContext(ctx, metros)
 
 	metroNames := make([]string, 0, len(metros))
 	for _, metro := range metros {
@@ -89,7 +90,7 @@ func DoAll[T any](ctx context.Context, c *Client, fn func(context.Context, *Metr
 	results := make([]T, len(c.clients))
 	for idx, client := range c.clients {
 		eg.Go(func() error {
-			logger := log.FromContextOrDefault(ctx).
+			logger := log.G(ctx).
 				With().
 				Str("metro", client.Metro.Name).
 				Logger()
@@ -113,7 +114,7 @@ func DoMetro[T any](ctx context.Context, c *Client, metro string, fn func(contex
 		return zero, err
 	}
 
-	logger := log.FromContextOrDefault(ctx).
+	logger := log.G(ctx).
 		With().
 		Str("metro", metroClient.Metro.Name).
 		Logger()
@@ -129,7 +130,7 @@ func DoKeyExact[T any](ctx context.Context, c *Client, key Key, fn func(context.
 		return zero, err
 	}
 
-	logger := log.FromContextOrDefault(ctx).
+	logger := log.G(ctx).
 		With().
 		Str("metro", metroClient.Metro.Name).
 		Str("key", key.String()).
@@ -143,9 +144,9 @@ func DoKeys[T any](ctx context.Context, c *Client, keys Keys, fn func(context.Co
 	targets := make(map[*MetroClient]Keys)
 	for _, key := range keys {
 		if key.Metro != "" {
-			client, ok := c.clientsMap[key.Metro]
-			if !ok {
-				return nil, fmt.Errorf("unknown metro %q", key.Metro)
+			client, err := c.getByMetro(key.Metro)
+			if err != nil {
+				return nil, err
 			}
 			targets[client] = append(targets[client], key)
 		} else {
@@ -167,7 +168,7 @@ func DoKeys[T any](ctx context.Context, c *Client, keys Keys, fn func(context.Co
 		}
 
 		eg.Go(func() error {
-			logger := log.FromContextOrDefault(ctx).
+			logger := log.G(ctx).
 				With().
 				Str("metro", client.Metro.Name).
 				Strs("keys", keys.Strings()).
