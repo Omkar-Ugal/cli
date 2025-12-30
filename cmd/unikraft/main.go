@@ -51,6 +51,8 @@ func main() {
 				for _, cause := range juerr.StackTrace() {
 					logErr(ctx, cause)
 				}
+			} else {
+				logErr(ctx, err.Error())
 			}
 		} else {
 			logErr(ctx, err.Error())

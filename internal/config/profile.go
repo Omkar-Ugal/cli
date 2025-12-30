@@ -50,15 +50,18 @@ const (
 
 // Profile represents a user profile configuration for the Unikraft CLI.
 type Profile struct {
-	Type         ProfileType `hidden:"" help:"Type of the profile." enum:"local,cloud" default:"cloud" yaml:"type"`
-	Name         string      `hidden:"" help:"Name of the profile." yaml:"name"`
-	Token        string      `hidden:"" help:"Authentication token for the profile." yaml:"token"`
-	Controlplane string      `hidden:"" help:"Control plane endpoint for the profile." yaml:"controlplane,omitempty"`
-	Metros       map[string]struct {
-		Name     string `hidden:"" help:"Name of the metro." yaml:"name"`
-		Endpoint string `hidden:"" help:"Endpoint for the metro." yaml:"endpoint"`
-		Country  string `hidden:"" help:"Country code for the metro." yaml:"country"`
-	} `hidden:"" embed:"" prefix:"metro." help:"Static list of metros." yaml:"metros,omitempty"`
+	Type         ProfileType `hidden:"" help:"Type of the profile." enum:"local,cloud" default:"cloud" json:"type" yaml:"type"`
+	Name         string      `hidden:"" help:"Name of the profile." json:"name" yaml:"name"`
+	Token        string      `hidden:"" help:"Authentication token for the profile." json:"token" yaml:"token"`
+	Organization string      `hidden:"" help:"Organization associated with the profile." json:"organization,omitempty" yaml:"organization,omitempty"`
+	Controlplane string      `hidden:"" help:"Control plane endpoint for the profile." json:"controlplane,omitempty" yaml:"controlplane,omitempty"`
+	Metros       []Metro     `hidden:"" embed:"" prefix:"metro." help:"Static list of metros." json:"metros,omitempty" yaml:"metros,omitempty"`
+}
+
+type Metro struct {
+	Name     string `hidden:"" help:"Name of the metro." json:"name" yaml:"name"`
+	Endpoint string `hidden:"" help:"Endpoint for the metro." json:"endpoint" yaml:"endpoint"`
+	Country  string `hidden:"" help:"Country code for the metro." json:"country" yaml:"country"`
 }
 
 var _ fmt.Stringer = Profile{}

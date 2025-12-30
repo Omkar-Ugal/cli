@@ -13,10 +13,11 @@ import (
 
 	"tailscale.com/hostinfo"
 	"tailscale.com/util/dnsname"
-	"unikraft.com/cli/internal/version"
 	"unikraft.com/cloud/sdk/controlplane"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
+
+	"unikraft.com/cli/internal/version"
 )
 
 func getFingerprint(ctx context.Context) controlplane.RequestSigninRequest {

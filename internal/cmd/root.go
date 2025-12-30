@@ -14,14 +14,12 @@ import (
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
 	jujuerrors "github.com/juju/errors"
-
-	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/version"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 
-	"unikraft.com/cli/internal/cmd/instances"
 	"unikraft.com/cli/internal/cmd/login"
+	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/version"
 )
 
 type UnikraftCLI struct {
@@ -29,9 +27,14 @@ type UnikraftCLI struct {
 
 	Version version.VersionFlag `group:"flag-global" short:"v" name:"version" help:"Print version information." env:"-"`
 
-	Instances instances.InstancesCmd `cmd:"" help:"View and manage applications."`
-	Login     login.LoginCmd         `cmd:"" help:"Login to Unikraft Cloud."`
-	Logout    login.LogoutCmd        `cmd:"" help:"Logout from Unikraft Cloud."`
+	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
+	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
+	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
+
+	Metros    MetrosCmd    `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
+	Instances InstancesCmd `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
+	Volumes   VolumesCmd   `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
+	Services  ServicesCmd  `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services"`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, error) {
@@ -118,8 +121,9 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		level = log.InfoLevel
 	}
 
-	cli.Context = log.WithLogger(cli.Context, log.New(stdout, cli.Config.LogType, level))
+	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.Config.LogType, level))
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
+	kctx.BindTo(cli.Context, (*context.Context)(nil))
 
 	log.G(cli.Context).
 		Debug().

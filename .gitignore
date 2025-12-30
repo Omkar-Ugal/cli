@@ -1,3 +1,5 @@
-dist/
+/unikraft
+/dist/
+
 .task/
 .goreleaser.yaml
