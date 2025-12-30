@@ -44,7 +44,7 @@ type FormatOpts struct {
 	// FIXME: not able to pass values beginning with -
 	// https://github.com/alecthomas/kong/issues/290
 	Field  []string `short:"f" help:"Specify which fields to include in the output."`
-	Filter []string `help:"Filter output based on a field value (e.g. --filter status=active)." sep:"none"`
+	Filter []string `help:"Filter output based on a field value (e.g. --filter status==active)." sep:"none"`
 
 	Quiet  bool   `short:"q" help:"Only display resource keys."`
 	Format string `help:"Format the output using a Go template."`
