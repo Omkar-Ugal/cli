@@ -29,18 +29,34 @@ type ServiceGroup struct {
 	Name      string `mirror:"service_group.name" field:",short"`
 	UUID      string `mirror:"service_group.uuid" field:",long"`
 
-	Persistent bool   `mirror:"service_group.persistent" field:",long"`
-	Autoscale  bool   `mirror:"service_group.autoscale" field:",short"`
-	SoftLimit  uint64 `mirror:"service_group.soft_limit" field:",long"`
-	HardLimit  uint64 `mirror:"service_group.hard_limit" field:",long"`
+	Persistent bool `mirror:"service_group.persistent" field:",long"`
+	Autoscale  bool `mirror:"service_group.autoscale" field:",short"`
+
+	Limits struct {
+		Soft uint64 `mirror:"service_group.soft_limit" field:",long"`
+		Hard uint64 `mirror:"service_group.hard_limit" field:",long"`
+	}
 
 	Timestamps struct {
 		CreatedAt time.Time `mirror:"service_group.created_at"`
 	}
 
-	// Instances
-	// Domains
-	// Services (port mappings, handlers, etc)
+	Domains []struct {
+		FQDN string `mirror:"fqdn" field:",short"`
+		// TODO: certificate
+	} `mirror:"service_group.domains"`
+
+	Instances []struct {
+		Name string `mirror:"name" field:",long"`
+		UUID string `mirror:"uuid" field:",long"`
+	} `mirror:"service_group.instances"`
+
+	// TODO: support shorthand
+	Services []struct {
+		Source      uint32                     `mirror:"port" field:",long"`
+		Destination uint32                     `mirror:"destination_port" field:",long"`
+		Handlers    []platform.ServiceHandlers `mirror:"handlers" field:",long"`
+	} `mirror:"service_group.services"`
 
 	ServiceGroup platform.ServiceGroup `field:"-" json:"service_group"`
 	Metro        *config.Metro         `field:"-" json:"metro"`

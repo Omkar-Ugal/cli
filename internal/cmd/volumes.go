@@ -32,6 +32,8 @@ type Volume struct {
 	Name      string `mirror:"volume.name" field:",short"`
 	UUID      string `mirror:"volume.uuid" field:",long"`
 
+	Tags []string `mirror:"volume.tags"`
+
 	State      VolumeState `mirror:"volume.state" field:",short"`
 	Size       SizeMB      `mirror:"volume.size_mb" field:",short"`
 	Persistent bool        `mirror:"volume.persistent" field:",long"`
@@ -40,8 +42,16 @@ type Volume struct {
 		CreatedAt time.Time `mirror:"volume.created_at"`
 	}
 
-	// Attached
-	// Mounted
+	AttachedTo []struct {
+		Name string `mirror:"name" field:",long"`
+		UUID string `mirror:"uuid" field:",long"`
+	} `mirror:"volume.attached_to"`
+
+	MountedBy []struct {
+		Name     string `mirror:"name" field:",long"`
+		UUID     string `mirror:"uuid" field:",long"`
+		ReadOnly bool   `mirror:"read_only" field:",long"`
+	} `mirror:"volume.mounted_by"`
 
 	Volume platform.Volume `field:"-" json:"volume"`
 	Metro  *config.Metro   `field:"-" json:"metro"`
@@ -79,20 +89,20 @@ func (i Volume) Fields() ([]resource.Field, error) {
 	for idx, field := range result {
 		switch field.Name {
 		case "name":
-			result[idx].Create = resource.Patch{
+			result[idx].Create = &resource.Patch{
 				Set: "",
 			}
 		case "metro":
-			result[idx].Create = resource.Patch{
+			result[idx].Create = &resource.Patch{
 				Set:      "",
 				Required: true,
 			}
 		case "size":
-			result[idx].Create = resource.Patch{
+			result[idx].Create = &resource.Patch{
 				Set:      SizeMB(0),
 				Required: true,
 			}
-			result[idx].Patch = resource.Patch{
+			result[idx].Patch = &resource.Patch{
 				Set: SizeMB(0),
 			}
 		}
@@ -208,7 +218,7 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) (resource.Res
 	var metro string
 	for key, field := range resource.IterFields(fields) {
 		if field.Create.Set != nil {
-			switch key {
+			switch key.String() {
 			case "name":
 				name := field.Create.Set.(string)
 				req.Name = &name
@@ -274,7 +284,10 @@ func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resou
 	return results[0], nil
 }
 
-func (Volume) getFieldRequests(uuid string, key string, field resource.Field) (reqs []platform.UpdateVolumesRequestItem) {
+func (Volume) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateVolumesRequestItem) {
+	if field.Patch == nil {
+		return reqs
+	}
 	if field.Patch.Set != nil {
 		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Patch.Set, platform.UpdateVolumesRequestItemOpSet))
 	}
@@ -287,9 +300,9 @@ func (Volume) getFieldRequests(uuid string, key string, field resource.Field) (r
 	return reqs
 }
 
-func (Volume) getPatchRequest(uuid string, key string, value any, op platform.UpdateVolumesRequestItemOp) platform.UpdateVolumesRequestItem {
+func (Volume) getPatchRequest(uuid string, key resource.FieldPath, value any, op platform.UpdateVolumesRequestItemOp) platform.UpdateVolumesRequestItem {
 	var prop platform.UpdateVolumesRequestItemProp
-	switch key {
+	switch key.String() {
 	case "size":
 		prop = platform.UpdateVolumesRequestItemPropSize_mb
 	default:

@@ -32,6 +32,8 @@ type Instance struct {
 	Name      string `mirror:"instance.name" field:",short"`
 	UUID      string `mirror:"instance.uuid" field:",long"`
 
+	Tags []string `mirror:"instance.tags"`
+
 	State InstanceState `mirror:"instance.state" field:",short"`
 	Image string        `mirror:"instance.image" field:",short"`
 
@@ -45,11 +47,27 @@ type Instance struct {
 		VCPUs  int `mirror:"instance.vcpus" field:"vcpus,short"`
 	}
 
-	Network struct {
-		Service   string `mirror:"instance.service_group.name" field:",long"`
-		FQDN      string `mirror:"instance.service_group.domains.0.fqdn" field:",short"`
-		PrivateIP string `mirror:"instance.network_interfaces.0.private_ip" field:",long"`
-	}
+	Volumes []*struct {
+		UUID     string `mirror:"uuid" field:",long"`
+		Name     string `mirror:"name" field:",long"`
+		At       string `mirror:"at" field:",long"`
+		Readonly bool   `mirror:"readonly" field:",long"`
+	} `mirror:"instance.volumes"`
+
+	Service struct {
+		UUID    string `mirror:"uuid" field:",long"`
+		Name    string `mirror:"name" field:",long"`
+		Domains []struct {
+			FQDN string `mirror:"fqdn" field:",short"`
+			// TODO: certificate
+		} `mirror:"domains"`
+	} `mirror:"instance.service_group"`
+
+	Networks []struct {
+		UUID      string `mirror:"uuid" field:",long"`
+		PrivateIP string `mirror:"private_ip" field:",long"`
+		MAC       string `mirror:"mac" field:",long"`
+	} `mirror:"instance.network_interfaces"`
 
 	Timestamps struct {
 		CreatedAt time.Time `mirror:"instance.created_at"`
@@ -81,10 +99,6 @@ type Instance struct {
 		ExitCode int `mirror:"instance.exit_code"`
 		Code     int `mirror:"instance.stop_code"`
 	}
-
-	// Volumes
-	// Services
-	// Network interfaces
 
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
@@ -122,23 +136,23 @@ func (i Instance) Fields() ([]resource.Field, error) {
 	}
 
 	for key, field := range resource.IterFields(result) {
-		switch key {
+		switch key.String() {
 		case "name":
 			field.Hyperlink = i.hyperlink()
 		case "image":
-			field.Patch = resource.Patch{Set: ""}
+			field.Patch = &resource.Patch{Set: ""}
 		case "runtime.args":
-			field.Patch = resource.Patch{Set: []string{}}
+			field.Patch = &resource.Patch{Set: []string{}}
 		case "runtime.env":
-			field.Patch = resource.Patch{
+			field.Patch = &resource.Patch{
 				Set: map[string]string{},
 				Add: map[string]string{},
 				Del: []string{},
 			}
 		case "resources.memory":
-			field.Patch = resource.Patch{Set: 0}
+			field.Patch = &resource.Patch{Set: 0}
 		case "resources.vcpus":
-			field.Patch = resource.Patch{Set: 0}
+			field.Patch = &resource.Patch{Set: 0}
 		}
 	}
 
@@ -299,7 +313,10 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 	return results[0], nil
 }
 
-func (Instance) getFieldRequests(uuid string, path string, field resource.Field) (reqs []platform.UpdateInstancesRequestItem) {
+func (Instance) getFieldRequests(uuid string, path resource.FieldPath, field resource.Field) (reqs []platform.UpdateInstancesRequestItem) {
+	if field.Patch == nil {
+		return reqs
+	}
 	if field.Patch.Set != nil {
 		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Patch.Set, platform.UpdateInstancesRequestItemOpSet))
 	}
@@ -312,9 +329,9 @@ func (Instance) getFieldRequests(uuid string, path string, field resource.Field)
 	return reqs
 }
 
-func (Instance) getPatchRequest(uuid string, key string, value any, op platform.UpdateInstancesRequestItemOp) platform.UpdateInstancesRequestItem {
+func (Instance) getPatchRequest(uuid string, key resource.FieldPath, value any, op platform.UpdateInstancesRequestItemOp) platform.UpdateInstancesRequestItem {
 	var prop platform.UpdateInstancesRequestItemProp
-	switch key {
+	switch key.String() {
 	case "image":
 		prop = platform.UpdateInstancesRequestItemPropImage
 	case "runtime.args":
