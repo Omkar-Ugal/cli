@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,9 +39,13 @@ func main() {
 	)
 
 	ctx, err = run(ctx, args, stdin, stdout, stderr)
+	if err == nil {
+		// catch context cancellation errors, and make sure we show them, even if
+		// the command succeeded
+		err = ctx.Err()
+	}
 
-	switch {
-	case err != nil:
+	if err != nil && !errors.Is(err, context.Canceled) {
 		if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
 			log.G(ctx).Error().Msg(" ")
 			log.G(ctx).Error().Msg(colors.ErrorFg("error:"))
@@ -61,7 +66,8 @@ func main() {
 		if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
 			log.G(ctx).Error().Msg(" ")
 		}
-
+	}
+	if err != nil {
 		os.Exit(1)
 	}
 }
