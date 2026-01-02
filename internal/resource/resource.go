@@ -46,26 +46,37 @@ type DeletableResource interface {
 }
 
 type Field struct {
-	Name  string
-	Value any
+	// Name is the name of the field
+	Name string `json:"name"`
+	// Value contains the value of the field
+	Value any `json:"value,omitempty"`
 
-	Hyperlink string
+	// Subfields allow defining nested structures
+	Subfields []Field `json:"subfields,omitempty"`
+	// Elem is used to indicate that all subfields have the same substructure
+	// (e.g. for arrays)
+	Elem *Field `json:"elem,omitempty"`
 
-	Create Patch
-	Patch  Patch
+	// display settings
+	Verbosity FieldVerbosity `json:"verbosity"`
+	Hyperlink string         `json:"hyperlink,omitempty"`
 
-	Verbosity FieldVerbosity
+	// settings for creating or patching resources
+	Create *Patch `json:"create,omitempty"`
+	Patch  *Patch `json:"patch,omitempty"`
+}
 
-	Subfields []Field
+func (f Field) HasChildren() bool {
+	return len(f.Subfields) > 0 || f.Elem != nil
 }
 
 type Patch struct {
-	Set any
-	Add any
-	Del any
+	Set any `json:"set,omitempty"`
+	Add any `json:"add,omitempty"`
+	Del any `json:"del,omitempty"`
 
 	// Required indicates whether a field must be provided when patching a resource.
-	Required bool
+	Required bool `json:"required,omitempty"`
 }
 
 func (f Field) ValueString() string {
@@ -93,3 +104,23 @@ const (
 	FieldVerbosityLong
 	FieldVerbosityShort
 )
+
+func (v FieldVerbosity) String() string {
+	if v < FieldVerbosityHidden {
+		v = FieldVerbosityHidden
+	}
+	switch v {
+	case FieldVerbosityHidden:
+		return "hidden"
+	case FieldVerbosityLong:
+		return "long"
+	case FieldVerbosityShort:
+		return "short"
+	default:
+		return "always"
+	}
+}
+
+func (v FieldVerbosity) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`%q`, v.String())), nil
+}

@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -94,7 +95,7 @@ func (b *keyValueWriter) flush() error {
 				// NOTE: would be nice to use lipgloss styles here, but lipgloss
 				// makes liberal use of full reset codes which can mess up if the
 				// target text contains it's own styles.
-				if b.cut < len(cleankey) && (cleankey[b.cut] == ' ' || cleankey[b.cut] == '\t') {
+				if b.cut < len(cleankey) && slices.Contains([]byte(" \t-"), cleankey[b.cut]) {
 					// italic
 					styleSeq = ansi.NewStyle(ansi.ItalicAttr)
 					resetSeq = ansi.NewStyle(ansi.NoItalicAttr)

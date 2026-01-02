@@ -10,7 +10,10 @@ import (
 	"fmt"
 	"iter"
 	"maps"
+	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 type PatchSpec struct {
@@ -53,59 +56,63 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 
 	fields = CloneFields(fields)
 	for key, field := range IterFields(fields) {
-		foundFields[key] = struct{}{}
+		keyStr := key.String()
+		foundFields[keyStr] = struct{}{}
 
-		var original Patch
-		var patch *Patch
+		var original *Patch
+		var patch **Patch
 		if spec.Create {
 			original = field.Create
-			field.Create = Patch{}
+			field.Create = nil
 			patch = &field.Create
 		} else {
 			original = field.Patch
-			field.Patch = Patch{}
+			field.Patch = nil
 			patch = &field.Patch
+		}
+		if original == nil {
+			original = &Patch{}
 		}
 
 		done := false
-		if value, ok := spec.Set[key]; ok {
+		if value, ok := spec.Set[keyStr]; ok {
 			done = true
 			if original.Set != nil {
 				set, err := parseNewValue(value, original.Set)
 				if err != nil {
-					return nil, fmt.Errorf("failed to unpack set value for %s: %w", key, err)
+					return nil, fmt.Errorf("failed to unpack set value for %s: %w", keyStr, err)
 				}
-				patch.Set = set
+				*patch = &Patch{Set: set}
 			} else {
-				setForbiddenFields[key] = struct{}{}
+				setForbiddenFields[keyStr] = struct{}{}
 			}
 		}
-		if value, ok := spec.Add[key]; ok {
+		if value, ok := spec.Add[keyStr]; ok {
 			done = true
 			if original.Add != nil {
 				add, err := parseNewValue(value, original.Add)
 				if err != nil {
-					return nil, fmt.Errorf("failed to unpack add value for %s: %w", key, err)
+					return nil, fmt.Errorf("failed to unpack add value for %s: %w", keyStr, err)
 				}
-				patch.Add = add
+				*patch = &Patch{Add: add}
 			} else {
-				addForbiddenFields[key] = struct{}{}
+				addForbiddenFields[keyStr] = struct{}{}
 			}
 		}
-		if value, ok := spec.Del[key]; ok {
+		if value, ok := spec.Del[keyStr]; ok {
 			done = true
 			if original.Del != nil {
 				del, err := parseNewValue(value, original.Del)
 				if err != nil {
-					return nil, fmt.Errorf("failed to unpack del value for %s: %w", key, err)
+					return nil, fmt.Errorf("failed to unpack del value for %s: %w", keyStr, err)
 				}
-				patch.Del = del
+				*patch = &Patch{Del: del}
 			} else {
-				delForbiddenFields[key] = struct{}{}
+				delForbiddenFields[keyStr] = struct{}{}
 			}
 		}
 		if !done && original.Required {
-			unsetFields[key] = struct{}{}
+			unsetFields[keyStr] = struct{}{}
 		}
 	}
 
@@ -140,4 +147,97 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 		return filterCreatableFields(fields), nil
 	}
 	return filterPatchableFields(fields), nil
+}
+
+func parseNewValue(input string, output any) (any, error) {
+	parsedVal, err := parseNewReflect(input, reflect.ValueOf(output))
+	if err != nil {
+		return nil, err
+	}
+	return parsedVal.Interface(), nil
+}
+
+func parseNewReflect(input string, output reflect.Value) (reflect.Value, error) {
+	newVal := reflect.New(output.Type())
+	err := parseReflect(input, newVal.Elem())
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	return newVal.Elem(), nil
+}
+
+func parseReflect(input string, output reflect.Value) error {
+	switch output.Kind() {
+	case reflect.Pointer:
+		if output.IsNil() {
+			output.Set(reflect.New(output.Type().Elem()))
+		}
+		return parseReflect(input, output.Elem())
+	case reflect.String:
+		output.SetString(input)
+		return nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		v, err := strconv.ParseInt(input, 10, output.Type().Bits())
+		if err != nil {
+			return err
+		}
+		output.SetInt(v)
+		return nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		v, err := strconv.ParseUint(input, 10, output.Type().Bits())
+		if err != nil {
+			return err
+		}
+		output.SetUint(v)
+		return nil
+	case reflect.Float32, reflect.Float64:
+		v, err := strconv.ParseFloat(input, output.Type().Bits())
+		if err != nil {
+			return err
+		}
+		output.SetFloat(v)
+		return nil
+	case reflect.Bool:
+		v, err := strconv.ParseBool(input)
+		if err != nil {
+			return err
+		}
+		output.SetBool(v)
+		return nil
+	case reflect.Slice:
+		inputs := strings.Split(input, ",")
+		slice := reflect.MakeSlice(output.Type(), len(inputs), len(inputs))
+		for i, item := range inputs {
+			err := parseReflect(item, slice.Index(i))
+			if err != nil {
+				return err
+			}
+		}
+		output.Set(slice)
+		return nil
+	case reflect.Map:
+		inputs := strings.Split(input, ",")
+		mapp := reflect.MakeMap(output.Type())
+		for _, item := range inputs {
+			if item == "" {
+				continue
+			}
+			k, v, _ := strings.Cut(item, "=")
+			key := reflect.New(output.Type().Key()).Elem()
+			err := parseReflect(k, key)
+			if err != nil {
+				return err
+			}
+			val := reflect.New(output.Type().Elem()).Elem()
+			err = parseReflect(v, val)
+			if err != nil {
+				return err
+			}
+			mapp.SetMapIndex(key, val)
+		}
+		output.Set(mapp)
+		return nil
+	default:
+		return fmt.Errorf("unsupported kind: %s", output.Kind())
+	}
 }

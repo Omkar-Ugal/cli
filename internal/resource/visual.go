@@ -6,11 +6,11 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"reflect"
-	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"sigs.k8s.io/yaml"
@@ -76,17 +76,21 @@ func visualEdit(fields []Field, patches []Field, create bool) ([]Field, error) {
 func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 	patchMap := make(map[string]any)
 	for key, field := range IterFields(patches) {
-		var patch Patch
+		keyStr := key.String()
+		var patch *Patch
 		if create {
 			patch = field.Create
 		} else {
 			patch = field.Patch
 		}
+		if patch == nil {
+			return nil, fmt.Errorf("cannot visual edit field %s with no patch", keyStr)
+		}
 		if patch.Add != nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with Add patch", key)
+			return nil, fmt.Errorf("cannot visual edit field %s with Add patch", keyStr)
 		}
 		if patch.Del != nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with Del patch", key)
+			return nil, fmt.Errorf("cannot visual edit field %s with Del patch", keyStr)
 		}
 		if patch.Set == nil {
 			continue
@@ -95,7 +99,7 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 		if !reflect.TypeOf(patch.Set).AssignableTo(reflect.TypeOf(field.Value)) {
 			return nil, fmt.Errorf("patch set type for field %s is not assignable to value type", field.Name)
 		}
-		patchMap[key] = patch.Set
+		patchMap[keyStr] = patch.Set
 	}
 
 	var patchableFields []Field
@@ -105,11 +109,12 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 		patchableFields = filterPatchableFields(fields)
 	}
 	for key, field := range IterFields(patchableFields) {
-		if val, ok := patchMap[key]; ok {
+		keyStr := key.String()
+		if val, ok := patchMap[keyStr]; ok {
 			field.Value = val
 		}
 	}
-	obj := fieldValues(patchableFields)
+	obj := fieldsToMap(patchableFields)
 	return yaml.Marshal(obj)
 }
 
@@ -121,25 +126,31 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
+	var forbiddenFields []string
+
 	for key, field := range IterFields(fields) {
-		if create {
-			patch := field.Create
-			field.Create = Patch{}
-			if patch.Set == nil {
-				continue
-			}
-		} else {
-			patch := field.Patch
-			field.Patch = Patch{}
-			if patch.Set == nil {
-				continue
-			}
+		if field.HasChildren() {
+			continue
 		}
 
-		result, ok := mapdig(obj, strings.Split(key, ".")...)
+		var patch *Patch
+		if create {
+			patch = field.Create
+			field.Create = nil
+		} else {
+			patch = field.Patch
+			field.Patch = nil
+		}
+
+		result, ok := mapdig(obj, key...)
 		if !ok {
 			continue
 		}
+		if patch == nil || patch.Set == nil {
+			forbiddenFields = append(forbiddenFields, key.String())
+			continue
+		}
+
 		newValue := reflect.New(reflect.TypeOf(field.Value))
 		err := mapstructure.Decode(result, newValue.Interface())
 		if err != nil {
@@ -150,12 +161,20 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 			continue
 		}
 
-		patch := Patch{Set: newValue.Elem().Interface()}
+		patch = &Patch{Set: newValue.Elem().Interface()}
 		if create {
 			field.Create = patch
 		} else {
 			field.Patch = patch
 		}
+	}
+
+	var err error
+	if len(forbiddenFields) > 0 {
+		err = errors.Join(err, fmt.Errorf("fields not settable: %v", forbiddenFields))
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	if create {
