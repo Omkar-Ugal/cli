@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"slices"
 	"strings"
 	"text/template"
 
@@ -46,7 +45,7 @@ func printKV(out io.Writer, specs []string, resources ...Resource) error {
 		if err != nil {
 			return err
 		}
-		fields, err = resourceFields(fields, FieldVerbosityLong, specs)
+		fields, err = resourceFields(fields, false, FieldVerbosityLong, specs)
 		if err != nil {
 			return err
 		}
@@ -56,29 +55,41 @@ func printKV(out io.Writer, specs []string, resources ...Resource) error {
 				return err
 			}
 		}
-		if err := printKVFields(out, fields, ""); err != nil {
+		if err := printKVFields(out, nil, fields, 0, 0); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func printKVFields(out io.Writer, fields []Field, prefix string) error {
-	for _, field := range fields {
+func printKVFields(out io.Writer, parent *Field, fields []Field, current int, indent int) error {
+	for i, field := range fields {
 		var line bytes.Buffer
-		line.WriteString(prefix)
-
-		line.WriteString(field.Name + ":")
-		if field.Value != nil {
-			line.WriteString(" ")
-			line.WriteString(field.ValueString())
+		nextCurrent := 0
+		nextIndent := indent + 1
+		if parent != nil && parent.Elem != nil {
+			line.WriteString(strings.Repeat("  ", max(0, indent-1)))
+			line.WriteString("- ")
+			nextCurrent = indent
+			nextIndent = indent
+		} else {
+			if i == 0 {
+				line.WriteString(strings.Repeat("  ", max(0, indent-current)))
+			} else {
+				line.WriteString(strings.Repeat("  ", indent))
+			}
+			line.WriteString(field.Name + ":")
+			if field.Value != nil {
+				line.WriteString(" ")
+				line.WriteString(field.ValueString())
+			}
+			line.WriteString("\n")
 		}
-		line.WriteString("\n")
 		if _, err := io.Copy(out, &line); err != nil {
 			return err
 		}
 
-		if err := printKVFields(out, field.Subfields, prefix+"  "); err != nil {
+		if err := printKVFields(out, &field, field.Subfields, nextCurrent, nextIndent); err != nil {
 			return err
 		}
 	}
@@ -91,18 +102,27 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 	if err != nil {
 		return err
 	}
-	headers, err = resourceFields(headers, FieldVerbosityShort, fieldSpecs)
+
+	headers, err = resourceFields(headers, true, FieldVerbosityShort, fieldSpecs)
 	if err != nil {
 		return err
 	}
-	headers = unpackFields(headers)
-	headers = slices.DeleteFunc(headers, func(field Field) bool {
-		return len(field.Subfields) > 0
-	})
 
-	for _, header := range headers {
+	headerIdx := -1
+	for _, header := range IterFields(headers) {
+		if header.HasChildren() {
+			continue
+		}
+		headerIdx++
+
+		if headerIdx > 0 {
+			_, err := fmt.Fprint(out, "\t")
+			if err != nil {
+				return err
+			}
+		}
 		name := strings.ToUpper(header.Name)
-		_, err := fmt.Fprintf(out, "%s\t", lipgloss.NewStyle().SetString(name).Bold(true).String())
+		_, err := fmt.Fprintf(out, "%s", lipgloss.NewStyle().SetString(name).Bold(true).String())
 		if err != nil {
 			return err
 		}
@@ -117,35 +137,49 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 		if err != nil {
 			return err
 		}
-		fieldsMap := make(map[string]*Field, len(fields))
-		for _, field := range IterFields(fields) {
-			fieldsMap[field.Name] = field
-		}
 
-		for i, header := range headers {
-			field, ok := fieldsMap[header.Name]
-			if !ok || field.Value == nil {
-				_, err := fmt.Fprint(out, "\t")
+		headerIdx := -1
+		for path, header := range IterFields(headers) {
+			if header.HasChildren() {
+				continue
+			}
+			headerIdx++
+
+			if headerIdx > 0 {
+				_, err = fmt.Fprint(out, "\t")
 				if err != nil {
 					return err
 				}
-				continue
 			}
 
-			value := field.ValueString()
-			if field.Hyperlink != "" {
-				// TODO: use lipgloss styles when it supports hyperlinks
-				// https://github.com/charmbracelet/lipgloss/issues/220
-				if lipgloss.ColorProfile() != termenv.Ascii {
-					value = ansi.SetHyperlink(field.Hyperlink) + value + ansi.ResetHyperlink()
+			fields := GetFieldByPath(fields, path)
+			fieldIdx := -1
+			for _, field := range IterFields(fields) {
+				if field.HasChildren() {
+					continue
 				}
-			}
-			_, err := fmt.Fprint(out, value)
-			if err != nil {
-				return err
-			}
-			if i < len(headers)-1 {
-				_, err := fmt.Fprint(out, "\t")
+				fieldIdx++
+
+				if fieldIdx > 0 {
+					_, err := fmt.Fprint(out, ", ")
+					if err != nil {
+						return err
+					}
+				}
+
+				if field.Value == nil {
+					continue
+				}
+
+				value := field.ValueString()
+				if field.Hyperlink != "" {
+					// TODO: use lipgloss styles when it supports hyperlinks
+					// https://github.com/charmbracelet/lipgloss/issues/220
+					if lipgloss.ColorProfile() != termenv.Ascii {
+						value = ansi.SetHyperlink(field.Hyperlink) + value + ansi.ResetHyperlink()
+					}
+				}
+				_, err = fmt.Fprint(out, value)
 				if err != nil {
 					return err
 				}
@@ -190,7 +224,7 @@ func printTemplate(out io.Writer, tmplStr string, resources ...Resource) error {
 		if err != nil {
 			return err
 		}
-		input = append(input, fieldValues(fields))
+		input = append(input, fieldsToMap(fields))
 	}
 
 	tmpl, err := template.New("out").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
@@ -200,11 +234,10 @@ func printTemplate(out io.Writer, tmplStr string, resources ...Resource) error {
 	return tmpl.Execute(out, input)
 }
 
-func resourceFields(fields []Field, verbosity FieldVerbosity, fieldSpecs []string) ([]Field, error) {
-	base := make(map[string]struct{})
-	include := make(map[string]struct{})
-	exclude := make(map[string]struct{})
-	found := make(map[string]bool)
+func resourceFields(fields []Field, header bool, verbosity FieldVerbosity, fieldSpecs []string) ([]Field, error) {
+	var base []FieldPath
+	var include []FieldPath
+	var exclude []FieldPath
 	for _, field := range fieldSpecs {
 		if len(field) == 0 {
 			continue
@@ -216,47 +249,45 @@ func resourceFields(fields []Field, verbosity FieldVerbosity, fieldSpecs []strin
 		switch field[0] {
 		case '+':
 			field = field[1:]
-			include[field] = struct{}{}
+			include = append(include, ParseFieldPath(field))
 		case '-':
 			field = field[1:]
-			exclude[field] = struct{}{}
+			exclude = append(exclude, ParseFieldPath(field))
 		default:
-			base[field] = struct{}{}
-		}
-		found[field] = false
-	}
-
-	fields = filterFields(fields, func(field Field, path []string) bool {
-		for i := range path {
-			key := strings.Join(path[:i+1], ".")
-			if _, ok := found[key]; ok {
-				found[key] = true
-			}
-			if _, ok := exclude[key]; ok {
-				return false
-			}
-			if _, ok := include[key]; ok {
-				return true
-			}
-			if _, ok := base[key]; ok {
-				return true
-			}
-		}
-		if len(base) > 0 {
-			return false
-		}
-		return field.Verbosity >= verbosity
-	}, nil)
-
-	var notFound []string
-	for field, ok := range found {
-		if !ok {
-			notFound = append(notFound, field)
+			base = append(base, ParseFieldPath(field))
 		}
 	}
-	if len(notFound) > 0 {
-		return nil, fmt.Errorf("unknown fields: %v", notFound)
+
+	var missing []FieldPath
+
+	result, missing := FilterFieldsByPath(fields, base, !header)
+	if len(base) == 0 {
+		result = filterFields(result, func(field Field) bool {
+			return field.Verbosity >= verbosity
+		})
 	}
 
-	return fields, nil
+	if len(include) > 0 {
+		included, includeMissing := FilterFieldsByPath(fields, include, !header)
+		result = MergeFields(result, included)
+		missing = append(missing, includeMissing...)
+	}
+
+	if len(exclude) > 0 {
+		excluded, excludeMissing := FilterFieldsByPath(fields, exclude, !header)
+		result = RemoveFields(result, excluded)
+		missing = append(missing, excludeMissing...)
+	}
+
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("unknown fields: %v", missing)
+	}
+
+	if header {
+		for i := range result {
+			result[i] = mergeFieldElems(result[i])
+		}
+	}
+
+	return result, nil
 }

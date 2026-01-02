@@ -142,12 +142,17 @@ func filterResources(resources []Resource, filter filters.Filter) (filtered []Re
 				}
 				return "", false
 			}
-			field := LookupField(fields, strings.Join(key, "."))
-			if field == nil {
+			fields = GetFieldByPath(fields, key)
+			if fields == nil {
+				return "", false
+			}
+			if len(fields) != 1 {
+				// 0 fields = no exact match
+				// >1 fields = ambiguous match
 				return "", false
 			}
 			// HACK: vtclean to remove any escape sequences from rendered output
-			return vtclean.Clean(field.ValueString(), false), true
+			return vtclean.Clean(fields[0].ValueString(), false), true
 		})) {
 			filtered = append(filtered, resource)
 		}

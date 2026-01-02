@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
-	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"sigs.k8s.io/yaml"
@@ -76,17 +75,21 @@ func visualEdit(fields []Field, patches []Field, create bool) ([]Field, error) {
 func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 	patchMap := make(map[string]any)
 	for key, field := range IterFields(patches) {
-		var patch Patch
+		keyStr := key.String()
+		var patch *Patch
 		if create {
 			patch = field.Create
 		} else {
 			patch = field.Patch
 		}
+		if patch == nil {
+			return nil, fmt.Errorf("cannot visual edit field %s with no patch", keyStr)
+		}
 		if patch.Add != nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with Add patch", key)
+			return nil, fmt.Errorf("cannot visual edit field %s with Add patch", keyStr)
 		}
 		if patch.Del != nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with Del patch", key)
+			return nil, fmt.Errorf("cannot visual edit field %s with Del patch", keyStr)
 		}
 		if patch.Set == nil {
 			continue
@@ -95,7 +98,7 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 		if !reflect.TypeOf(patch.Set).AssignableTo(reflect.TypeOf(field.Value)) {
 			return nil, fmt.Errorf("patch set type for field %s is not assignable to value type", field.Name)
 		}
-		patchMap[key] = patch.Set
+		patchMap[keyStr] = patch.Set
 	}
 
 	var patchableFields []Field
@@ -105,11 +108,12 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 		patchableFields = filterPatchableFields(fields)
 	}
 	for key, field := range IterFields(patchableFields) {
-		if val, ok := patchMap[key]; ok {
+		keyStr := key.String()
+		if val, ok := patchMap[keyStr]; ok {
 			field.Value = val
 		}
 	}
-	obj := fieldValues(patchableFields)
+	obj := fieldsToMap(patchableFields)
 	return yaml.Marshal(obj)
 }
 
@@ -124,19 +128,25 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 	for key, field := range IterFields(fields) {
 		if create {
 			patch := field.Create
-			field.Create = Patch{}
+			if patch == nil {
+				continue
+			}
+			field.Create = nil
 			if patch.Set == nil {
 				continue
 			}
 		} else {
 			patch := field.Patch
-			field.Patch = Patch{}
+			if patch == nil {
+				continue
+			}
+			field.Patch = nil
 			if patch.Set == nil {
 				continue
 			}
 		}
 
-		result, ok := mapdig(obj, strings.Split(key, ".")...)
+		result, ok := mapdig(obj, key...)
 		if !ok {
 			continue
 		}
@@ -152,9 +162,9 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 
 		patch := Patch{Set: newValue.Elem().Interface()}
 		if create {
-			field.Create = patch
+			field.Create = &patch
 		} else {
-			field.Patch = patch
+			field.Patch = &patch
 		}
 	}
 
