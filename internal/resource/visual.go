@@ -6,6 +6,7 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -125,31 +126,31 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
+	var forbiddenFields []string
+
 	for key, field := range IterFields(fields) {
+		if field.HasChildren() {
+			continue
+		}
+
+		var patch *Patch
 		if create {
-			patch := field.Create
-			if patch == nil {
-				continue
-			}
+			patch = field.Create
 			field.Create = nil
-			if patch.Set == nil {
-				continue
-			}
 		} else {
-			patch := field.Patch
-			if patch == nil {
-				continue
-			}
+			patch = field.Patch
 			field.Patch = nil
-			if patch.Set == nil {
-				continue
-			}
 		}
 
 		result, ok := mapdig(obj, key...)
 		if !ok {
 			continue
 		}
+		if patch == nil || patch.Set == nil {
+			forbiddenFields = append(forbiddenFields, key.String())
+			continue
+		}
+
 		newValue := reflect.New(reflect.TypeOf(field.Value))
 		err := mapstructure.Decode(result, newValue.Interface())
 		if err != nil {
@@ -160,12 +161,20 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 			continue
 		}
 
-		patch := Patch{Set: newValue.Elem().Interface()}
+		patch = &Patch{Set: newValue.Elem().Interface()}
 		if create {
-			field.Create = &patch
+			field.Create = patch
 		} else {
-			field.Patch = &patch
+			field.Patch = patch
 		}
+	}
+
+	var err error
+	if len(forbiddenFields) > 0 {
+		err = errors.Join(err, fmt.Errorf("fields not settable: %v", forbiddenFields))
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	if create {
