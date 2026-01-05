@@ -269,9 +269,11 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context) error {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(start.String(), end.String(), false)
 	tw := kvwriter.KeyValueWriter(os.Stdout, "  ")
-	io.Copy(tw, strings.NewReader(prettydiff.Render(diffs)))
-	tw.Flush()
-	return nil
+	_, err = io.Copy(tw, strings.NewReader(prettydiff.Render(diffs)))
+	if err != nil {
+		return err
+	}
+	return tw.Flush()
 }
 
 type ResourceCreateCmd[R CreatableResource] struct {

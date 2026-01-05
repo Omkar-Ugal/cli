@@ -100,9 +100,8 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	cli.Stdout = stdout
 	cli.Stderr = stderr
 
-	level := log.InfoLevel
-
-	switch cli.Config.LogLevel.String() {
+	var level log.Level
+	switch cli.LogLevel.String() {
 	case "trace":
 		level = log.TraceLevel
 	case "debug":
@@ -121,7 +120,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		level = log.InfoLevel
 	}
 
-	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.Config.LogType, level))
+	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.LogType, level))
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
 	kctx.BindTo(cli.Context, (*context.Context)(nil))
 
