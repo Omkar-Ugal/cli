@@ -1,6 +1,8 @@
 version: "2"
 run:
   issues-exit-code: 2
+  build-tags:
+    - integration
 linters:
   default: none
   enable:

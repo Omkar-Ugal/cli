@@ -1,11 +1,24 @@
 $ unikraft login
 
-stdout:
-	HH:MM INF existing authentication token found, re-authenticating
+stderr:
 	HH:MM INF using authentication token from UKC_TOKEN environment variable
+	HH:MM WRN no metros configured; please add them manually
 	HH:MM INF login successful
+
+$ unikraft profile list
+
+stdout:
+	NAME     ACTIVE  METROS
+	default  true    [test]
+	default  true    [test]
+
+$ unikraft metro list
+
+stdout:
+	NAME  COUNTRY  ENDPOINT
+	test  xx       https://api.test.unikraft.internal/
 
 $ unikraft logout
 
-stdout:
+stderr:
 	HH:MM INF logout successful
