@@ -181,11 +181,11 @@ func getLineType(lineDiffs []diffmatchpatch.Diff) (hasInsert bool, hasDelete boo
 // ANSI color codes for backgrounds
 // FIXME: replace with unikraft.com/x/colors
 var (
-	resetStyle      = ansi.NewStyle(ansi.DefaultBackgroundColorAttr)
-	lineRemoveStyle = ansi.NewStyle(ansi.RedBackgroundColorAttr)
-	lineAddStyle    = ansi.NewStyle(ansi.GreenBackgroundColorAttr)
-	wordRemoveStyle = ansi.NewStyle(ansi.BrightRedBackgroundColorAttr)
-	wordAddStyle    = ansi.NewStyle(ansi.BrightGreenBackgroundColorAttr)
+	resetStyle      = ansi.NewStyle(ansi.AttrDefaultBackgroundColor)
+	lineRemoveStyle = ansi.NewStyle(ansi.AttrRedBackgroundColor)
+	lineAddStyle    = ansi.NewStyle(ansi.AttrGreenBackgroundColor)
+	wordRemoveStyle = ansi.NewStyle(ansi.AttrBrightRedBackgroundColor)
+	wordAddStyle    = ansi.NewStyle(ansi.AttrBrightGreenBackgroundColor)
 )
 
 func (line line) render(buff *bytes.Buffer, color bool) {

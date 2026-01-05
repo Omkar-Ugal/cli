@@ -97,12 +97,12 @@ func (b *keyValueWriter) flush() error {
 				// target text contains it's own styles.
 				if b.cut < len(cleankey) && slices.Contains([]byte(" \t-"), cleankey[b.cut]) {
 					// italic
-					styleSeq = ansi.NewStyle(ansi.ItalicAttr)
-					resetSeq = ansi.NewStyle(ansi.NoItalicAttr)
+					styleSeq = ansi.NewStyle(ansi.AttrItalic)
+					resetSeq = ansi.NewStyle(ansi.AttrNoItalic)
 				} else {
 					// bold
-					styleSeq = ansi.NewStyle(ansi.BoldAttr)
-					resetSeq = ansi.NewStyle(ansi.NormalIntensityAttr)
+					styleSeq = ansi.NewStyle(ansi.AttrBold)
+					resetSeq = ansi.NewStyle(ansi.AttrNormalIntensity)
 				}
 			}
 
