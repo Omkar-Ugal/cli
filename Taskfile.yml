@@ -19,3 +19,18 @@ tasks:
     - task: go:build
       vars:
         package: ./cmd/unikraft
+
+  unit:
+    cmds:
+    - task: go:test
+
+  integration:
+    cmds:
+    - task: go:test
+      vars:
+        go_tags: "integration"
+        package: ./cmd/unikraft
+
+  integration-update:
+    cmd: >-
+      go test -v ./cmd/unikraft -tags integration --update

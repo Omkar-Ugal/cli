@@ -1,0 +1,69 @@
+name: test
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [prod-staging, prod-stable]
+  pull_request:
+    branches: [staging]
+    paths:
+      - '**'
+      - '!.github/**'
+      - .github/workflows/run-tests.yaml
+
+# Automatically cancel in-progress actions on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    env:
+      TASK_X_REMOTE_TASKFILES: 1
+    steps:
+      - uses: actions/checkout@v5
+      - uses: go-task/setup-task@v1
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Set Go variables
+        id: goenv
+        run: |
+          {
+            echo "cache=$(go env GOCACHE)"
+            echo "modcache=$(go env GOMODCACHE)"
+            echo "mod=$(go env GOMOD)"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Go caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.goenv.outputs.cache }}
+            ${{ steps.goenv.outputs.modcache }}
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          task --yes go:test
+
+      - name: Run integration tests (without auth)
+        shell: bash
+        run: |
+          task --yes integration
+
+      # TODO: re-enable when we have access to internal metros
+      # - name: Run integration tests (with auth)
+      #   if: ${{ github.event_name == 'push' || !github.event.pull_request.head.repo.fork }}
+      #   shell: bash
+      #   run: |
+      #     task --yes integration
+      #   env:
+      #     UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
+      #     UKC_METRO: ${{ secrets.UKC_METRO }}
