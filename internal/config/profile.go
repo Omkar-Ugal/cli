@@ -21,7 +21,7 @@ var (
 	// ErrNoCurrentProfile is returned when there is no current profile set in the
 	// configuration. This can happen if the user has not logged in or if the
 	// current profile is not set in the configuration.
-	ErrNoCurrentProfile = jujuerrors.Errorf(heredoc.Docf(`
+	ErrNoCurrentProfile = jujuerrors.New(heredoc.Docf(`
 		profile not setup;
 
 		use %[1]sunikraft login%[1]s to get started,
