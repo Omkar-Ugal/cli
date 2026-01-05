@@ -10,9 +10,15 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,6 +94,20 @@ var testCases = []testCase{
 			{args: []string{unikraftCmd, "volume", "list"}},
 			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
 			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+		},
+	},
+
+	{
+		name:   "certificates",
+		online: true,
+		commands: []command{
+			{args: []string{unikraftCmd, "login"}, token: true},
+			{args: []string{unikraftCmd, "certificate", "list"}},
+			{args: []string{unikraftCmd, "certificate", "create", "--set", "name=test-$UNIQ_CERT_A", "--set", "cn=$CERT_A_CN", "--set", "chain=$CERT_A_CHAIN", "--set", "pkey=$CERT_A_KEY", "--set", "metro=" + defaultMetro}},
+			{args: []string{unikraftCmd, "certificate", "create", "--set", "name=test-$UNIQ_CERT_B", "--set", "cn=$CERT_B_CN", "--set", "chain=$CERT_B_CHAIN", "--set", "pkey=$CERT_B_KEY", "--set", "metro=" + defaultMetro}},
+			{args: []string{unikraftCmd, "certificate", "list"}},
+			{args: []string{unikraftCmd, "certificate", "inspect", "test-$UNIQ_CERT_A", "test-$UNIQ_CERT_B"}},
+			{args: []string{unikraftCmd, "certificate", "delete", "test-$UNIQ_CERT_A", "test-$UNIQ_CERT_B"}},
 		},
 	},
 }
@@ -282,11 +303,20 @@ type cleaner struct {
 // so we get consistent golden files.
 var cleaners = []cleaner{
 	{
-		// times like "12:34PM" change between runs
-		pattern: regexp.MustCompile(`\b\d\d?:\d\d[AP]M `),
-		repl:    "HH:MM ",
+		// times like "12:34:56" or "12:34:56PM" change between runs
+		pattern: regexp.MustCompile(`\b\d\d?:\d\d:\d\d([AP]M)?\b`),
+		repl:    "HH:MM:SS",
 	},
-
+	{
+		// times like "12:34" or "12:34PM" change between runs
+		pattern: regexp.MustCompile(`\b\d\d?:\d\d?([AP]M)?\b`),
+		repl:    "HH:MM",
+	},
+	{
+		// dates like "2000-01-02" change between runs
+		pattern: regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\b`),
+		repl:    "YYYY-MM-DD",
+	},
 	{
 		// runtime versions like "go1.25.4" change between go releases
 		pattern: wordCleaner(runtime.Version()),
@@ -313,23 +343,56 @@ func wordCleanerf(word string, args ...any) *regexp.Regexp {
 }
 
 type expander struct {
-	uniq map[string]string
+	uniq  map[string]string
+	certs map[string]*generatedCert
+}
+
+type generatedCert struct {
+	cn    string
+	chain string
+	key   string
 }
 
 func (e *expander) expandArgs(args []string) []string {
 	if e.uniq == nil {
 		e.uniq = make(map[string]string)
 	}
+	if e.certs == nil {
+		e.certs = make(map[string]*generatedCert)
+	}
 	expanded := make([]string, 0, len(args))
 	for _, arg := range args {
 		arg, err := shell.Expand(arg, func(varname string) string {
-			if varname, ok := strings.CutPrefix(varname, "UNIQ_"); ok {
-				if val, ok := e.uniq[varname]; ok {
+			prefix, rest, ok := strings.Cut(varname, "_")
+			if !ok {
+				return ""
+			}
+			switch prefix {
+			case "UNIQ":
+				if val, ok := e.uniq[rest]; ok {
 					return val
 				}
 				result := fmt.Sprintf("%x", rand.Text())[:12]
-				e.uniq[varname] = result
+				e.uniq[rest] = result
 				return result
+			case "CERT":
+				name, field, ok := strings.Cut(rest, "_")
+				if !ok {
+					return ""
+				}
+				cert, ok := e.certs[name]
+				if !ok {
+					cert = generateCert()
+					e.certs[name] = cert
+				}
+				switch field {
+				case "CN":
+					return cert.cn
+				case "CHAIN":
+					return cert.chain
+				case "KEY":
+					return cert.key
+				}
 			}
 			return ""
 		})
@@ -342,11 +405,19 @@ func (e *expander) expandArgs(args []string) []string {
 }
 
 func (e *expander) cleaners() []cleaner {
-	cleaners := make([]cleaner, 0, len(e.uniq))
+	cleaners := make([]cleaner, 0, len(e.uniq)+len(e.certs))
 	for varname, val := range e.uniq {
 		cleaners = append(cleaners, cleaner{
 			pattern: wordCleaner(val),
 			repl:    fmt.Sprintf("<%s>", varname),
+		})
+	}
+	for name, cert := range e.certs {
+		// Clean the CN (without trailing dot)
+		cn := strings.TrimSuffix(cert.cn, ".")
+		cleaners = append(cleaners, cleaner{
+			pattern: regexp.MustCompile(regexp.QuoteMeta(cn)),
+			repl:    fmt.Sprintf("<CERT_%s_CN>", name),
 		})
 	}
 	return cleaners
@@ -373,4 +444,48 @@ func defaultCfg() (*config.Config, *config.Profile) {
 		},
 	}
 	return cfg, profile
+}
+
+func generateCert() *generatedCert {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+
+	cn := fmt.Sprintf("test-%x.unikraft.io", rand.Text()[:12])
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			CommonName: cn,
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		panic(err)
+	}
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: certDER,
+	})
+
+	keyDER, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		panic(err)
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyDER,
+	})
+
+	return &generatedCert{
+		cn:    cn + ".",
+		chain: string(certPEM),
+		key:   string(keyPEM),
+	}
 }

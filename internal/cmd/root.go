@@ -34,10 +34,11 @@ type UnikraftCLI struct {
 	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
 	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
 
-	Metros    MetrosCmd    `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
-	Instances InstancesCmd `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
-	Volumes   VolumesCmd   `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
-	Services  ServicesCmd  `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services"`
+	Metros       MetrosCmd       `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
+	Instances    InstancesCmd    `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
+	Volumes      VolumesCmd      `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
+	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services"`
+	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates"`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
@@ -161,6 +162,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 }
 
 var SandboxedResources = []resource.Resource{
+	Certificate{},
 	Instance{},
 	ServiceGroup{},
 	Volume{},
