@@ -8,8 +8,10 @@ package cmd
 import (
 	"context"
 	"io"
+	"maps"
 	"path/filepath"
 	"runtime"
+	"slices"
 
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
@@ -19,6 +21,7 @@ import (
 
 	"unikraft.com/cli/internal/cmd/login"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/version"
 )
 
@@ -37,7 +40,7 @@ type UnikraftCLI struct {
 	Services  ServicesCmd  `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services"`
 }
 
-func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, error) {
+func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
 	cli := UnikraftCLI{}
 
 	helpOptions := kong.HelpOptions{
@@ -87,12 +90,12 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		}),
 	)
 	if err != nil {
-		return nil, &cli, jujuerrors.Annotate(err, "initializing kong context")
+		return nil, nil, nil, jujuerrors.Annotate(err, "initializing kong context")
 	}
 
 	kctx, err := parser.Parse(args)
 	if err != nil {
-		return nil, &cli, jujuerrors.Annotate(err, "parsing arguments")
+		return nil, nil, nil, jujuerrors.Annotate(err, "parsing arguments")
 	}
 
 	cli.Context = ctx
@@ -124,6 +127,27 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
 	kctx.BindTo(cli.Context, (*context.Context)(nil))
 
+	sandbox, err := resource.LoadSandboxFromEnv(SandboxedResources...)
+	if err != nil {
+		return nil, nil, nil, jujuerrors.Annotate(err, "loading sandbox from environment")
+	}
+	if sandbox != nil {
+		sandboxed := slices.Collect(maps.Keys(sandbox.Keys))
+		slices.Sort(sandboxed)
+		log.G(cli.Context).Debug().
+			Str("path", sandbox.Path).
+			Strs("resources", sandboxed).
+			Msg("loaded sandbox from environment")
+	}
+	kctx.Bind(sandbox)
+
+	cleanup := func() error {
+		if err := sandbox.Save(); err != nil {
+			return jujuerrors.Annotate(err, "saving sandbox")
+		}
+		return nil
+	}
+
 	log.G(cli.Context).
 		Debug().
 		Str("version", version.Version).
@@ -133,5 +157,11 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		Str("built", version.BuildTime).
 		Msg("unikraft CLI")
 
-	return kctx, &cli, nil
+	return kctx, &cli, cleanup, nil
+}
+
+var SandboxedResources = []resource.Resource{
+	Instance{},
+	ServiceGroup{},
+	Volume{},
 }

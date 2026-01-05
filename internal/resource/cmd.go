@@ -10,13 +10,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/lunixbochs/vtclean"
 	"github.com/sergi/go-diff/diffmatchpatch"
 
+	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/kvwriter"
 	"unikraft.com/cli/internal/prettydiff"
 )
@@ -61,14 +61,15 @@ func (cmd *ResourceListCmd[R]) Help() string {
 	return "Lister"
 }
 
-func (cmd *ResourceListCmd[R]) Run(ctx context.Context) error {
+func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
 	}
 	ctx = WithFilter(ctx, filter)
 
-	var r R
+	var empty R
+	r := sandbox.WrapGettable(empty)
 	var resources []Resource
 	if len(cmd.Name) > 0 {
 		resources, err = r.Get(ctx, cmd.Name)
@@ -86,13 +87,13 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context) error {
 
 	switch {
 	case cmd.Quiet:
-		return printQuiet(os.Stdout, resources...)
+		return printQuiet(cfg.Stdout, resources...)
 	case cmd.Raw:
-		return printRaw(os.Stdout, resources...)
+		return printRaw(cfg.Stdout, resources...)
 	case cmd.Format != "":
-		return printTemplate(os.Stdout, cmd.Format, resources...)
+		return printTemplate(cfg.Stdout, cmd.Format, resources...)
 	default:
-		return printTable[R](os.Stdout, cmd.Field, resources...)
+		return printTable[R](cfg.Stdout, cmd.Field, resources...)
 	}
 }
 
@@ -102,14 +103,15 @@ type ResourceInspectCmd[R GettableResource] struct {
 	FormatOpts
 }
 
-func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context) error {
+func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
 	}
 	ctx = WithFilter(ctx, filter)
 
-	var r R
+	var empty R
+	r := sandbox.WrapGettable(empty)
 	resources, err := r.Get(ctx, cmd.Name)
 	if err != nil {
 		return err
@@ -122,13 +124,13 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context) error {
 
 	switch {
 	case cmd.Quiet:
-		return printQuiet(os.Stdout, resources...)
+		return printQuiet(cfg.Stdout, resources...)
 	case cmd.Raw:
-		return printRaw(os.Stdout, resources...)
+		return printRaw(cfg.Stdout, resources...)
 	case cmd.Format != "":
-		return printTemplate(os.Stdout, cmd.Format, resources...)
+		return printTemplate(cfg.Stdout, cmd.Format, resources...)
 	default:
-		return printInspect(os.Stdout, cmd.Field, resources...)
+		return printInspect(cfg.Stdout, cmd.Field, resources...)
 	}
 }
 
@@ -164,8 +166,9 @@ type ResourceRemoveCmd[R DeletableResource] struct {
 	Name []string `arg:"" help:"Name of the resource to remove."`
 }
 
-func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context) error {
-	var r R
+func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) error {
+	var empty R
+	r := sandbox.WrapDeletable(empty)
 	resources, err := r.Get(ctx, cmd.Name)
 	if err != nil {
 		return err
@@ -182,8 +185,9 @@ type ResourceEditCmd[R EditableResource] struct {
 	Del    map[string]string `help:"Keys to delete from the resource."`
 }
 
-func (cmd *ResourceEditCmd[R]) Run(ctx context.Context) error {
-	var r R
+func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
+	var empty R
+	r := sandbox.WrapEditable(empty)
 	resources, err := r.Get(ctx, []string{cmd.Name})
 	if err != nil {
 		return err
@@ -240,7 +244,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context) error {
 		return err
 	}
 	if cmd.Visual {
-		patched, err = VisualEdit(fields, patched)
+		patched, err = VisualEdit(cfg, fields, patched)
 		if err != nil {
 			return err
 		}
@@ -268,7 +272,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context) error {
 
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(start.String(), end.String(), false)
-	tw := kvwriter.KeyValueWriter(os.Stdout, "  ")
+	tw := kvwriter.KeyValueWriter(cfg.Stdout, "  ")
 	_, err = io.Copy(tw, strings.NewReader(prettydiff.Render(diffs)))
 	if err != nil {
 		return err
@@ -281,12 +285,13 @@ type ResourceCreateCmd[R CreatableResource] struct {
 	Set    map[string]string `help:"Key-value pairs for creating the resource."`
 }
 
-func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context) error {
+func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
 	if cmd.Set == nil {
 		cmd.Set = make(map[string]string)
 	}
 
-	var r R
+	var empty R
+	r := sandbox.WrapCreatable(empty)
 	fields, err := r.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
@@ -301,7 +306,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context) error {
 
 	if cmd.Visual {
 		// FIXME: should allow required fields
-		patched, err = VisualCreate(fields, patched)
+		patched, err = VisualCreate(cfg, fields, patched)
 		if err != nil {
 			return err
 		}
@@ -313,5 +318,5 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return printInspect(os.Stdout, nil, resource)
+	return printInspect(cfg.Stdout, nil, resource)
 }
