@@ -112,7 +112,7 @@ jobs:
 
         for DISTRO in "${DISTROS[@]}"; do
           for DEB in dist/*.deb; do
-            wget "https://pkg.unikraft.com/debian/cli/upload/${DISTRO}/${COMPONENT}" \
+            wget "https://pkg.unikraft.com/debian/cli-apt/upload/${DISTRO}/${COMPONENT}" \
               --http-user "api" \
               --http-password "${{ secrets.PKG_TOKEN }}" \
               --method POST \
