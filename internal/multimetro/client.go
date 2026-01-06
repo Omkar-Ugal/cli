@@ -15,6 +15,7 @@ import (
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
+	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type Client struct {
@@ -157,11 +158,11 @@ func DoKeys[T any](ctx context.Context, c *Client, keys Keys, fn func(context.Co
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
-	foundKeys := make(map[Key]struct{})
-	foundValues := make([]T, 0)
+	foundValues := make([][]T, len(c.clients))
+	keyMap := make(map[Key]struct{})
 	var mu sync.Mutex
 
-	for _, client := range c.clients {
+	for i, client := range c.clients {
 		keys, ok := targets[client]
 		if !ok || len(keys) == 0 {
 			continue
@@ -179,18 +180,21 @@ func DoKeys[T any](ctx context.Context, c *Client, keys Keys, fn func(context.Co
 			if err != nil {
 				return err
 			}
+			foundValues[i] = vals
 
 			mu.Lock()
 			for _, key := range keys {
-				foundKeys[key] = struct{}{}
-				foundKeys[Key{UUID: key.UUID}] = struct{}{}
-				foundKeys[Key{Name: key.Name}] = struct{}{}
-				foundKeys[Key{Metro: client.Metro.Name, Name: key.Name}] = struct{}{}
-				foundKeys[Key{Metro: client.Metro.Name, UUID: key.UUID}] = struct{}{}
-				foundKeys[Key{Name: key.Name, UUID: key.UUID}] = struct{}{}
+				// track all possible key permutations that could have been used to
+				// fetch this resource
+				keyMap[key] = struct{}{}
+				keyMap[Key{UUID: key.UUID}] = struct{}{}
+				keyMap[Key{Name: key.Name}] = struct{}{}
+				keyMap[Key{Metro: client.Metro.Name, Name: key.Name}] = struct{}{}
+				keyMap[Key{Metro: client.Metro.Name, UUID: key.UUID}] = struct{}{}
+				keyMap[Key{Name: key.Name, UUID: key.UUID}] = struct{}{}
 			}
-			foundValues = append(foundValues, vals...)
 			mu.Unlock()
+
 			return nil
 		})
 	}
@@ -200,13 +204,14 @@ func DoKeys[T any](ctx context.Context, c *Client, keys Keys, fn func(context.Co
 
 	notFound := make([]string, 0)
 	for _, key := range keys {
-		if _, ok := foundKeys[key]; !ok {
+		if _, ok := keyMap[key]; !ok {
 			notFound = append(notFound, key.String())
 		}
 	}
 	if len(notFound) > 0 {
+		// FIXME: preserve all original errors if possible
 		return nil, fmt.Errorf("keys not found: %v", notFound)
 	}
 
-	return foundValues, nil
+	return xslices.Flatten(foundValues), nil
 }
