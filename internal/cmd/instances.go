@@ -30,7 +30,10 @@ type InstancesCmd struct {
 	resource.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 	resource.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 
-	Logs InstancesLogsCmd `cmd:"" help:"Fetch and display instance logs"`
+	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs"`
+	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances"`
+	Stop    InstancesStopCmd    `cmd:"" help:"Stop one or more instances"`
+	Restart InstancesRestartCmd `cmd:"" help:"Restart one or more instances"`
 }
 
 type Instance struct {
@@ -214,7 +217,7 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 		var found []multimetro.Key
 		var results []resource.Resource
 		for _, instance := range resp.Data.Instances {
-			if instance.Status == nil || *instance.Status != "success" {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			result, err := Instance{}.load(ctx, instance, &mc.Metro)
@@ -279,7 +282,7 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 		}
 		var deleted []multimetro.Key
 		for _, instance := range instances.Data.Instances {
-			if instance.Status == nil || *instance.Status != "success" {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			deleted = append(deleted, multimetro.Key{
@@ -410,4 +413,161 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error 
 		return nil
 	}
 	return err
+}
+
+type InstancesStartCmd struct {
+	Name []string `arg:"" help:"Names of the instances to start."`
+}
+
+func (cmd *InstancesStartCmd) Run(ctx context.Context) error {
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(cmd.Name), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("starting instances")
+		resp, err := mc.StartInstances(ctx, keys.NamesOrUUIDs())
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, nil, err
+		}
+		var started []multimetro.Key
+		for _, instance := range resp.Data.Instances {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			started = append(started, multimetro.Key{
+				Metro: mc.Metro.Name,
+				Name:  *instance.Name,
+				UUID:  *instance.Uuid,
+			})
+		}
+		return nil, started, nil
+	})
+	// FIXME: show diff view
+	return err
+}
+
+type InstancesStopCmd struct {
+	Name []string `arg:"" help:"Names of the instances to stop."`
+
+	StopOpts
+}
+
+func (cmd *InstancesStopCmd) Run(ctx context.Context) error {
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(cmd.Name), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("stopping instances")
+		reqs := make([]platform.StopInstancesRequestItem, 0, len(keys))
+		for _, key := range keys {
+			reqs = append(reqs, cmd.toReq(key.NameOrUUID()))
+		}
+		resp, err := mc.StopInstances(ctx, reqs)
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, nil, err
+		}
+		var stopped []multimetro.Key
+		for _, instance := range resp.Data.Instances {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			stopped = append(stopped, multimetro.Key{
+				Metro: mc.Metro.Name,
+				Name:  *instance.Name,
+				UUID:  *instance.Uuid,
+			})
+		}
+		return nil, stopped, nil
+	})
+	// FIXME: show diff view
+	return err
+}
+
+type InstancesRestartCmd struct {
+	Name []string `arg:"" help:"Names of the instances to restart."`
+
+	StopOpts
+}
+
+func (cmd *InstancesRestartCmd) Run(ctx context.Context) error {
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	// First stop the instances
+	keys := multimetro.ParseKeys(cmd.Name)
+	keys, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]multimetro.Key, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("stopping instances for restart")
+		reqs := make([]platform.StopInstancesRequestItem, 0, len(keys))
+		for _, key := range keys {
+			reqs = append(reqs, cmd.toReq(key.NameOrUUID()))
+		}
+		resp, err := mc.StopInstances(ctx, reqs)
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, nil, err
+		}
+		var stopped []multimetro.Key
+		for _, instance := range resp.Data.Instances {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			stopped = append(stopped, multimetro.Key{
+				Metro: mc.Metro.Name,
+				Name:  *instance.Name,
+				UUID:  *instance.Uuid,
+			})
+		}
+		return stopped, stopped, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Then start the instances
+	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("starting instances for restart")
+		resp, err := mc.StartInstances(ctx, keys.NamesOrUUIDs())
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, nil, err
+		}
+		var started []multimetro.Key
+		for _, instance := range resp.Data.Instances {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			started = append(started, multimetro.Key{
+				Metro: mc.Metro.Name,
+				Name:  *instance.Name,
+				UUID:  *instance.Uuid,
+			})
+		}
+		return nil, started, nil
+	})
+
+	// FIXME: show diff view (start count will be different)
+
+	return err
+}
+
+type StopOpts struct {
+	Force        bool  `help:"Force stop the instance immediately."`
+	DrainTimeout int64 `help:"Timeout in milliseconds for draining connections before stopping." default:"-1"`
+}
+
+func (args *StopOpts) toReq(nameOrUUID platform.NameOrUUID) platform.StopInstancesRequestItem {
+	req := platform.StopInstancesRequestItem{
+		Uuid: nameOrUUID.Uuid,
+		Name: nameOrUUID.Name,
+	}
+	if args.Force {
+		req.Force = &args.Force
+	}
+	if args.DrainTimeout >= 0 {
+		timeout := uint64(args.DrainTimeout)
+		req.DrainTimeoutMs = &timeout
+	}
+	return req
 }

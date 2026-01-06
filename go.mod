@@ -29,7 +29,7 @@ require (
 	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.6.0
 	tailscale.com v1.92.4
-	unikraft.com/cloud/sdk v0.0.0-20260106103220-a504b9b266d8
+	unikraft.com/cloud/sdk v0.0.0-20260106155929-09ab9b333e25
 	unikraft.com/x/colors v0.0.0-20260105163520-49d071286efd
 	unikraft.com/x/kingkong v0.0.0-20260105163520-49d071286efd
 	unikraft.com/x/log v0.0.0-20260105163520-49d071286efd

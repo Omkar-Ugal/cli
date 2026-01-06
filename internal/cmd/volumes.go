@@ -153,7 +153,7 @@ func (Volume) Get(ctx context.Context, keys []string) ([]resource.Resource, erro
 		var found []multimetro.Key
 		var results []resource.Resource
 		for _, volume := range resp.Data.Volumes {
-			if volume.Status == nil || *volume.Status != "success" {
+			if volume.Status == nil || *volume.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			result, err := Volume{}.load(volume, &mc.Metro)
