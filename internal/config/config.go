@@ -7,6 +7,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -44,12 +45,16 @@ type Config struct {
 
 // Save the current configuration to the configuration file.
 func (c *Config) Save() error {
-	if err := os.MkdirAll(ConfigDir(), 0o755); err != nil {
+	return c.SaveTo(ConfigDir())
+}
+
+func (c *Config) SaveTo(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return jujuerrors.Annotate(err, "creating config directory")
 	}
 
 	// Open the existing configuration file or create a new one.
-	configFile := filepath.Join(ConfigDir(), DefaultConfigFilename)
+	configFile := filepath.Join(dir, DefaultConfigFilename)
 	f, err := os.OpenFile(configFile, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		return jujuerrors.Annotate(err, "opening config file")
@@ -81,4 +86,23 @@ func (c *Config) Save() error {
 	encoder.SetIndent(2)
 
 	return encoder.Encode(headNode)
+}
+
+func LoadFrom(dir string) (*Config, error) {
+	configFile := filepath.Join(dir, DefaultConfigFilename)
+	f, err := os.Open(configFile)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, jujuerrors.Annotate(err, "opening config file")
+	}
+	defer f.Close()
+
+	c := Config{}
+	decoder := yaml.NewDecoder(f)
+	if err := decoder.Decode(&c); err != nil {
+		return nil, jujuerrors.Annotate(err, "decoding config file")
+	}
+
+	return &c, nil
 }

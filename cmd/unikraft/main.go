@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -89,7 +90,7 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 }
 
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (context.Context, error) {
-	cli, opts, err := cmd.NewRootCmd(ctx, args, stdin, stdout, stderr)
+	cli, opts, cleanup, err := cmd.NewRootCmd(ctx, args, stdin, stdout, stderr)
 	if err != nil {
 		return ctx, err
 	}
@@ -113,5 +114,9 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		}
 	}
 
-	return opts.Context, cli.RunNode(node, &opts.Config)
+	err = cli.RunNode(node, &opts.Config)
+	if cleanup != nil {
+		err = errors.Join(err, cleanup())
+	}
+	return opts.Context, err
 }

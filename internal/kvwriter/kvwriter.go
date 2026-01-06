@@ -108,13 +108,19 @@ func (b *keyValueWriter) flush() error {
 
 			padding := maxKeyLen - len(cleankey)
 			line := []byte{}
-			line = append(line, []byte(styleSeq.String())...)
+			if styleSeq != nil {
+				line = append(line, []byte(styleSeq.String())...)
+			}
 			line = append(line, key...)
-			line = append(line, []byte(resetSeq.String())...)
+			if styleSeq != nil {
+				line = append(line, []byte(resetSeq.String())...)
+			}
 			line = append(line, ':')
-			line = append(line, bytes.Repeat([]byte(" "), padding)...)
-			line = append(line, ' ')
-			line = append(line, value...)
+			if len(value) > 0 {
+				line = append(line, bytes.Repeat([]byte(" "), padding)...)
+				line = append(line, ' ')
+				line = append(line, value...)
+			}
 			line = append(line, '\n')
 			if _, err := b.w.Write(line); err != nil {
 				return err

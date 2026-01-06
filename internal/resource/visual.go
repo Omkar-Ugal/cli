@@ -14,21 +14,22 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"sigs.k8s.io/yaml"
+	"unikraft.com/cli/internal/config"
 )
 
-func VisualEdit(fields []Field, patches []Field) ([]Field, error) {
-	return visualEdit(fields, patches, false)
+func VisualEdit(cfg *config.Config, fields []Field, patches []Field) ([]Field, error) {
+	return visualEdit(cfg, fields, patches, false)
 }
 
-func VisualCreate(fields []Field, creates []Field) ([]Field, error) {
-	return visualEdit(fields, creates, true)
+func VisualCreate(cfg *config.Config, fields []Field, creates []Field) ([]Field, error) {
+	return visualEdit(cfg, fields, creates, true)
 }
 
 // visualEdit opens an editor for the user to modify fields visually.
 //
 // It takes all the fields and already existing patched fields as input, and
 // returns all patched fields after editing.
-func visualEdit(fields []Field, patches []Field, create bool) ([]Field, error) {
+func visualEdit(cfg *config.Config, fields []Field, patches []Field, create bool) ([]Field, error) {
 	data, err := saveFields(fields, patches, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize fields: %w", err)
@@ -54,9 +55,9 @@ func visualEdit(fields []Field, patches []Field, create bool) ([]Field, error) {
 	}
 
 	cmd := exec.Command(editor, tmpfile.Name())
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdin = cfg.Stdin
+	cmd.Stdout = cfg.Stdout
+	cmd.Stderr = cfg.Stderr
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("editor exited with error: %w", err)
 	}
