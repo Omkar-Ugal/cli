@@ -7,14 +7,18 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/logs"
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
@@ -25,6 +29,8 @@ type InstancesCmd struct {
 	resource.ResourceCmd[Instance]          `set:"name=instance" set:"names=instances"`
 	resource.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 	resource.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
+
+	Logs InstancesLogsCmd `cmd:"" help:"Fetch and display instance logs"`
 }
 
 type Instance struct {
@@ -351,4 +357,57 @@ func (Instance) getPatchRequest(uuid string, key resource.FieldPath, value any, 
 		Prop:  prop,
 		Value: platform.Ptr(value),
 	}
+}
+
+type InstancesLogsCmd struct {
+	Name []string `arg:"" help:"Names of the instances to fetch logs for."`
+
+	Tail   int  `help:"Number of lines to show from the end of the logs."`
+	Follow bool `short:"f" help:"Follow log output."`
+}
+
+func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error {
+	// HACK: we resolve the keys early, so that we can assume that all the
+	// instances actually exist (this is a potential race condition, but it's
+	// acceptable for now)
+	instances, err := Instance{}.Get(ctx, cmd.Name)
+	if err != nil {
+		return err
+	}
+	keys := make(multimetro.Keys, 0, len(instances))
+	for _, instance := range instances {
+		key := instance.(Instance).key()
+		if key.Metro == "" {
+			return fmt.Errorf("key %q not fully resolved", key)
+		}
+		keys = append(keys, key)
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	_, err = multimetro.DoKeys(ctx, cl, keys, func(_ context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+		for _, key := range keys {
+			eg.Go(func() error {
+				r, err := logs.InstanceLogs(ctx, mc).Reader(key.NameOrUUID(), cmd.Tail, cmd.Follow)
+				if err != nil {
+					return err
+				}
+				_, err = io.Copy(cfg.Stdout, r)
+				return err
+			})
+		}
+		return nil, keys, nil
+	})
+	if err != nil {
+		return err
+	}
+	err = eg.Wait()
+	if cmd.Follow && errors.Is(err, context.Canceled) {
+		return nil
+	}
+	return err
 }

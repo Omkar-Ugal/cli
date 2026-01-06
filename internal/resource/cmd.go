@@ -52,7 +52,7 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R GettableResource] struct {
-	Name []string `arg:"" optional:"" help:"Name of the resource to inspect."`
+	Name []string `arg:"" optional:"" help:"Names of the ${names} to list."`
 
 	FormatOpts
 }
@@ -98,7 +98,7 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 }
 
 type ResourceInspectCmd[R GettableResource] struct {
-	Name []string `arg:"" help:"Name of the resource to inspect."`
+	Name []string `arg:"" help:"Names of the ${names} to inspect."`
 
 	FormatOpts
 }
@@ -163,7 +163,7 @@ func filterResources(resources []Resource, filter filters.Filter) (filtered []Re
 }
 
 type ResourceRemoveCmd[R DeletableResource] struct {
-	Name []string `arg:"" help:"Name of the resource to remove."`
+	Name []string `arg:"" help:"Names of the ${names} to remove."`
 }
 
 func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) error {
@@ -177,12 +177,13 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) erro
 }
 
 type ResourceEditCmd[R EditableResource] struct {
-	Name string `arg:"" help:"Name of the resource to edit."`
+	Name string `arg:"" help:"Name of the ${name} to edit."`
 
-	Visual bool              `short:"e" help:"Open an editor to modify fields visually."`
-	Set    map[string]string `help:"Key-value pairs to update the resource with."`
-	Add    map[string]string `help:"Key-value pairs to add to the resource."`
-	Del    map[string]string `help:"Keys to delete from the resource."`
+	Set map[string]string `help:"Key-value pairs to update the ${name} with."`
+	Add map[string]string `help:"Key-value pairs to add to the ${name}."`
+	Del map[string]string `help:"Keys to delete from the ${name}."`
+
+	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 }
 
 func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
@@ -281,8 +282,9 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 }
 
 type ResourceCreateCmd[R CreatableResource] struct {
-	Visual bool              `short:"e" help:"Open an editor to set fields visually."`
-	Set    map[string]string `help:"Key-value pairs for creating the resource."`
+	Set map[string]string `help:"Key-value pairs for creating the ${name}."`
+
+	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 }
 
 func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
