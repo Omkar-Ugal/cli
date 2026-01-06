@@ -7,6 +7,7 @@ package mirror
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -178,4 +179,21 @@ func TestMirror_NonPointerDestination(t *testing.T) {
 
 	// The original dest is not modified because it's passed by value
 	assert.Empty(t, dest.Field)
+}
+
+func TestMirror_TimeValue(t *testing.T) {
+	expectedTime := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
+	source := map[string]any{
+		"created_at": expectedTime,
+	}
+
+	type Dest struct {
+		CreatedAt time.Time `mirror:"created_at"`
+	}
+
+	var dest Dest
+	err := Mirror(source, &dest)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedTime, dest.CreatedAt)
 }

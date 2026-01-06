@@ -147,7 +147,7 @@ func canSetFieldValue(destType reflect.Type) bool {
 	}
 	switch destType.Kind() {
 	case reflect.Struct:
-		return false
+		return destType.Name() != ""
 	case reflect.Slice, reflect.Map:
 		return canSetFieldValue(destType.Elem())
 	default:
