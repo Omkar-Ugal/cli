@@ -214,7 +214,7 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 		var found []multimetro.Key
 		var results []resource.Resource
 		for _, instance := range resp.Data.Instances {
-			if instance.Status == nil || *instance.Status != "success" {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			result, err := Instance{}.load(ctx, instance, &mc.Metro)
@@ -279,7 +279,7 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 		}
 		var deleted []multimetro.Key
 		for _, instance := range instances.Data.Instances {
-			if instance.Status == nil || *instance.Status != "success" {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			deleted = append(deleted, multimetro.Key{

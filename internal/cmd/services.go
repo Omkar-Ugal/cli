@@ -136,7 +136,7 @@ func (ServiceGroup) Get(ctx context.Context, keys []string) ([]resource.Resource
 		var found []multimetro.Key
 		var results []resource.Resource
 		for _, serviceGroup := range resp.Data.ServiceGroups {
-			if serviceGroup.Status == nil || *serviceGroup.Status != "success" {
+			if serviceGroup.Status == nil || *serviceGroup.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			result, err := ServiceGroup{}.load(serviceGroup, &mc.Metro)
