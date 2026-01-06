@@ -22,6 +22,8 @@ stdout:
 	          Manage Unikraft Cloud volumes.
 	  services, service
 	          Manage Unikraft Cloud services.
+	  certificates, certificate
+	          Manage Unikraft Cloud certificates.
 
 	Global flags:
 	  -h, --help

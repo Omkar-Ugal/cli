@@ -1,0 +1,77 @@
+$ unikraft login
+
+stderr:
+	HH:MM INF using authentication token from UKC_TOKEN environment variable
+	HH:MM WRN no metros configured; please add them manually
+	HH:MM INF login successful
+
+$ unikraft certificate list
+
+stdout:
+	METRO  NAME  COMMON-NAME  STATE  NOT-AFTER
+
+$ unikraft certificate create --set name=test-$UNIQ_CERT_A --set cn=$CERT_A_CN --set chain=$CERT_A_CHAIN --set pkey=$CERT_A_KEY --set metro=test
+
+stdout:
+	metro:         test
+	name:          test-<CERT_A>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	common-name:   <CERT_A_CN>
+	subject:       CN=<CERT_A_CN>
+	issuer:        CN=<CERT_A_CN>
+	serial-number: 01
+	state:         valid
+	timestamps:
+	  not-before:  YYYY-MM-DD HH:MM:SS +0000 UTC
+	  not-after:   YYYY-MM-DD HH:MM:SS +0000 UTC
+
+$ unikraft certificate create --set name=test-$UNIQ_CERT_B --set cn=$CERT_B_CN --set chain=$CERT_B_CHAIN --set pkey=$CERT_B_KEY --set metro=test
+
+stdout:
+	metro:         test
+	name:          test-<CERT_B>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	common-name:   <CERT_B_CN>
+	subject:       CN=<CERT_B_CN>
+	issuer:        CN=<CERT_B_CN>
+	serial-number: 01
+	state:         valid
+	timestamps:
+	  not-before:  YYYY-MM-DD HH:MM:SS +0000 UTC
+	  not-after:   YYYY-MM-DD HH:MM:SS +0000 UTC
+
+$ unikraft certificate list
+
+stdout:
+	METRO  NAME               COMMON-NAME                                STATE  NOT-AFTER
+	test   test-<CERT_B>  <CERT_B_CN>  valid  YYYY-MM-DD HH:MM:SS +0000 UTC
+	test   test-<CERT_A>  <CERT_A_CN>  valid  YYYY-MM-DD HH:MM:SS +0000 UTC
+
+$ unikraft certificate inspect test-$UNIQ_CERT_A test-$UNIQ_CERT_B
+
+stdout:
+	metro:         test
+	name:          test-<CERT_A>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	common-name:   <CERT_A_CN>
+	subject:       CN=<CERT_A_CN>
+	issuer:        CN=<CERT_A_CN>
+	serial-number: 01
+	state:         valid
+	timestamps:
+	  not-before:  YYYY-MM-DD HH:MM:SS +0000 UTC
+	  not-after:   YYYY-MM-DD HH:MM:SS +0000 UTC
+
+	metro:         test
+	name:          test-<CERT_B>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	common-name:   <CERT_B_CN>
+	subject:       CN=<CERT_B_CN>
+	issuer:        CN=<CERT_B_CN>
+	serial-number: 01
+	state:         valid
+	timestamps:
+	  not-before:  YYYY-MM-DD HH:MM:SS +0000 UTC
+	  not-after:   YYYY-MM-DD HH:MM:SS +0000 UTC
+
+$ unikraft certificate delete test-$UNIQ_CERT_A test-$UNIQ_CERT_B

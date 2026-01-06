@@ -86,3 +86,21 @@ func (state VolumeState) color() func(...string) string {
 	}
 	return colors.InfoFg
 }
+
+type CertificateState platform.CertificateState
+
+func (state CertificateState) String() string {
+	return state.color()(string(state))
+}
+
+func (state CertificateState) color() func(...string) string {
+	switch platform.CertificateState(state) {
+	case platform.CertificateStatePending:
+		return colors.WarningFg
+	case platform.CertificateStateValid:
+		return colors.SuccessFg
+	case platform.CertificateStateError:
+		return colors.ErrorFg
+	}
+	return colors.InfoFg
+}
