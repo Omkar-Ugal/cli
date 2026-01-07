@@ -153,3 +153,8 @@ help: ## Show this help menu and exit.
 	/^##@/ { \
 		printf "\n\033[1m%s\033[0m\n", substr($$0, 5) \
 	} ' $(MAKEFILE_LIST)
+
+.PHONY: docs
+docs:
+	go run ./tools/gencli docs ./dist/docs
+	go run ./tools/gencli man --compress ./dist/man

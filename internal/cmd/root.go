@@ -44,55 +44,12 @@ type UnikraftCLI struct {
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
 	cli := UnikraftCLI{}
 
-	helpOptions := kong.HelpOptions{
-		Compact:             true,
-		FlagsLast:           true,
-		NoExpandSubcommands: true,
-	}
-	globalFlagGroup := kong.Group{
-		Key:   "flag-global",
-		Title: kingkong.Underline("Global flags") + ":",
-	}
-
-	configFile := filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)
-
-	parser, err := kong.New(&cli,
-		kong.Name("unikraft"),
-		kong.DefaultEnvars("UNIKRAFT"),
-		kong.UsageOnError(),
-		kong.Writers(stdout, stderr),
-		kong.ConfigureHelp(helpOptions),
-		kong.Configuration(kongyaml.Loader, configFile),
-		kong.Help(kingkong.HelpPrinter(version.Version)),
-		kong.WithBeforeReset(func(value *kong.Path) error {
-			if value == nil || value.App == nil || value.App.Flags == nil {
-				return nil
-			}
-
-			for _, f := range value.App.Flags {
-				if f.Name != "help" {
-					continue
-				}
-
-				f.Group = &kong.Group{
-					Key:   "flag-global",
-					Title: kingkong.Underline("Global flags") + ":",
-				}
-			}
-
-			return nil
-		}),
-		kong.ExplicitGroups([]kong.Group{
-			globalFlagGroup,
-			{
-				Key:   "flag-local",
-				Title: kingkong.Underline("Subcommand flags") + ":",
-			},
-		}),
-	)
+	parser, err := NewParser(&cli)
 	if err != nil {
-		return nil, nil, nil, jujuerrors.Annotate(err, "initializing kong context")
+		return nil, nil, nil, jujuerrors.Annotate(err, "creating parser")
 	}
+	parser.Stdout = stdout
+	parser.Stderr = stderr
 
 	kctx, err := parser.Parse(args)
 	if err != nil {
@@ -159,6 +116,55 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		Msg("unikraft CLI")
 
 	return kctx, &cli, cleanup, nil
+}
+
+func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
+	helpOptions := kong.HelpOptions{
+		Compact:             true,
+		FlagsLast:           true,
+		NoExpandSubcommands: true,
+	}
+	globalFlagGroup := kong.Group{
+		Key:   "flag-global",
+		Title: kingkong.Underline("Global flags") + ":",
+	}
+
+	configFile := filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)
+
+	parser, err := kong.New(cli,
+		kong.Name("unikraft"),
+		kong.DefaultEnvars("UNIKRAFT"),
+		kong.UsageOnError(),
+		kong.ConfigureHelp(helpOptions),
+		kong.Configuration(kongyaml.Loader, configFile),
+		kong.Help(kingkong.HelpPrinter(version.Version)),
+		kong.WithBeforeReset(func(value *kong.Path) error {
+			if value == nil || value.App == nil || value.App.Flags == nil {
+				return nil
+			}
+
+			for _, f := range value.App.Flags {
+				if f.Name != "help" {
+					continue
+				}
+
+				f.Group = &kong.Group{
+					Key:   "flag-global",
+					Title: kingkong.Underline("Global flags") + ":",
+				}
+			}
+
+			return nil
+		}),
+		kong.ExplicitGroups([]kong.Group{
+			globalFlagGroup,
+			{
+				Key:   "flag-local",
+				Title: kingkong.Underline("Subcommand flags") + ":",
+			},
+		}),
+	)
+	return parser, err
 }
 
 var SandboxedResources = []resource.Resource{

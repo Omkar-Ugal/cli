@@ -34,3 +34,8 @@ tasks:
   integration-update:
     cmd: >-
       go test -v ./cmd/unikraft -tags integration --update
+
+  docs:
+    cmds:
+    - go run ./tools/gencli docs ./dist/docs
+    - go run ./tools/gencli man --compress ./dist/man
