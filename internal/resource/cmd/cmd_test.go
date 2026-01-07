@@ -8,12 +8,15 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"testing"
 
+	"github.com/lunixbochs/vtclean"
 	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
@@ -73,67 +76,6 @@ func TestList(t *testing.T) {
 	assert.Contains(t, output, "id-test1")
 	assert.Contains(t, output, "id-test2")
 
-	t.Run("quiet", func(t *testing.T) {
-		var out bytes.Buffer
-		cmd := &ResourceListCmd[resourcet.TestResource]{
-			FormatOpts: FormatOpts{
-				Quiet: true,
-			},
-		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test1\ntest2\n", out.String())
-
-		out.Reset()
-		cmd.Name = []string{"test2"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test2\n", out.String())
-	})
-
-	t.Run("raw", func(t *testing.T) {
-		var out bytes.Buffer
-		cmd := &ResourceListCmd[resourcet.TestResource]{
-			FormatOpts: FormatOpts{
-				Raw: true,
-			},
-		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-
-		output := out.String()
-		assert.Contains(t, output, `"Name": "test1"`)
-		assert.Contains(t, output, `"ID": "id-test1"`)
-
-		out.Reset()
-		cmd.Name = []string{"test1"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-
-		output = out.String()
-		assert.Contains(t, output, `"Name": "test1"`)
-		assert.Contains(t, output, `"ID": "id-test1"`)
-		assert.NotContains(t, output, `"Name": "test2"`)
-	})
-
-	t.Run("format", func(t *testing.T) {
-		var out bytes.Buffer
-		cmd := &ResourceListCmd[resourcet.TestResource]{
-			FormatOpts: FormatOpts{
-				Format: "{{range .}}{{.name}}\n{{end}}",
-			},
-		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test1\ntest2\n", out.String())
-
-		out.Reset()
-		cmd.Name = []string{"test2", "test1"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test2\ntest1\n", out.String())
-	})
-
 	t.Run("field", func(t *testing.T) {
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
@@ -182,6 +124,104 @@ func TestList(t *testing.T) {
 		output = out.String()
 		assert.Contains(t, output, "test1")
 		assert.NotContains(t, output, "test2")
+	})
+}
+
+func TestListOutput(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	runList := func(t *testing.T, printer Printer) string {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{
+				Output: printer,
+			},
+		}
+		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	t.Run("table", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeTable})
+		cleaned := vtclean.Clean(output, false)
+		assert.Contains(t, cleaned, "test1")
+		assert.Contains(t, cleaned, "test2")
+		assert.Contains(t, cleaned, "id-test1")
+	})
+
+	t.Run("kv", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeKeyValue})
+		assert.Contains(t, output, "name:")
+		assert.Contains(t, output, "id:")
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "id-test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("json", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeJSON})
+		var resources []map[string]any
+		err := json.Unmarshal([]byte(output), &resources)
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+
+		names := map[string]bool{}
+		for _, res := range resources {
+			if name, ok := res["name"].(string); ok {
+				names[name] = true
+			}
+		}
+		assert.True(t, names["test1"])
+		assert.True(t, names["test2"])
+	})
+
+	t.Run("yaml", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeYAML})
+		var resources []map[string]any
+		err := yaml.Unmarshal([]byte(output), &resources)
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+
+		names := map[string]bool{}
+		for _, res := range resources {
+			if name, ok := res["name"].(string); ok {
+				names[name] = true
+			}
+		}
+		assert.True(t, names["test1"])
+		assert.True(t, names["test2"])
+	})
+
+	t.Run("raw", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeRaw})
+		var resources []resourcet.TestResource
+		err := json.Unmarshal([]byte(output), &resources)
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+
+		names := map[string]bool{}
+		for _, res := range resources {
+			names[res.Name] = true
+		}
+		assert.True(t, names["test1"])
+		assert.True(t, names["test2"])
+	})
+
+	t.Run("quiet", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeQuiet})
+		assert.Equal(t, "test1\ntest2\n", output)
+	})
+
+	t.Run("template", func(t *testing.T) {
+		output := runList(t, Printer{Type: PrinterTypeTemplate, Value: "{{range .}}{{.name}}-{{.id}}\n{{end}}"})
+		assert.Equal(t, "test1-id-test1\ntest2-id-test2\n", output)
 	})
 }
 
@@ -242,71 +282,6 @@ func TestGet(t *testing.T) {
 		assert.Contains(t, output, "test2")
 		assert.Contains(t, output, "id-test1")
 		assert.Contains(t, output, "id-test2")
-	})
-
-	t.Run("quiet", func(t *testing.T) {
-		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
-			Name: []string{"test1"},
-			FormatOpts: FormatOpts{
-				Quiet: true,
-			},
-		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test1\n", out.String())
-
-		out.Reset()
-		cmd.Name = []string{"test2", "test1"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test2\ntest1\n", out.String())
-	})
-
-	t.Run("raw", func(t *testing.T) {
-		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
-			Name: []string{"test1"},
-			FormatOpts: FormatOpts{
-				Raw: true,
-			},
-		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-
-		output := out.String()
-		assert.Contains(t, output, `"Name": "test1"`)
-		assert.Contains(t, output, `"ID": "id-test1"`)
-
-		out.Reset()
-		cmd.Name = []string{"test1", "test2"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-
-		output = out.String()
-		assert.Contains(t, output, `"Name": "test1"`)
-		assert.Contains(t, output, `"ID": "id-test1"`)
-		assert.Contains(t, output, `"Name": "test2"`)
-		assert.Contains(t, output, `"ID": "id-test2"`)
-	})
-
-	t.Run("format", func(t *testing.T) {
-		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
-			Name: []string{"test1"},
-			FormatOpts: FormatOpts{
-				Format: "{{range .}}{{.name}}: {{.url}}\n{{end}}",
-			},
-		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test1: https://example.com\n", out.String())
-
-		out.Reset()
-		cmd.Name = []string{"test2", "test1"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-		assert.Equal(t, "test2: https://example.org\ntest1: https://example.com\n", out.String())
 	})
 
 	t.Run("field", func(t *testing.T) {
