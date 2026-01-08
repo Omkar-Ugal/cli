@@ -9,6 +9,7 @@ linters:
     - staticcheck
     - errcheck
     - govet
+    - modernize
     - unparam
     - ineffassign
     - unused
