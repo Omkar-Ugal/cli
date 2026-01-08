@@ -127,12 +127,13 @@ func init() {
 		os.Unsetenv("UKC_TOKEN")
 	}
 
-	if v, ok := os.LookupEnv("UKC_METROS"); ok {
-		metros = strings.Split(v, ",")
-		os.Unsetenv("UKC_METROS")
-	} else if v, ok := os.LookupEnv("UKC_METRO"); ok {
-		metros = []string{v}
+	if v, ok := os.LookupEnv("UKC_METRO"); ok {
+		metros = append(metros, v)
 		os.Unsetenv("UKC_METRO")
+	}
+	if v, ok := os.LookupEnv("UKC_METROS"); ok {
+		metros = append(metros, strings.Split(v, ",")...)
+		os.Unsetenv("UKC_METROS")
 	}
 }
 

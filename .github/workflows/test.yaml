@@ -8,9 +8,9 @@ on:
   pull_request:
     branches: [staging]
     paths:
-      - '**'
-      - '!.github/**'
-      - .github/workflows/run-tests.yaml
+    - '**'
+    - '!.github/**'
+    - '.github/workflows/test.yaml'
 
 # Automatically cancel in-progress actions on the same branch
 concurrency:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   go:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
     env:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
@@ -54,16 +54,16 @@ jobs:
           task --yes go:test
 
       - name: Run integration tests (without auth)
+        if: ${{ !(github.event_name == 'push' || !github.event.pull_request.head.repo.fork) }}
         shell: bash
         run: |
           task --yes integration
 
-      # TODO: re-enable when we have access to internal metros
-      # - name: Run integration tests (with auth)
-      #   if: ${{ github.event_name == 'push' || !github.event.pull_request.head.repo.fork }}
-      #   shell: bash
-      #   run: |
-      #     task --yes integration
-      #   env:
-      #     UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
-      #     UKC_METRO: ${{ secrets.UKC_METRO }}
+      - name: Run integration tests (with auth)
+        if: ${{ github.event_name == 'push' || !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        run: |
+          task --yes integration
+        env:
+          UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
+          UKC_METRO: ${{ vars.UKC_METRO }}
