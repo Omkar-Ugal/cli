@@ -122,5 +122,5 @@ func (v FieldVerbosity) String() string {
 }
 
 func (v FieldVerbosity) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`%q`, v.String())), nil
+	return fmt.Appendf(nil, `%q`, v.String()), nil
 }

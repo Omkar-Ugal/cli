@@ -74,7 +74,7 @@ func main() {
 
 func logErr(ctx context.Context, msg string) {
 	if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
-		for _, line := range strings.Split(msg, "\n") {
+		for line := range strings.SplitSeq(msg, "\n") {
 			log.G(ctx).Error().Msgf("  %s", line)
 		}
 	} else {
