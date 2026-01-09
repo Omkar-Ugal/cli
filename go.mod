@@ -10,6 +10,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/x/ansi v0.11.3
 	github.com/containerd/containerd/v2 v2.2.1
+	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
 	github.com/google/uuid v1.6.0
@@ -31,7 +32,7 @@ require (
 	tailscale.com v1.92.4
 	unikraft.com/cloud/sdk v0.0.0-20260106155929-09ab9b333e25
 	unikraft.com/x/colors v0.0.0-20260105163520-49d071286efd
-	unikraft.com/x/kingkong v0.0.0-20260105163520-49d071286efd
+	unikraft.com/x/kingkong v0.0.0-20260107171923-82c0f5ef829a
 	unikraft.com/x/log v0.0.0-20260105163520-49d071286efd
 	unikraft.com/x/ptr v0.0.0-20260105163520-49d071286efd
 )
@@ -65,6 +66,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
