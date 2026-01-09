@@ -112,7 +112,7 @@ func mirrorSlice(source gjson.Result, destVal reflect.Value) error {
 		return nil
 	}
 	if !source.IsArray() {
-		return fmt.Errorf("expected JSON array for slice, got: %s", source.Raw)
+		return nil
 	}
 	array := source.Array()
 

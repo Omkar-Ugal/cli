@@ -19,8 +19,10 @@ type Key struct {
 	UUID string
 }
 
+const MetroKeySeparator = "#"
+
 func ParseKey(s string) Key {
-	if metro, key, ok := strings.Cut(s, "/"); ok {
+	if metro, key, ok := strings.Cut(s, MetroKeySeparator); ok {
 		if uuid.Validate(key) == nil {
 			return Key{Metro: metro, UUID: key}
 		}
@@ -43,7 +45,7 @@ func (k Key) NameOrUUID() platform.NameOrUUID {
 func (k Key) String() string {
 	s := ""
 	if k.Metro != "" {
-		s += k.Metro + "/"
+		s += k.Metro + MetroKeySeparator
 	}
 	if k.UUID != "" {
 		s += k.UUID

@@ -11,6 +11,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.3
 	github.com/containerd/containerd/v2 v2.2.1
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
+	github.com/distribution/reference v0.6.0
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
 	github.com/google/uuid v1.6.0
@@ -19,6 +20,7 @@ require (
 	github.com/lunixbochs/vtclean v1.0.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/muesli/termenv v0.16.0
+	github.com/opencontainers/go-digest v1.0.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/sergi/go-diff v1.4.0
 	github.com/stretchr/testify v1.11.1
