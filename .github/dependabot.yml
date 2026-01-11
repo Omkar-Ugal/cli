@@ -12,6 +12,9 @@ updates:
   commit-message:
     prefix: gomod # Prefix messages with
     include: scope # List all updated dependencies
+  ignore:
+    # HACK: do these manually, these aren't tagged in a super go-friendly way
+    - dependency-name: "unikraft.com/cloud/sdk"
   groups:
     go-deps:
       applies-to: version-updates
