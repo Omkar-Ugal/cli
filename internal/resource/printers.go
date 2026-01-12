@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -18,7 +19,9 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/juju/ansiterm"
 	"github.com/muesli/termenv"
+
 	"unikraft.com/cli/internal/kvwriter"
+	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 func printTable[R Resource](out io.Writer, fieldSpecs []string, resources ...Resource) error {
@@ -49,6 +52,7 @@ func printKV(out io.Writer, specs []string, resources ...Resource) error {
 		if err != nil {
 			return err
 		}
+		fields = DedupeFields(fields)
 
 		if i > 0 {
 			if _, err := fmt.Fprintln(out); err != nil {
@@ -72,6 +76,10 @@ func printKVFields(out io.Writer, parent *Field, fields []Field, current int, in
 			line.WriteString("- ")
 			nextCurrent = indent
 			nextIndent = indent
+			if field.Value != nil {
+				line.WriteString(field.ValueString())
+				line.WriteString("\n")
+			}
 		} else {
 			if i == 0 {
 				line.WriteString(strings.Repeat("  ", max(0, indent-current)))
@@ -89,8 +97,10 @@ func printKVFields(out io.Writer, parent *Field, fields []Field, current int, in
 			return err
 		}
 
-		if err := printKVFields(out, &field, field.Subfields, nextCurrent, nextIndent); err != nil {
-			return err
+		if field.Value == nil {
+			if err := printKVFields(out, &field, field.Subfields, nextCurrent, nextIndent); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -108,20 +118,21 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 		return err
 	}
 
-	headerIdx := -1
-	for _, header := range IterFields(headers) {
-		if header.HasChildren() {
+	headerPaths, headerFields := xslices.Collect2(IterFields(headers))
+
+	for i, header := range headerFields {
+		if header.HasChildren() && header.Value == nil {
 			continue
 		}
-		headerIdx++
+		path := headerPaths[i]
 
-		if headerIdx > 0 {
+		if i > 0 {
 			_, err := fmt.Fprint(out, "\t")
 			if err != nil {
 				return err
 			}
 		}
-		name := strings.ToUpper(header.Name)
+		name := strings.ToUpper(headerName(path))
 		_, err := fmt.Fprintf(out, "%s", lipgloss.NewStyle().SetString(name).Bold(true).String())
 		if err != nil {
 			return err
@@ -138,14 +149,13 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 			return err
 		}
 
-		headerIdx := -1
-		for path, header := range IterFields(headers) {
-			if header.HasChildren() {
+		for i, header := range headerFields {
+			if header.HasChildren() && header.Value == nil {
 				continue
 			}
-			headerIdx++
+			path := headerPaths[i]
 
-			if headerIdx > 0 {
+			if i > 0 {
 				_, err = fmt.Fprint(out, "\t")
 				if err != nil {
 					return err
@@ -155,7 +165,7 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 			fields := GetFieldByPath(fields, path)
 			fieldIdx := -1
 			for _, field := range IterFields(fields) {
-				if field.HasChildren() {
+				if field.Value == nil {
 					continue
 				}
 				fieldIdx++
@@ -194,6 +204,16 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 	return nil
 }
 
+func headerName(path FieldPath) string {
+	for _, part := range slices.Backward(path) {
+		if part == "*" {
+			continue
+		}
+		return part
+	}
+	return ""
+}
+
 func printQuiet(out io.Writer, resources ...Resource) error {
 	for _, resource := range resources {
 		_, err := fmt.Fprintln(out, resource.Key())
@@ -224,7 +244,7 @@ func printTemplate(out io.Writer, tmplStr string, resources ...Resource) error {
 		if err != nil {
 			return err
 		}
-		input = append(input, fieldsToMap(fields))
+		input = append(input, FieldsToMap(fields))
 	}
 
 	tmpl, err := template.New("out").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
@@ -262,8 +282,11 @@ func resourceFields(fields []Field, header bool, verbosity FieldVerbosity, field
 
 	result, missing := FilterFieldsByPath(fields, base, !header)
 	if len(base) == 0 {
-		result = filterFields(result, func(field Field) bool {
-			return field.Verbosity >= verbosity
+		result = filterFields(result, func(field Field) filterResult {
+			if field.Verbosity >= verbosity {
+				return filterRecurse
+			}
+			return filterExclude
 		})
 	}
 
@@ -281,12 +304,6 @@ func resourceFields(fields []Field, header bool, verbosity FieldVerbosity, field
 
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("unknown fields: %v", missing)
-	}
-
-	if header {
-		for i := range result {
-			result[i] = mergeFieldElems(result[i])
-		}
 	}
 
 	return result, nil
