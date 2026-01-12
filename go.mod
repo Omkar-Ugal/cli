@@ -31,7 +31,7 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.6.0
-	tailscale.com v1.92.4
+	tailscale.com v1.92.5
 	unikraft.com/cloud/sdk v0.0.0-20260106155929-09ab9b333e25
 	unikraft.com/x/colors v0.0.0-20260105163520-49d071286efd
 	unikraft.com/x/kingkong v0.0.0-20260107171923-82c0f5ef829a
