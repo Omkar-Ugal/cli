@@ -6,30 +6,33 @@
 package resource
 
 import (
-	"errors"
+	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"reflect"
+	"slices"
 
 	"github.com/mitchellh/mapstructure"
 	"sigs.k8s.io/yaml"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/x/log"
 )
 
-func VisualEdit(cfg *config.Config, fields []Field, patches []Field) ([]Field, error) {
-	return visualEdit(cfg, fields, patches, false)
+func VisualEdit(ctx context.Context, cfg *config.Config, fields []Field, patches []Field) ([]Field, error) {
+	return visualEdit(ctx, cfg, fields, patches, false)
 }
 
-func VisualCreate(cfg *config.Config, fields []Field, creates []Field) ([]Field, error) {
-	return visualEdit(cfg, fields, creates, true)
+func VisualCreate(ctx context.Context, cfg *config.Config, fields []Field, creates []Field) ([]Field, error) {
+	return visualEdit(ctx, cfg, fields, creates, true)
 }
 
 // visualEdit opens an editor for the user to modify fields visually.
 //
 // It takes all the fields and already existing patched fields as input, and
 // returns all patched fields after editing.
-func visualEdit(cfg *config.Config, fields []Field, patches []Field, create bool) ([]Field, error) {
+func visualEdit(ctx context.Context, cfg *config.Config, fields []Field, patches []Field, create bool) ([]Field, error) {
 	data, err := saveFields(fields, patches, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize fields: %w", err)
@@ -54,7 +57,7 @@ func visualEdit(cfg *config.Config, fields []Field, patches []Field, create bool
 		return nil, err
 	}
 
-	cmd := exec.Command(editor, tmpfile.Name())
+	cmd := exec.CommandContext(ctx, editor, tmpfile.Name())
 	cmd.Stdin = cfg.Stdin
 	cmd.Stdout = cfg.Stdout
 	cmd.Stderr = cfg.Stderr
@@ -66,8 +69,12 @@ func visualEdit(cfg *config.Config, fields []Field, patches []Field, create bool
 	if err != nil {
 		return nil, fmt.Errorf("failed to read edited file: %w", err)
 	}
+	editedData = bytes.TrimSpace(editedData)
+	if len(editedData) == 0 {
+		return nil, fmt.Errorf("edited data is empty")
+	}
 
-	fields, err = loadFieldPatches(fields, editedData, create)
+	fields, err = loadFieldPatches(ctx, fields, editedData, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize edited fields: %w", err)
 	}
@@ -75,32 +82,55 @@ func visualEdit(cfg *config.Config, fields []Field, patches []Field, create bool
 }
 
 func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
-	patchMap := make(map[string]any)
+	fields = CloneFields(fields)
+
+	patchMap := make(map[string]Field)
 	for key, field := range IterFields(patches) {
+		patchMap[key.String()] = *field
+	}
+
+	for key, field := range IterFields(fields) {
 		keyStr := key.String()
+
 		var patch *Patch
 		if create {
 			patch = field.Create
 		} else {
 			patch = field.Patch
 		}
-		if patch == nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with no patch", keyStr)
-		}
-		if patch.Add != nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with Add patch", keyStr)
-		}
-		if patch.Del != nil {
-			return nil, fmt.Errorf("cannot visual edit field %s with Del patch", keyStr)
-		}
-		if patch.Set == nil {
+		if patch == nil || patch.Set == nil {
 			continue
 		}
 
-		if !reflect.TypeOf(patch.Set).AssignableTo(reflect.TypeOf(field.Value)) {
-			return nil, fmt.Errorf("patch set type for field %s is not assignable to value type", field.Name)
+		// verify that the patch set type is assignable to the value type
+		value, err := collectValue(*field, reflect.TypeOf(patch.Set))
+		if err != nil {
+			return nil, fmt.Errorf("failed to collect value for field %s: %w", keyStr, err)
 		}
-		patchMap[keyStr] = patch.Set
+		// TODO: instead of relying on patch.Set and field.Value being the same
+		// type, we should have each Resource store the actual patch.Set content
+		// (not just the type-info). Then patching should only update the
+		// patch.Set, and never actually touch the Value.
+		if !reflect.TypeOf(value).AssignableTo(reflect.TypeOf(patch.Set)) {
+			return nil, fmt.Errorf("%s of value %T cannot be patched with %T", keyStr, value, patch.Set)
+		}
+
+		// write already set patches into fields
+		if patchedField, ok := patchMap[keyStr]; ok {
+			var patch *Patch
+			if create {
+				patch = patchedField.Create
+			} else {
+				patch = patchedField.Patch
+			}
+			if patch == nil || patch.Set == nil {
+				return nil, fmt.Errorf("%s is not settable", keyStr)
+			}
+			if !reflect.TypeOf(value).AssignableTo(reflect.TypeOf(patch.Set)) {
+				return nil, fmt.Errorf("%s of value %T cannot be patched with %T", keyStr, value, patch.Set)
+			}
+			field.Value = patch.Set
+		}
 	}
 
 	var patchableFields []Field
@@ -109,17 +139,27 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 	} else {
 		patchableFields = filterPatchableFields(fields)
 	}
-	for key, field := range IterFields(patchableFields) {
-		keyStr := key.String()
-		if val, ok := patchMap[keyStr]; ok {
-			field.Value = val
-		}
+	result, err := yaml.Marshal(FieldsToMap(patchableFields))
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
 	}
-	obj := fieldsToMap(patchableFields)
-	return yaml.Marshal(obj)
+
+	result = append(result, []byte("\n# Edit the fields above. Lines starting with '#' will be ignored.\n#")...)
+	result = append(result, []byte("\n# Original:\n")...)
+
+	rest, err := yaml.Marshal(FieldsToMap(fields))
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
+	}
+	for line := range bytes.Lines(rest) {
+		result = append(result, []byte("#\t")...)
+		result = append(result, line...)
+	}
+
+	return result, nil
 }
 
-func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error) {
+func loadFieldPatches(ctx context.Context, fields []Field, data []byte, create bool) ([]Field, error) {
 	fields = CloneFields(fields)
 
 	var obj map[string]any
@@ -127,61 +167,160 @@ func loadFieldPatches(fields []Field, data []byte, create bool) ([]Field, error)
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
-	var forbiddenFields []string
-
-	for key, field := range IterFields(fields) {
-		if field.HasChildren() {
-			continue
-		}
-
-		var patch *Patch
-		if create {
-			patch = field.Create
-			field.Create = nil
-		} else {
-			patch = field.Patch
-			field.Patch = nil
-		}
-
-		result, ok := mapdig(obj, key...)
-		if !ok {
-			continue
-		}
-		if patch == nil || patch.Set == nil {
-			forbiddenFields = append(forbiddenFields, key.String())
-			continue
-		}
-
-		newValue := reflect.New(reflect.TypeOf(field.Value))
-		err := mapstructure.Decode(result, newValue.Interface())
-		if err != nil {
-			return nil, fmt.Errorf("failed to decode field %s: %w", key, err)
-		}
-
-		if reflect.DeepEqual(field.Value, newValue.Elem().Interface()) {
-			continue
-		}
-
-		patch = &Patch{Set: newValue.Elem().Interface()}
-		if create {
-			field.Create = patch
-		} else {
-			field.Patch = patch
-		}
+	patchedFields, missing, err := MapToFields(fields, obj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to map edited data to fields: %w", err)
+	}
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("unknown fields: %v", missing)
 	}
 
-	var err error
-	if len(forbiddenFields) > 0 {
-		err = errors.Join(err, fmt.Errorf("fields not settable: %v", forbiddenFields))
-	}
+	before := Field{Subfields: fields}
+	after := Field{Subfields: patchedFields}
+	err = patchField(FieldPath{}, &before, &after, create)
 	if err != nil {
 		return nil, err
 	}
 
-	if create {
-		return filterCreatableFields(fields), nil
+	for fieldPath, field := range IterFields(fields) {
+		var patch *Patch
+		if create {
+			patch = field.Create
+		} else {
+			patch = field.Patch
+		}
+		if patch == nil || patch.Set == nil {
+			continue
+		}
+		value, err := collectValue(*field, reflect.TypeOf(patch.Set))
+		if err != nil {
+			return nil, fmt.Errorf("failed to collect value for field %s: %w", fieldPath.String(), err)
+		}
+		log.G(ctx).
+			Debug().
+			Str("field", fieldPath.String()).
+			Any("old", value).
+			Any("new", patch.Set).
+			Msg("patched field")
 	}
-	return filterPatchableFields(fields), nil
+
+	if create {
+		fields = filterCreatableFields(fields)
+	} else {
+		fields = filterPatchableFields(fields)
+	}
+	return fields, nil
+}
+
+// patchField applies the changes from after to before, modifying before in
+// place by setting Patch fields.
+func patchField(path FieldPath, before *Field, after *Field, create bool) error {
+	var patch *Patch
+	if create {
+		patch = before.Create
+	} else {
+		patch = before.Patch
+	}
+
+	if before.Name != after.Name {
+		return fmt.Errorf("field name changed from %s to %s at %s", before.Name, after.Name, path.String())
+	}
+	if len(before.Subfields) != len(after.Subfields) {
+		return fmt.Errorf("number of subfields changed for field %s", path.String())
+	}
+
+	if !reflect.DeepEqual(before.Value, after.Value) {
+		if patch == nil {
+			return fmt.Errorf("no patch available for field %s", path.String())
+		}
+		if patch.Set == nil {
+			return fmt.Errorf("field %s is not settable", path.String())
+		}
+		if !reflect.TypeOf(after.Value).AssignableTo(reflect.TypeOf(patch.Set)) {
+			return fmt.Errorf("cannot assign value of type %T to patch of type %T for field %s", after.Value, patch.Set, path.String())
+		}
+		patch.Set = after.Value
+	} else if before.Elem != nil && !reflect.DeepEqual(before.Subfields, after.Subfields) {
+		if patch == nil {
+			return fmt.Errorf("no patch available for field %s", path.String())
+		}
+		if patch.Set == nil {
+			return fmt.Errorf("field %s is not settable", path.String())
+		}
+		original, err := collectValue(*before, reflect.TypeOf(patch.Set))
+		if err != nil {
+			return fmt.Errorf("failed to collect value for field %s: %w", path.String(), err)
+		}
+		next, err := collectValue(*after, reflect.TypeOf(patch.Set))
+		if err != nil {
+			return fmt.Errorf("failed to collect value for field %s: %w", path.String(), err)
+		}
+		if reflect.DeepEqual(original, next) {
+			return fmt.Errorf("subfields of field %s changed but collected value is the same", path.String())
+		}
+		patch.Set = next
+	} else {
+		patch = nil
+		for i := range before.Subfields {
+			before := &before.Subfields[i]
+			after := &after.Subfields[i]
+			path := append(slices.Clone(path), before.Name)
+			err := patchField(path, before, after, create)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if create {
+		before.Create = patch
+	} else {
+		before.Patch = patch
+	}
+
+	return nil
+}
+
+func collectValue(field Field, into reflect.Type) (any, error) {
+	v, err := collectValueRaw(field)
+	if err != nil {
+		return nil, err
+	}
+	target := reflect.New(into).Elem().Interface()
+	err = mapstructure.Decode(v, &target)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode value into type %s: %w", into.String(), err)
+	}
+	return target, nil
+}
+
+func collectValueRaw(field Field) (any, error) {
+	if field.Value != nil {
+		return field.Value, nil
+	}
+	if field.Elem != nil {
+		sl := make([]any, 0, len(field.Subfields))
+		for _, subfield := range field.Subfields {
+			elemValue, err := collectValueRaw(subfield)
+			if err != nil {
+				return nil, err
+			}
+			sl = append(sl, elemValue)
+		}
+		return sl, nil
+	}
+	if len(field.Subfields) > 0 {
+		m := make(map[string]any, len(field.Subfields))
+		for _, subfield := range field.Subfields {
+			subfieldValue, err := collectValueRaw(subfield)
+			if err != nil {
+				return nil, err
+			}
+			m[subfield.Name] = subfieldValue
+		}
+		return m, nil
+	}
+	return nil, fmt.Errorf("field has no value")
 }
 
 func getEditor() (string, error) {
@@ -192,21 +331,4 @@ func getEditor() (string, error) {
 		return editor, nil
 	}
 	return "", fmt.Errorf("no editor set: please set $VISUAL or $EDITOR")
-}
-
-func mapdig(m map[string]any, keys ...string) (any, bool) {
-	var current any = m
-
-	for _, key := range keys {
-		currentMap, ok := current.(map[string]any)
-		if !ok {
-			return nil, false
-		}
-		current, ok = currentMap[key]
-		if !ok {
-			return nil, false
-		}
-	}
-
-	return current, true
 }

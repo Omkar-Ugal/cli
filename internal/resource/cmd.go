@@ -245,7 +245,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		return err
 	}
 	if cmd.Visual {
-		patched, err = VisualEdit(cfg, fields, patched)
+		patched, err = VisualEdit(ctx, cfg, fields, patched)
 		if err != nil {
 			return err
 		}
@@ -306,7 +306,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 
 	if cmd.Visual {
 		// FIXME: should allow required fields
-		patched, err = VisualCreate(cfg, fields, patched)
+		patched, err = VisualCreate(ctx, cfg, fields, patched)
 		if err != nil {
 			return err
 		}

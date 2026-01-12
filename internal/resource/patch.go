@@ -14,6 +14,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type PatchSpec struct {
@@ -166,7 +168,15 @@ func parseNewReflect(input string, output reflect.Value) (reflect.Value, error) 
 	return newVal.Elem(), nil
 }
 
-func parseReflect(input string, output reflect.Value) error {
+func parseReflect(input string, value reflect.Value) error {
+	output := value
+	for output.Kind() == reflect.Pointer {
+		if output.IsNil() {
+			output.Set(reflect.New(output.Type().Elem()))
+		}
+		output = output.Elem()
+	}
+
 	switch output.Kind() {
 	case reflect.Pointer:
 		if output.IsNil() {
@@ -237,7 +247,30 @@ func parseReflect(input string, output reflect.Value) error {
 		}
 		output.Set(mapp)
 		return nil
+	case reflect.Struct:
+		valueField, ok := value.Interface().(valueField)
+		if ok {
+			return valueField.Parse(input)
+		}
+
+		kv := map[string]string{}
+		fields := strings.Split(input, ",")
+		for _, field := range fields {
+			field = strings.TrimSpace(field)
+			k, v, _ := strings.Cut(field, "=")
+			kv[k] = v
+		}
+
+		decoderConfig := mapstructure.DecoderConfig{
+			ErrorUnused: true,
+			Result:      value.Addr().Interface(),
+		}
+		decoder, err := mapstructure.NewDecoder(&decoderConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create decoder: %w", err)
+		}
+		return decoder.Decode(kv)
 	default:
-		return fmt.Errorf("unsupported kind: %s", output.Kind())
+		return fmt.Errorf("unsupported type: %T", value.Interface())
 	}
 }
