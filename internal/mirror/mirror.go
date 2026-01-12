@@ -40,10 +40,11 @@ func Mirror(source any, dest any) error {
 		destVal = destVal.Elem()
 	}
 
-	return mirrorValue(gjson.Parse(sourceStr), destVal, true)
+	pkgPath := destVal.Type().PkgPath()
+	return mirrorStruct(gjson.Parse(sourceStr), destVal, pkgPath)
 }
 
-func mirrorValue(source gjson.Result, dest reflect.Value, topLevel bool) error {
+func mirrorValue(source gjson.Result, dest reflect.Value, pkgPath string) error {
 	if !dest.IsValid() || !dest.CanSet() {
 		return nil
 	}
@@ -51,24 +52,24 @@ func mirrorValue(source gjson.Result, dest reflect.Value, topLevel bool) error {
 	destType := dest.Type()
 	switch dest.Kind() {
 	case reflect.Struct:
-		return mirrorStruct(source, dest, topLevel)
+		return mirrorStruct(source, dest, pkgPath)
 	case reflect.Slice, reflect.Array:
-		return mirrorSlice(source, dest)
+		return mirrorSlice(source, dest, pkgPath)
 	case reflect.Map:
-		return mirrorMap(source, dest)
+		return mirrorMap(source, dest, pkgPath)
 	case reflect.Pointer:
 		if dest.IsNil() {
 			dest.Set(reflect.New(destType.Elem()))
 		}
-		return mirrorValue(source, dest.Elem(), topLevel)
+		return mirrorValue(source, dest.Elem(), pkgPath)
 	}
 
 	return nil
 }
 
-func mirrorStruct(source gjson.Result, dest reflect.Value, topLevel bool) error {
+func mirrorStruct(source gjson.Result, dest reflect.Value, pkgPath string) error {
 	destType := dest.Type()
-	if !topLevel && destType.Name() != "" {
+	if destType.PkgPath() != "" && destType.PkgPath() != pkgPath {
 		return nil
 	}
 	for i := range destType.NumField() {
@@ -89,7 +90,7 @@ func mirrorStruct(source gjson.Result, dest reflect.Value, topLevel bool) error 
 				source = source.Get(path)
 			}
 
-			if canSetFieldValue(field.Type) {
+			if canSetFieldValue(field.Type, pkgPath) {
 				ok, err := setFieldValue(source, fieldVal)
 				if err != nil {
 					return fmt.Errorf("field %s: %w", field.Name, err)
@@ -100,14 +101,14 @@ func mirrorStruct(source gjson.Result, dest reflect.Value, topLevel bool) error 
 			}
 		}
 
-		if err := mirrorValue(source, fieldVal, false); err != nil {
+		if err := mirrorValue(source, fieldVal, pkgPath); err != nil {
 			return fmt.Errorf("field %s: %w", field.Name, err)
 		}
 	}
 	return nil
 }
 
-func mirrorSlice(source gjson.Result, destVal reflect.Value) error {
+func mirrorSlice(source gjson.Result, destVal reflect.Value, pkgPath string) error {
 	if !source.Exists() {
 		return nil
 	}
@@ -124,32 +125,32 @@ func mirrorSlice(source gjson.Result, destVal reflect.Value) error {
 	}
 	for i := range destVal.Len() {
 		source := array[i]
-		if err := mirrorValue(source, destVal.Index(i), false); err != nil {
+		if err := mirrorValue(source, destVal.Index(i), pkgPath); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func mirrorMap(source gjson.Result, destVal reflect.Value) error {
+func mirrorMap(source gjson.Result, destVal reflect.Value, pkgPath string) error {
 	for _, key := range destVal.MapKeys() {
 		itemVal := destVal.MapIndex(key)
-		if err := mirrorValue(source, itemVal, false); err != nil {
+		if err := mirrorValue(source, itemVal, pkgPath); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func canSetFieldValue(destType reflect.Type) bool {
+func canSetFieldValue(destType reflect.Type, pkgPath string) bool {
 	for destType.Kind() == reflect.Pointer {
 		destType = destType.Elem()
 	}
 	switch destType.Kind() {
 	case reflect.Struct:
-		return destType.Name() != ""
+		return destType.PkgPath() != "" && destType.PkgPath() != pkgPath
 	case reflect.Slice, reflect.Map:
-		return canSetFieldValue(destType.Elem())
+		return canSetFieldValue(destType.Elem(), pkgPath)
 	default:
 		return true
 	}

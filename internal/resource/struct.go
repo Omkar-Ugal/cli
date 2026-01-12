@@ -17,28 +17,38 @@ import (
 // FieldsFromStruct is a helper that converts a struct into a slice of Fields
 // based on the `field` tags defined on the struct's fields.
 func FieldsFromStruct(s any) (fields []Field, err error) {
-	field, err := fieldFromStruct(reflect.ValueOf(s), true)
+	field, err := fieldFromStruct("", reflect.ValueOf(s))
 	if err != nil {
 		return nil, err
 	}
 	return field.Subfields, nil
 }
 
-func fieldFromStruct(v reflect.Value, topLevel bool) (field *Field, err error) {
-	if v.Kind() == reflect.Pointer {
-		if v.IsNil() {
-			v = reflect.New(v.Type().Elem())
-		} else {
-			v = v.Elem()
+type valueField interface {
+	String() string
+	Parse(s string) error
+}
+
+func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) {
+	s := v
+	if s.Kind() == reflect.Pointer {
+		if s.IsNil() {
+			v2 := reflect.New(s.Type().Elem())
+			s = v2
 		}
+		s = s.Elem()
 	}
-	if v.Kind() != reflect.Struct {
+	if s.Kind() != reflect.Struct {
 		return nil, nil
 	}
-	if !topLevel && v.Type().Name() != "" {
+	t := s.Type()
+
+	if pkgPath == "" {
+		pkgPath = s.Type().PkgPath()
+	}
+	if t.PkgPath() != "" && t.PkgPath() != pkgPath {
 		return nil, nil
 	}
-	t := v.Type()
 
 	var fields []Field
 	for i := range t.NumField() {
@@ -46,7 +56,7 @@ func fieldFromStruct(v reflect.Value, topLevel bool) (field *Field, err error) {
 		if !field.IsExported() {
 			continue
 		}
-		fieldVal := v.Field(i)
+		fieldVal := s.Field(i)
 
 		name := field.Tag.Get("field")
 		if name == "-" {
@@ -62,29 +72,33 @@ func fieldFromStruct(v reflect.Value, topLevel bool) (field *Field, err error) {
 			Name:  name,
 			Value: fieldVal.Interface(),
 		}
-		if slices.Contains(opts, "short") {
-			result.Verbosity = max(result.Verbosity, FieldVerbosityShort)
-		}
-		if slices.Contains(opts, "long") {
-			result.Verbosity = max(result.Verbosity, FieldVerbosityLong)
+		switch {
+		case slices.Contains(opts, "hidden"):
+			result.Verbosity = FieldVerbosityHidden
+		case slices.Contains(opts, "short"):
+			result.Verbosity = FieldVerbosityShort
+		case slices.Contains(opts, "long"):
+			result.Verbosity = FieldVerbosityLong
+		default:
+			result.Verbosity = FieldVerbosityHidden
 		}
 
-		newField, err := fieldFromStruct(fieldVal, false)
+		newField, err := fieldFromStruct(pkgPath, fieldVal)
 		if err != nil {
 			return nil, err
 		}
 		if newField != nil {
-			result.Value = nil
+			result.Value = newField.Value
 			result.Subfields = newField.Subfields
 			result.Verbosity = max(result.Verbosity, newField.Verbosity)
 		}
 
-		newField, err = fieldFromSlice(fieldVal)
+		newField, err = fieldFromSlice(pkgPath, fieldVal)
 		if err != nil {
 			return nil, err
 		}
 		if newField != nil {
-			result.Value = nil
+			result.Value = newField.Value
 			result.Elem = newField.Elem
 			result.Subfields = newField.Subfields
 			result.Verbosity = max(result.Verbosity, newField.Verbosity)
@@ -93,17 +107,23 @@ func fieldFromStruct(v reflect.Value, topLevel bool) (field *Field, err error) {
 		fields = append(fields, result)
 	}
 
-	verbosity := FieldVerbosityHidden
+	var value any
+	if valueField, ok := v.Interface().(valueField); ok {
+		value = valueField
+	}
+
+	verbosity := FieldVerbosity(0)
 	for _, f := range fields {
 		verbosity = max(verbosity, f.Verbosity)
 	}
 	return &Field{
+		Value:     value,
 		Subfields: fields,
 		Verbosity: verbosity,
 	}, nil
 }
 
-func fieldFromSlice(v reflect.Value) (field *Field, err error) {
+func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			v = reflect.New(v.Type().Elem())
@@ -117,7 +137,7 @@ func fieldFromSlice(v reflect.Value) (field *Field, err error) {
 
 	elemType := v.Type().Elem()
 	elemVal := reflect.New(elemType).Elem()
-	elem, err := fieldFromStruct(elemVal, false)
+	elem, err := fieldFromStruct(pkgPath, elemVal)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +148,7 @@ func fieldFromSlice(v reflect.Value) (field *Field, err error) {
 	var fields []Field
 	for i := range v.Len() {
 		vv := v.Index(i)
-		field, err := fieldFromStruct(vv, false)
+		field, err := fieldFromStruct(pkgPath, vv)
 		if err != nil {
 			return nil, err
 		}

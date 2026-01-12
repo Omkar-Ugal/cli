@@ -47,7 +47,7 @@ func TestMirror_BasicExample(t *testing.T) {
 	assert.Equal(t, "value1", dest.Field1)
 	assert.Equal(t, 42, dest.Field2)
 	assert.Equal(t, "nested_value", dest.Nested.SubField)
-	assert.Empty(t, dest.Nested2.SubField)
+	assert.Equal(t, "nested_value", dest.Nested2.SubField)
 	assert.Equal(t, []string{"item1", "item2", "item3"}, dest.Lists)
 }
 
