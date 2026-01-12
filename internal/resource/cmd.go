@@ -250,20 +250,18 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 			return err
 		}
 	}
-
-	fields = filterPatchableFields(patched)
-	if len(fields) == 0 {
-		return fmt.Errorf("no editable fields provided")
-	}
+	patched = filterPatchableFields(patched)
 
 	start := &bytes.Buffer{}
 	err = printKV(start, nil, resource)
 	if err != nil {
 		return err
 	}
-	resource, err = r.Edit(ctx, resource, fields)
-	if err != nil {
-		return err
+	if len(patched) > 0 {
+		resource, err = r.Edit(ctx, resource, patched)
+		if err != nil {
+			return err
+		}
 	}
 	end := &bytes.Buffer{}
 	err = printKV(end, nil, resource)
