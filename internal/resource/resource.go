@@ -8,6 +8,8 @@ package resource
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 )
 
 type Type struct {
@@ -80,10 +82,10 @@ type Patch struct {
 }
 
 func (f Field) ValueString() string {
-	value := f.Value
-	if value == nil {
-		return ""
-	}
+	return valueString(f.Value)
+}
+
+func valueString(value any) string {
 	for {
 		unwrapped, ok := value.(interface{ Unwrap() any })
 		if !ok {
@@ -91,10 +93,34 @@ func (f Field) ValueString() string {
 		}
 		value = unwrapped.Unwrap()
 	}
-	if str, ok := value.(fmt.Stringer); ok {
-		return str.String()
+	if value, ok := value.(fmt.Stringer); ok {
+		return value.String()
 	}
-	return fmt.Sprintf("%v", value)
+
+	if value == nil {
+		return "<nil>"
+	}
+
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.String:
+		return v.String()
+	case reflect.Slice, reflect.Array:
+		var result []string
+		for i := range v.Len() {
+			result = append(result, valueString(v.Index(i).Interface()))
+		}
+		return "[" + strings.Join(result, " ") + "]"
+	case reflect.Map:
+		var result []string
+		for _, key := range v.MapKeys() {
+			val := v.MapIndex(key)
+			result = append(result, fmt.Sprintf("%s:%s", valueString(key.Interface()), valueString(val.Interface())))
+		}
+		return "{" + strings.Join(result, " ") + "}"
+	default:
+		return fmt.Sprintf("%v", value)
+	}
 }
 
 type FieldVerbosity int
