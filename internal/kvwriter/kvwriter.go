@@ -51,6 +51,11 @@ func (b *keyValueWriter) Write(p []byte) (n int, err error) {
 
 	for line := range lines {
 		key, value, ok := bytes.Cut(line, []byte(":"))
+		if ok && len(value) > 0 {
+			if value[0] != ' ' && value[0] != '\t' && value[0] != '\n' {
+				ok = false
+			}
+		}
 		if ok {
 			b.keys = append(b.keys, key)
 			b.cleankeys = append(b.cleankeys, []byte(vtclean.Clean(string(key), false)))
