@@ -126,7 +126,8 @@ func valueString(value any) string {
 type FieldVerbosity int
 
 const (
-	FieldVerbosityHidden FieldVerbosity = iota
+	FieldVerbosityInvisible FieldVerbosity = iota
+	FieldVerbosityHidden
 	FieldVerbosityLong
 	FieldVerbosityShort
 )
@@ -136,6 +137,8 @@ func (v FieldVerbosity) String() string {
 		v = FieldVerbosityHidden
 	}
 	switch v {
+	case FieldVerbosityInvisible:
+		return "invisible"
 	case FieldVerbosityHidden:
 		return "hidden"
 	case FieldVerbosityLong:

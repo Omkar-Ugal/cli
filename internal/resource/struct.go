@@ -73,6 +73,8 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 			Value: fieldVal.Interface(),
 		}
 		switch {
+		case slices.Contains(opts, "invisible"):
+			result.Verbosity = FieldVerbosityInvisible
 		case slices.Contains(opts, "hidden"):
 			result.Verbosity = FieldVerbosityHidden
 		case slices.Contains(opts, "short"):
