@@ -148,14 +148,45 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 	return rerr
 }
 
-func (s *Sandbox) Add(r Resource) {
+func (s *Sandbox) Add(ctx context.Context, r Resource) error {
 	if s == nil {
-		return
+		return nil
 	}
 	if _, ok := s.Keys[r.Type().Name]; !ok {
-		return
+		return nil
 	}
 	s.Keys[r.Type().Name][r.Key()] = struct{}{}
+
+	fields, err := r.Fields()
+	if err != nil {
+		return fmt.Errorf("failed to get fields for resource %s: %w", r.Key(), err)
+	}
+	for _, field := range IterFields(fields) {
+		for _, link := range field.Links {
+			for _, r := range s.Cleanup {
+				if r.Type().Name != link.Type {
+					continue
+				}
+
+				r, ok := r.(GettableResource)
+				if !ok {
+					continue
+				}
+				linkedResources, err := r.Get(ctx, []string{link.Key})
+				if err != nil {
+					return fmt.Errorf("failed to get linked resource %s %s: %w", link.Type, link.Key, err)
+				}
+				for _, linkedResource := range linkedResources {
+					if err := s.Add(ctx, linkedResource); err != nil {
+						return err
+					}
+				}
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Sandbox) Remove(r Resource) {
@@ -299,8 +330,7 @@ func (r sandboxedCreatableResource) Create(ctx context.Context, fields []Field) 
 	if err != nil {
 		return nil, err
 	}
-	r.sandbox.Add(res)
-	return res, nil
+	return res, r.sandbox.Add(ctx, res)
 }
 
 type sandboxedDeletableResource struct {

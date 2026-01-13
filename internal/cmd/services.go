@@ -103,10 +103,12 @@ func (s *Service) Parse(str string) error {
 
 type Domain struct {
 	FQDN string `mirror:"fqdn" field:",short"`
-
 	Name string `field:",invisible"` // edit-only field
 
-	// TODO: certificates
+	Certificate struct {
+		Name string `mirror:"name" field:",long"`
+		UUID string `mirror:"uuid" field:",long"`
+	} `mirror:"certificate"`
 }
 
 func (ServiceGroup) Type() resource.Type {
@@ -157,6 +159,18 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 		case "limits.hard":
 			field.Patch = &resource.Patch{Set: uint64(0)}
 			field.Create = &resource.Patch{Set: uint64(0)}
+		}
+		if key.MatchesString("domains.*.certificate") {
+			name, _ := field.Get("name")
+			uuid, _ := field.Get("uuid")
+			field.Links = append(field.Links, resource.Link{
+				Type: "certificate",
+				Key: multimetro.Key{
+					Metro: s.Metro.Name,
+					Name:  name.Value.(string),
+					UUID:  uuid.Value.(string),
+				}.String(),
+			})
 		}
 	}
 

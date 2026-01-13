@@ -1,0 +1,239 @@
+$ unikraft login
+
+stderr:
+	HH:MM INF using authentication token from UKC_TOKEN environment variable
+	HH:MM WRN no metros configured; please add them manually
+	HH:MM INF login successful
+
+$ unikraft service list
+
+stdout:
+	METRO  NAME  AUTOSCALE  FQDN  SERVICES
+
+$ unikraft service create --set name=test-$UNIQ_SVC_A --set metro=test --set domains=fqdn=$UNIQ_DOMAIN_A.unikraft.example --set services=443:8080/tls+http --set services=80:443/http+redirect
+
+stdout:
+	metro:         test
+	name:          test-<SVC_A>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_A>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_A>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 443:8080/tls+http
+	- 80:443/http+redirect
+
+$ unikraft service create --set name=test-$UNIQ_SVC_B --set metro=test --set domains=fqdn=$UNIQ_DOMAIN_B.unikraft.example --set services=443:8080/tls+http,80:443/http+redirect
+
+stdout:
+	metro:         test
+	name:          test-<SVC_B>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_B>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_B>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 443:8080/tls+http
+	- 80:443/http+redirect
+
+$ unikraft service list
+
+stdout:
+	METRO  NAME               AUTOSCALE  FQDN                           SERVICES
+	test   test-<SVC_B>  false      <DOMAIN_B>.unikraft.example  443:8080/tls+http, 80:443/http+redirect
+	test   test-<SVC_A>  false      <DOMAIN_A>.unikraft.example  443:8080/tls+http, 80:443/http+redirect
+
+$ unikraft service inspect test-$UNIQ_SVC_A test-$UNIQ_SVC_B
+
+stdout:
+	metro:         test
+	name:          test-<SVC_A>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_A>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_A>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 443:8080/tls+http
+	- 80:443/http+redirect
+
+	metro:         test
+	name:          test-<SVC_B>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_B>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_B>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 443:8080/tls+http
+	- 80:443/http+redirect
+
+$ unikraft service edit test-$UNIQ_SVC_A --add services=1000:2000/tls
+
+stdout:
+	metro:         test
+	  name:          test-<SVC_A>
+	  uuid:          12345678-1234-1234-1234-123456789abc
+	  persistent:    true
+	  limits:
+	    soft:        1
+	    hard:        65535
+	  domains:
+	  - fqdn:        <DOMAIN_A>.unikraft.example
+	    certificate:
+	      name:      <DOMAIN_A>.unikraft.example-xxxxx
+	      uuid:      12345678-1234-1234-1234-123456789abc
+	  services:
+	  - 443:8080/tls+http
+	  - 80:443/http+redirect
+	+ - 1000:2000/tls
+
+$ unikraft service edit test-$UNIQ_SVC_B --set services=1000:2000/tls
+
+stdout:
+	metro:         test
+	  name:          test-<SVC_B>
+	  uuid:          12345678-1234-1234-1234-123456789abc
+	  persistent:    true
+	  limits:
+	    soft:        1
+	    hard:        65535
+	  domains:
+	  - fqdn:        <DOMAIN_B>.unikraft.example
+	    certificate:
+	      name:      <DOMAIN_B>.unikraft.example-xxxxx
+	      uuid:      12345678-1234-1234-1234-123456789abc
+	  services:
+	- - 443:8080/tls+http
+	- - 80:443/http+redirect
+	+ - 1000:2000/tls
+	+
+
+$ unikraft service inspect test-$UNIQ_SVC_A test-$UNIQ_SVC_B
+
+stdout:
+	metro:         test
+	name:          test-<SVC_A>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_A>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_A>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 443:8080/tls+http
+	- 80:443/http+redirect
+	- 1000:2000/tls
+
+	metro:         test
+	name:          test-<SVC_B>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_B>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_B>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 1000:2000/tls
+
+$ unikraft service edit test-$UNIQ_SVC_A --del services=1000:2000/tls
+
+stdout:
+	metro:         test
+	  name:          test-<SVC_A>
+	  uuid:          12345678-1234-1234-1234-123456789abc
+	  persistent:    true
+	  limits:
+	    soft:        1
+	    hard:        65535
+	  domains:
+	  - fqdn:        <DOMAIN_A>.unikraft.example
+	    certificate:
+	      name:      <DOMAIN_A>.unikraft.example-xxxxx
+	      uuid:      12345678-1234-1234-1234-123456789abc
+	  services:
+	  - 443:8080/tls+http
+	  - 80:443/http+redirect
+	- - 1000:2000/tls
+
+$ unikraft service edit test-$UNIQ_SVC_B --del services=1000:2000/tls
+
+stdout:
+	metro:         test
+	  name:          test-<SVC_B>
+	  uuid:          12345678-1234-1234-1234-123456789abc
+	  persistent:    true
+	  limits:
+	    soft:        1
+	    hard:        65535
+	  domains:
+	  - fqdn:        <DOMAIN_B>.unikraft.example
+	    certificate:
+	      name:      <DOMAIN_B>.unikraft.example-xxxxx
+	      uuid:      12345678-1234-1234-1234-123456789abc
+	- services:
+	- - 1000:2000/tls
+
+$ unikraft service inspect test-$UNIQ_SVC_A test-$UNIQ_SVC_B
+
+stdout:
+	metro:         test
+	name:          test-<SVC_A>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_A>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_A>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+	services:
+	- 443:8080/tls+http
+	- 80:443/http+redirect
+
+	metro:         test
+	name:          test-<SVC_B>
+	uuid:          12345678-1234-1234-1234-123456789abc
+	persistent:    true
+	limits:
+	  soft:        1
+	  hard:        65535
+	domains:
+	- fqdn:        <DOMAIN_B>.unikraft.example
+	  certificate:
+	    name:      <DOMAIN_B>.unikraft.example-xxxxx
+	    uuid:      12345678-1234-1234-1234-123456789abc
+
+$ unikraft service delete test-$UNIQ_SVC_A test-$UNIQ_SVC_B

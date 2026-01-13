@@ -22,8 +22,6 @@ type Resource interface {
 	Key() string
 	Fields() ([]Field, error)
 	Raw() any
-
-	// TODO: link to other resources, e.g. instance -> image
 }
 
 type GettableResource interface {
@@ -47,6 +45,11 @@ type DeletableResource interface {
 	Delete(ctx context.Context, targets []Resource) error
 }
 
+type Link struct {
+	Type string
+	Key  string
+}
+
 type Field struct {
 	// Name is the name of the field
 	Name string `json:"name"`
@@ -58,6 +61,8 @@ type Field struct {
 	// Elem is used to indicate that all subfields have the same substructure
 	// (e.g. for arrays)
 	Elem *Field `json:"elem,omitempty"`
+
+	Links []Link `json:"links,omitempty"`
 
 	// display settings
 	Empty     bool           `json:"empty,omitempty"`
@@ -71,6 +76,15 @@ type Field struct {
 
 func (f Field) HasChildren() bool {
 	return len(f.Subfields) > 0 || f.Elem != nil
+}
+
+func (f Field) Get(name string) (Field, bool) {
+	for _, subfield := range f.Subfields {
+		if subfield.Name == name {
+			return subfield, true
+		}
+	}
+	return Field{}, false
 }
 
 type Patch struct {

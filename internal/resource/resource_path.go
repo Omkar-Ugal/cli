@@ -25,6 +25,22 @@ func ParseFieldPath(s string) FieldPath {
 	return FieldPath(parts)
 }
 
+func (fp FieldPath) Matches(spec FieldPath) bool {
+	if len(fp) != len(spec) {
+		return false
+	}
+	for i := range fp {
+		if spec[i] != "*" && fp[i] != spec[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (fp FieldPath) MatchesString(s string) bool {
+	return fp.Matches(ParseFieldPath(s))
+}
+
 func (fp FieldPath) String() string {
 	return strings.Join(fp, ".")
 }
