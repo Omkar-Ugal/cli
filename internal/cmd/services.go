@@ -23,8 +23,10 @@ import (
 )
 
 type ServicesCmd struct {
-	resource.ResourceCmd[ServiceGroup]         `set:"name=service" set:"names=services"`
-	resource.EditableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	resource.ResourceCmd[ServiceGroup]          `set:"name=service" set:"names=services"`
+	resource.DeletableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	resource.EditableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
+	resource.CreatableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
 }
 
 type ServiceGroup struct {
@@ -138,15 +140,23 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 
 	for key, field := range resource.IterFields(result) {
 		switch key.String() {
+		case "metro":
+			field.Create = &resource.Patch{Set: "", Required: true}
+		case "name":
+			field.Create = &resource.Patch{Set: ""}
 		case "services":
 			// FIXME: del should support deleting by *just* port
 			field.Patch = &resource.Patch{Set: []*Service{}, Add: []*Service{}, Del: []*Service{}}
+			field.Create = &resource.Patch{Set: []*Service{}, Required: true}
 		case "domains":
 			field.Patch = &resource.Patch{Set: []Domain{}, Add: []Domain{}, Del: []Domain{}}
+			field.Create = &resource.Patch{Set: []Domain{}}
 		case "limits.soft":
 			field.Patch = &resource.Patch{Set: uint64(0)}
+			field.Create = &resource.Patch{Set: uint64(0)}
 		case "limits.hard":
 			field.Patch = &resource.Patch{Set: uint64(0)}
+			field.Create = &resource.Patch{Set: uint64(0)}
 		}
 	}
 
@@ -227,6 +237,91 @@ func (ServiceGroup) load(serviceGroup platform.ServiceGroup, metro *config.Metro
 		return ServiceGroup{}, fmt.Errorf("could not mirror service group data: %w", err)
 	}
 	return result, nil
+}
+
+func (ServiceGroup) Delete(ctx context.Context, targets []resource.Resource) error {
+	keys := make([]multimetro.Key, len(targets))
+	for i, target := range targets {
+		sg := target.(ServiceGroup)
+		keys[i] = sg.key()
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("deleting service groups")
+		_, err := mc.DeleteServiceGroups(ctx, keys.NamesOrUUIDs())
+		return nil, keys, err
+	})
+	return err
+}
+
+func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+	var req platform.CreateServiceGroupRequest
+	var metro string
+	for key, field := range resource.IterFields(fields) {
+		if field.Create != nil && field.Create.Set != nil {
+			switch key.String() {
+			case "metro":
+				metro = field.Create.Set.(string)
+			case "name":
+				name := field.Create.Set.(string)
+				req.Name = &name
+			case "limits.soft":
+				limit := field.Create.Set.(uint64)
+				req.SoftLimit = &limit
+			case "limits.hard":
+				limit := field.Create.Set.(uint64)
+				req.HardLimit = &limit
+			case "domains":
+				for _, domain := range field.Create.Set.([]Domain) {
+					name := domain.Name
+					if name == "" {
+						name = domain.FQDN + "."
+					}
+					req.Domains = append(req.Domains, platform.CreateServiceGroupRequestDomain{
+						Name: name,
+					})
+				}
+			case "services":
+				for _, svc := range field.Create.Set.([]*Service) {
+					req.Services = append(req.Services, platform.Service{
+						Port:            svc.Source,
+						DestinationPort: &svc.Destination,
+						Handlers:        svc.Handlers,
+					})
+				}
+			}
+		}
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	uuid, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (string, error) {
+		log.G(ctx).Trace().Msg("creating service group")
+		resp, err := mc.CreateServiceGroup(ctx, req)
+		if err != nil {
+			return "", err
+		}
+		return *resp.Data.ServiceGroups[0].Uuid, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	key := multimetro.Key{
+		Metro: metro,
+		UUID:  uuid,
+	}
+	results, err := ServiceGroup{}.Get(ctx, []string{key.String()})
+	if err != nil {
+		return nil, err
+	}
+	return results[0], nil
 }
 
 func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
