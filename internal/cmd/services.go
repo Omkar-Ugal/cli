@@ -60,9 +60,9 @@ type ServiceGroup struct {
 }
 
 type Service struct {
-	Source      uint32                     `mirror:"port" json:"source" field:",long"`
-	Destination uint32                     `mirror:"destination_port" json:"destination" field:",long"`
-	Handlers    []platform.ServiceHandlers `mirror:"handlers" json:"handlers" field:",long"`
+	Source      uint32                     `mirror:"port" json:"source" field:",short"`
+	Destination uint32                     `mirror:"destination_port" json:"destination" field:",short"`
+	Handlers    []platform.ServiceHandlers `mirror:"handlers" json:"handlers" field:",short"`
 }
 
 func (s *Service) String() string {

@@ -92,13 +92,17 @@ func FilterFieldsByPath(fields []Field, specs []FieldPath, strict bool) ([]Field
 }
 
 func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Field, missing []FieldPath) {
+	if len(specs) == 0 {
+		if !strict {
+			field = mergeElem(field)
+		}
+		field = pruneFields(field)
+		return field, nil
+	}
+
 	result = field
 	result.Value = nil
 	result.Subfields = nil
-
-	if len(specs) == 0 {
-		return pruneFields(field), nil
-	}
 
 	for len(specs) > 0 {
 		// find the first "group" of specs with the same root
@@ -115,11 +119,14 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 				// if we don't, then recursively include all subfields
 				if !strict && field.Elem != nil {
 					elem := *field.Elem
-					elem.Name = "*"
+					elem = mergeElem(elem)
 					elem = pruneFields(elem)
 					result.Subfields = append(result.Subfields, elem)
 				}
 				for _, subfield := range field.Subfields {
+					if !strict {
+						subfield = mergeElem(subfield)
+					}
 					subfield = pruneFields(subfield)
 					result.Subfields = append(result.Subfields, subfield)
 				}
@@ -180,6 +187,20 @@ func pruneFields(field Field) Field {
 	field.Subfields = slices.Clone(field.Subfields)
 	for i := range field.Subfields {
 		field.Subfields[i] = pruneFields(field.Subfields[i])
+	}
+	return field
+}
+
+func mergeElem(field Field) Field {
+	if field.Elem != nil {
+		elem := mergeElem(*field.Elem)
+		elem.Name = "*"
+		field.Elem = nil
+		field.Subfields = append(field.Subfields, elem)
+	}
+	field.Subfields = slices.Clone(field.Subfields)
+	for i := range field.Subfields {
+		field.Subfields[i] = mergeElem(field.Subfields[i])
 	}
 	return field
 }
