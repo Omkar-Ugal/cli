@@ -68,7 +68,6 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 			Name:      parsedField.name,
 			Verbosity: parsedField.verbosity,
 			Value:     fieldVal.Interface(),
-			Empty:     fieldVal.IsZero(),
 		}
 
 		newField, err := fieldFromStruct(pkgPath, fieldVal)
@@ -151,7 +150,6 @@ func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 		Elem:      elem,
 		Subfields: fields,
 		Verbosity: elem.Verbosity,
-		Empty:     len(fields) == 0,
 	}, nil
 }
 
