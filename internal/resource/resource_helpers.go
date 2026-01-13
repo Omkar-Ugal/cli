@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"time"
-
-	"github.com/mitchellh/mapstructure"
 )
+
+func CloneField(field Field) Field {
+	newField := field
+	newField.Subfields = CloneFields(field.Subfields)
+	return newField
+}
 
 // CloneFields creates a deep copy of the given slice of Fields.
 func CloneFields(fields []Field) []Field {
@@ -121,16 +124,7 @@ func valueToField(field *Field, val any) (*Field, []FieldPath, error) {
 
 	if field.Value != nil {
 		field.Value = reflect.New(reflect.TypeOf(field.Value)).Elem().Interface()
-		decoderConfig := mapstructure.DecoderConfig{
-			DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
-			Result:     &field.Value,
-		}
-		decoder, err := mapstructure.NewDecoder(&decoderConfig)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to create decoder for field %q: %w", field.Name, err)
-		}
-		err = decoder.Decode(val)
-		if err != nil {
+		if err := decodeStruct(val, &field.Value); err != nil {
 			return nil, nil, fmt.Errorf("failed to decode value %v for field %q: %w", val, field.Name, err)
 		}
 	}

@@ -10,8 +10,10 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ettle/strcase"
+	"github.com/mitchellh/mapstructure"
 )
 
 // FieldsFromStruct is a helper that converts a struct into a slice of Fields
@@ -58,31 +60,14 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 		}
 		fieldVal := s.Field(i)
 
-		name := field.Tag.Get("field")
-		if name == "-" {
+		parsedField := parseField(field)
+		if parsedField == nil {
 			continue
 		}
-		opts := strings.Split(name, ",")
-		name, opts = opts[0], opts[1:]
-		if name == "" {
-			name = field.Name
-			name = strcase.ToKebab(name)
-		}
 		result := Field{
-			Name:  name,
-			Value: fieldVal.Interface(),
-		}
-		switch {
-		case slices.Contains(opts, "invisible"):
-			result.Verbosity = FieldVerbosityInvisible
-		case slices.Contains(opts, "hidden"):
-			result.Verbosity = FieldVerbosityHidden
-		case slices.Contains(opts, "short"):
-			result.Verbosity = FieldVerbosityShort
-		case slices.Contains(opts, "long"):
-			result.Verbosity = FieldVerbosityLong
-		default:
-			result.Verbosity = FieldVerbosityHidden
+			Name:      parsedField.name,
+			Verbosity: parsedField.verbosity,
+			Value:     fieldVal.Interface(),
 		}
 
 		newField, err := fieldFromStruct(pkgPath, fieldVal)
@@ -166,4 +151,64 @@ func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 		Subfields: fields,
 		Verbosity: elem.Verbosity,
 	}, nil
+}
+
+type parsedField struct {
+	name      string
+	verbosity FieldVerbosity
+}
+
+func parseField(field reflect.StructField) *parsedField {
+	if !field.IsExported() {
+		return nil
+	}
+	tag := field.Tag.Get("field")
+	if tag == "-" {
+		return nil
+	}
+
+	opts := strings.Split(tag, ",")
+	name, opts := opts[0], opts[1:]
+	if name == "" {
+		name = field.Name
+		name = strcase.ToKebab(name)
+	}
+
+	var verbosity FieldVerbosity
+	switch {
+	case slices.Contains(opts, "invisible"):
+		verbosity = FieldVerbosityInvisible
+	case slices.Contains(opts, "hidden"):
+		verbosity = FieldVerbosityHidden
+	case slices.Contains(opts, "short"):
+		verbosity = FieldVerbosityShort
+	case slices.Contains(opts, "long"):
+		verbosity = FieldVerbosityLong
+	default:
+		verbosity = FieldVerbosityHidden
+	}
+
+	return &parsedField{
+		name:      name,
+		verbosity: verbosity,
+	}
+}
+
+// HACK: avoid use of this method, and prefer using the info available directly
+// on the Field - this function makes heavy assumptions about the structure of
+// field data and how values are read/written. Currently it is only used for
+// visual editing.
+func decodeStruct(input any, output any) error {
+	config := mapstructure.DecoderConfig{
+		TagName:     "field",
+		ErrorUnused: true,
+		Result:      output,
+		// TODO: more hooks probably needed
+		DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
+	}
+	decoder, err := mapstructure.NewDecoder(&config)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(input)
 }

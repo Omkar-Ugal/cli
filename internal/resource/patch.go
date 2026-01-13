@@ -14,8 +14,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 type PatchSpec struct {
@@ -268,16 +266,7 @@ func parseReflect(input []string, value reflect.Value) error {
 			k, v, _ := strings.Cut(field, "=")
 			kv[k] = v
 		}
-
-		decoderConfig := mapstructure.DecoderConfig{
-			ErrorUnused: true,
-			Result:      value.Addr().Interface(),
-		}
-		decoder, err := mapstructure.NewDecoder(&decoderConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create decoder: %w", err)
-		}
-		return decoder.Decode(kv)
+		return decodeStruct(kv, value.Addr().Interface())
 	default:
 		return fmt.Errorf("unsupported type: %T", value.Interface())
 	}

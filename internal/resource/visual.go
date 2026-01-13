@@ -14,7 +14,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/mitchellh/mapstructure"
 	"sigs.k8s.io/yaml"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/x/log"
@@ -123,13 +122,22 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 			} else {
 				patch = patchedField.Patch
 			}
-			if patch == nil || patch.Set == nil {
+			if patch == nil {
+				return nil, fmt.Errorf("no patch available for field %s", keyStr)
+			}
+			if patch.Add != nil {
+				return nil, fmt.Errorf("%s was added, but visual editing does not support this", keyStr)
+			}
+			if patch.Del != nil {
+				return nil, fmt.Errorf("%s was deleted, but visual editing does not support this", keyStr)
+			}
+			if patch.Set == nil {
 				return nil, fmt.Errorf("%s is not settable", keyStr)
 			}
-			if !reflect.TypeOf(value).AssignableTo(reflect.TypeOf(patch.Set)) {
-				return nil, fmt.Errorf("%s of value %T cannot be patched with %T", keyStr, value, patch.Set)
+			err := storeValue(field, reflect.ValueOf(patch.Set))
+			if err != nil {
+				return nil, fmt.Errorf("failed to store patched value for field %s: %w", keyStr, err)
 			}
-			field.Value = patch.Set
 		}
 	}
 
@@ -225,9 +233,6 @@ func patchField(path FieldPath, before *Field, after *Field, create bool) error 
 	if before.Name != after.Name {
 		return fmt.Errorf("field name changed from %s to %s at %s", before.Name, after.Name, path.String())
 	}
-	if len(before.Subfields) != len(after.Subfields) {
-		return fmt.Errorf("number of subfields changed for field %s", path.String())
-	}
 
 	if !reflect.DeepEqual(before.Value, after.Value) {
 		if patch == nil {
@@ -260,7 +265,9 @@ func patchField(path FieldPath, before *Field, after *Field, create bool) error 
 		}
 		patch.Set = next
 	} else {
-		patch = nil
+		if len(before.Subfields) != len(after.Subfields) {
+			return fmt.Errorf("number of subfields changed for field %s", path.String())
+		}
 		for i := range before.Subfields {
 			before := &before.Subfields[i]
 			after := &after.Subfields[i]
@@ -270,6 +277,7 @@ func patchField(path FieldPath, before *Field, after *Field, create bool) error 
 				return err
 			}
 		}
+		patch = nil
 	}
 
 	if create {
@@ -279,48 +287,6 @@ func patchField(path FieldPath, before *Field, after *Field, create bool) error 
 	}
 
 	return nil
-}
-
-func collectValue(field Field, into reflect.Type) (any, error) {
-	v, err := collectValueRaw(field)
-	if err != nil {
-		return nil, err
-	}
-	target := reflect.New(into).Elem().Interface()
-	err = mapstructure.Decode(v, &target)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode value into type %s: %w", into.String(), err)
-	}
-	return target, nil
-}
-
-func collectValueRaw(field Field) (any, error) {
-	if field.Value != nil {
-		return field.Value, nil
-	}
-	if field.Elem != nil {
-		sl := make([]any, 0, len(field.Subfields))
-		for _, subfield := range field.Subfields {
-			elemValue, err := collectValueRaw(subfield)
-			if err != nil {
-				return nil, err
-			}
-			sl = append(sl, elemValue)
-		}
-		return sl, nil
-	}
-	if len(field.Subfields) > 0 {
-		m := make(map[string]any, len(field.Subfields))
-		for _, subfield := range field.Subfields {
-			subfieldValue, err := collectValueRaw(subfield)
-			if err != nil {
-				return nil, err
-			}
-			m[subfield.Name] = subfieldValue
-		}
-		return m, nil
-	}
-	return nil, fmt.Errorf("field has no value")
 }
 
 func getEditor() (string, error) {
