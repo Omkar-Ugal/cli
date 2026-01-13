@@ -260,10 +260,14 @@ func patchField(path FieldPath, before *Field, after *Field, create bool) error 
 		if err != nil {
 			return fmt.Errorf("failed to collect value for field %s: %w", path.String(), err)
 		}
-		if reflect.DeepEqual(original, next) {
-			return fmt.Errorf("subfields of field %s changed but collected value is the same", path.String())
+		if !reflect.DeepEqual(original, next) {
+			// due to weirdness in having saved-and-loaded the values, the subfields
+			// might not be exactly identical, so we check DeepEqual on the collected
+			// values as well
+			patch.Set = next
+		} else {
+			patch = nil
 		}
-		patch.Set = next
 	} else {
 		if len(before.Subfields) != len(after.Subfields) {
 			return fmt.Errorf("number of subfields changed for field %s", path.String())
