@@ -65,7 +65,6 @@ type Field struct {
 	Links []Link `json:"links,omitempty"`
 
 	// display settings
-	Empty     bool           `json:"empty,omitempty"`
 	Verbosity FieldVerbosity `json:"verbosity"`
 	Hyperlink string         `json:"hyperlink,omitempty"`
 
@@ -76,6 +75,22 @@ type Field struct {
 
 func (f Field) HasChildren() bool {
 	return len(f.Subfields) > 0 || f.Elem != nil
+}
+
+func (f Field) IsEmpty() bool {
+	if f.Value != nil {
+		return reflect.ValueOf(f.Value).IsZero()
+	}
+	if f.Elem != nil {
+		return len(f.Subfields) == 0
+	}
+
+	for _, subfield := range f.Subfields {
+		if !subfield.IsEmpty() {
+			return false
+		}
+	}
+	return true
 }
 
 func (f Field) Get(name string) (Field, bool) {

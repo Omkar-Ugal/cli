@@ -286,7 +286,7 @@ func resourceFields(fields []Field, header bool, verbosity FieldVerbosity, field
 			if field.Verbosity < verbosity {
 				return filterExclude
 			}
-			if field.Empty && !header {
+			if !header && field.IsEmpty() {
 				return filterExclude
 			}
 			return filterRecurse
