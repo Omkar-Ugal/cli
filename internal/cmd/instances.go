@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ type InstancesCmd struct {
 	cmd.GettableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 	cmd.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 	cmd.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
+	cmd.CreatableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 
 	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs"`
 	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances"`
@@ -39,39 +41,34 @@ type InstancesCmd struct {
 }
 
 type Instance struct {
-	MetroName string `mirror:"metro.name" field:"metro,short"`
-	Name      string `mirror:"instance.name" field:",short"`
+	MetroName string `mirror:"metro.name" field:"metro,short" create:"set,required"`
+	Name      string `mirror:"instance.name" field:",short" create:"set"`
 	UUID      string `mirror:"instance.uuid" field:",long"`
 
 	Tags []string `mirror:"instance.tags"`
 
 	State InstanceState `mirror:"instance.state" field:",short"`
-	Image string        `mirror:"instance.image" field:",short" edit:"set"`
+	Image string        `mirror:"instance.image" field:",short" create:"set,required" edit:"set"`
 
 	Runtime struct {
-		Args []string          `mirror:"instance.args" field:",short" edit:"set"`
-		Env  map[string]string `mirror:"instance.env" field:",long" edit:"set,add,del=keys"`
+		Args []string          `mirror:"instance.args" field:",short" create:"set" edit:"set"`
+		Env  map[string]string `mirror:"instance.env" field:",long" create:"set" edit:"set,add,del=keys"`
 	}
 
 	Resources struct {
-		Memory int `mirror:"instance.memory_mb" field:",short" edit:"set"`
-		VCPUs  int `mirror:"instance.vcpus" field:"vcpus,short" edit:"set"`
+		Memory int `mirror:"instance.memory_mb" field:",short" create:"set" edit:"set"`
+		VCPUs  int `mirror:"instance.vcpus" field:"vcpus,short" create:"set" edit:"set"`
 	}
 
-	Volumes []*struct {
-		UUID     string `mirror:"uuid" field:",long"`
-		Name     string `mirror:"name" field:",long"`
-		At       string `mirror:"at" field:",long"`
-		Readonly bool   `mirror:"readonly" field:",long"`
-	} `mirror:"instance.volumes"`
+	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
 
 	Service struct {
-		UUID    string `mirror:"uuid" field:",long"`
-		Name    string `mirror:"name" field:",long"`
-		Domains []struct {
-			FQDN string `mirror:"fqdn" field:",short"`
-			// TODO: certificate
-		} `mirror:"domains"`
+		UUID      string     `mirror:"uuid" field:",long" create:"set"`
+		Name      string     `mirror:"name" field:",long" create:"set"`
+		Services  []*Service `field:",long,embed" create:"set"`
+		Domains   []Domain   `mirror:"domains" field:",long,embed" create:"set"`
+		SoftLimit uint32     `field:",long" create:"set"`
+		HardLimit uint32     `field:",long" create:"set"`
 	} `mirror:"instance.service_group"`
 
 	Networks []struct {
@@ -87,10 +84,10 @@ type Instance struct {
 	}
 
 	ScaleToZero struct {
-		Enabled      bool   `mirror:"instance.scale_to_zero.enabled"`
-		Policy       string `mirror:"instance.scale_to_zero.policy"`
-		Stateful     bool   `mirror:"instance.scale_to_zero.stateful"`
-		CooldownTime int64  `mirror:"instance.scale_to_zero.cooldown_time_ms"`
+		Enabled      bool   `mirror:"instance.scale_to_zero.enabled" create:"set"`
+		Policy       string `mirror:"instance.scale_to_zero.policy" create:"set"`
+		Stateful     bool   `mirror:"instance.scale_to_zero.stateful" create:"set"`
+		CooldownTime int64  `mirror:"instance.scale_to_zero.cooldown_time_ms" create:"set"`
 	}
 
 	Timing struct {
@@ -100,7 +97,7 @@ type Instance struct {
 	}
 
 	Restart struct {
-		Policy       string `mirror:"instance.restart_policy"`
+		Policy       string `mirror:"instance.restart_policy" create:"set"`
 		StartCount   int    `mirror:"instance.start_count"`
 		RestartCount int    `mirror:"instance.restart_count"`
 	}
@@ -111,10 +108,79 @@ type Instance struct {
 		Code     int `mirror:"instance.stop_code"`
 	}
 
+	Autostart     bool     `field:",long" create:"set"`
+	Replicas      int64    `field:",long" create:"set"`
+	WaitTimeoutMs int64    `field:"wait_timeout_ms,long" create:"set"`
+	Features      []string `field:",long" create:"set"`
+
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
 
 	organization string
+}
+
+type InstanceVolume struct {
+	UUID     string `mirror:"uuid" json:"uuid,omitempty" field:",long"`
+	Name     string `mirror:"name" json:"name,omitempty" field:",long"`
+	SizeMB   int64  `json:"size_mb,omitempty"`
+	At       string `mirror:"at" json:"at" field:",long"`
+	Readonly bool   `mirror:"readonly" json:"readonly,omitempty" field:",long"`
+}
+
+func (v *InstanceVolume) String() string {
+	if v.UUID != "" {
+		parts := []string{v.UUID, v.At}
+		if v.Readonly {
+			parts = append(parts, "ro")
+		}
+		return strings.Join(parts, ":")
+	}
+	if v.SizeMB > 0 {
+		parts := []string{v.Name, strconv.FormatInt(v.SizeMB, 10) + "M", v.At}
+		if v.Readonly {
+			parts = append(parts, "ro")
+		}
+		return strings.Join(parts, ":")
+	}
+	parts := []string{v.Name, v.At}
+	if v.Readonly {
+		parts = append(parts, "ro")
+	}
+	return strings.Join(parts, ":")
+}
+
+func (v *InstanceVolume) Parse(str string) error {
+	parts := strings.Split(str, ":")
+	if len(parts) < 2 {
+		return fmt.Errorf("invalid volume format, expected NAME:AT[:ro] or UUID:AT[:ro] or NAME:SIZE:AT[:ro]")
+	}
+
+	// Check if last part is "ro"
+	if len(parts) > 0 && parts[len(parts)-1] == "ro" {
+		v.Readonly = true
+		parts = parts[:len(parts)-1]
+	}
+
+	if len(parts) == 2 {
+		// Could be NAME:AT or UUID:AT
+		v.Name = parts[0]
+		v.UUID = parts[0]
+		v.At = parts[1]
+	} else if len(parts) == 3 {
+		// NAME:SIZE:AT
+		v.Name = parts[0]
+		sizeStr := strings.TrimSuffix(parts[1], "M")
+		size, err := strconv.ParseInt(sizeStr, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid size: %w", err)
+		}
+		v.SizeMB = size
+		v.At = parts[2]
+	} else {
+		return fmt.Errorf("invalid volume format")
+	}
+
+	return nil
 }
 
 func (Instance) Type() resource.Type {
@@ -150,6 +216,21 @@ func (i Instance) Fields() ([]resource.Field, error) {
 		switch key.String() {
 		case "name":
 			field.Hyperlink = i.hyperlink()
+		case "service":
+			nameField, _ := field.Get("name")
+			uuidField, _ := field.Get("uuid")
+			name, _ := nameField.Value.(string)
+			uuid, _ := uuidField.Value.(string)
+			if name != "" || uuid != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "service",
+					Key: multimetro.Key{
+						Metro: i.Metro.Name,
+						Name:  name,
+						UUID:  uuid,
+					}.String(),
+				})
+			}
 		}
 	}
 
@@ -348,6 +429,183 @@ func (Instance) getPatchRequest(uuid string, key resource.FieldPath, value any, 
 		Prop:  prop,
 		Value: platform.Ptr(value),
 	}
+}
+
+func (Instance) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+	var req platform.CreateInstanceRequest
+	var metro string
+	for key, field := range resource.IterFields(fields) {
+		if field.Create == nil || field.Create.Set == nil {
+			continue
+		}
+		switch key.String() {
+		case "name":
+			name := field.Create.Set.(string)
+			req.Name = &name
+		case "metro":
+			metro = field.Create.Set.(string)
+		case "image":
+			req.Image = field.Create.Set.(string)
+		case "runtime.args":
+			req.Args = field.Create.Set.([]string)
+		case "runtime.env":
+			req.Env = field.Create.Set.(map[string]string)
+		case "resources.memory":
+			mem := int64(field.Create.Set.(int))
+			req.MemoryMb = &mem
+		case "resources.vcpus":
+			vcpus := int32(field.Create.Set.(int))
+			req.Vcpus = &vcpus
+		case "restart.policy":
+			policy := platform.CreateInstanceRequestRestartPolicy(field.Create.Set.(string))
+			req.RestartPolicy = &policy
+		case "scale-to-zero.enabled":
+			if req.ScaleToZero == nil {
+				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			}
+			enabled := field.Create.Set.(bool)
+			req.ScaleToZero.Enabled = &enabled
+		case "scale-to-zero.policy":
+			if req.ScaleToZero == nil {
+				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			}
+			policy := platform.CreateInstanceRequestScaleToZeroPolicy(field.Create.Set.(string))
+			req.ScaleToZero.Policy = &policy
+		case "scale-to-zero.stateful":
+			if req.ScaleToZero == nil {
+				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			}
+			stateful := field.Create.Set.(bool)
+			req.ScaleToZero.Stateful = &stateful
+		case "scale-to-zero.cooldown-time":
+			if req.ScaleToZero == nil {
+				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			}
+			cooldown := int32(field.Create.Set.(int64))
+			req.ScaleToZero.CooldownTimeMs = &cooldown
+		case "volumes":
+			for _, vol := range field.Create.Set.([]*InstanceVolume) {
+				reqVol := platform.CreateInstanceRequestVolume{
+					At: vol.At,
+				}
+				if vol.UUID != "" {
+					reqVol.Uuid = &vol.UUID
+				}
+				if vol.Name != "" {
+					reqVol.Name = &vol.Name
+				}
+				if vol.SizeMB > 0 {
+					reqVol.SizeMb = &vol.SizeMB
+				}
+				if vol.Readonly {
+					reqVol.Readonly = &vol.Readonly
+				}
+				req.Volumes = append(req.Volumes, reqVol)
+			}
+		case "service.uuid":
+			uuid := field.Create.Set.(string)
+			if uuid != "" {
+				if req.ServiceGroup == nil {
+					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
+				}
+				req.ServiceGroup.Uuid = &uuid
+			}
+		case "service.name":
+			name := field.Create.Set.(string)
+			if name != "" {
+				if req.ServiceGroup == nil {
+					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
+				}
+				req.ServiceGroup.Name = &name
+			}
+		case "service.services":
+			services := field.Create.Set.([]*Service)
+			if len(services) > 0 {
+				if req.ServiceGroup == nil {
+					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
+				}
+				for _, svc := range services {
+					req.ServiceGroup.Services = append(req.ServiceGroup.Services, platform.Service{
+						Port:            svc.Source,
+						DestinationPort: &svc.Destination,
+						Handlers:        svc.Handlers,
+					})
+				}
+			}
+		case "service.domains":
+			domains := field.Create.Set.([]Domain)
+			if len(domains) > 0 {
+				if req.ServiceGroup == nil {
+					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
+				}
+				for _, domain := range domains {
+					name := domain.Name
+					if name == "" {
+						name = domain.FQDN + "."
+					}
+					req.ServiceGroup.Domains = append(req.ServiceGroup.Domains, platform.CreateInstanceRequestDomain{
+						Name: name,
+					})
+				}
+			}
+		case "service.soft-limit":
+			limit := field.Create.Set.(uint32)
+			if limit > 0 {
+				if req.ServiceGroup == nil {
+					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
+				}
+				req.ServiceGroup.SoftLimit = &limit
+			}
+		case "service.hard-limit":
+			limit := field.Create.Set.(uint32)
+			if limit > 0 {
+				if req.ServiceGroup == nil {
+					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
+				}
+				req.ServiceGroup.HardLimit = &limit
+			}
+		case "autostart":
+			autostart := field.Create.Set.(bool)
+			req.Autostart = &autostart
+		case "replicas":
+			replicas := field.Create.Set.(int64)
+			req.Replicas = &replicas
+		case "wait_timeout_ms":
+			timeout := field.Create.Set.(int64)
+			req.WaitTimeoutMs = &timeout
+		case "features":
+			features := field.Create.Set.([]string)
+			for _, f := range features {
+				req.Features = append(req.Features, platform.CreateInstanceRequestFeatures(f))
+			}
+		}
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	uuid, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (string, error) {
+		log.G(ctx).Trace().Msg("creating instance")
+		resp, err := mc.CreateInstance(ctx, req)
+		if err != nil {
+			return "", err
+		}
+		return *resp.Data.Instances[0].Uuid, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	key := multimetro.Key{
+		Metro: metro,
+		UUID:  uuid,
+	}
+	results, err := Instance{}.Get(ctx, []string{key.String()})
+	if err != nil {
+		return nil, err
+	}
+	return results[0], nil
 }
 
 type InstancesLogsCmd struct {
