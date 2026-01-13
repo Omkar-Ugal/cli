@@ -179,9 +179,9 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) erro
 type ResourceEditCmd[R EditableResource] struct {
 	Name string `arg:"" help:"Name of the ${name} to edit."`
 
-	Set []map[string]string `help:"Key-value pairs to update the ${name} with." mapsep:"none"`
-	Add []map[string]string `help:"Key-value pairs to add to the ${name}." mapsep:"none"`
-	Del []map[string]string `help:"Keys to delete from the ${name}." mapsep:"none"`
+	Set []map[string]string `help:"Key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
+	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
+	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 }
@@ -292,7 +292,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 }
 
 type ResourceCreateCmd[R CreatableResource] struct {
-	Set []map[string]string `help:"Key-value pairs for creating the ${name}." mapsep:"none"`
+	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 }
