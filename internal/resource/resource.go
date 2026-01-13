@@ -60,6 +60,7 @@ type Field struct {
 	Elem *Field `json:"elem,omitempty"`
 
 	// display settings
+	Empty     bool           `json:"empty,omitempty"`
 	Verbosity FieldVerbosity `json:"verbosity"`
 	Hyperlink string         `json:"hyperlink,omitempty"`
 

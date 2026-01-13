@@ -283,10 +283,13 @@ func resourceFields(fields []Field, header bool, verbosity FieldVerbosity, field
 	result, missing := FilterFieldsByPath(fields, base, !header)
 	if len(base) == 0 {
 		result = filterFields(result, func(field Field) filterResult {
-			if field.Verbosity >= verbosity {
-				return filterRecurse
+			if field.Verbosity < verbosity {
+				return filterExclude
 			}
-			return filterExclude
+			if field.Empty && !header {
+				return filterExclude
+			}
+			return filterRecurse
 		})
 	}
 

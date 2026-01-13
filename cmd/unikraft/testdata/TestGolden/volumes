@@ -13,14 +13,12 @@ stdout:
 $ unikraft volume create --set name=test-$UNIQ_VOLUME --set size=10 --set metro=test
 
 stdout:
-	metro:       test
-	name:        test-<VOLUME>
-	uuid:        12345678-1234-1234-1234-123456789abc
-	state:       available
-	size:        10MB
-	persistent:  true
-	attached-to:
-	mounted-by:
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       10MB
+	persistent: true
 
 $ unikraft volume list
 
@@ -31,27 +29,23 @@ stdout:
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
 stdout:
-	metro:       test
-	name:        test-<VOLUME>
-	uuid:        12345678-1234-1234-1234-123456789abc
-	state:       available
-	size:        10MB
-	persistent:  true
-	attached-to:
-	mounted-by:
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       10MB
+	persistent: true
 
 $ unikraft volume edit test-$UNIQ_VOLUME --set size=20
 
 stdout:
-	metro:       test
-	  name:        test-<VOLUME>
-	  uuid:        12345678-1234-1234-1234-123456789abc
-	  state:       available
-	- size:        10MB
-	+ size:        20MB
-	  persistent:  true
-	  attached-to:
-	  mounted-by:
+	metro:      test
+	  name:       test-<VOLUME>
+	  uuid:       12345678-1234-1234-1234-123456789abc
+	  state:      available
+	- size:       10MB
+	+ size:       20MB
+	  persistent: true
 
 $ unikraft volume list
 
@@ -62,13 +56,11 @@ stdout:
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
 stdout:
-	metro:       test
-	name:        test-<VOLUME>
-	uuid:        12345678-1234-1234-1234-123456789abc
-	state:       available
-	size:        20MB
-	persistent:  true
-	attached-to:
-	mounted-by:
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       20MB
+	persistent: true
 
 $ unikraft volume delete test-$UNIQ_VOLUME
