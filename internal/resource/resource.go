@@ -8,6 +8,8 @@ package resource
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
 )
 
 type Type struct {
@@ -20,8 +22,6 @@ type Resource interface {
 	Key() string
 	Fields() ([]Field, error)
 	Raw() any
-
-	// TODO: link to other resources, e.g. instance -> image
 }
 
 type GettableResource interface {
@@ -45,6 +45,11 @@ type DeletableResource interface {
 	Delete(ctx context.Context, targets []Resource) error
 }
 
+type Link struct {
+	Type string
+	Key  string
+}
+
 type Field struct {
 	// Name is the name of the field
 	Name string `json:"name"`
@@ -57,7 +62,10 @@ type Field struct {
 	// (e.g. for arrays)
 	Elem *Field `json:"elem,omitempty"`
 
+	Links []Link `json:"links,omitempty"`
+
 	// display settings
+	Empty     bool           `json:"empty,omitempty"`
 	Verbosity FieldVerbosity `json:"verbosity"`
 	Hyperlink string         `json:"hyperlink,omitempty"`
 
@@ -70,6 +78,15 @@ func (f Field) HasChildren() bool {
 	return len(f.Subfields) > 0 || f.Elem != nil
 }
 
+func (f Field) Get(name string) (Field, bool) {
+	for _, subfield := range f.Subfields {
+		if subfield.Name == name {
+			return subfield, true
+		}
+	}
+	return Field{}, false
+}
+
 type Patch struct {
 	Set any `json:"set,omitempty"`
 	Add any `json:"add,omitempty"`
@@ -80,10 +97,10 @@ type Patch struct {
 }
 
 func (f Field) ValueString() string {
-	value := f.Value
-	if value == nil {
-		return ""
-	}
+	return valueString(f.Value)
+}
+
+func valueString(value any) string {
 	for {
 		unwrapped, ok := value.(interface{ Unwrap() any })
 		if !ok {
@@ -91,16 +108,41 @@ func (f Field) ValueString() string {
 		}
 		value = unwrapped.Unwrap()
 	}
-	if str, ok := value.(fmt.Stringer); ok {
-		return str.String()
+	if value, ok := value.(fmt.Stringer); ok {
+		return value.String()
 	}
-	return fmt.Sprintf("%v", value)
+
+	if value == nil {
+		return "<nil>"
+	}
+
+	v := reflect.ValueOf(value)
+	switch v.Kind() {
+	case reflect.String:
+		return v.String()
+	case reflect.Slice, reflect.Array:
+		var result []string
+		for i := range v.Len() {
+			result = append(result, valueString(v.Index(i).Interface()))
+		}
+		return "[" + strings.Join(result, " ") + "]"
+	case reflect.Map:
+		var result []string
+		for _, key := range v.MapKeys() {
+			val := v.MapIndex(key)
+			result = append(result, fmt.Sprintf("%s:%s", valueString(key.Interface()), valueString(val.Interface())))
+		}
+		return "{" + strings.Join(result, " ") + "}"
+	default:
+		return fmt.Sprintf("%v", value)
+	}
 }
 
 type FieldVerbosity int
 
 const (
-	FieldVerbosityHidden FieldVerbosity = iota
+	FieldVerbosityInvisible FieldVerbosity = iota
+	FieldVerbosityHidden
 	FieldVerbosityLong
 	FieldVerbosityShort
 )
@@ -110,6 +152,8 @@ func (v FieldVerbosity) String() string {
 		v = FieldVerbosityHidden
 	}
 	switch v {
+	case FieldVerbosityInvisible:
+		return "invisible"
 	case FieldVerbosityHidden:
 		return "hidden"
 	case FieldVerbosityLong:

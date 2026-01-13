@@ -179,11 +179,35 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) erro
 type ResourceEditCmd[R EditableResource] struct {
 	Name string `arg:"" help:"Name of the ${name} to edit."`
 
-	Set map[string]string `help:"Key-value pairs to update the ${name} with."`
-	Add map[string]string `help:"Key-value pairs to add to the ${name}."`
-	Del map[string]string `help:"Keys to delete from the ${name}."`
+	Set []map[string]string `help:"Key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
+	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
+	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
+}
+
+func (cmd *ResourceEditCmd[R]) toPatchSpec() PatchSpec {
+	spec := PatchSpec{
+		Set: make(map[string][]string),
+		Add: make(map[string][]string),
+		Del: make(map[string][]string),
+	}
+	for _, m := range cmd.Set {
+		for k, v := range m {
+			spec.Set[k] = append(spec.Set[k], v)
+		}
+	}
+	for _, m := range cmd.Add {
+		for k, v := range m {
+			spec.Add[k] = append(spec.Add[k], v)
+		}
+	}
+	for _, m := range cmd.Del {
+		for k, v := range m {
+			spec.Del[k] = append(spec.Del[k], v)
+		}
+	}
+	return spec
 }
 
 func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
@@ -205,25 +229,17 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	}
 	resource := resources[0]
 
-	if cmd.Set == nil {
-		cmd.Set = make(map[string]string)
-	}
-	if cmd.Add == nil {
-		cmd.Add = make(map[string]string)
-	}
-	if cmd.Del == nil {
-		cmd.Del = make(map[string]string)
-	}
+	spec := cmd.toPatchSpec()
 
 	// Check for duplicate field paths across Set/Add/Del
 	allFields := make(map[string]int)
-	for k := range cmd.Set {
+	for k := range spec.Set {
 		allFields[k]++
 	}
-	for k := range cmd.Add {
+	for k := range spec.Add {
 		allFields[k]++
 	}
-	for k := range cmd.Del {
+	for k := range spec.Del {
 		allFields[k]++
 	}
 	for k, count := range allFields {
@@ -236,34 +252,28 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}
-	patched, err := PatchedFields(fields, PatchSpec{
-		Set: cmd.Set,
-		Add: cmd.Add,
-		Del: cmd.Del,
-	})
+	patched, err := PatchedFields(fields, spec)
 	if err != nil {
 		return err
 	}
 	if cmd.Visual {
-		patched, err = VisualEdit(cfg, fields, patched)
+		patched, err = VisualEdit(ctx, cfg, fields, patched)
 		if err != nil {
 			return err
 		}
 	}
-
-	fields = filterPatchableFields(patched)
-	if len(fields) == 0 {
-		return fmt.Errorf("no editable fields provided")
-	}
+	patched = filterPatchableFields(patched)
 
 	start := &bytes.Buffer{}
 	err = printKV(start, nil, resource)
 	if err != nil {
 		return err
 	}
-	resource, err = r.Edit(ctx, resource, fields)
-	if err != nil {
-		return err
+	if len(patched) > 0 {
+		resource, err = r.Edit(ctx, resource, patched)
+		if err != nil {
+			return err
+		}
 	}
 	end := &bytes.Buffer{}
 	err = printKV(end, nil, resource)
@@ -282,33 +292,39 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 }
 
 type ResourceCreateCmd[R CreatableResource] struct {
-	Set map[string]string `help:"Key-value pairs for creating the ${name}."`
+	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 }
 
-func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
-	if cmd.Set == nil {
-		cmd.Set = make(map[string]string)
+func (cmd *ResourceCreateCmd[R]) toPatchSpec() PatchSpec {
+	spec := PatchSpec{
+		Create: true,
+		Set:    make(map[string][]string),
 	}
+	for _, m := range cmd.Set {
+		for k, v := range m {
+			spec.Set[k] = append(spec.Set[k], v)
+		}
+	}
+	return spec
+}
 
+func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
 	var empty R
 	r := sandbox.WrapCreatable(empty)
 	fields, err := r.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}
-	patched, err := PatchedFields(fields, PatchSpec{
-		Create: true,
-		Set:    cmd.Set,
-	})
+	patched, err := PatchedFields(fields, cmd.toPatchSpec())
 	if err != nil {
 		return err
 	}
 
 	if cmd.Visual {
 		// FIXME: should allow required fields
-		patched, err = VisualCreate(cfg, fields, patched)
+		patched, err = VisualCreate(ctx, cfg, fields, patched)
 		if err != nil {
 			return err
 		}

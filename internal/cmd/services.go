@@ -8,6 +8,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
@@ -21,7 +23,10 @@ import (
 )
 
 type ServicesCmd struct {
-	resource.ResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	resource.ResourceCmd[ServiceGroup]          `set:"name=service" set:"names=services"`
+	resource.DeletableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	resource.EditableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
+	resource.CreatableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
 }
 
 type ServiceGroup struct {
@@ -41,25 +46,69 @@ type ServiceGroup struct {
 		CreatedAt time.Time `mirror:"service_group.created_at"`
 	}
 
-	Domains []struct {
-		FQDN string `mirror:"fqdn" field:",short"`
-		// TODO: certificate
-	} `mirror:"service_group.domains"`
+	Domains []Domain `mirror:"service_group.domains"`
 
 	Instances []struct {
 		Name string `mirror:"name" field:",long"`
 		UUID string `mirror:"uuid" field:",long"`
 	} `mirror:"service_group.instances"`
 
-	// TODO: support shorthand
-	Services []struct {
-		Source      uint32                     `mirror:"port" field:",long"`
-		Destination uint32                     `mirror:"destination_port" field:",long"`
-		Handlers    []platform.ServiceHandlers `mirror:"handlers" field:",long"`
-	} `mirror:"service_group.services"`
+	Services []*Service `mirror:"service_group.services"`
 
 	ServiceGroup platform.ServiceGroup `field:"-" json:"service_group"`
 	Metro        *config.Metro         `field:"-" json:"metro"`
+}
+
+type Service struct {
+	Source      uint32                     `mirror:"port" json:"source" field:",short"`
+	Destination uint32                     `mirror:"destination_port" json:"destination" field:",short"`
+	Handlers    []platform.ServiceHandlers `mirror:"handlers" json:"handlers" field:",short"`
+}
+
+func (s *Service) String() string {
+	handlers := make([]string, len(s.Handlers))
+	for i, handler := range s.Handlers {
+		handlers[i] = string(handler)
+	}
+	return fmt.Sprintf("%d:%d/%s", s.Source, s.Destination, strings.Join(handlers, "+"))
+}
+
+func (s *Service) Parse(str string) error {
+	ports, handlers, _ := strings.Cut(str, "/")
+	src, dest, ok := strings.Cut(ports, ":")
+	if !ok {
+		return fmt.Errorf("invalid service format, expected SOURCE:DESTINATION/HANDLERS")
+	}
+
+	srcPort, err := strconv.Atoi(src)
+	if err != nil {
+		return fmt.Errorf("invalid source port: %w", err)
+	}
+	s.Source = uint32(srcPort)
+
+	destPort, err := strconv.Atoi(dest)
+	if err != nil {
+		return fmt.Errorf("invalid destination port: %w", err)
+	}
+	s.Destination = uint32(destPort)
+
+	if handlers != "" {
+		for handler := range strings.SplitSeq(handlers, "+") {
+			s.Handlers = append(s.Handlers, platform.ServiceHandlers(handler))
+		}
+	}
+
+	return nil
+}
+
+type Domain struct {
+	FQDN string `mirror:"fqdn" field:",short"`
+	Name string `field:",invisible"` // edit-only field
+
+	Certificate struct {
+		Name string `mirror:"name" field:",long"`
+		UUID string `mirror:"uuid" field:",long"`
+	} `mirror:"certificate"`
 }
 
 func (ServiceGroup) Type() resource.Type {
@@ -89,6 +138,40 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 	result, err := resource.FieldsFromStruct(s)
 	if err != nil {
 		return nil, err
+	}
+
+	for key, field := range resource.IterFields(result) {
+		switch key.String() {
+		case "metro":
+			field.Create = &resource.Patch{Set: "", Required: true}
+		case "name":
+			field.Create = &resource.Patch{Set: ""}
+		case "services":
+			// FIXME: del should support deleting by *just* port
+			field.Patch = &resource.Patch{Set: []*Service{}, Add: []*Service{}, Del: []*Service{}}
+			field.Create = &resource.Patch{Set: []*Service{}, Required: true}
+		case "domains":
+			field.Patch = &resource.Patch{Set: []Domain{}, Add: []Domain{}, Del: []Domain{}}
+			field.Create = &resource.Patch{Set: []Domain{}}
+		case "limits.soft":
+			field.Patch = &resource.Patch{Set: uint64(0)}
+			field.Create = &resource.Patch{Set: uint64(0)}
+		case "limits.hard":
+			field.Patch = &resource.Patch{Set: uint64(0)}
+			field.Create = &resource.Patch{Set: uint64(0)}
+		}
+		if key.MatchesString("domains.*.certificate") {
+			name, _ := field.Get("name")
+			uuid, _ := field.Get("uuid")
+			field.Links = append(field.Links, resource.Link{
+				Type: "certificate",
+				Key: multimetro.Key{
+					Metro: s.Metro.Name,
+					Name:  name.Value.(string),
+					UUID:  uuid.Value.(string),
+				}.String(),
+			})
+		}
 	}
 
 	return result, nil
@@ -168,4 +251,173 @@ func (ServiceGroup) load(serviceGroup platform.ServiceGroup, metro *config.Metro
 		return ServiceGroup{}, fmt.Errorf("could not mirror service group data: %w", err)
 	}
 	return result, nil
+}
+
+func (ServiceGroup) Delete(ctx context.Context, targets []resource.Resource) error {
+	keys := make([]multimetro.Key, len(targets))
+	for i, target := range targets {
+		sg := target.(ServiceGroup)
+		keys[i] = sg.key()
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("deleting service groups")
+		_, err := mc.DeleteServiceGroups(ctx, keys.NamesOrUUIDs())
+		return nil, keys, err
+	})
+	return err
+}
+
+func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+	var req platform.CreateServiceGroupRequest
+	var metro string
+	for key, field := range resource.IterFields(fields) {
+		if field.Create != nil && field.Create.Set != nil {
+			switch key.String() {
+			case "metro":
+				metro = field.Create.Set.(string)
+			case "name":
+				name := field.Create.Set.(string)
+				req.Name = &name
+			case "limits.soft":
+				limit := field.Create.Set.(uint64)
+				req.SoftLimit = &limit
+			case "limits.hard":
+				limit := field.Create.Set.(uint64)
+				req.HardLimit = &limit
+			case "domains":
+				for _, domain := range field.Create.Set.([]Domain) {
+					name := domain.Name
+					if name == "" {
+						name = domain.FQDN + "."
+					}
+					req.Domains = append(req.Domains, platform.CreateServiceGroupRequestDomain{
+						Name: name,
+					})
+				}
+			case "services":
+				for _, svc := range field.Create.Set.([]*Service) {
+					req.Services = append(req.Services, platform.Service{
+						Port:            svc.Source,
+						DestinationPort: &svc.Destination,
+						Handlers:        svc.Handlers,
+					})
+				}
+			}
+		}
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	uuid, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (string, error) {
+		log.G(ctx).Trace().Msg("creating service group")
+		resp, err := mc.CreateServiceGroup(ctx, req)
+		if err != nil {
+			return "", err
+		}
+		return *resp.Data.ServiceGroups[0].Uuid, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	key := multimetro.Key{
+		Metro: metro,
+		UUID:  uuid,
+	}
+	results, err := ServiceGroup{}.Get(ctx, []string{key.String()})
+	if err != nil {
+		return nil, err
+	}
+	return results[0], nil
+}
+
+func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
+	sg := target.(ServiceGroup)
+	var reqs []platform.UpdateServiceGroupsRequestItem
+	for key, field := range resource.IterFields(fields) {
+		reqs = append(reqs, ServiceGroup{}.getFieldRequests(sg.UUID, key, *field)...)
+	}
+
+	cl, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, err = multimetro.DoKeyExact(ctx, cl, sg.key(), func(ctx context.Context, metroClient *multimetro.MetroClient) (struct{}, error) {
+		log.G(ctx).Trace().Msg("updating service group")
+		_, err := metroClient.UpdateServiceGroups(ctx, reqs)
+		return struct{}{}, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	results, err := ServiceGroup{}.Get(ctx, []string{sg.Key()})
+	if err != nil {
+		return nil, err
+	}
+	return results[0], nil
+}
+
+func (ServiceGroup) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateServiceGroupsRequestItem) {
+	if field.Patch == nil {
+		return reqs
+	}
+	if field.Patch.Set != nil {
+		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Patch.Set, platform.UpdateServiceGroupsRequestItemOpSet))
+	}
+	if field.Patch.Add != nil {
+		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Patch.Add, platform.UpdateServiceGroupsRequestItemOpAdd))
+	}
+	if field.Patch.Del != nil {
+		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Patch.Del, platform.UpdateServiceGroupsRequestItemOpDel))
+	}
+	return reqs
+}
+
+func (ServiceGroup) getPatchRequest(uuid string, key resource.FieldPath, value any, op platform.UpdateServiceGroupsRequestItemOp) platform.UpdateServiceGroupsRequestItem {
+	var prop platform.UpdateServiceGroupsRequestItemProp
+	switch key.String() {
+	case "limits.soft":
+		prop = platform.UpdateServiceGroupsRequestItemPropSoft_limit
+	case "limits.hard":
+		prop = platform.UpdateServiceGroupsRequestItemPropHard_limit
+	case "domains":
+		prop = platform.UpdateServiceGroupsRequestItemPropDomains
+		nvalue := []platform.CreateServiceGroupRequestDomain{}
+		for _, domain := range value.([]Domain) {
+			name := domain.Name
+			if name == "" {
+				name = domain.FQDN + "."
+			}
+			nvalue = append(nvalue, platform.CreateServiceGroupRequestDomain{
+				Name: name,
+			})
+		}
+		value = nvalue
+	case "services":
+		prop = platform.UpdateServiceGroupsRequestItemPropServices
+		nvalue := []platform.Service{}
+		for _, svc := range value.([]*Service) {
+			nvalue = append(nvalue, platform.Service{
+				Port:            svc.Source,
+				DestinationPort: &svc.Destination,
+				Handlers:        svc.Handlers,
+			})
+		}
+		value = nvalue
+	default:
+		return platform.UpdateServiceGroupsRequestItem{}
+	}
+	return platform.UpdateServiceGroupsRequestItem{
+		Uuid:  &uuid,
+		Op:    op,
+		Prop:  prop,
+		Value: platform.Ptr(value),
+	}
 }

@@ -9,6 +9,8 @@ import (
 	"iter"
 	"slices"
 	"strings"
+
+	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 // FieldPath represents a dot-separated path to a field in a resource.
@@ -23,6 +25,22 @@ func ParseFieldPath(s string) FieldPath {
 	return FieldPath(parts)
 }
 
+func (fp FieldPath) Matches(spec FieldPath) bool {
+	if len(fp) != len(spec) {
+		return false
+	}
+	for i := range fp {
+		if spec[i] != "*" && fp[i] != spec[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (fp FieldPath) MatchesString(s string) bool {
+	return fp.Matches(ParseFieldPath(s))
+}
+
 func (fp FieldPath) String() string {
 	return strings.Join(fp, ".")
 }
@@ -35,18 +53,24 @@ func IterFields(fields []Field) iter.Seq2[FieldPath, *Field] {
 	}
 }
 
-func iterFields(path FieldPath, fields []Field, yield func(FieldPath, *Field) bool) {
+func iterFields(path FieldPath, fields []Field, yield func(FieldPath, *Field) bool) bool {
 	for i := range fields {
 		field := &fields[i]
 		path := append(slices.Clone(path), field.Name)
 		if !yield(path, field) {
-			return
+			return false
 		}
-		iterFields(path, field.Subfields, yield)
+		if !iterFields(path, field.Subfields, yield) {
+			return false
+		}
 	}
+	return true
 }
 
 // GetFieldByPath retrieves all fields matching the given FieldPath.
+//
+// It can be used similarly to FilterFieldsByPath, but instead of retaining the
+// structure, it flattens the result to contain only the matching fields.
 func GetFieldByPath(fields []Field, spec FieldPath) []Field {
 	return getFieldByPath(nil, fields, spec)
 }
@@ -60,7 +84,7 @@ func getFieldByPath(parent *Field, fields []Field, spec FieldPath) []Field {
 	for _, field := range fields {
 		if spec[0] == field.Name || spec[0] == "*" && parent != nil && parent.Elem != nil {
 			if len(spec) == 1 {
-				result = append(result, field)
+				result = append(result, pruneFields(field))
 			} else {
 				subfields := getFieldByPath(&field, field.Subfields, spec[1:])
 				result = append(result, subfields...)
@@ -80,130 +104,119 @@ func FilterFieldsByPath(fields []Field, specs []FieldPath, strict bool) ([]Field
 	field, missing := filterFieldsByPath(Field{
 		Subfields: fields,
 	}, specs, strict)
-	return field.Subfields, missing
+	return field.Subfields, xslices.DedupeStringer(missing)
 }
 
 func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Field, missing []FieldPath) {
 	if len(specs) == 0 {
-		return field, nil
-	}
-
-	// make a map to track found keys (to avoid duplicates)
-	foundKeys := make(map[string]int)
-
-	// remove all the fully matched specs
-	originalLen := len(specs)
-	specs = slices.Clone(specs)
-	specs = slices.DeleteFunc(specs, func(fp FieldPath) bool {
-		return len(fp) == 0
-	})
-	if len(specs) == 0 {
-		return field, nil
-	}
-	if len(specs) < originalLen {
-		for _, field := range field.Subfields {
-			if _, ok := foundKeys[field.Name]; ok {
-				continue
-			}
-			foundKeys[field.Name] = len(result.Subfields)
-			result.Subfields = append(result.Subfields, field)
+		if !strict {
+			field = mergeElem(field)
 		}
-
-		// keep going - we want to find missing keys
+		field = pruneFields(field)
+		return field, nil
 	}
+
+	result = field
+	result.Value = nil
+	result.Subfields = nil
 
 	for len(specs) > 0 {
 		// find the first "group" of specs with the same root
-		target, rest := specs[:1], specs[1:]
-		for i := 0; i < len(rest); {
-			if len(rest[i]) > 0 && len(target[0]) > 0 && rest[i][0] == target[0][0] {
-				target = append(target, rest[i])
-				rest = append(rest[:i], rest[i+1:]...)
+		target, rest := slices.Clone(specs[:1]), slices.Clone(specs[1:])
+		specs = rest
+
+		// check for an exact match
+		if len(target[0]) == 0 {
+			if field.Value != nil {
+				// if we have a value, then include only that, don't include subfields
+				// (we'll go grab those later)
+				result.Value = field.Value
 			} else {
-				i++
+				// if we don't, then recursively include all subfields
+				if !strict && field.Elem != nil {
+					elem := *field.Elem
+					elem = mergeElem(elem)
+					elem = pruneFields(elem)
+					result.Subfields = append(result.Subfields, elem)
+				}
+				for _, subfield := range field.Subfields {
+					if !strict {
+						subfield = mergeElem(subfield)
+					}
+					subfield = pruneFields(subfield)
+					result.Subfields = append(result.Subfields, subfield)
+				}
 			}
+			continue
 		}
 
 		spec := target[0][0]
 		for i := range target {
 			target[i] = target[i][1:]
 		}
-		specs = rest
 
-		// then find all fields matching the root of that group
+		// find all fields matching the root
 		matched := false
 		for _, subfield := range field.Subfields {
 			if spec == subfield.Name || spec == "*" && field.Elem != nil {
 				matched = true
-				filtered, missed := filterFieldsByPath(subfield, target, strict)
-
-				if idx, ok := foundKeys[subfield.Name]; ok {
-					field := &result.Subfields[idx]
-					mergeTopLevelField(field, &filtered)
-				} else {
-					subfield.Subfields = filtered.Subfields
-					foundKeys[subfield.Name] = len(result.Subfields)
-					result.Subfields = append(result.Subfields, subfield)
-				}
+				subfield, missed := filterFieldsByPath(subfield, target, strict)
+				result.Subfields = append(result.Subfields, subfield)
 
 				for _, miss := range missed {
 					missing = append(missing, append(FieldPath{spec}, miss...))
 				}
 			}
 		}
-		if matched {
-			continue
-		}
 
-		// try matching against the element type
+		// filter the elem to the root as well (if it exists)
 		if !strict && field.Elem != nil {
-			filtered, missed := filterFieldsByPath(*field.Elem, target, strict)
-			if idx, ok := foundKeys[field.Elem.Name]; ok {
-				field := &result.Subfields[idx]
-				mergeTopLevelField(field, &filtered)
-			} else {
-				subfield := *field.Elem
-				subfield.Name = spec
-				subfield.Subfields = filtered.Subfields
-				foundKeys[field.Elem.Name] = len(result.Subfields)
+			subfield, missed := filterFieldsByPath(*field.Elem, target, strict)
+			if !strict {
+				matched = true
+				subfield.Name = spec // NOTE: override the name
 				result.Subfields = append(result.Subfields, subfield)
-			}
 
-			for _, miss := range missed {
-				missing = append(missing, append(FieldPath{spec}, miss...))
+				for _, miss := range missed {
+					missing = append(missing, append(FieldPath{spec}, miss...))
+				}
 			}
-
-			continue
 		}
 
-		missing = append(missing, FieldPath{spec})
+		if !matched {
+			missing = append(missing, FieldPath{spec})
+		}
 	}
 
-	field.Subfields = result.Subfields
-	return field, missing
+	return result, missing
 }
 
-func mergeTopLevelField(dest *Field, src *Field) {
-	dest.Subfields = append(dest.Subfields, slices.DeleteFunc(slices.Clone(src.Subfields), func(f Field) bool {
-		for _, existing := range dest.Subfields {
-			if f.Name == existing.Name {
-				return true
-			}
-		}
-		return false
-	})...)
-}
-
-func mergeFieldElems(field Field) Field {
+func pruneFields(field Field) Field {
+	if field.Elem != nil {
+		elem := pruneFields(*field.Elem)
+		field.Elem = &elem
+	}
+	if field.Value != nil {
+		field.Subfields = nil
+		return field
+	}
 	field.Subfields = slices.Clone(field.Subfields)
-	if field.Elem != nil && len(field.Subfields) == 0 {
-		elem := *field.Elem
-		elem.Name = "*"
-		field.Subfields = append(field.Subfields, elem)
-		field.Elem = nil
-	}
 	for i := range field.Subfields {
-		field.Subfields[i] = mergeFieldElems(field.Subfields[i])
+		field.Subfields[i] = pruneFields(field.Subfields[i])
+	}
+	return field
+}
+
+func mergeElem(field Field) Field {
+	if field.Elem != nil {
+		elem := mergeElem(*field.Elem)
+		elem.Name = "*"
+		field.Elem = nil
+		field.Subfields = append(field.Subfields, elem)
+	}
+	field.Subfields = slices.Clone(field.Subfields)
+	for i := range field.Subfields {
+		field.Subfields[i] = mergeElem(field.Subfields[i])
 	}
 	return field
 }
