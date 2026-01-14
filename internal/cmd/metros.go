@@ -14,10 +14,11 @@ import (
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 )
 
 type MetrosCmd struct {
-	resource.ResourceCmd[Metro] `set:"name=metro" set:"names=metros"`
+	cmd.ResourceCmd[Metro] `set:"name=metro" set:"names=metros"`
 }
 
 type Metro struct {

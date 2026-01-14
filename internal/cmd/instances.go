@@ -22,13 +22,14 @@ import (
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type InstancesCmd struct {
-	resource.ResourceCmd[Instance]          `set:"name=instance" set:"names=instances"`
-	resource.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
-	resource.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
+	cmd.ResourceCmd[Instance]          `set:"name=instance" set:"names=instances"`
+	cmd.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
+	cmd.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 
 	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs"`
 	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances"`

@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package resource
+package cmd
 
 import (
 	"bytes"
@@ -19,19 +19,21 @@ import (
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/kvwriter"
 	"unikraft.com/cli/internal/prettydiff"
+	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/patch"
 )
 
-type ResourceCmd[R GettableResource] struct {
+type ResourceCmd[R resource.GettableResource] struct {
 	List ResourceListCmd[R]    `cmd:"" help:"List ${names}." aliases:"ls"`
 	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
 }
-type DeletableResourceCmd[R DeletableResource] struct {
+type DeletableResourceCmd[R resource.DeletableResource] struct {
 	Delete ResourceRemoveCmd[R] `cmd:"" help:"Remove a ${name}." aliases:"rm,remove"`
 }
-type EditableResourceCmd[R EditableResource] struct {
+type EditableResourceCmd[R resource.EditableResource] struct {
 	Edit ResourceEditCmd[R] `cmd:"" help:"Edit a ${name}."`
 }
-type CreatableResourceCmd[R CreatableResource] struct {
+type CreatableResourceCmd[R resource.CreatableResource] struct {
 	Create ResourceCreateCmd[R] `cmd:"" help:"Create a ${name}."`
 }
 
@@ -51,7 +53,7 @@ type FormatOpts struct {
 	Raw    bool   `help:"Output raw JSON API response."`
 }
 
-type ResourceListCmd[R GettableResource] struct {
+type ResourceListCmd[R resource.GettableResource] struct {
 	Name []string `arg:"" optional:"" help:"Names of the ${names} to list."`
 
 	FormatOpts
@@ -61,16 +63,16 @@ func (cmd *ResourceListCmd[R]) Help() string {
 	return "Lister"
 }
 
-func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
+func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
 	}
-	ctx = WithFilter(ctx, filter)
+	ctx = resource.WithFilter(ctx, filter)
 
 	var empty R
 	r := sandbox.WrapGettable(empty)
-	var resources []Resource
+	var resources []resource.Resource
 	if len(cmd.Name) > 0 {
 		resources, err = r.Get(ctx, cmd.Name)
 	} else {
@@ -97,18 +99,18 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	}
 }
 
-type ResourceInspectCmd[R GettableResource] struct {
+type ResourceInspectCmd[R resource.GettableResource] struct {
 	Name []string `arg:"" help:"Names of the ${names} to inspect."`
 
 	FormatOpts
 }
 
-func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
+func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
 	}
-	ctx = WithFilter(ctx, filter)
+	ctx = resource.WithFilter(ctx, filter)
 
 	var empty R
 	r := sandbox.WrapGettable(empty)
@@ -134,17 +136,17 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 	}
 }
 
-func filterResources(resources []Resource, filter filters.Filter) (filtered []Resource, rerr error) {
-	for _, resource := range resources {
+func filterResources(resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
+	for _, res := range resources {
 		if filter.Match(filters.AdapterFunc(func(key []string) (string, bool) {
-			fields, err := resource.Fields()
+			fields, err := res.Fields()
 			if err != nil {
 				if rerr == nil {
-					rerr = fmt.Errorf("failed to get fields for resource %s: %w", resource.Key(), err)
+					rerr = fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
 				}
 				return "", false
 			}
-			fields = GetFieldByPath(fields, key)
+			fields = resource.GetFieldByPath(fields, key)
 			if fields == nil {
 				return "", false
 			}
@@ -156,17 +158,17 @@ func filterResources(resources []Resource, filter filters.Filter) (filtered []Re
 			// HACK: vtclean to remove any escape sequences from rendered output
 			return vtclean.Clean(fields[0].ValueString(), false), true
 		})) {
-			filtered = append(filtered, resource)
+			filtered = append(filtered, res)
 		}
 	}
 	return filtered, rerr
 }
 
-type ResourceRemoveCmd[R DeletableResource] struct {
+type ResourceRemoveCmd[R resource.DeletableResource] struct {
 	Name []string `arg:"" help:"Names of the ${names} to remove."`
 }
 
-func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) error {
+func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
 	resources, err := r.Get(ctx, cmd.Name)
@@ -176,7 +178,7 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *Sandbox) erro
 	return r.Delete(ctx, resources)
 }
 
-type ResourceEditCmd[R EditableResource] struct {
+type ResourceEditCmd[R resource.EditableResource] struct {
 	Name string `arg:"" help:"Name of the ${name} to edit."`
 
 	Set []map[string]string `help:"Key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
@@ -186,8 +188,8 @@ type ResourceEditCmd[R EditableResource] struct {
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 }
 
-func (cmd *ResourceEditCmd[R]) toPatchSpec() PatchSpec {
-	spec := PatchSpec{
+func (cmd *ResourceEditCmd[R]) toPatchSpec() patch.PatchSpec {
+	spec := patch.PatchSpec{
 		Set: make(map[string][]string),
 		Add: make(map[string][]string),
 		Del: make(map[string][]string),
@@ -210,7 +212,7 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() PatchSpec {
 	return spec
 }
 
-func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
+func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapEditable(empty)
 	resources, err := r.Get(ctx, []string{cmd.Name})
@@ -227,7 +229,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		}
 		return fmt.Errorf("ambiguous resource name: %s (found %v)", cmd.Name, keys)
 	}
-	resource := resources[0]
+	res := resources[0]
 
 	spec := cmd.toPatchSpec()
 
@@ -248,35 +250,35 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		}
 	}
 
-	fields, err := resource.Fields()
+	fields, err := res.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}
-	patched, err := PatchedFields(fields, spec)
+	patched, err := patch.PatchedFields(fields, spec)
 	if err != nil {
 		return err
 	}
 	if cmd.Visual {
-		patched, err = VisualEdit(ctx, cfg, fields, patched)
+		patched, err = patch.VisualEdit(ctx, cfg, fields, patched)
 		if err != nil {
 			return err
 		}
 	}
-	patched = filterPatchableFields(patched)
+	patched = patch.FilterPatchableFields(patched)
 
 	start := &bytes.Buffer{}
-	err = printKV(start, nil, resource)
+	err = printKV(start, nil, res)
 	if err != nil {
 		return err
 	}
 	if len(patched) > 0 {
-		resource, err = r.Edit(ctx, resource, patched)
+		res, err = r.Edit(ctx, res, patched)
 		if err != nil {
 			return err
 		}
 	}
 	end := &bytes.Buffer{}
-	err = printKV(end, nil, resource)
+	err = printKV(end, nil, res)
 	if err != nil {
 		return err
 	}
@@ -291,14 +293,14 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	return tw.Flush()
 }
 
-type ResourceCreateCmd[R CreatableResource] struct {
+type ResourceCreateCmd[R resource.CreatableResource] struct {
 	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 }
 
-func (cmd *ResourceCreateCmd[R]) toPatchSpec() PatchSpec {
-	spec := PatchSpec{
+func (cmd *ResourceCreateCmd[R]) toPatchSpec() patch.PatchSpec {
+	spec := patch.PatchSpec{
 		Create: true,
 		Set:    make(map[string][]string),
 	}
@@ -310,31 +312,31 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() PatchSpec {
 	return spec
 }
 
-func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *Sandbox) error {
+func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapCreatable(empty)
 	fields, err := r.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}
-	patched, err := PatchedFields(fields, cmd.toPatchSpec())
+	patched, err := patch.PatchedFields(fields, cmd.toPatchSpec())
 	if err != nil {
 		return err
 	}
 
 	if cmd.Visual {
 		// FIXME: should allow required fields
-		patched, err = VisualCreate(ctx, cfg, fields, patched)
+		patched, err = patch.VisualCreate(ctx, cfg, fields, patched)
 		if err != nil {
 			return err
 		}
 	}
 
-	fields = filterCreatableFields(patched)
+	fields = patch.FilterCreatableFields(patched)
 
-	resource, err := r.Create(ctx, fields)
+	res, err := r.Create(ctx, fields)
 	if err != nil {
 		return err
 	}
-	return printInspect(cfg.Stdout, nil, resource)
+	return printInspect(cfg.Stdout, nil, res)
 }

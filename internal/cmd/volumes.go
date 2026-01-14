@@ -17,14 +17,15 @@ import (
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type VolumesCmd struct {
-	resource.ResourceCmd[Volume]          `set:"name=volume" set:"names=volumes"`
-	resource.DeletableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
-	resource.EditableResourceCmd[Volume]  `set:"name=volume" set:"names=volumes"`
-	resource.CreatableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
+	cmd.ResourceCmd[Volume]          `set:"name=volume" set:"names=volumes"`
+	cmd.DeletableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
+	cmd.EditableResourceCmd[Volume]  `set:"name=volume" set:"names=volumes"`
+	cmd.CreatableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
 }
 
 type Volume struct {

@@ -26,7 +26,7 @@ func FieldsFromStruct(s any) (fields []Field, err error) {
 	return field.Subfields, nil
 }
 
-type valueField interface {
+type ValueField interface {
 	String() string
 	Parse(s string) error
 }
@@ -60,13 +60,13 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 		}
 		fieldVal := s.Field(i)
 
-		parsedField := parseField(field)
+		parsedField := ParseField(field)
 		if parsedField == nil {
 			continue
 		}
 		result := Field{
-			Name:      parsedField.name,
-			Verbosity: parsedField.verbosity,
+			Name:      parsedField.Name,
+			Verbosity: parsedField.Verbosity,
 			Value:     fieldVal.Interface(),
 		}
 
@@ -95,8 +95,8 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 	}
 
 	var value any
-	if valueField, ok := v.Interface().(valueField); ok {
-		value = valueField
+	if ValueField, ok := v.Interface().(ValueField); ok {
+		value = ValueField
 	}
 
 	verbosity := FieldVerbosity(0)
@@ -153,12 +153,12 @@ func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 	}, nil
 }
 
-type parsedField struct {
-	name      string
-	verbosity FieldVerbosity
+type ParsedField struct {
+	Name      string
+	Verbosity FieldVerbosity
 }
 
-func parseField(field reflect.StructField) *parsedField {
+func ParseField(field reflect.StructField) *ParsedField {
 	if !field.IsExported() {
 		return nil
 	}
@@ -188,9 +188,9 @@ func parseField(field reflect.StructField) *parsedField {
 		verbosity = FieldVerbosityHidden
 	}
 
-	return &parsedField{
-		name:      name,
-		verbosity: verbosity,
+	return &ParsedField{
+		Name:      name,
+		Verbosity: verbosity,
 	}
 }
 
@@ -198,7 +198,7 @@ func parseField(field reflect.StructField) *parsedField {
 // on the Field - this function makes heavy assumptions about the structure of
 // field data and how values are read/written. Currently it is only used for
 // visual editing.
-func decodeStruct(input any, output any) error {
+func DecodeStruct(input any, output any) error {
 	config := mapstructure.DecoderConfig{
 		TagName:     "field",
 		ErrorUnused: true,
