@@ -15,6 +15,8 @@ linters:
     - unused
     - misspell
     - godox
+    - testifylint
+    - nolintlint
   exclusions:
     generated: lax
     presets:
@@ -42,6 +44,9 @@ linters:
     godox:
       keywords:
         - XXX
+    nolintlint:
+      require-explanation: true
+      require-specific: true
 formatters:
   enable:
   - gofumpt
