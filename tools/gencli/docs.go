@@ -7,15 +7,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/muesli/termenv"
+	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/tablewriter"
 	"unikraft.com/x/kingkong"
+	"unikraft.com/x/log"
 )
 
 // DocsCmd generates markdown documentation for the CLI.
@@ -23,7 +29,7 @@ type DocsCmd struct {
 	Outdir string `arg:"" required:"" help:"Output directory for generated documentation."`
 }
 
-func (c *DocsCmd) Run() error {
+func (c *DocsCmd) Run(ctx context.Context) error {
 	lipgloss.SetColorProfile(termenv.Ascii)
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {
@@ -36,14 +42,15 @@ func (c *DocsCmd) Run() error {
 	}
 
 	for child := range IterChildren(parser.Model.Node) {
-		if err := generateMarkdown(child, c.Outdir); err != nil {
+		if err := generateMarkdown(ctx, child, c.Outdir); err != nil {
 			return err
 		}
 	}
+	log.G(ctx).Info().Str("dir", c.Outdir).Msg("Generated documentation")
 	return nil
 }
 
-func generateMarkdown(node *kong.Node, dir string) error {
+func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 	buf := new(bytes.Buffer)
 	name := NodePath(node)
 
@@ -70,6 +77,16 @@ func generateMarkdown(node *kong.Node, dir string) error {
 
 	printDocsOptions(buf, node)
 
+	if target, ok := node.Target.Interface().(cmd.ResourceCmdInterface); ok {
+		src := target.Underlying()
+		fields, err := src.Fields()
+		if err != nil {
+			return fmt.Errorf("could not get fields for %s: %w", name, err)
+		}
+		fields, _ = resource.FilterFieldsByPath(fields, nil, true)
+		printDocsFields(buf, fields)
+	}
+
 	hasSeeAlso := false
 	basename := strings.ReplaceAll(name, " ", "/") + ".mdx"
 	for related := range SeeAlso(node) {
@@ -91,13 +108,13 @@ func generateMarkdown(node *kong.Node, dir string) error {
 	}
 
 	filename := filepath.Join(dir, basename)
-	fmt.Printf("mkdir: %s\n", filepath.Dir(filename))
+	log.G(ctx).Debug().Str("dir", filepath.Dir(filename)).Msg("mkdir")
 
 	if err := os.MkdirAll(filepath.Dir(filename), 0o775); err != nil {
 		return err
 	}
 
-	fmt.Printf("write: %s\n", filename)
+	log.G(ctx).Debug().Str("file", filename).Msg("write")
 
 	w, err := os.Create(filename)
 	if err != nil {
@@ -136,5 +153,61 @@ func printDocsOptions(buf *bytes.Buffer, node *kong.Node) {
 			buf.WriteString(FormatFlag(f) + "\n")
 		}
 		buf.WriteString("```\n\n")
+	}
+}
+
+func printDocsFields(buf *bytes.Buffer, fields []resource.Field) {
+	w := tablewriter.TableWriter(buf)
+	defer w.Flush()
+
+	fmt.Fprintln(w, "## Resource Fields")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "| Field | Type | Operations |")
+	fmt.Fprintln(w, "|-------|------|------------|")
+	for path, field := range resource.IterFields(fields) {
+		var typeStr string
+		if field.Value != nil {
+			typeStr = formatType(reflect.TypeOf(field.Value))
+			typeStr = strings.ToLower(typeStr)
+			typeStr = fmt.Sprintf("`%s`", typeStr)
+		}
+
+		operations := []string{}
+		if field.Create != nil {
+			operations = append(operations, "create")
+		}
+		if field.Edit != nil {
+			operations = append(operations, "edit")
+		}
+
+		fmt.Fprintf(w, "| `%s` | %s | %s |\n", path, typeStr, strings.Join(operations, "/"))
+	}
+	fmt.Fprintln(w)
+}
+
+func formatType(tp reflect.Type) string {
+	v := reflect.New(tp).Elem()
+	switch vv := v.Interface().(type) {
+	case resource.Wrapped:
+		return formatType(reflect.TypeOf(vv.Unwrap()))
+	}
+
+	switch tp.Kind() {
+	case reflect.Pointer:
+		return formatType(tp.Elem())
+	case reflect.Slice:
+		return "[" + formatType(tp.Elem()) + "]"
+	case reflect.Map:
+		return "{" + formatType(tp.Key()) + ": " + formatType(tp.Elem()) + "}"
+	case reflect.Struct:
+		return tp.Name()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return "integer"
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "integer"
+	case reflect.Float32, reflect.Float64:
+		return "float"
+	default:
+		return tp.Kind().String()
 	}
 }

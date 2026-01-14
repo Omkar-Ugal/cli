@@ -20,7 +20,8 @@ import (
 )
 
 type ProfileCmd struct {
-	cmd.ResourceCmd[Profile] `set:"name=profile" set:"names=profiles"`
+	cmd.ResourceCmd[Profile]
+	cmd.GettableResourceCmd[Profile] `set:"name=profile" set:"names=profiles"`
 
 	Use UseCmd `cmd:"" help:"Switch between profiles."`
 }

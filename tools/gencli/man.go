@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +22,7 @@ import (
 	"github.com/cpuguy83/go-md2man/v2/md2man"
 	"github.com/muesli/termenv"
 	"unikraft.com/x/kingkong"
+	"unikraft.com/x/log"
 )
 
 // ManCmd generates man pages for the CLI.
@@ -35,7 +37,7 @@ type ManCmd struct {
 	Manual  string `default:"Unikraft Manual" help:"Manual field for man pages."`
 }
 
-func (c *ManCmd) Run() error {
+func (c *ManCmd) Run(ctx context.Context) error {
 	lipgloss.SetColorProfile(termenv.Ascii)
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {
@@ -54,12 +56,12 @@ func (c *ManCmd) Run() error {
 		Manual:  c.Manual,
 	}
 
-	fmt.Println("Generating man pages in directory", c.Outdir)
 	for child := range IterChildren(parser.Model.Node) {
-		if err := generateManPage(child, header, c.Outdir, c.Markdown, c.Compress); err != nil {
+		if err := generateManPage(ctx, child, header, c.Outdir, c.Markdown, c.Compress); err != nil {
 			return err
 		}
 	}
+	log.G(ctx).Debug().Str("dir", c.Outdir).Msg("Generated man pages")
 
 	return nil
 }
@@ -73,7 +75,7 @@ type ManHeader struct {
 	Manual  string
 }
 
-func generateManPage(node *kong.Node, header *ManHeader, dir string, markdown bool, compressed bool) error {
+func generateManPage(ctx context.Context, node *kong.Node, header *ManHeader, dir string, markdown bool, compressed bool) error {
 	section := header.Section
 	if section == "" {
 		section = "1"
@@ -88,7 +90,7 @@ func generateManPage(node *kong.Node, header *ManHeader, dir string, markdown bo
 	if compressed {
 		filename += ".gz"
 	}
-	fmt.Printf("write: %s\n", filename)
+	log.G(ctx).Debug().Str("file", filename).Msg("write")
 
 	f, err := os.Create(filename)
 	if err != nil {

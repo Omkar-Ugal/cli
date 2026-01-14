@@ -26,7 +26,20 @@ import (
 	"unikraft.com/x/kingkong"
 )
 
-type ResourceCmd[R resource.GettableResource] struct {
+type ResourceCmdInterface interface {
+	Underlying() resource.Resource
+}
+
+type ResourceCmd[R resource.Resource] struct{}
+
+var _ ResourceCmdInterface = (*ResourceCmd[resource.GettableResource])(nil)
+
+func (cmd ResourceCmd[R]) Underlying() resource.Resource {
+	var empty R
+	return empty
+}
+
+type GettableResourceCmd[R resource.GettableResource] struct {
 	List ResourceListCmd[R]    `cmd:"" help:"List ${names}." aliases:"ls"`
 	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
 }

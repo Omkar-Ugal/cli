@@ -115,9 +115,13 @@ func (f Field) ValueString() string {
 	return valueString(f.Value)
 }
 
+type Wrapped interface {
+	Unwrap() any
+}
+
 func valueString(value any) string {
 	for {
-		unwrapped, ok := value.(interface{ Unwrap() any })
+		unwrapped, ok := value.(Wrapped)
 		if !ok {
 			break
 		}
