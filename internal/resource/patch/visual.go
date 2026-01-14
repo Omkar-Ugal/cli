@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package resource
+package patch
 
 import (
 	"bytes"
@@ -15,15 +15,17 @@ import (
 	"slices"
 
 	"sigs.k8s.io/yaml"
-	"unikraft.com/cli/internal/config"
 	"unikraft.com/x/log"
+
+	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/resource"
 )
 
-func VisualEdit(ctx context.Context, cfg *config.Config, fields []Field, patches []Field) ([]Field, error) {
+func VisualEdit(ctx context.Context, cfg *config.Config, fields []resource.Field, patches []resource.Field) ([]resource.Field, error) {
 	return visualEdit(ctx, cfg, fields, patches, false)
 }
 
-func VisualCreate(ctx context.Context, cfg *config.Config, fields []Field, creates []Field) ([]Field, error) {
+func VisualCreate(ctx context.Context, cfg *config.Config, fields []resource.Field, creates []resource.Field) ([]resource.Field, error) {
 	return visualEdit(ctx, cfg, fields, creates, true)
 }
 
@@ -31,7 +33,7 @@ func VisualCreate(ctx context.Context, cfg *config.Config, fields []Field, creat
 //
 // It takes all the fields and already existing patched fields as input, and
 // returns all patched fields after editing.
-func visualEdit(ctx context.Context, cfg *config.Config, fields []Field, patches []Field, create bool) ([]Field, error) {
+func visualEdit(ctx context.Context, cfg *config.Config, fields []resource.Field, patches []resource.Field, create bool) ([]resource.Field, error) {
 	data, err := saveFields(fields, patches, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize fields: %w", err)
@@ -80,18 +82,18 @@ func visualEdit(ctx context.Context, cfg *config.Config, fields []Field, patches
 	return fields, nil
 }
 
-func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
-	fields = CloneFields(fields)
+func saveFields(fields []resource.Field, patches []resource.Field, create bool) ([]byte, error) {
+	fields = resource.CloneFields(fields)
 
-	patchMap := make(map[string]Field)
-	for key, field := range IterFields(patches) {
+	patchMap := make(map[string]resource.Field)
+	for key, field := range resource.IterFields(patches) {
 		patchMap[key.String()] = *field
 	}
 
-	for key, field := range IterFields(fields) {
+	for key, field := range resource.IterFields(fields) {
 		keyStr := key.String()
 
-		var patch *Patch
+		var patch *resource.Patch
 		if create {
 			patch = field.Create
 		} else {
@@ -116,7 +118,7 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 
 		// write already set patches into fields
 		if patchedField, ok := patchMap[keyStr]; ok {
-			var patch *Patch
+			var patch *resource.Patch
 			if create {
 				patch = patchedField.Create
 			} else {
@@ -141,13 +143,13 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 		}
 	}
 
-	var patchableFields []Field
+	var patchableFields []resource.Field
 	if create {
-		patchableFields = filterCreatableFields(fields)
+		patchableFields = FilterCreatableFields(fields)
 	} else {
-		patchableFields = filterPatchableFields(fields)
+		patchableFields = FilterPatchableFields(fields)
 	}
-	result, err := yaml.Marshal(FieldsToMap(patchableFields))
+	result, err := yaml.Marshal(resource.FieldsToMap(patchableFields))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
 	}
@@ -155,7 +157,7 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 	result = append(result, []byte("\n# Edit the fields above. Lines starting with '#' will be ignored.\n#")...)
 	result = append(result, []byte("\n# Original:\n")...)
 
-	rest, err := yaml.Marshal(FieldsToMap(fields))
+	rest, err := yaml.Marshal(resource.FieldsToMap(fields))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
 	}
@@ -167,15 +169,15 @@ func saveFields(fields []Field, patches []Field, create bool) ([]byte, error) {
 	return result, nil
 }
 
-func loadFieldPatches(ctx context.Context, fields []Field, data []byte, create bool) ([]Field, error) {
-	fields = CloneFields(fields)
+func loadFieldPatches(ctx context.Context, fields []resource.Field, data []byte, create bool) ([]resource.Field, error) {
+	fields = resource.CloneFields(fields)
 
 	var obj map[string]any
 	if err := yaml.Unmarshal(data, &obj); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
-	patchedFields, missing, err := MapToFields(fields, obj)
+	patchedFields, missing, err := resource.MapToFields(fields, obj)
 	if err != nil {
 		return nil, fmt.Errorf("failed to map edited data to fields: %w", err)
 	}
@@ -183,15 +185,15 @@ func loadFieldPatches(ctx context.Context, fields []Field, data []byte, create b
 		return nil, fmt.Errorf("unknown fields: %v", missing)
 	}
 
-	before := Field{Subfields: fields}
-	after := Field{Subfields: patchedFields}
-	err = patchField(FieldPath{}, &before, &after, create)
+	before := resource.Field{Subfields: fields}
+	after := resource.Field{Subfields: patchedFields}
+	err = patchField(resource.FieldPath{}, &before, &after, create)
 	if err != nil {
 		return nil, err
 	}
 
-	for fieldPath, field := range IterFields(fields) {
-		var patch *Patch
+	for fieldPath, field := range resource.IterFields(fields) {
+		var patch *resource.Patch
 		if create {
 			patch = field.Create
 		} else {
@@ -213,17 +215,17 @@ func loadFieldPatches(ctx context.Context, fields []Field, data []byte, create b
 	}
 
 	if create {
-		fields = filterCreatableFields(fields)
+		fields = FilterCreatableFields(fields)
 	} else {
-		fields = filterPatchableFields(fields)
+		fields = FilterPatchableFields(fields)
 	}
 	return fields, nil
 }
 
 // patchField applies the changes from after to before, modifying before in
-// place by setting Patch fields.
-func patchField(path FieldPath, before *Field, after *Field, create bool) error {
-	var patch *Patch
+// place by setting resource.Patch fields.
+func patchField(path resource.FieldPath, before *resource.Field, after *resource.Field, create bool) error {
+	var patch *resource.Patch
 	if create {
 		patch = before.Create
 	} else {

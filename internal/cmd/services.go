@@ -19,14 +19,15 @@ import (
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type ServicesCmd struct {
-	resource.ResourceCmd[ServiceGroup]          `set:"name=service" set:"names=services"`
-	resource.DeletableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
-	resource.EditableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
-	resource.CreatableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	cmd.ResourceCmd[ServiceGroup]          `set:"name=service" set:"names=services"`
+	cmd.DeletableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	cmd.EditableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
+	cmd.CreatableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
 }
 
 type ServiceGroup struct {

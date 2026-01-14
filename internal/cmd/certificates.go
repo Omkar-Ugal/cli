@@ -17,13 +17,14 @@ import (
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type CertificatesCmd struct {
-	resource.ResourceCmd[Certificate]          `set:"name=certificate" set:"names=certificates"`
-	resource.DeletableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
-	resource.CreatableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
+	cmd.ResourceCmd[Certificate]          `set:"name=certificate" set:"names=certificates"`
+	cmd.DeletableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
+	cmd.CreatableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
 }
 
 type Certificate struct {

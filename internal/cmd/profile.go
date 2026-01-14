@@ -15,11 +15,12 @@ import (
 	jujuerrors "github.com/juju/errors"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/x/log"
 )
 
 type ProfileCmd struct {
-	resource.ResourceCmd[Profile] `set:"name=profile" set:"names=profiles"`
+	cmd.ResourceCmd[Profile] `set:"name=profile" set:"names=profiles"`
 
 	Use UseCmd `cmd:"" help:"Switch between profiles."`
 }

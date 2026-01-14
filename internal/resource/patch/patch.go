@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package resource
+package patch
 
 import (
 	"errors"
@@ -14,6 +14,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"unikraft.com/cli/internal/resource"
 )
 
 type PatchSpec struct {
@@ -47,20 +49,20 @@ func (spec *PatchSpec) Keys() iter.Seq[string] {
 // PatchedFields applies the given PatchSpec to the provided fields, returning
 // only the modified fields or an error if the patching process encounters
 // issues.
-func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
+func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, error) {
 	foundFields := make(map[string]struct{})
 	unsetFields := make(map[string]struct{})
 	setForbiddenFields := make(map[string]struct{})
 	addForbiddenFields := make(map[string]struct{})
 	delForbiddenFields := make(map[string]struct{})
 
-	fields = CloneFields(fields)
-	for key, field := range IterFields(fields) {
+	fields = resource.CloneFields(fields)
+	for key, field := range resource.IterFields(fields) {
 		keyStr := key.String()
 		foundFields[keyStr] = struct{}{}
 
-		var original *Patch
-		var patch **Patch
+		var original *resource.Patch
+		var patch **resource.Patch
 		if spec.Create {
 			original = field.Create
 			field.Create = nil
@@ -71,7 +73,7 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 			patch = &field.Patch
 		}
 		if original == nil {
-			original = &Patch{}
+			original = &resource.Patch{}
 		}
 
 		done := false
@@ -82,7 +84,7 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to unpack set value for %s: %w", keyStr, err)
 				}
-				*patch = &Patch{Set: set}
+				*patch = &resource.Patch{Set: set}
 			} else {
 				setForbiddenFields[keyStr] = struct{}{}
 			}
@@ -94,7 +96,7 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to unpack add value for %s: %w", keyStr, err)
 				}
-				*patch = &Patch{Add: add}
+				*patch = &resource.Patch{Add: add}
 			} else {
 				addForbiddenFields[keyStr] = struct{}{}
 			}
@@ -106,7 +108,7 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 				if err != nil {
 					return nil, fmt.Errorf("failed to unpack del value for %s: %w", keyStr, err)
 				}
-				*patch = &Patch{Del: del}
+				*patch = &resource.Patch{Del: del}
 			} else {
 				delForbiddenFields[keyStr] = struct{}{}
 			}
@@ -144,9 +146,9 @@ func PatchedFields(fields []Field, spec PatchSpec) ([]Field, error) {
 	}
 
 	if spec.Create {
-		return filterCreatableFields(fields), nil
+		return FilterCreatableFields(fields), nil
 	}
-	return filterPatchableFields(fields), nil
+	return FilterPatchableFields(fields), nil
 }
 
 func parseNewValue(input []string, output any) (any, error) {
@@ -254,7 +256,7 @@ func parseReflect(input []string, value reflect.Value) error {
 		output.Set(mapp)
 		return nil
 	case reflect.Struct:
-		valueField, ok := value.Interface().(valueField)
+		valueField, ok := value.Interface().(resource.ValueField)
 		if ok {
 			return valueField.Parse(input[0])
 		}
@@ -266,7 +268,7 @@ func parseReflect(input []string, value reflect.Value) error {
 			k, v, _ := strings.Cut(field, "=")
 			kv[k] = v
 		}
-		return decodeStruct(kv, value.Addr().Interface())
+		return resource.DecodeStruct(kv, value.Addr().Interface())
 	default:
 		return fmt.Errorf("unsupported type: %T", value.Interface())
 	}

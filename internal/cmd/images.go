@@ -20,11 +20,12 @@ import (
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type ImagesCmd struct {
-	resource.ResourceCmd[Image] `set:"name=image" set:"names=images"`
+	cmd.ResourceCmd[Image] `set:"name=image" set:"names=images"`
 }
 
 type Image struct {

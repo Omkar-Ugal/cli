@@ -11,6 +11,7 @@ import (
 	"slices"
 )
 
+// CloneField creates a deep copy of the given Field.
 func CloneField(field Field) Field {
 	newField := field
 	newField.Subfields = CloneFields(field.Subfields)
@@ -31,6 +32,9 @@ func CloneFields(fields []Field) []Field {
 	return result
 }
 
+// DedupeFields removes duplicate fields from the given slice of Fields.
+// If a field with the same Name exists multiple times, their Subfields are
+// merged recursively.
 func DedupeFields(fields []Field) []Field {
 	seen := make(map[string]int)
 	result := make([]Field, 0, len(fields))
@@ -124,7 +128,7 @@ func valueToField(field *Field, val any) (*Field, []FieldPath, error) {
 
 	if field.Value != nil {
 		field.Value = reflect.New(reflect.TypeOf(field.Value)).Elem().Interface()
-		if err := decodeStruct(val, &field.Value); err != nil {
+		if err := DecodeStruct(val, &field.Value); err != nil {
 			return nil, nil, fmt.Errorf("failed to decode value %v for field %q: %w", val, field.Name, err)
 		}
 	}
@@ -211,18 +215,9 @@ func slicesToFields(elem *Field, vals []any) ([]Field, []FieldPath, error) {
 	return fields, unknown, nil
 }
 
-type filterResult int
-
-const (
-	filterExclude filterResult = iota
-	filterInclude
-	filterRecurse
-	filterPrune
-)
-
-// filterFields filters the given fields based on the provided predicate
+// FilterFields filters the given fields based on the provided predicate
 // function f. It recursively filters subfields as well.
-func filterFields(fields []Field, f func(Field) filterResult) []Field {
+func FilterFields(fields []Field, f func(Field) FilterResult) []Field {
 	if fields == nil {
 		return nil
 	}
@@ -230,15 +225,15 @@ func filterFields(fields []Field, f func(Field) filterResult) []Field {
 	result := make([]Field, 0, len(fields))
 	for _, field := range fields {
 		ff := f(field)
-		if ff == filterExclude {
+		if ff == FilterExclude {
 			continue
 		}
-		if ff == filterInclude {
+		if ff == FilterInclude {
 			result = append(result, field)
 			continue
 		}
-		field.Subfields = filterFields(field.Subfields, f)
-		if ff == filterPrune && len(field.Subfields) == 0 {
+		field.Subfields = FilterFields(field.Subfields, f)
+		if ff == FilterPrune && len(field.Subfields) == 0 {
 			continue
 		}
 		result = append(result, field)
@@ -246,20 +241,11 @@ func filterFields(fields []Field, f func(Field) filterResult) []Field {
 	return result
 }
 
-func filterPatchableFields(fields []Field) []Field {
-	return filterFields(fields, func(field Field) filterResult {
-		if field.Patch != nil {
-			return filterInclude
-		}
-		return filterPrune
-	})
-}
+type FilterResult int
 
-func filterCreatableFields(fields []Field) []Field {
-	return filterFields(fields, func(field Field) filterResult {
-		if field.Create != nil {
-			return filterInclude
-		}
-		return filterPrune
-	})
-}
+const (
+	FilterExclude FilterResult = iota
+	FilterInclude
+	FilterRecurse
+	FilterPrune
+)

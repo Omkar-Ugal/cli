@@ -3,32 +3,34 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package resource
+package patch
 
 import (
 	"fmt"
 	"reflect"
+
+	"unikraft.com/cli/internal/resource"
 )
 
-// collectValue collects a value of the given type from the Field.
+// collectValue collects a value of the given type from the resource.Field.
 //
 // In the simplest case, this is just returning field.Value, but for nested
 // structures, like lists of fields, then we need to assemble a value from
-// the subfields. e.g. [Field{Value: 1}, Field{Value: 2}] -> []int{1, 2}
-func collectValue(field Field, into reflect.Type) (any, error) {
+// the subfields. e.g. [resource.Field{Value: 1}, resource.Field{Value: 2}] -> []int{1, 2}
+func collectValue(field resource.Field, into reflect.Type) (any, error) {
 	v, err := collectValueRaw(field)
 	if err != nil {
 		return nil, err
 	}
 	target := reflect.New(into).Elem().Interface()
 
-	if err := decodeStruct(v, &target); err != nil {
+	if err := resource.DecodeStruct(v, &target); err != nil {
 		return nil, fmt.Errorf("failed to decode value into type %s: %w", into.String(), err)
 	}
 	return target, nil
 }
 
-func collectValueRaw(field Field) (any, error) {
+func collectValueRaw(field resource.Field) (any, error) {
 	if field.Value != nil {
 		return field.Value, nil
 	}
@@ -57,12 +59,12 @@ func collectValueRaw(field Field) (any, error) {
 	return nil, fmt.Errorf("field has no value")
 }
 
-// storeValue stores a value into the given Field, as the reverse of collectValue.
+// storeValue stores a value into the given resource.Field, as the reverse of collectValue.
 //
 // In the simplest case, this is just setting field.Value, but for nested structures,
 // like lists of fields, then we need to decompose the value into the subfields.
-// e.g. []int{1, 2} -> [Field{Value: 1}, Field{Value: 2}].
-func storeValue(field *Field, base reflect.Value) error {
+// e.g. []int{1, 2} -> [resource.Field{Value: 1}, resource.Field{Value: 2}].
+func storeValue(field *resource.Field, base reflect.Value) error {
 	value := base
 	for value.Kind() == reflect.Interface || value.Kind() == reflect.Pointer {
 		value = value.Elem()
@@ -80,9 +82,9 @@ func storeValue(field *Field, base reflect.Value) error {
 			return fmt.Errorf("expected slice for field %s, got %s", field.Name, value.Kind().String())
 		}
 		if field.Subfields == nil {
-			field.Subfields = make([]Field, value.Len())
+			field.Subfields = make([]resource.Field, value.Len())
 			for i := range field.Subfields {
-				field.Subfields[i] = CloneField(*field.Elem)
+				field.Subfields[i] = resource.CloneField(*field.Elem)
 				field.Subfields[i].Name = fmt.Sprintf("%d", i)
 			}
 		}
@@ -104,20 +106,20 @@ func storeValue(field *Field, base reflect.Value) error {
 			return fmt.Errorf("expected struct for field %s, got %s", field.Name, value.Kind().String())
 		}
 		for i := range value.NumField() {
-			parsedField := parseField(value.Type().Field(i))
+			parsedField := resource.ParseField(value.Type().Field(i))
 			if parsedField == nil {
 				continue
 			}
 
-			var subfield *Field
+			var subfield *resource.Field
 			for j := range field.Subfields {
-				if field.Subfields[j].Name == parsedField.name {
+				if field.Subfields[j].Name == parsedField.Name {
 					subfield = &field.Subfields[j]
 					break
 				}
 			}
 			if subfield == nil {
-				return fmt.Errorf("no subfield named %s in field %s", parsedField.name, field.Name)
+				return fmt.Errorf("no subfield named %s in field %s", parsedField.Name, field.Name)
 			}
 			err := storeValue(subfield, value.Field(i))
 			if err != nil {

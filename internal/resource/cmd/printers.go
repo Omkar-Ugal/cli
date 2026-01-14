@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package resource
+package cmd
 
 import (
 	"bytes"
@@ -21,10 +21,11 @@ import (
 	"github.com/muesli/termenv"
 
 	"unikraft.com/cli/internal/kvwriter"
+	"unikraft.com/cli/internal/resource"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
-func printTable[R Resource](out io.Writer, fieldSpecs []string, resources ...Resource) error {
+func printTable[R resource.Resource](out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
 	tw := ansiterm.NewTabWriter(out, 0, 8, 2, ' ', 0)
 	err := printTabSeparated[R](tw, fieldSpecs, resources...)
 	if err != nil {
@@ -33,7 +34,7 @@ func printTable[R Resource](out io.Writer, fieldSpecs []string, resources ...Res
 	return tw.Flush()
 }
 
-func printInspect(out io.Writer, fieldSpecs []string, resources ...Resource) error {
+func printInspect(out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
 	bw := kvwriter.KeyValueWriter(out, "")
 	err := printKV(bw, fieldSpecs, resources...)
 	if err != nil {
@@ -42,17 +43,17 @@ func printInspect(out io.Writer, fieldSpecs []string, resources ...Resource) err
 	return bw.Flush()
 }
 
-func printKV(out io.Writer, specs []string, resources ...Resource) error {
-	for i, resource := range resources {
-		fields, err := resource.Fields()
+func printKV(out io.Writer, specs []string, resources ...resource.Resource) error {
+	for i, res := range resources {
+		fields, err := res.Fields()
 		if err != nil {
 			return err
 		}
-		fields, err = resourceFields(fields, false, FieldVerbosityLong, specs)
+		fields, err = resourceFields(fields, false, resource.FieldVerbosityLong, specs)
 		if err != nil {
 			return err
 		}
-		fields = DedupeFields(fields)
+		fields = resource.DedupeFields(fields)
 
 		if i > 0 {
 			if _, err := fmt.Fprintln(out); err != nil {
@@ -66,7 +67,7 @@ func printKV(out io.Writer, specs []string, resources ...Resource) error {
 	return nil
 }
 
-func printKVFields(out io.Writer, parent *Field, fields []Field, current int, indent int) error {
+func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Field, current int, indent int) error {
 	for i, field := range fields {
 		var line bytes.Buffer
 		nextCurrent := 0
@@ -106,19 +107,19 @@ func printKVFields(out io.Writer, parent *Field, fields []Field, current int, in
 	return nil
 }
 
-func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources ...Resource) error {
+func printTabSeparated[R resource.Resource](out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
 	var r R
 	headers, err := r.Fields()
 	if err != nil {
 		return err
 	}
 
-	headers, err = resourceFields(headers, true, FieldVerbosityShort, fieldSpecs)
+	headers, err = resourceFields(headers, true, resource.FieldVerbosityShort, fieldSpecs)
 	if err != nil {
 		return err
 	}
 
-	headerPaths, headerFields := xslices.Collect2(IterFields(headers))
+	headerPaths, headerFields := xslices.Collect2(resource.IterFields(headers))
 
 	for i, header := range headerFields {
 		if header.HasChildren() && header.Value == nil {
@@ -143,8 +144,8 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 		return err
 	}
 
-	for _, resource := range resources {
-		fields, err := resource.Fields()
+	for _, res := range resources {
+		fields, err := res.Fields()
 		if err != nil {
 			return err
 		}
@@ -162,9 +163,9 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 				}
 			}
 
-			fields := GetFieldByPath(fields, path)
+			fields := resource.GetFieldByPath(fields, path)
 			fieldIdx := -1
-			for _, field := range IterFields(fields) {
+			for _, field := range resource.IterFields(fields) {
 				if field.Value == nil {
 					continue
 				}
@@ -204,7 +205,7 @@ func printTabSeparated[R Resource](out io.Writer, fieldSpecs []string, resources
 	return nil
 }
 
-func headerName(path FieldPath) string {
+func headerName(path resource.FieldPath) string {
 	for _, part := range slices.Backward(path) {
 		if part == "*" {
 			continue
@@ -214,9 +215,9 @@ func headerName(path FieldPath) string {
 	return ""
 }
 
-func printQuiet(out io.Writer, resources ...Resource) error {
-	for _, resource := range resources {
-		_, err := fmt.Fprintln(out, resource.Key())
+func printQuiet(out io.Writer, resources ...resource.Resource) error {
+	for _, res := range resources {
+		_, err := fmt.Fprintln(out, res.Key())
 		if err != nil {
 			return err
 		}
@@ -224,10 +225,10 @@ func printQuiet(out io.Writer, resources ...Resource) error {
 	return nil
 }
 
-func printRaw(out io.Writer, resources ...Resource) error {
+func printRaw(out io.Writer, resources ...resource.Resource) error {
 	input := make([]any, 0, len(resources))
-	for _, resource := range resources {
-		input = append(input, resource.Raw())
+	for _, res := range resources {
+		input = append(input, res.Raw())
 	}
 	dt, err := json.MarshalIndent(input, "", "  ")
 	if err != nil {
@@ -237,14 +238,14 @@ func printRaw(out io.Writer, resources ...Resource) error {
 	return err
 }
 
-func printTemplate(out io.Writer, tmplStr string, resources ...Resource) error {
+func printTemplate(out io.Writer, tmplStr string, resources ...resource.Resource) error {
 	input := make([]any, 0, len(resources))
-	for _, resource := range resources {
-		fields, err := resource.Fields()
+	for _, res := range resources {
+		fields, err := res.Fields()
 		if err != nil {
 			return err
 		}
-		input = append(input, FieldsToMap(fields))
+		input = append(input, resource.FieldsToMap(fields))
 	}
 
 	tmpl, err := template.New("out").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
@@ -254,54 +255,54 @@ func printTemplate(out io.Writer, tmplStr string, resources ...Resource) error {
 	return tmpl.Execute(out, input)
 }
 
-func resourceFields(fields []Field, header bool, verbosity FieldVerbosity, fieldSpecs []string) ([]Field, error) {
-	var base []FieldPath
-	var include []FieldPath
-	var exclude []FieldPath
+func resourceFields(fields []resource.Field, header bool, verbosity resource.FieldVerbosity, fieldSpecs []string) ([]resource.Field, error) {
+	var base []resource.FieldPath
+	var include []resource.FieldPath
+	var exclude []resource.FieldPath
 	for _, field := range fieldSpecs {
 		if len(field) == 0 {
 			continue
 		}
 		if field == "all" {
-			verbosity = FieldVerbosityHidden
+			verbosity = resource.FieldVerbosityHidden
 			continue
 		}
 		switch field[0] {
 		case '+':
 			field = field[1:]
-			include = append(include, ParseFieldPath(field))
+			include = append(include, resource.ParseFieldPath(field))
 		case '-':
 			field = field[1:]
-			exclude = append(exclude, ParseFieldPath(field))
+			exclude = append(exclude, resource.ParseFieldPath(field))
 		default:
-			base = append(base, ParseFieldPath(field))
+			base = append(base, resource.ParseFieldPath(field))
 		}
 	}
 
-	var missing []FieldPath
+	var missing []resource.FieldPath
 
-	result, missing := FilterFieldsByPath(fields, base, !header)
+	result, missing := resource.FilterFieldsByPath(fields, base, !header)
 	if len(base) == 0 {
-		result = filterFields(result, func(field Field) filterResult {
+		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
 			if field.Verbosity < verbosity {
-				return filterExclude
+				return resource.FilterExclude
 			}
 			if !header && field.IsEmpty() {
-				return filterExclude
+				return resource.FilterExclude
 			}
-			return filterRecurse
+			return resource.FilterRecurse
 		})
 	}
 
 	if len(include) > 0 {
-		included, includeMissing := FilterFieldsByPath(fields, include, !header)
-		result = MergeFields(result, included)
+		included, includeMissing := resource.FilterFieldsByPath(fields, include, !header)
+		result = resource.MergeFields(result, included)
 		missing = append(missing, includeMissing...)
 	}
 
 	if len(exclude) > 0 {
-		excluded, excludeMissing := FilterFieldsByPath(fields, exclude, !header)
-		result = RemoveFields(result, excluded)
+		excluded, excludeMissing := resource.FilterFieldsByPath(fields, exclude, !header)
+		result = resource.RemoveFields(result, excluded)
 		missing = append(missing, excludeMissing...)
 	}
 
