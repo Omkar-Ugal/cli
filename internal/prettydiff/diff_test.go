@@ -20,7 +20,7 @@ func TestDiffPrettyText_SingleLineUnchanged(t *testing.T) {
 
 	result := Render(diffs)
 	clean := vtclean.Clean(result, false)
-	require.Equal(t, clean, "  hello world\n")
+	require.Equal(t, "  hello world\n", clean)
 }
 
 func TestDiffPrettyText_MultiLineUnchanged(t *testing.T) {
@@ -97,7 +97,7 @@ func TestDiffPrettyText_EmptyStrings(t *testing.T) {
 	diffs := dmp.DiffMain("", "", false)
 	result := Render(diffs)
 	clean := vtclean.Clean(result, false)
-	require.Equal(t, "", clean)
+	require.Empty(t, clean)
 
 	// Old empty, new has content
 	diffs = dmp.DiffMain("", "new line\n", false)

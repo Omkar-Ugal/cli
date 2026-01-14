@@ -69,7 +69,7 @@ func TestMirror_TopLevelField(t *testing.T) {
 	require.True(t, ok, "Data should be map[string]any")
 
 	assert.Equal(t, "John", data["name"])
-	assert.Equal(t, float64(30), data["age"])
+	assert.Equal(t, float64(30), data["age"]) //nolint:testifylint // float should be exactly copied
 }
 
 func TestMirror_IgnoredField(t *testing.T) {

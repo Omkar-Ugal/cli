@@ -225,7 +225,7 @@ func TestGolden(t *testing.T) {
 					args = append(args, "go", "run", ".")
 					args = append(args, command.args[1:]...)
 				} else {
-					assert.Fail(t, "first argument must be %q", unikraftCmd)
+					assert.Failf(t, "first argument must be %q", unikraftCmd)
 					args = command.args
 				}
 				args = expander.expandArgs(args)
@@ -257,7 +257,7 @@ func TestGolden(t *testing.T) {
 					// ignore exit errors for help commands
 					err = nil
 				}
-				assert.NoError(t, err, "command %q failed", strings.Join(args, " "))
+				require.NoError(t, err, "command %q failed", strings.Join(args, " "), stdout.String(), stderr.String())
 
 				report := report{
 					args:     command.args,
