@@ -17,18 +17,19 @@ import (
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
+	resourcet "unikraft.com/cli/internal/resource/testing"
 )
 
-var baseTestStore = map[string]resource.Test{
+var baseTestStore = map[string]resourcet.TestResource{
 	"test1": {
 		ID:   "id-test1",
 		Name: "test1",
 		URL:  "https://example.com",
-		Settings: resource.TestSettings{
+		Settings: resourcet.TestSettings{
 			X: 42,
 			Y: "hello",
 		},
-		Authors: []resource.TestAuthor{
+		Authors: []resourcet.TestAuthor{
 			{Name: "Alice", Email: "alice@example.com"},
 			{Name: "Bob", Email: "bob@example.com"},
 		},
@@ -37,11 +38,11 @@ var baseTestStore = map[string]resource.Test{
 		ID:   "id-test2",
 		Name: "test2",
 		URL:  "https://example.org",
-		Settings: resource.TestSettings{
+		Settings: resourcet.TestSettings{
 			X: 7,
 			Y: "world",
 		},
-		Authors: []resource.TestAuthor{
+		Authors: []resourcet.TestAuthor{
 			{Name: "Charlie", Email: "charlie@example.com"},
 			{Name: "Dana", Email: "dana@example.com"},
 		},
@@ -54,15 +55,15 @@ func TestList(t *testing.T) {
 
 	cloned, err := copystructure.Copy(baseTestStore)
 	require.NoError(t, err)
-	resource.TestStore = cloned.(map[string]resource.Test)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
-	var empty resource.Test
+	var empty resourcet.TestResource
 	resources, err := empty.List(ctx)
 	require.NoError(t, err)
 	assert.Len(t, resources, 2)
 
 	var listOut bytes.Buffer
-	listCmd := &ResourceListCmd[resource.Test]{}
+	listCmd := &ResourceListCmd[resourcet.TestResource]{}
 	err = listCmd.Run(ctx, testConfig(&listOut), sandbox)
 	require.NoError(t, err)
 
@@ -74,7 +75,7 @@ func TestList(t *testing.T) {
 
 	t.Run("quiet", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceListCmd[resource.Test]{
+		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: FormatOpts{
 				Quiet: true,
 			},
@@ -92,7 +93,7 @@ func TestList(t *testing.T) {
 
 	t.Run("raw", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceListCmd[resource.Test]{
+		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: FormatOpts{
 				Raw: true,
 			},
@@ -117,7 +118,7 @@ func TestList(t *testing.T) {
 
 	t.Run("format", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceListCmd[resource.Test]{
+		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: FormatOpts{
 				Format: "{{range .}}{{.name}}\n{{end}}",
 			},
@@ -135,7 +136,7 @@ func TestList(t *testing.T) {
 
 	t.Run("field", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceListCmd[resource.Test]{
+		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: FormatOpts{
 				Field: []string{"name", "id"},
 			},
@@ -161,7 +162,7 @@ func TestList(t *testing.T) {
 
 	t.Run("filter", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceListCmd[resource.Test]{
+		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: FormatOpts{
 				Filter: []string{"name==test1"},
 			},
@@ -190,14 +191,14 @@ func TestGet(t *testing.T) {
 
 	cloned, err := copystructure.Copy(baseTestStore)
 	require.NoError(t, err)
-	resource.TestStore = cloned.(map[string]resource.Test)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
-	var empty resource.Test
+	var empty resourcet.TestResource
 	resources, err := empty.Get(ctx, []string{"test1"})
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
 
-	test := resources[0].(resource.Test)
+	test := resources[0].(resourcet.TestResource)
 	assert.Equal(t, "test1", test.Name)
 	assert.Equal(t, "id-test1", test.ID)
 	assert.Equal(t, 42, test.Settings.X)
@@ -208,7 +209,7 @@ func TestGet(t *testing.T) {
 	assert.NotEmpty(t, fields)
 
 	var inspectOut bytes.Buffer
-	inspectCmd := &ResourceInspectCmd[resource.Test]{
+	inspectCmd := &ResourceInspectCmd[resourcet.TestResource]{
 		Name: []string{"test1"},
 	}
 	err = inspectCmd.Run(ctx, testConfig(&inspectOut), sandbox)
@@ -221,7 +222,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("no_args", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{},
 		}
 		err := cmd.Run(ctx, testConfig(&out), sandbox)
@@ -230,7 +231,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("multiple", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{"test1", "test2"},
 		}
 		err := cmd.Run(ctx, testConfig(&out), sandbox)
@@ -245,7 +246,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("quiet", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Quiet: true,
@@ -264,7 +265,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("raw", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Raw: true,
@@ -291,7 +292,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("format", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Format: "{{range .}}{{.name}}: {{.url}}\n{{end}}",
@@ -310,7 +311,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("field", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Field: []string{"id", "url"},
@@ -337,7 +338,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("filter", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resource.Test]{
+		cmd := &ResourceInspectCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Filter: []string{"id==id-test1"},
@@ -363,9 +364,9 @@ func TestGet(t *testing.T) {
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
 
-	resource.TestStore = map[string]resource.Test{}
+	resourcet.TestStore = map[string]resourcet.TestResource{}
 
-	var empty resource.Test
+	var empty resourcet.TestResource
 	templateFields, err := empty.Fields()
 	require.NoError(t, err)
 
@@ -386,22 +387,22 @@ func TestCreate(t *testing.T) {
 	res, err := empty.Create(ctx, templateFields)
 	require.NoError(t, err)
 
-	created := res.(resource.Test)
+	created := res.(resourcet.TestResource)
 	assert.Equal(t, "test-new", created.Name)
 	assert.Equal(t, 100, created.Settings.X)
 	assert.Equal(t, "created", created.Settings.Y)
-	assert.Contains(t, resource.TestStore, "test-new")
+	assert.Contains(t, resourcet.TestStore, "test-new")
 }
 
 func TestEdit(t *testing.T) {
 	ctx := context.Background()
 
-	editStore := map[string]resource.Test{
+	editStore := map[string]resourcet.TestResource{
 		"test-edit": {
 			ID:   "id-edit",
 			Name: "test-edit",
 			URL:  "https://example.com",
-			Settings: resource.TestSettings{
+			Settings: resourcet.TestSettings{
 				X: 10,
 				Y: "original",
 			},
@@ -409,9 +410,9 @@ func TestEdit(t *testing.T) {
 	}
 	cloned, err := copystructure.Copy(editStore)
 	require.NoError(t, err)
-	resource.TestStore = cloned.(map[string]resource.Test)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
-	var empty resource.Test
+	var empty resourcet.TestResource
 	resources, err := empty.Get(ctx, []string{"test-edit"})
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
@@ -435,13 +436,13 @@ func TestEdit(t *testing.T) {
 	res, err := empty.Edit(ctx, target, templateFields)
 	require.NoError(t, err)
 
-	edited := res.(resource.Test)
+	edited := res.(resourcet.TestResource)
 	assert.Equal(t, "test-edit", edited.Name)
 	assert.Equal(t, "id-edit", edited.ID)
 	assert.Equal(t, 999, edited.Settings.X)
 	assert.Equal(t, "modified", edited.Settings.Y)
 
-	stored := resource.TestStore["test-edit"]
+	stored := resourcet.TestStore["test-edit"]
 	assert.Equal(t, 999, stored.Settings.X)
 	assert.Equal(t, "modified", stored.Settings.Y)
 }
@@ -449,7 +450,7 @@ func TestEdit(t *testing.T) {
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
 
-	deleteStore := map[string]resource.Test{
+	deleteStore := map[string]resourcet.TestResource{
 		"test-delete": {
 			ID:   "id-delete",
 			Name: "test-delete",
@@ -463,9 +464,9 @@ func TestDelete(t *testing.T) {
 	}
 	cloned, err := copystructure.Copy(deleteStore)
 	require.NoError(t, err)
-	resource.TestStore = cloned.(map[string]resource.Test)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
-	var empty resource.Test
+	var empty resourcet.TestResource
 	resources, err := empty.Get(ctx, []string{"test-delete"})
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
@@ -473,8 +474,8 @@ func TestDelete(t *testing.T) {
 	err = empty.Delete(ctx, resources)
 	require.NoError(t, err)
 
-	assert.NotContains(t, resource.TestStore, "test-delete")
-	assert.Contains(t, resource.TestStore, "test-keep")
+	assert.NotContains(t, resourcet.TestStore, "test-delete")
+	assert.Contains(t, resourcet.TestStore, "test-keep")
 
 	resources, err = empty.Get(ctx, []string{"test-delete"})
 	require.NoError(t, err)

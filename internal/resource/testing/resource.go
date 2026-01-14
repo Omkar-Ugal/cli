@@ -3,16 +3,18 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package resource
+package testing
 
 import (
 	"context"
 	"fmt"
 	"slices"
 	"strings"
+
+	"unikraft.com/cli/internal/resource"
 )
 
-type Test struct {
+type TestResource struct {
 	ID       string
 	Name     string
 	URL      string
@@ -21,11 +23,11 @@ type Test struct {
 }
 
 var (
-	_ Resource          = (*Test)(nil)
-	_ GettableResource  = (*Test)(nil)
-	_ EditableResource  = (*Test)(nil)
-	_ CreatableResource = (*Test)(nil)
-	_ DeletableResource = (*Test)(nil)
+	_ resource.Resource          = (*TestResource)(nil)
+	_ resource.GettableResource  = (*TestResource)(nil)
+	_ resource.EditableResource  = (*TestResource)(nil)
+	_ resource.CreatableResource = (*TestResource)(nil)
+	_ resource.DeletableResource = (*TestResource)(nil)
 )
 
 type TestSettings struct {
@@ -38,66 +40,66 @@ type TestAuthor struct {
 	Email string
 }
 
-var TestStore = map[string]Test{}
+var TestStore = map[string]TestResource{}
 
-func (Test) Type() Type {
-	return Type{
+func (TestResource) Type() resource.Type {
+	return resource.Type{
 		Name:  "test",
 		Names: "tests",
 	}
 }
 
-func (t Test) Key() string {
+func (t TestResource) Key() string {
 	return t.Name
 }
 
-func (t Test) Raw() any {
+func (t TestResource) Raw() any {
 	return t
 }
 
-func (t Test) Fields() ([]Field, error) {
-	return []Field{
+func (t TestResource) Fields() ([]resource.Field, error) {
+	return []resource.Field{
 		{
 			Name:      "id",
 			Value:     t.ID,
-			Verbosity: FieldVerbosityShort,
+			Verbosity: resource.FieldVerbosityShort,
 		},
 		{
 			Name:      "name",
 			Value:     t.Name,
-			Verbosity: FieldVerbosityShort,
-			Create: &Patch{
+			Verbosity: resource.FieldVerbosityShort,
+			Create: &resource.Patch{
 				Set: "",
 			},
 		},
 		{
 			Name:      "url",
 			Value:     t.URL,
-			Verbosity: FieldVerbosityShort,
+			Verbosity: resource.FieldVerbosityShort,
 		},
 		{
 			Name:      "settings",
-			Verbosity: FieldVerbosityLong,
-			Subfields: []Field{
+			Verbosity: resource.FieldVerbosityLong,
+			Subfields: []resource.Field{
 				{
 					Name:      "x",
 					Value:     t.Settings.X,
-					Verbosity: FieldVerbosityLong,
-					Create: &Patch{
+					Verbosity: resource.FieldVerbosityLong,
+					Create: &resource.Patch{
 						Set: 0,
 					},
-					Patch: &Patch{
+					Patch: &resource.Patch{
 						Set: 0,
 					},
 				},
 				{
 					Name:      "y",
 					Value:     t.Settings.Y,
-					Verbosity: FieldVerbosityLong,
-					Create: &Patch{
+					Verbosity: resource.FieldVerbosityLong,
+					Create: &resource.Patch{
 						Set: "",
 					},
-					Patch: &Patch{
+					Patch: &resource.Patch{
 						Set: "",
 					},
 				},
@@ -105,35 +107,35 @@ func (t Test) Fields() ([]Field, error) {
 		},
 		{
 			Name:      "authors",
-			Verbosity: FieldVerbosityLong,
-			Elem: &Field{
-				Subfields: []Field{
+			Verbosity: resource.FieldVerbosityLong,
+			Elem: &resource.Field{
+				Subfields: []resource.Field{
 					{
 						Name:      "name",
-						Verbosity: FieldVerbosityLong,
+						Verbosity: resource.FieldVerbosityLong,
 					},
 					{
 						Name:      "email",
-						Verbosity: FieldVerbosityLong,
+						Verbosity: resource.FieldVerbosityLong,
 					},
 				},
 			},
-			Subfields: func() []Field {
-				var fields []Field
+			Subfields: func() []resource.Field {
+				var fields []resource.Field
 				for i, author := range t.Authors {
-					fields = append(fields, Field{
+					fields = append(fields, resource.Field{
 						Name:      fmt.Sprintf("%d", i),
-						Verbosity: FieldVerbosityLong,
-						Subfields: []Field{
+						Verbosity: resource.FieldVerbosityLong,
+						Subfields: []resource.Field{
 							{
 								Name:      "name",
 								Value:     author.Name,
-								Verbosity: FieldVerbosityLong,
+								Verbosity: resource.FieldVerbosityLong,
 							},
 							{
 								Name:      "email",
 								Value:     author.Email,
-								Verbosity: FieldVerbosityLong,
+								Verbosity: resource.FieldVerbosityLong,
 							},
 						},
 					})
@@ -144,21 +146,21 @@ func (t Test) Fields() ([]Field, error) {
 	}, nil
 }
 
-func (Test) List(ctx context.Context) ([]Resource, error) {
-	var resources []Resource
+func (TestResource) List(ctx context.Context) ([]resource.Resource, error) {
+	var resources []resource.Resource
 	for _, t := range TestStore {
 		resources = append(resources, t)
 	}
 	// Sort by ID for deterministic output
-	slices.SortFunc(resources, func(a, b Resource) int {
-		return strings.Compare(a.(Test).ID, b.(Test).ID)
+	slices.SortFunc(resources, func(a, b resource.Resource) int {
+		return strings.Compare(a.(TestResource).ID, b.(TestResource).ID)
 	})
 	return resources, nil
 }
 
-func (Test) Get(ctx context.Context, keys []string) ([]Resource, error) {
+func (TestResource) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
 	// Build a map for lookup
-	resourceMap := make(map[string]Test)
+	resourceMap := make(map[string]TestResource)
 	for _, key := range keys {
 		if t, ok := TestStore[key]; ok {
 			resourceMap[key] = t
@@ -166,7 +168,7 @@ func (Test) Get(ctx context.Context, keys []string) ([]Resource, error) {
 	}
 
 	// Return resources in the order of keys provided
-	var resources []Resource
+	var resources []resource.Resource
 	for _, key := range keys {
 		if t, ok := resourceMap[key]; ok {
 			resources = append(resources, t)
@@ -175,12 +177,12 @@ func (Test) Get(ctx context.Context, keys []string) ([]Resource, error) {
 	return resources, nil
 }
 
-func (Test) Create(ctx context.Context, fields []Field) (Resource, error) {
-	t := Test{
+func (TestResource) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+	t := TestResource{
 		Settings: TestSettings{},
 	}
 
-	for key, field := range IterFields(fields) {
+	for key, field := range resource.IterFields(fields) {
 		if field.Create == nil || field.Create.Set == nil {
 			continue
 		}
@@ -198,10 +200,10 @@ func (Test) Create(ctx context.Context, fields []Field) (Resource, error) {
 	return t, nil
 }
 
-func (Test) Edit(ctx context.Context, target Resource, fields []Field) (Resource, error) {
-	t := target.(Test)
+func (TestResource) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
+	t := target.(TestResource)
 
-	for key, field := range IterFields(fields) {
+	for key, field := range resource.IterFields(fields) {
 		if field.Patch == nil || field.Patch.Set == nil {
 			continue
 		}
@@ -217,9 +219,9 @@ func (Test) Edit(ctx context.Context, target Resource, fields []Field) (Resource
 	return t, nil
 }
 
-func (Test) Delete(ctx context.Context, targets []Resource) error {
+func (TestResource) Delete(ctx context.Context, targets []resource.Resource) error {
 	for _, target := range targets {
-		t := target.(Test)
+		t := target.(TestResource)
 		delete(TestStore, t.Name)
 	}
 	return nil
