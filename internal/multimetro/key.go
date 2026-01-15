@@ -19,20 +19,35 @@ type Key struct {
 	UUID string
 }
 
-const MetroKeySeparator = "#"
+const (
+	MetroKeySeparator = "#"
+	KeyNamePrefix     = "name:"
+	KeyUUIDPrefix     = "uuid:"
+)
 
 func ParseKey(s string) Key {
-	if metro, key, ok := strings.Cut(s, MetroKeySeparator); ok {
-		if uuid.Validate(key) == nil {
-			return Key{Metro: metro, UUID: key}
-		}
-		return Key{Metro: metro, Name: key}
+	metro := ""
+	key := s
+	if metroPart, keyPart, ok := strings.Cut(s, MetroKeySeparator); ok {
+		metro = metroPart
+		key = keyPart
 	}
 
-	if uuid.Validate(s) == nil {
-		return Key{UUID: s}
+	name, id := parseKeyValue(key)
+	return Key{Metro: metro, Name: name, UUID: id}
+}
+
+func parseKeyValue(key string) (name string, id string) {
+	if name, ok := strings.CutPrefix(key, KeyNamePrefix); ok {
+		return name, ""
 	}
-	return Key{Name: s}
+	if id, ok := strings.CutPrefix(key, KeyUUIDPrefix); ok {
+		return "", id
+	}
+	if uuid.Validate(key) == nil {
+		return "", key
+	}
+	return key, ""
 }
 
 func (k Key) NameOrUUID() platform.NameOrUUID {
@@ -42,14 +57,40 @@ func (k Key) NameOrUUID() platform.NameOrUUID {
 	return platform.NameOrUUID{Name: &k.Name}
 }
 
+func requiresNamePrefix(name string) bool {
+	if name == "" {
+		return false
+	}
+	if strings.HasPrefix(name, KeyNamePrefix) || strings.HasPrefix(name, KeyUUIDPrefix) {
+		return true
+	}
+	return uuid.Validate(name) == nil
+}
+
+func requiresIDPrefix(id string) bool {
+	if id == "" {
+		return false
+	}
+	if strings.HasPrefix(id, KeyNamePrefix) || strings.HasPrefix(id, KeyUUIDPrefix) {
+		return true
+	}
+	return uuid.Validate(id) != nil
+}
+
 func (k Key) String() string {
 	s := ""
 	if k.Metro != "" {
 		s += k.Metro + MetroKeySeparator
 	}
 	if k.UUID != "" {
+		if requiresIDPrefix(k.UUID) {
+			s += KeyUUIDPrefix
+		}
 		s += k.UUID
 	} else if k.Name != "" {
+		if requiresNamePrefix(k.Name) {
+			s += KeyNamePrefix
+		}
 		s += k.Name
 	}
 	return s
