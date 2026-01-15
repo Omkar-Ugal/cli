@@ -87,6 +87,7 @@ func init() {
 
 	testCases = append(testCases, helpTestCases...)
 	testCases = append(testCases, authTestCases...)
+	testCases = append(testCases, instancesTestCases...)
 	testCases = append(testCases, volumesTestCases...)
 	testCases = append(testCases, servicesTestCases...)
 	testCases = append(testCases, certificatesTestCases...)
