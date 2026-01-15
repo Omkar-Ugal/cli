@@ -144,16 +144,20 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 
 	for key, field := range resource.IterFields(result) {
 		if key.MatchesString("domains.*.certificate") {
-			name, _ := field.Get("name")
-			uuid, _ := field.Get("uuid")
-			field.Links = append(field.Links, resource.Link{
-				Type: "certificate",
-				Key: multimetro.Key{
-					Metro: s.Metro.Name,
-					Name:  name.Value.(string),
-					UUID:  uuid.Value.(string),
-				}.String(),
-			})
+			nameField, _ := field.Get("name")
+			uuidField, _ := field.Get("uuid")
+			name, _ := nameField.Value.(string)
+			uuid, _ := uuidField.Value.(string)
+			if name != "" && uuid != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "certificate",
+					Key: multimetro.Key{
+						Metro: s.Metro.Name,
+						Name:  name,
+						UUID:  uuid,
+					}.String(),
+				})
+			}
 		}
 	}
 
