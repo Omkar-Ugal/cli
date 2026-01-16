@@ -88,7 +88,7 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 					Create: &resource.Patch{
 						Set: 0,
 					},
-					Patch: &resource.Patch{
+					Edit: &resource.Patch{
 						Set: 0,
 					},
 				},
@@ -99,7 +99,7 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 					Create: &resource.Patch{
 						Set: "",
 					},
-					Patch: &resource.Patch{
+					Edit: &resource.Patch{
 						Set: "",
 					},
 				},
@@ -204,14 +204,14 @@ func (TestResource) Edit(ctx context.Context, target resource.Resource, fields [
 	t := target.(TestResource)
 
 	for key, field := range resource.IterFields(fields) {
-		if field.Patch == nil || field.Patch.Set == nil {
+		if field.Edit == nil || field.Edit.Set == nil {
 			continue
 		}
 		switch key.String() {
 		case "settings.x":
-			t.Settings.X = field.Patch.Set.(int)
+			t.Settings.X = field.Edit.Set.(int)
 		case "settings.y":
-			t.Settings.Y = field.Patch.Set.(string)
+			t.Settings.Y = field.Edit.Set.(string)
 		}
 	}
 

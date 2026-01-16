@@ -70,7 +70,7 @@ type Field struct {
 
 	// settings for creating or patching resources
 	Create *Patch `json:"create,omitempty"`
-	Patch  *Patch `json:"patch,omitempty"`
+	Edit   *Patch `json:"edit,omitempty"`
 }
 
 func (f Field) HasChildren() bool {

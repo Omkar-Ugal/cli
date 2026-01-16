@@ -29,14 +29,14 @@ type VolumesCmd struct {
 }
 
 type Volume struct {
-	MetroName string `mirror:"metro.name" field:"metro,short"`
-	Name      string `mirror:"volume.name" field:",short"`
+	MetroName string `mirror:"metro.name" field:"metro,short" create:"set,required"`
+	Name      string `mirror:"volume.name" field:",short" create:"set"`
 	UUID      string `mirror:"volume.uuid" field:",long"`
 
 	Tags []string `mirror:"volume.tags"`
 
 	State      VolumeState `mirror:"volume.state" field:",short"`
-	Size       SizeMB      `mirror:"volume.size_mb" field:",short"`
+	Size       SizeMB      `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
 	Persistent bool        `mirror:"volume.persistent" field:",long"`
 
 	Timestamps struct {
@@ -82,34 +82,7 @@ func (i Volume) Raw() any {
 }
 
 func (i Volume) Fields() ([]resource.Field, error) {
-	result, err := resource.FieldsFromStruct(i)
-	if err != nil {
-		return nil, err
-	}
-
-	for idx, field := range result {
-		switch field.Name {
-		case "name":
-			result[idx].Create = &resource.Patch{
-				Set: "",
-			}
-		case "metro":
-			result[idx].Create = &resource.Patch{
-				Set:      "",
-				Required: true,
-			}
-		case "size":
-			result[idx].Create = &resource.Patch{
-				Set:      SizeMB(0),
-				Required: true,
-			}
-			result[idx].Patch = &resource.Patch{
-				Set: SizeMB(0),
-			}
-		}
-	}
-
-	return result, nil
+	return resource.FieldsFromStruct(i)
 }
 
 func (Volume) List(ctx context.Context) ([]resource.Resource, error) {
@@ -286,17 +259,17 @@ func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resou
 }
 
 func (Volume) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateVolumesRequestItem) {
-	if field.Patch == nil {
+	if field.Edit == nil {
 		return reqs
 	}
-	if field.Patch.Set != nil {
-		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Patch.Set, platform.UpdateVolumesRequestItemOpSet))
+	if field.Edit.Set != nil {
+		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Edit.Set, platform.UpdateVolumesRequestItemOpSet))
 	}
-	if field.Patch.Add != nil {
-		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Patch.Add, platform.UpdateVolumesRequestItemOpAdd))
+	if field.Edit.Add != nil {
+		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Edit.Add, platform.UpdateVolumesRequestItemOpAdd))
 	}
-	if field.Patch.Del != nil {
-		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Patch.Del, platform.UpdateVolumesRequestItemOpDel))
+	if field.Edit.Del != nil {
+		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Edit.Del, platform.UpdateVolumesRequestItemOpDel))
 	}
 	return reqs
 }

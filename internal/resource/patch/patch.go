@@ -68,9 +68,9 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 			field.Create = nil
 			patch = &field.Create
 		} else {
-			original = field.Patch
-			field.Patch = nil
-			patch = &field.Patch
+			original = field.Edit
+			field.Edit = nil
+			patch = &field.Edit
 		}
 		if original == nil {
 			original = &resource.Patch{}

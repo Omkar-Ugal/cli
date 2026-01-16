@@ -31,30 +31,30 @@ type ServicesCmd struct {
 }
 
 type ServiceGroup struct {
-	MetroName string `mirror:"metro.name" field:"metro,short"`
-	Name      string `mirror:"service_group.name" field:",short"`
+	MetroName string `mirror:"metro.name" field:"metro,short" create:"set,required"`
+	Name      string `mirror:"service_group.name" field:",short" create:"set"`
 	UUID      string `mirror:"service_group.uuid" field:",long"`
 
 	Persistent bool `mirror:"service_group.persistent" field:",long"`
 	Autoscale  bool `mirror:"service_group.autoscale" field:",short"`
 
 	Limits struct {
-		Soft uint64 `mirror:"service_group.soft_limit" field:",long"`
-		Hard uint64 `mirror:"service_group.hard_limit" field:",long"`
+		Soft uint64 `mirror:"service_group.soft_limit" field:",long" create:"set" edit:"set"`
+		Hard uint64 `mirror:"service_group.hard_limit" field:",long" create:"set" edit:"set"`
 	}
 
 	Timestamps struct {
 		CreatedAt time.Time `mirror:"service_group.created_at"`
 	}
 
-	Domains []Domain `mirror:"service_group.domains"`
+	Domains []Domain `mirror:"service_group.domains" create:"set" edit:"set,add,del"`
 
 	Instances []struct {
 		Name string `mirror:"name" field:",long"`
 		UUID string `mirror:"uuid" field:",long"`
 	} `mirror:"service_group.instances"`
 
-	Services []*Service `mirror:"service_group.services"`
+	Services []*Service `mirror:"service_group.services" create:"set,required" edit:"set,add,del"`
 
 	ServiceGroup platform.ServiceGroup `field:"-" json:"service_group"`
 	Metro        *config.Metro         `field:"-" json:"metro"`
@@ -142,25 +142,6 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 	}
 
 	for key, field := range resource.IterFields(result) {
-		switch key.String() {
-		case "metro":
-			field.Create = &resource.Patch{Set: "", Required: true}
-		case "name":
-			field.Create = &resource.Patch{Set: ""}
-		case "services":
-			// FIXME: del should support deleting by *just* port
-			field.Patch = &resource.Patch{Set: []*Service{}, Add: []*Service{}, Del: []*Service{}}
-			field.Create = &resource.Patch{Set: []*Service{}, Required: true}
-		case "domains":
-			field.Patch = &resource.Patch{Set: []Domain{}, Add: []Domain{}, Del: []Domain{}}
-			field.Create = &resource.Patch{Set: []Domain{}}
-		case "limits.soft":
-			field.Patch = &resource.Patch{Set: uint64(0)}
-			field.Create = &resource.Patch{Set: uint64(0)}
-		case "limits.hard":
-			field.Patch = &resource.Patch{Set: uint64(0)}
-			field.Create = &resource.Patch{Set: uint64(0)}
-		}
 		if key.MatchesString("domains.*.certificate") {
 			name, _ := field.Get("name")
 			uuid, _ := field.Get("uuid")
@@ -366,17 +347,17 @@ func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields [
 }
 
 func (ServiceGroup) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateServiceGroupsRequestItem) {
-	if field.Patch == nil {
+	if field.Edit == nil {
 		return reqs
 	}
-	if field.Patch.Set != nil {
-		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Patch.Set, platform.UpdateServiceGroupsRequestItemOpSet))
+	if field.Edit.Set != nil {
+		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Edit.Set, platform.UpdateServiceGroupsRequestItemOpSet))
 	}
-	if field.Patch.Add != nil {
-		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Patch.Add, platform.UpdateServiceGroupsRequestItemOpAdd))
+	if field.Edit.Add != nil {
+		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Edit.Add, platform.UpdateServiceGroupsRequestItemOpAdd))
 	}
-	if field.Patch.Del != nil {
-		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Patch.Del, platform.UpdateServiceGroupsRequestItemOpDel))
+	if field.Edit.Del != nil {
+		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Edit.Del, platform.UpdateServiceGroupsRequestItemOpDel))
 	}
 	return reqs
 }
