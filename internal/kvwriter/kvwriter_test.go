@@ -109,3 +109,28 @@ Version:          1.0.0
 	clean := vtclean.Clean(buf.String(), false)
 	require.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(clean))
 }
+
+func TestMultipleSplits(t *testing.T) {
+	var buf bytes.Buffer
+	w := KeyValueWriter(&buf, "", ": ", "=> ")
+
+	input := `
+Name: ExampleApp
+Version=> 1.0.0
+Owner: Example Org
+Type=> Service
+	`
+	_, err := w.Write([]byte(strings.TrimSpace(input)))
+	require.NoError(t, err)
+	err = w.Flush()
+	require.NoError(t, err)
+
+	expected := `
+Name:     ExampleApp
+Version=> 1.0.0
+Owner:    Example Org
+Type=>    Service
+	`
+	clean := vtclean.Clean(buf.String(), false)
+	require.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(clean))
+}

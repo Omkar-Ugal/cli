@@ -21,11 +21,21 @@ type keyValueWriter struct {
 	w      io.Writer
 	buffer []byte
 
-	cut int
+	splits []string
+	cut    int
 
-	keys      [][]byte
-	cleankeys [][]byte
-	values    [][]byte
+	cells []cell
+}
+
+type cell struct {
+	key      []byte
+	cleankey []byte
+	value    []byte
+	split    []byte
+}
+
+func (entry cell) width() int {
+	return len(entry.cleankey) + len(entry.split)
 }
 
 // KeyValueWriter returns a Writer that formats key-value pairs written to it.
@@ -34,8 +44,11 @@ type keyValueWriter struct {
 // The keys will be aligned based on the longest key, and styling rules are
 // applied to them based on their leading whitespace after the specified indent
 // is removed.
-func KeyValueWriter(w io.Writer, indent string) WriteFlusher {
-	return &keyValueWriter{w: w, cut: len(indent)}
+func KeyValueWriter(w io.Writer, indent string, splits ...string) WriteFlusher {
+	if len(splits) == 0 {
+		splits = []string{": "}
+	}
+	return &keyValueWriter{w: w, cut: len(indent), splits: splits}
 }
 
 func (b *keyValueWriter) Write(p []byte) (n int, err error) {
@@ -50,23 +63,52 @@ func (b *keyValueWriter) Write(p []byte) (n int, err error) {
 	b.buffer = b.buffer[lastNewline+1:]
 
 	for line := range lines {
-		key, value, ok := bytes.Cut(line, []byte(":"))
-		if ok && len(value) > 0 {
-			if value[0] != ' ' && value[0] != '\t' && value[0] != '\n' {
-				ok = false
-			}
-		}
-		if ok {
-			b.keys = append(b.keys, key)
-			b.cleankeys = append(b.cleankeys, []byte(vtclean.Clean(string(key), false)))
-			b.values = append(b.values, bytes.TrimSpace(value))
-		} else {
-			b.keys = append(b.keys, nil)
-			b.cleankeys = append(b.cleankeys, nil)
-			b.values = append(b.values, line)
-		}
+		b.cells = append(b.cells, b.parseLine(line))
 	}
 	return len(p), nil
+}
+
+func (b *keyValueWriter) parseLine(line []byte) cell {
+	parsed, ok := b.splitLine(line)
+	if ok {
+		return parsed
+	}
+	return cell{value: line}
+}
+
+func (b *keyValueWriter) splitLine(line []byte) (cell, bool) {
+	var best cell
+	bestIndex := -1
+
+	for _, split := range b.splits {
+		if split == "" {
+			continue
+		}
+		splitBytes := []byte(split)
+		idx := bytes.Index(line, splitBytes)
+		if idx == -1 {
+			continue
+		}
+		value := line[idx+len(splitBytes):]
+		if bestIndex != -1 && idx > bestIndex {
+			continue
+		}
+		if bestIndex != -1 && idx == bestIndex && len(splitBytes) <= len(best.split) {
+			continue
+		}
+		key := line[:idx]
+		best = cell{
+			key:      key,
+			cleankey: []byte(vtclean.Clean(string(key), false)),
+			value:    bytes.TrimSpace(value),
+			split:    splitBytes,
+		}
+		bestIndex = idx
+	}
+	if bestIndex == -1 {
+		return cell{}, false
+	}
+	return best, true
 }
 
 func (b *keyValueWriter) flush() error {
@@ -80,20 +122,21 @@ func (b *keyValueWriter) flush() error {
 	color := lipgloss.ColorProfile() != termenv.Ascii
 
 	maxKeyLen := 0
-	for _, key := range b.cleankeys {
-		maxKeyLen = max(maxKeyLen, len(key))
+	for _, entry := range b.cells {
+		if entry.key == nil {
+			continue
+		}
+		maxKeyLen = max(maxKeyLen, entry.width())
 	}
 
-	for i, key := range b.keys {
-		value := b.values[i]
-		cleankey := b.cleankeys[i]
-
-		if key == nil {
-			if _, err := fmt.Fprint(b.w, string(value)); err != nil {
+	for _, entry := range b.cells {
+		if entry.key == nil {
+			if _, err := fmt.Fprint(b.w, string(entry.value)); err != nil {
 				return err
 			}
 			continue
 		}
+		cleankey := entry.cleankey
 		if len(cleankey) > 0 {
 			var styleSeq, resetSeq ansi.Style
 			if color {
@@ -111,20 +154,21 @@ func (b *keyValueWriter) flush() error {
 				}
 			}
 
-			padding := maxKeyLen - len(cleankey)
+			padding := max(0, maxKeyLen-entry.width())
 			line := []byte{}
 			if styleSeq != nil {
 				line = append(line, []byte(styleSeq.String())...)
 			}
-			line = append(line, key...)
+			line = append(line, entry.key...)
 			if styleSeq != nil {
 				line = append(line, []byte(resetSeq.String())...)
 			}
-			line = append(line, ':')
-			if len(value) > 0 {
-				line = append(line, bytes.Repeat([]byte(" "), padding)...)
-				line = append(line, ' ')
-				line = append(line, value...)
+			line = append(line, entry.split...)
+			if len(entry.value) > 0 {
+				if padding > 0 {
+					line = append(line, bytes.Repeat([]byte(" "), padding)...)
+				}
+				line = append(line, entry.value...)
 			}
 			line = append(line, '\n')
 			if _, err := b.w.Write(line); err != nil {
