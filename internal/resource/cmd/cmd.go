@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/lunixbochs/vtclean"
@@ -21,6 +22,7 @@ import (
 	"unikraft.com/cli/internal/prettydiff"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
+	"unikraft.com/cli/internal/tui/watcher"
 )
 
 type ResourceCmd[R resource.GettableResource] struct {
@@ -54,7 +56,8 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R resource.GettableResource] struct {
-	Name []string `arg:"" optional:"" help:"Names of the ${names} to list."`
+	Name  []string      `arg:"" optional:"" help:"Names of the ${names} to list."`
+	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
 }
@@ -72,35 +75,45 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 
 	var empty R
 	r := sandbox.WrapGettable(empty)
-	var resources []resource.Resource
-	if len(cmd.Name) > 0 {
-		resources, err = r.Get(ctx, cmd.Name)
-	} else {
-		resources, err = r.List(ctx)
-	}
-	if err != nil {
-		return err
+
+	render := func(out io.Writer) error {
+		var resources []resource.Resource
+		var err error
+		if len(cmd.Name) > 0 {
+			resources, err = r.Get(ctx, cmd.Name)
+		} else {
+			resources, err = r.List(ctx)
+		}
+		if err != nil {
+			return err
+		}
+
+		resources, err = filterResources(resources, filter)
+		if err != nil {
+			return err
+		}
+
+		switch {
+		case cmd.Quiet:
+			return printQuiet(out, resources...)
+		case cmd.Raw:
+			return printRaw(out, resources...)
+		case cmd.Format != "":
+			return printTemplate(out, cmd.Format, resources...)
+		default:
+			return printTable[R](out, cmd.Field, resources...)
+		}
 	}
 
-	resources, err = filterResources(resources, filter)
-	if err != nil {
-		return err
+	if cmd.Watch > 0 {
+		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
 	}
-
-	switch {
-	case cmd.Quiet:
-		return printQuiet(cfg.Stdout, resources...)
-	case cmd.Raw:
-		return printRaw(cfg.Stdout, resources...)
-	case cmd.Format != "":
-		return printTemplate(cfg.Stdout, cmd.Format, resources...)
-	default:
-		return printTable[R](cfg.Stdout, cmd.Field, resources...)
-	}
+	return render(cfg.Stdout)
 }
 
 type ResourceInspectCmd[R resource.GettableResource] struct {
-	Name []string `arg:"" help:"Names of the ${names} to inspect."`
+	Name  []string      `arg:"" help:"Names of the ${names} to inspect."`
+	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
 }
@@ -114,26 +127,34 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 
 	var empty R
 	r := sandbox.WrapGettable(empty)
-	resources, err := r.Get(ctx, cmd.Name)
-	if err != nil {
-		return err
+
+	render := func(out io.Writer) error {
+		resources, err := r.Get(ctx, cmd.Name)
+		if err != nil {
+			return err
+		}
+
+		resources, err = filterResources(resources, filter)
+		if err != nil {
+			return err
+		}
+
+		switch {
+		case cmd.Quiet:
+			return printQuiet(out, resources...)
+		case cmd.Raw:
+			return printRaw(out, resources...)
+		case cmd.Format != "":
+			return printTemplate(out, cmd.Format, resources...)
+		default:
+			return printInspect(out, cmd.Field, resources...)
+		}
 	}
 
-	resources, err = filterResources(resources, filter)
-	if err != nil {
-		return err
+	if cmd.Watch > 0 {
+		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
 	}
-
-	switch {
-	case cmd.Quiet:
-		return printQuiet(cfg.Stdout, resources...)
-	case cmd.Raw:
-		return printRaw(cfg.Stdout, resources...)
-	case cmd.Format != "":
-		return printTemplate(cfg.Stdout, cmd.Format, resources...)
-	default:
-		return printInspect(cfg.Stdout, cmd.Field, resources...)
-	}
+	return render(cfg.Stdout)
 }
 
 func filterResources(resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
