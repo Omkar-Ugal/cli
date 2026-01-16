@@ -25,8 +25,6 @@ import (
 	"unikraft.com/cli/internal/tui/watcher"
 )
 
-const resourceWatchInterval = 2 * time.Second
-
 type ResourceCmd[R resource.GettableResource] struct {
 	List ResourceListCmd[R]    `cmd:"" help:"List ${names}." aliases:"ls"`
 	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
@@ -58,8 +56,8 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R resource.GettableResource] struct {
-	Name  []string `arg:"" optional:"" help:"Names of the ${names} to list."`
-	Watch bool     `short:"w" help:"Watch for changes and refresh output every 2s."`
+	Name  []string      `arg:"" optional:"" help:"Names of the ${names} to list."`
+	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
 }
@@ -107,15 +105,15 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		}
 	}
 
-	if cmd.Watch {
-		return watcher.WatchOutput(ctx, resourceWatchInterval, cfg.Stdout, render)
+	if cmd.Watch > 0 {
+		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
 	}
 	return render(cfg.Stdout)
 }
 
 type ResourceInspectCmd[R resource.GettableResource] struct {
-	Name  []string `arg:"" help:"Names of the ${names} to inspect."`
-	Watch bool     `short:"w" help:"Watch for changes and refresh output every 2s."`
+	Name  []string      `arg:"" help:"Names of the ${names} to inspect."`
+	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
 }
@@ -153,8 +151,8 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 		}
 	}
 
-	if cmd.Watch {
-		return watcher.WatchOutput(ctx, resourceWatchInterval, cfg.Stdout, render)
+	if cmd.Watch > 0 {
+		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
 	}
 	return render(cfg.Stdout)
 }
