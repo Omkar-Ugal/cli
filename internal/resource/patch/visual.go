@@ -97,7 +97,7 @@ func saveFields(fields []resource.Field, patches []resource.Field, create bool) 
 		if create {
 			patch = field.Create
 		} else {
-			patch = field.Patch
+			patch = field.Edit
 		}
 		if patch == nil || patch.Set == nil {
 			continue
@@ -122,7 +122,7 @@ func saveFields(fields []resource.Field, patches []resource.Field, create bool) 
 			if create {
 				patch = patchedField.Create
 			} else {
-				patch = patchedField.Patch
+				patch = patchedField.Edit
 			}
 			if patch == nil {
 				return nil, fmt.Errorf("no patch available for field %s", keyStr)
@@ -197,7 +197,7 @@ func loadFieldPatches(ctx context.Context, fields []resource.Field, data []byte,
 		if create {
 			patch = field.Create
 		} else {
-			patch = field.Patch
+			patch = field.Edit
 		}
 		if patch == nil || patch.Set == nil {
 			continue
@@ -229,7 +229,7 @@ func patchField(path resource.FieldPath, before *resource.Field, after *resource
 	if create {
 		patch = before.Create
 	} else {
-		patch = before.Patch
+		patch = before.Edit
 	}
 
 	if before.Name != after.Name {
@@ -289,7 +289,7 @@ func patchField(path resource.FieldPath, before *resource.Field, after *resource
 	if create {
 		before.Create = patch
 	} else {
-		before.Patch = patch
+		before.Edit = patch
 	}
 
 	return nil

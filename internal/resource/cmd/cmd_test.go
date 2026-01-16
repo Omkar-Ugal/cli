@@ -422,14 +422,14 @@ func TestEdit(t *testing.T) {
 	require.NoError(t, err)
 
 	for key, field := range resource.IterFields(templateFields) {
-		if field.Patch == nil {
+		if field.Edit == nil {
 			continue
 		}
 		switch key.String() {
 		case "settings.x":
-			field.Patch.Set = 999
+			field.Edit.Set = 999
 		case "settings.y":
-			field.Patch.Set = "modified"
+			field.Edit.Set = "modified"
 		}
 	}
 

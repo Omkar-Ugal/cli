@@ -9,7 +9,7 @@ import "unikraft.com/cli/internal/resource"
 
 func FilterPatchableFields(fields []resource.Field) []resource.Field {
 	return resource.FilterFields(fields, func(field resource.Field) resource.FilterResult {
-		if field.Patch != nil {
+		if field.Edit != nil {
 			return resource.FilterInclude
 		}
 		return resource.FilterPrune

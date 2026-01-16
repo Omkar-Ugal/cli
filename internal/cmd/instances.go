@@ -45,16 +45,16 @@ type Instance struct {
 	Tags []string `mirror:"instance.tags"`
 
 	State InstanceState `mirror:"instance.state" field:",short"`
-	Image string        `mirror:"instance.image" field:",short"`
+	Image string        `mirror:"instance.image" field:",short" edit:"set"`
 
 	Runtime struct {
-		Args []string          `mirror:"instance.args" field:",short"`
-		Env  map[string]string `mirror:"instance.env" field:",long"`
+		Args []string          `mirror:"instance.args" field:",short" edit:"set"`
+		Env  map[string]string `mirror:"instance.env" field:",long" edit:"set,add,del=keys"`
 	}
 
 	Resources struct {
-		Memory int `mirror:"instance.memory_mb" field:",short"`
-		VCPUs  int `mirror:"instance.vcpus" field:"vcpus,short"`
+		Memory int `mirror:"instance.memory_mb" field:",short" edit:"set"`
+		VCPUs  int `mirror:"instance.vcpus" field:"vcpus,short" edit:"set"`
 	}
 
 	Volumes []*struct {
@@ -149,20 +149,6 @@ func (i Instance) Fields() ([]resource.Field, error) {
 		switch key.String() {
 		case "name":
 			field.Hyperlink = i.hyperlink()
-		case "image":
-			field.Patch = &resource.Patch{Set: ""}
-		case "runtime.args":
-			field.Patch = &resource.Patch{Set: []string{}}
-		case "runtime.env":
-			field.Patch = &resource.Patch{
-				Set: map[string]string{},
-				Add: map[string]string{},
-				Del: []string{},
-			}
-		case "resources.memory":
-			field.Patch = &resource.Patch{Set: 0}
-		case "resources.vcpus":
-			field.Patch = &resource.Patch{Set: 0}
 		}
 	}
 
@@ -324,17 +310,17 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 }
 
 func (Instance) getFieldRequests(uuid string, path resource.FieldPath, field resource.Field) (reqs []platform.UpdateInstancesRequestItem) {
-	if field.Patch == nil {
+	if field.Edit == nil {
 		return reqs
 	}
-	if field.Patch.Set != nil {
-		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Patch.Set, platform.UpdateInstancesRequestItemOpSet))
+	if field.Edit.Set != nil {
+		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Edit.Set, platform.UpdateInstancesRequestItemOpSet))
 	}
-	if field.Patch.Add != nil {
-		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Patch.Add, platform.UpdateInstancesRequestItemOpAdd))
+	if field.Edit.Add != nil {
+		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Edit.Add, platform.UpdateInstancesRequestItemOpAdd))
 	}
-	if field.Patch.Del != nil {
-		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Patch.Del, platform.UpdateInstancesRequestItemOpDel))
+	if field.Edit.Del != nil {
+		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Edit.Del, platform.UpdateInstancesRequestItemOpDel))
 	}
 	return reqs
 }

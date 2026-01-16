@@ -6,6 +6,7 @@
 package resource
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strconv"
@@ -60,7 +61,10 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 		}
 		fieldVal := s.Field(i)
 
-		parsedField := ParseField(field)
+		parsedField, err := ParseField(field)
+		if err != nil {
+			return nil, err
+		}
 		if parsedField == nil {
 			continue
 		}
@@ -68,6 +72,8 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 			Name:      parsedField.Name,
 			Verbosity: parsedField.Verbosity,
 			Value:     fieldVal.Interface(),
+			Create:    parsedField.Create,
+			Edit:      parsedField.Edit,
 		}
 
 		newField, err := fieldFromStruct(pkgPath, fieldVal)
@@ -155,16 +161,20 @@ func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 
 type ParsedField struct {
 	Name      string
+	Type      reflect.Type
 	Verbosity FieldVerbosity
+
+	Edit   *Patch
+	Create *Patch
 }
 
-func ParseField(field reflect.StructField) *ParsedField {
+func ParseField(field reflect.StructField) (*ParsedField, error) {
 	if !field.IsExported() {
-		return nil
+		return nil, nil
 	}
 	tag := field.Tag.Get("field")
 	if tag == "-" {
-		return nil
+		return nil, nil
 	}
 
 	opts := strings.Split(tag, ",")
@@ -188,9 +198,61 @@ func ParseField(field reflect.StructField) *ParsedField {
 		verbosity = FieldVerbosityHidden
 	}
 
+	edit, err := parsePatch(field.Type, field.Tag.Get("edit"))
+	if err != nil {
+		return nil, err
+	}
+	create, err := parsePatch(field.Type, field.Tag.Get("create"))
+	if err != nil {
+		return nil, err
+	}
+
 	return &ParsedField{
 		Name:      name,
 		Verbosity: verbosity,
+		Type:      field.Type,
+		Edit:      edit,
+		Create:    create,
+	}, nil
+}
+
+func parsePatch(tp reflect.Type, tag string) (*Patch, error) {
+	if tag == "" {
+		return nil, nil
+	}
+	parts := strings.Split(tag, ",")
+	patch := &Patch{}
+	for _, part := range parts {
+		k, v, _ := strings.Cut(part, "=")
+		var err error
+		switch k {
+		case "set":
+			patch.Set, err = parsePatchValue(tp, v)
+		case "add":
+			patch.Add, err = parsePatchValue(tp, v)
+		case "del":
+			patch.Del, err = parsePatchValue(tp, v)
+		case "required":
+			patch.Required = true
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return patch, nil
+}
+
+func parsePatchValue(tp reflect.Type, value string) (any, error) {
+	switch value {
+	case "":
+		return reflect.Zero(tp).Interface(), nil
+	case "keys":
+		if tp.Kind() == reflect.Map {
+			return reflect.Zero(tp.Key()).Interface(), nil
+		}
+		return nil, fmt.Errorf("keys patch value only valid for map types")
+	default:
+		return nil, fmt.Errorf("unknown patch value: %s", value)
 	}
 }
 

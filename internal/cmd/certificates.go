@@ -28,9 +28,13 @@ type CertificatesCmd struct {
 }
 
 type Certificate struct {
-	MetroName string `mirror:"metro.name" field:"metro,short"`
-	Name      string `mirror:"certificate.name" field:",short"`
+	MetroName string `mirror:"metro.name" field:"metro,short" create:"set,required"`
+	Name      string `mirror:"certificate.name" field:",short" create:"set"`
 	UUID      string `mirror:"certificate.uuid" field:",long"`
+
+	CN         string `field:"cn,invisible" create:"set,required"`
+	Chain      string `field:"chain,invisible" create:"set,required"`
+	PrivateKey string `field:"pkey,invisible" create:"set,required"`
 
 	CommonName   string `mirror:"certificate.common_name" field:",short"`
 	Subject      string `mirror:"certificate.subject" field:",long"`
@@ -73,49 +77,7 @@ func (c Certificate) Raw() any {
 }
 
 func (c Certificate) Fields() ([]resource.Field, error) {
-	result, err := resource.FieldsFromStruct(c)
-	if err != nil {
-		return nil, err
-	}
-
-	for idx, field := range result {
-		switch field.Name {
-		case "name":
-			result[idx].Create = &resource.Patch{
-				Set: "",
-			}
-		case "metro":
-			result[idx].Create = &resource.Patch{
-				Set:      "",
-				Required: true,
-			}
-		}
-	}
-
-	// Add create-only fields for certificate upload
-	result = append(result, resource.Field{
-		Name: "cn",
-		Create: &resource.Patch{
-			Set:      "",
-			Required: true,
-		},
-	})
-	result = append(result, resource.Field{
-		Name: "chain",
-		Create: &resource.Patch{
-			Set:      "",
-			Required: true,
-		},
-	})
-	result = append(result, resource.Field{
-		Name: "pkey",
-		Create: &resource.Patch{
-			Set:      "",
-			Required: true,
-		},
-	})
-
-	return result, nil
+	return resource.FieldsFromStruct(c)
 }
 
 func (Certificate) List(ctx context.Context) ([]resource.Resource, error) {

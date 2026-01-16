@@ -106,7 +106,10 @@ func storeValue(field *resource.Field, base reflect.Value) error {
 			return fmt.Errorf("expected struct for field %s, got %s", field.Name, value.Kind().String())
 		}
 		for i := range value.NumField() {
-			parsedField := resource.ParseField(value.Type().Field(i))
+			parsedField, err := resource.ParseField(value.Type().Field(i))
+			if err != nil {
+				return err
+			}
 			if parsedField == nil {
 				continue
 			}
@@ -121,7 +124,7 @@ func storeValue(field *resource.Field, base reflect.Value) error {
 			if subfield == nil {
 				return fmt.Errorf("no subfield named %s in field %s", parsedField.Name, field.Name)
 			}
-			err := storeValue(subfield, value.Field(i))
+			err = storeValue(subfield, value.Field(i))
 			if err != nil {
 				return err
 			}
