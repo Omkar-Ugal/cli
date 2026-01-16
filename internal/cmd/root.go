@@ -7,11 +7,15 @@ package cmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"maps"
+	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strings"
 
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
@@ -53,6 +57,18 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	parser.Stderr = stderr
 
 	kctx, err := parser.Parse(args)
+
+	var parseErr *kong.ParseError
+	if errors.As(err, &parseErr) {
+		// HACK: kong provides UsageOnError, but this shows help for *all* parse
+		// errors - we only want to show it only for parent commands.
+		// See https://github.com/alecthomas/kong/issues/33
+		if strings.HasPrefix(parseErr.Error(), "expected one of") {
+			_ = parseErr.Context.PrintUsage(false)
+			fmt.Fprintln(os.Stdout)
+		}
+	}
+
 	if err != nil {
 		return nil, nil, nil, jujuerrors.Annotate(err, "parsing arguments")
 	}
