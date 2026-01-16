@@ -264,9 +264,10 @@ func parsePatchValue(tp reflect.Type, value string) (any, error) {
 // visual editing.
 func DecodeStruct(input any, output any) error {
 	config := mapstructure.DecoderConfig{
-		TagName:     "field",
-		ErrorUnused: true,
-		Result:      output,
+		TagName:          "field",
+		ErrorUnused:      true,
+		Result:           output,
+		WeaklyTypedInput: true,
 		// TODO: more hooks probably needed
 		DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
 	}

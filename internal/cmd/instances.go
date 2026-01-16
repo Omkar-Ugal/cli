@@ -84,12 +84,7 @@ type Instance struct {
 		StoppedAt time.Time `mirror:"instance.stopped_at"`
 	}
 
-	ScaleToZero struct {
-		Enabled      bool   `mirror:"instance.scale_to_zero.enabled" create:"set"`
-		Policy       string `mirror:"instance.scale_to_zero.policy" create:"set"`
-		Stateful     bool   `mirror:"instance.scale_to_zero.stateful" create:"set"`
-		CooldownTime int64  `mirror:"instance.scale_to_zero.cooldown_time_ms" create:"set"`
-	}
+	ScaleToZero InstanceScaleToZero `field:",long,embed" mirror:"instance.scale_to_zero"`
 
 	Timing struct {
 		Uptime   DurationMS `mirror:"instance.uptime_ms"`
@@ -182,6 +177,13 @@ func (v *InstanceVolume) Parse(str string) error {
 	}
 
 	return nil
+}
+
+type InstanceScaleToZero struct {
+	Enabled      *bool  `mirror:"enabled" create:"set"`
+	Policy       string `mirror:"policy" create:"set"`
+	Stateful     bool   `mirror:"stateful" create:"set"`
+	CooldownTime int64  `mirror:"cooldown_time_ms" create:"set"`
 }
 
 func (Instance) Type() resource.Type {

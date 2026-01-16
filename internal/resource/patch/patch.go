@@ -151,6 +151,15 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 	return FilterPatchableFields(fields), nil
 }
 
+func ParseNewValue[T any](input []string) (T, error) {
+	var t T
+	output, err := parseNewValue(input, t)
+	if err != nil {
+		return t, err
+	}
+	return output.(T), nil
+}
+
 func parseNewValue(input []string, output any) (any, error) {
 	parsedVal, err := parseNewReflect(input, reflect.ValueOf(output))
 	if err != nil {
@@ -169,7 +178,7 @@ func parseNewReflect(input []string, output reflect.Value) (reflect.Value, error
 }
 
 func parseReflect(input []string, value reflect.Value) error {
-	if len(input) == 0 {
+	if input == nil {
 		return nil
 	}
 
@@ -179,6 +188,11 @@ func parseReflect(input []string, value reflect.Value) error {
 			output.Set(reflect.New(output.Type().Elem()))
 		}
 		output = output.Elem()
+	}
+
+	if len(input) == 0 {
+		output.Set(reflect.Zero(output.Type()))
+		return nil
 	}
 
 	switch output.Kind() {
@@ -265,6 +279,9 @@ func parseReflect(input []string, value reflect.Value) error {
 		fields := strings.Split(input[0], ",")
 		for _, field := range fields {
 			field = strings.TrimSpace(field)
+			if field == "" {
+				continue
+			}
 			k, v, _ := strings.Cut(field, "=")
 			kv[k] = v
 		}
