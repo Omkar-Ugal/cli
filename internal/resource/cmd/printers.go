@@ -265,6 +265,9 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 		}
 		if field == "all" {
 			verbosity = resource.FieldVerbosityHidden
+			if base == nil {
+				base = []resource.FieldPath{}
+			}
 			continue
 		}
 		switch field[0] {
@@ -282,7 +285,7 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 	var missing []resource.FieldPath
 
 	result, missing := resource.FilterFieldsByPath(fields, base, !header)
-	if len(base) == 0 {
+	if base == nil {
 		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
 			if field.Verbosity < verbosity {
 				return resource.FilterExclude
