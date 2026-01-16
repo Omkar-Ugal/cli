@@ -21,10 +21,11 @@ type keyValueWriter struct {
 	w      io.Writer
 	buffer []byte
 
-	splits []string
-	cut    int
-
 	cells []cell
+
+	cut             int
+	separators      []string
+	alignSeparators bool
 }
 
 type cell struct {
@@ -38,17 +39,41 @@ func (entry cell) width() int {
 	return len(entry.cleankey) + len(entry.split)
 }
 
+type KeyValueOpt func(*keyValueWriter)
+
+func WithSeparator(splits ...string) KeyValueOpt {
+	return func(b *keyValueWriter) {
+		b.separators = splits
+	}
+}
+
+func WithAlignedSeparator() KeyValueOpt {
+	return func(b *keyValueWriter) {
+		b.alignSeparators = true
+	}
+}
+
+func WithIndent(indent string) KeyValueOpt {
+	return func(b *keyValueWriter) {
+		b.cut = len(indent)
+	}
+}
+
 // KeyValueWriter returns a Writer that formats key-value pairs written to it.
 // Each line written to the Writer should be in the format "key: value".
 //
 // The keys will be aligned based on the longest key, and styling rules are
 // applied to them based on their leading whitespace after the specified indent
 // is removed.
-func KeyValueWriter(w io.Writer, indent string, splits ...string) WriteFlusher {
-	if len(splits) == 0 {
-		splits = []string{": "}
+func KeyValueWriter(w io.Writer, opts ...KeyValueOpt) WriteFlusher {
+	kv := &keyValueWriter{w: w}
+	for _, opt := range opts {
+		opt(kv)
 	}
-	return &keyValueWriter{w: w, cut: len(indent), splits: splits}
+	if len(kv.separators) == 0 {
+		kv.separators = []string{":"}
+	}
+	return kv
 }
 
 func (b *keyValueWriter) Write(p []byte) (n int, err error) {
@@ -77,38 +102,26 @@ func (b *keyValueWriter) parseLine(line []byte) cell {
 }
 
 func (b *keyValueWriter) splitLine(line []byte) (cell, bool) {
-	var best cell
-	bestIndex := -1
-
-	for _, split := range b.splits {
+	for _, split := range b.separators {
 		if split == "" {
 			continue
 		}
 		splitBytes := []byte(split)
-		idx := bytes.Index(line, splitBytes)
-		if idx == -1 {
+		key, value, ok := bytes.Cut(line, splitBytes)
+		if !ok {
 			continue
 		}
-		value := line[idx+len(splitBytes):]
-		if bestIndex != -1 && idx > bestIndex {
+		if len(value) != 0 && !slices.Contains([]byte(" \n"), value[0]) {
 			continue
 		}
-		if bestIndex != -1 && idx == bestIndex && len(splitBytes) <= len(best.split) {
-			continue
-		}
-		key := line[:idx]
-		best = cell{
+		return cell{
 			key:      key,
 			cleankey: []byte(vtclean.Clean(string(key), false)),
 			value:    bytes.TrimSpace(value),
 			split:    splitBytes,
-		}
-		bestIndex = idx
+		}, true
 	}
-	if bestIndex == -1 {
-		return cell{}, false
-	}
-	return best, true
+	return cell{}, false
 }
 
 func (b *keyValueWriter) flush() error {
@@ -136,7 +149,12 @@ func (b *keyValueWriter) flush() error {
 			}
 			continue
 		}
+		key := entry.key
 		cleankey := entry.cleankey
+		if b.alignSeparators {
+			key = bytes.TrimRight(key, " ")
+			cleankey = bytes.TrimRight(cleankey, " ")
+		}
 		if len(cleankey) > 0 {
 			var styleSeq, resetSeq ansi.Style
 			if color {
@@ -154,20 +172,28 @@ func (b *keyValueWriter) flush() error {
 				}
 			}
 
-			padding := max(0, maxKeyLen-entry.width())
+			padding := max(0, maxKeyLen-(len(cleankey)+len(entry.split))+1)
 			line := []byte{}
 			if styleSeq != nil {
 				line = append(line, []byte(styleSeq.String())...)
 			}
-			line = append(line, entry.key...)
+			line = append(line, key...)
 			if styleSeq != nil {
 				line = append(line, []byte(resetSeq.String())...)
 			}
-			line = append(line, entry.split...)
-			if len(entry.value) > 0 {
-				if padding > 0 {
+			if b.alignSeparators {
+				line = append(line, bytes.Repeat([]byte(" "), padding)...)
+				line = append(line, entry.split...)
+				if len(entry.value) > 0 {
+					line = append(line, ' ')
+				}
+			} else {
+				line = append(line, entry.split...)
+				if len(entry.value) > 0 {
 					line = append(line, bytes.Repeat([]byte(" "), padding)...)
 				}
+			}
+			if len(entry.value) > 0 {
 				line = append(line, entry.value...)
 			}
 			line = append(line, '\n')

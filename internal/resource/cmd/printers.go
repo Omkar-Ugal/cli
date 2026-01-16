@@ -119,7 +119,7 @@ func printTableFormatted(out io.Writer, fieldSpecs []string, base resource.Resou
 }
 
 func printKVFormatted(out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
-	bw := kvwriter.KeyValueWriter(out, "")
+	bw := kvwriter.KeyValueWriter(out)
 	err := printKV(bw, fieldSpecs, resources...)
 	if err != nil {
 		return err
@@ -434,7 +434,11 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 }
 
 func printPatches(out io.Writer, fields []resource.Field, create bool) error {
-	tw := kvwriter.KeyValueWriter(out, "", " ")
+	tw := kvwriter.KeyValueWriter(
+		out,
+		kvwriter.WithSeparator(":=", "+=", "-="),
+		kvwriter.WithAlignedSeparator(),
+	)
 	for path, field := range resource.IterFields(fields) {
 		var patch *resource.Patch
 		if create {

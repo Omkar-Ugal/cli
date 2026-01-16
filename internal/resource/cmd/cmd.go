@@ -352,7 +352,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(start.String(), end.String(), false)
-	tw := kvwriter.KeyValueWriter(cfg.Stdout, "  ")
+	tw := kvwriter.KeyValueWriter(cfg.Stdout, kvwriter.WithIndent("  "))
 	_, err = io.Copy(tw, strings.NewReader(prettydiff.Render(diffs)))
 	if err != nil {
 		return err
