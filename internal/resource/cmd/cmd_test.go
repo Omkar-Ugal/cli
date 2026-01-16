@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -402,6 +403,56 @@ func TestCreateDryRun(t *testing.T) {
 	}
 }
 
+func TestCreatePatchSpecFileArgs(t *testing.T) {
+	nameFile := tempFile(t, " test-file ")
+	setFile := tempFile(t, " 123 \n")
+	setTextFile := tempFile(t, " created\n")
+
+	cmd := &ResourceCreateCmd[resourcet.TestResource]{
+		Set: []map[string]string{{"name": "test-inline"}},
+		SetFile: []map[string]*os.File{
+			{"name": nameFile},
+			{"settings.x": setFile},
+			{"settings.y": setTextFile},
+		},
+	}
+
+	spec, err := cmd.toPatchSpec()
+	require.NoError(t, err)
+	require.NoError(t, cmd.Close())
+
+	assert.Equal(t, []string{"test-inline", "test-file"}, spec.Set["name"])
+	assert.Equal(t, []string{"123"}, spec.Set["settings.x"])
+	assert.Equal(t, []string{"created"}, spec.Set["settings.y"])
+}
+
+func TestCreateSetFile(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+	resourcet.TestStore = map[string]resourcet.TestResource{}
+
+	nameFile := tempFile(t, " test-file ")
+	setFile := tempFile(t, " 101 \n")
+	setTextFile := tempFile(t, " created\n")
+
+	var out bytes.Buffer
+	cmd := &ResourceCreateCmd[resourcet.TestResource]{
+		SetFile: []map[string]*os.File{
+			{"name": nameFile},
+			{"settings.x": setFile},
+			{"settings.y": setTextFile},
+		},
+	}
+
+	err := cmd.Run(ctx, testConfig(&out), sandbox)
+	require.NoError(t, err)
+
+	created, ok := resourcet.TestStore["test-file"]
+	require.True(t, ok)
+	assert.Equal(t, 101, created.Settings.X)
+	assert.Equal(t, "created", created.Settings.Y)
+}
+
 func TestEdit(t *testing.T) {
 	ctx := context.Background()
 
@@ -502,6 +553,30 @@ func TestEditDryRun(t *testing.T) {
 	}
 }
 
+func TestEditPatchSpecFileArgs(t *testing.T) {
+	setFile := tempFile(t, " 123 \n")
+	addFile := tempFile(t, " new-entry\n")
+	delFile := tempFile(t, " old-entry\n")
+
+	cmd := &ResourceEditCmd[resourcet.TestResource]{
+		Set:     []map[string]string{{"settings.y": "inline"}},
+		Add:     []map[string]string{{"authors": "inline-entry"}},
+		Del:     []map[string]string{{"url": "inline-entry"}},
+		SetFile: []map[string]*os.File{{"settings.x": setFile}},
+		AddFile: []map[string]*os.File{{"authors": addFile}},
+		DelFile: []map[string]*os.File{{"url": delFile}},
+	}
+
+	spec, err := cmd.toPatchSpec()
+	require.NoError(t, err)
+	require.NoError(t, cmd.Close())
+
+	assert.Equal(t, []string{"inline"}, spec.Set["settings.y"])
+	assert.Equal(t, []string{"123"}, spec.Set["settings.x"])
+	assert.Equal(t, []string{"inline-entry", "new-entry"}, spec.Add["authors"])
+	assert.Equal(t, []string{"inline-entry", "old-entry"}, spec.Del["url"])
+}
+
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
 
@@ -535,6 +610,21 @@ func TestDelete(t *testing.T) {
 	resources, err = empty.Get(ctx, []string{"test-delete"})
 	require.NoError(t, err)
 	assert.Empty(t, resources)
+}
+
+func tempFile(t *testing.T, contents string) *os.File {
+	t.Helper()
+
+	file, err := os.CreateTemp(t.TempDir(), "set-file-*")
+	require.NoError(t, err)
+
+	_, err = file.WriteString(contents)
+	require.NoError(t, err)
+
+	_, err = file.Seek(0, io.SeekStart)
+	require.NoError(t, err)
+
+	return file
 }
 
 func testConfig(out io.Writer) *config.Config {
