@@ -6,6 +6,7 @@
 package config
 
 import (
+	"cmp"
 	"fmt"
 	"net/url"
 	"strings"
@@ -14,26 +15,27 @@ import (
 	jujuerrors "github.com/juju/errors"
 )
 
-// DefaultProfileName is the name of the default profile used by the Unikraft
-// CLI.  It is used when no specific profile is set or when the user has not
-// created any profiles yet.
-const DefaultProfileName = "default"
+// DefaultProfile is the name of the default profile used by the Unikraft CLI.
+// It is used when no specific profile is set or when the user has not created
+// any profiles yet.
+const DefaultProfile = "default"
 
-var (
-	// ErrNoCurrentProfile is returned when there is no current profile set in the
-	// configuration. This can happen if the user has not logged in or if the
-	// current profile is not set in the configuration.
-	ErrNoCurrentProfile = jujuerrors.New(heredoc.Docf(`
+// ErrNotSetup is returned when there are no profiles available in the
+// configuration.
+var ErrNotSetup = jujuerrors.New(heredoc.Docf(`
 		profile not setup;
 
 		use %[1]sunikraft login%[1]s to get started,
 
 		or visit https://unikraft.com/docs/cli for more information`, "`"))
-	// ErrProfileNotFound is returned when a profile with the specified name does
-	// not exist in the configuration. This can happen if the user tries to access
-	// a profile that has not been created or has been deleted.
-	ErrProfileNotFound = jujuerrors.Errorf("profile not found")
-)
+
+type ErrProfileNotFound struct {
+	Name string
+}
+
+func (e ErrProfileNotFound) Error() string {
+	return fmt.Sprintf("profile %q not found", e.Name)
+}
 
 // ProfileType represents the type of profile used in the Unikraft CLI.
 // It can be either "local" for local profiles or "cloud" for cloud-based
@@ -52,20 +54,48 @@ const (
 
 // Profile represents a user profile configuration for the Unikraft CLI.
 type Profile struct {
-	Type         ProfileType `hidden:"" help:"Type of the profile." enum:"local,cloud" default:"cloud" json:"type" yaml:"type"`
-	Name         string      `hidden:"" help:"Name of the profile." json:"name" yaml:"name"`
-	Token        string      `hidden:"" help:"Authentication token for the profile." json:"token" yaml:"token"`
-	Organization string      `hidden:"" help:"Organization associated with the profile." json:"organization,omitempty" yaml:"organization,omitempty"`
-	ControlPlane string      `hidden:"" help:"Control plane endpoint for the profile." json:"controlplane,omitempty" yaml:"controlplane,omitempty"`
-	Metros       []Metro     `hidden:"" embed:"" prefix:"metro." help:"Static list of metros." json:"metros,omitempty" yaml:"metros,omitempty"`
+	// Name of the profile
+	Name string `json:"-"`
+	// Type of the profile
+	Type ProfileType `json:"type"`
+	// Token is the authentication token associated with the profile, used for
+	// authenticating with Unikraft Cloud services.
+	Token string `json:"token"`
+	// Organization is the organization associated with the profile.
+	Organization string `json:"organization,omitempty"`
+	// ControlPlane is the endpoint for the control plane associated with the profile.
+	ControlPlane string `json:"controlplane,omitempty"`
+	// Metros is a static list of metros.
+	Metros []Metro `json:"metros,omitempty"`
+}
+
+func (p Profile) Validate() error {
+	if p.Name == "" {
+		return fmt.Errorf("profile name cannot be empty")
+	}
+	switch p.Type {
+	case ProfileTypeCloud:
+		if p.Token == "" {
+			return fmt.Errorf("cloud profiles require a token")
+		}
+	case ProfileTypeLocal:
+		return fmt.Errorf("local profiles are not currently supported")
+	default:
+		return fmt.Errorf("invalid profile type: %s", p.Type)
+	}
+	return nil
 }
 
 // Metro represents a metro configuration for a profile in the Unikraft CLI.
 type Metro struct {
-	Name     string `hidden:"" help:"Name of the metro." json:"name" yaml:"name"`
-	Endpoint string `hidden:"" help:"Endpoint for the metro." json:"endpoint" yaml:"endpoint"`
-	Country  string `hidden:"" help:"Country code for the metro." json:"country" yaml:"country"`
-	Insecure bool   `hidden:"" help:"Allow insecure connections to the metro." json:"insecure" yaml:"insecure"`
+	// Name of the metro.
+	Name string `json:"name"`
+	// Endpoint for the metro.
+	Endpoint string `json:"endpoint"`
+	// Country code for the metro.
+	Country string `json:"country"`
+	// Allows insecure connections to the metro, skipping TLS verification.
+	Insecure bool `json:"insecure,omitempty"`
 }
 
 type Index struct {
@@ -91,15 +121,13 @@ func (m Metro) Index() Index {
 	}
 }
 
-var _ fmt.Stringer = Profile{}
-
-func (profile Profile) String() string {
-	return profile.Name
-}
-
 // ProfileList returns a slice of profile names (aliases) from the
 // configuration.
 func (config *Config) ProfileList() []Profile {
+	if config == nil {
+		return nil
+	}
+
 	list := make([]Profile, 0, len(config.Profiles))
 	for _, profile := range config.Profiles {
 		list = append(list, profile)
@@ -110,14 +138,28 @@ func (config *Config) ProfileList() []Profile {
 // CurrentProfile returns the currently selected profile from the configuration.
 // If the profile does not exist, it returns an error.
 func (config *Config) CurrentProfile() (*Profile, error) {
-	profile, ok := config.Profiles[config.Profile]
+	if config == nil {
+		return nil, ErrNotSetup
+	}
+
+	profile, ok := config.Profiles[config.CurrentProfileName()]
 	if !ok {
-		if config.Profile == "" || config.Profile == DefaultProfileName {
-			return nil, ErrNoCurrentProfile
-		} else {
-			return nil, ErrProfileNotFound
+		if len(config.Profiles) == 0 && (config.DefaultProfile == "" || config.DefaultProfile == DefaultProfile) {
+			return nil, ErrNotSetup
 		}
+		return nil, ErrProfileNotFound{Name: config.CurrentProfileName()}
 	}
 
 	return &profile, nil
+}
+
+func (config *Config) CurrentProfileName() string {
+	if config == nil {
+		return DefaultProfile
+	}
+	return cmp.Or(config.selectedProfile, config.DefaultProfile, DefaultProfile)
+}
+
+func (config *Config) OverrideCurrentProfile(name string) {
+	config.selectedProfile = name
 }

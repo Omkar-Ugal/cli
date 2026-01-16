@@ -3,8 +3,7 @@ $ unikraft invalid
 stderr:
 	│  
 	│ error:
-	│   unexpected argument invalid
-	│   unikraft.com/cli/internal/cmd.NewRootCmd:148: parsing arguments
+	│   parsing arguments: unexpected argument invalid
 	│  
 	exit status 1
 

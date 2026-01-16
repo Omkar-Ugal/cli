@@ -76,7 +76,7 @@ func TestList(t *testing.T) {
 
 	var listOut bytes.Buffer
 	listCmd := &ResourceListCmd[resourcet.TestResource]{}
-	err = listCmd.Run(ctx, testConfig(&listOut), sandbox)
+	err = listCmd.Run(ctx, testStdio(&listOut), sandbox)
 	require.NoError(t, err)
 
 	output := listOut.String()
@@ -92,7 +92,7 @@ func TestList(t *testing.T) {
 				Field: []string{"name", "id"},
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output := out.String()
@@ -102,7 +102,7 @@ func TestList(t *testing.T) {
 
 		out.Reset()
 		cmd.Name = []string{"test1"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output = out.String()
@@ -116,7 +116,7 @@ func TestList(t *testing.T) {
 		cmd := &ResourceListCmd[resourcet.TestResource]{
 			Filter: []string{"name==test1"},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output := out.String()
@@ -125,7 +125,7 @@ func TestList(t *testing.T) {
 
 		out.Reset()
 		cmd.Name = []string{"test1", "test2"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output = out.String()
@@ -148,7 +148,7 @@ func TestListOutput(t *testing.T) {
 		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: opts,
 		}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -251,7 +251,7 @@ func TestTableNestedFieldSelection(t *testing.T) {
 			Field:  []string{"name", "authors"},
 		},
 	}
-	err = cmd.Run(ctx, testConfig(&out), sandbox)
+	err = cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
 	cleaned := vtclean.Clean(out.String(), false)
@@ -286,7 +286,7 @@ func TestGet(t *testing.T) {
 	inspectCmd := &ResourceGetCmd[resourcet.TestResource]{
 		Name: []string{"test1"},
 	}
-	err = inspectCmd.Run(ctx, testConfig(&inspectOut), sandbox)
+	err = inspectCmd.Run(ctx, testStdio(&inspectOut), sandbox)
 	require.NoError(t, err)
 
 	output := inspectOut.String()
@@ -299,7 +299,7 @@ func TestGet(t *testing.T) {
 		cmd := &ResourceGetCmd[resourcet.TestResource]{
 			Name: []string{},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.Error(t, err)
 	})
 
@@ -308,7 +308,7 @@ func TestGet(t *testing.T) {
 		cmd := &ResourceGetCmd[resourcet.TestResource]{
 			Name: []string{"test1", "test2"},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output := out.String()
@@ -326,7 +326,7 @@ func TestGet(t *testing.T) {
 				Field: []string{"id", "url"},
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output := out.String()
@@ -335,7 +335,7 @@ func TestGet(t *testing.T) {
 
 		out.Reset()
 		cmd.Name = []string{"test1", "test2"}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		output = out.String()
@@ -362,7 +362,7 @@ func TestFieldVerbosity(t *testing.T) {
 				Field: fields,
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -376,7 +376,7 @@ func TestFieldVerbosity(t *testing.T) {
 				Field: fields,
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -436,7 +436,7 @@ func TestGetOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -472,7 +472,7 @@ func TestWait(t *testing.T) {
 			Timeout:  time.Second,
 			Interval: 10 * time.Millisecond,
 		}
-		err = cmd.Run(ctx, testConfig(&bytes.Buffer{}), sandbox)
+		err = cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
 		require.NoError(t, err)
 	})
 
@@ -487,7 +487,7 @@ func TestWait(t *testing.T) {
 			Timeout:  1 * time.Second,
 			Interval: 10 * time.Millisecond,
 		}
-		err = cmd.Run(ctx, testConfig(&bytes.Buffer{}), sandbox)
+		err = cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
@@ -517,7 +517,7 @@ func TestWaitOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -582,7 +582,7 @@ func TestCreateOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -609,7 +609,7 @@ func TestCreateDryRun(t *testing.T) {
 			{"settings.y": "created"},
 		},
 	}
-	err := cmd.Run(ctx, testConfig(&out), sandbox)
+	err := cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
 	assert.NotContains(t, resourcet.TestStore, "test-dry")
@@ -667,7 +667,7 @@ func TestCreateSetFile(t *testing.T) {
 		},
 	}
 
-	err := cmd.Run(ctx, testConfig(&out), sandbox)
+	err := cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
 	created, ok := resourcet.TestStore["test-file"]
@@ -760,7 +760,7 @@ func TestEditOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -801,7 +801,7 @@ func TestEditDryRun(t *testing.T) {
 			{"settings.y": "modified"},
 		},
 	}
-	err = cmd.Run(ctx, testConfig(&out), sandbox)
+	err = cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
 	stored := resourcet.TestStore["test-edit"]
@@ -895,7 +895,7 @@ func TestRemoveOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -932,11 +932,10 @@ func tempFile(t *testing.T, contents string) string {
 	return file.Name()
 }
 
-func testConfig(out io.Writer) *config.Config {
-	return &config.Config{
-		Context: context.Background(),
-		Stdin:   &bytes.Buffer{},
-		Stdout:  out,
-		Stderr:  out,
+func testStdio(out io.Writer) config.Stdio {
+	return config.Stdio{
+		Stdin:  &bytes.Buffer{},
+		Stdout: out,
+		Stderr: out,
 	}
 }

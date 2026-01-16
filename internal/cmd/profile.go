@@ -51,7 +51,7 @@ func (i Profile) Fields() ([]resource.Field, error) {
 }
 
 func (Profile) List(ctx context.Context) ([]resource.Resource, error) {
-	cfg := config.FromContextOrDefault(ctx)
+	cfg := config.G(ctx)
 	profiles := cfg.Profiles
 
 	var results []resource.Resource
@@ -63,7 +63,7 @@ func (Profile) List(ctx context.Context) ([]resource.Resource, error) {
 
 		result := Profile{
 			Name:   profile.Name,
-			Active: profile.Name == cfg.Profile,
+			Active: profile.Name == cfg.DefaultProfile,
 			Metros: metroNames,
 		}
 		results = append(results, result)
@@ -96,13 +96,12 @@ type UseCmd struct {
 	Name string `arg:"" help:"Name of the profile to switch to."`
 }
 
-func (cmd *UseCmd) Run(ctx context.Context) error {
-	cfg := config.FromContextOrDefault(ctx)
+func (cmd *UseCmd) Run(ctx context.Context, cfg *config.Config) error {
 	_, ok := cfg.Profiles[cmd.Name]
 	if !ok {
-		return config.ErrProfileNotFound
+		return config.ErrProfileNotFound{Name: cmd.Name}
 	}
-	cfg.Profile = cmd.Name
+	cfg.DefaultProfile = cmd.Name
 
 	if err := cfg.Save(); err != nil {
 		return jujuerrors.Annotate(err, "saving profile")

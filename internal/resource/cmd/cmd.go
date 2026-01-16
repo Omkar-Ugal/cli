@@ -134,7 +134,7 @@ func (cmd ResourceListCmd[R]) Examples() []kingkong.Example {
 	return nil
 }
 
-func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
@@ -167,9 +167,9 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 
 	if cmd.Watch != nil {
 		watch := cmp.Or(*cmd.Watch, 2*time.Second)
-		return watcher.WatchOutput(ctx, watch, cfg.Stdout, render)
+		return watcher.WatchOutput(ctx, watch, stdio.Stdout, render)
 	}
-	return render(cfg.Stdout)
+	return render(stdio.Stdout)
 }
 
 type ResourceGetCmd[R resource.GettableResource] struct {
@@ -191,7 +191,7 @@ func (cmd ResourceGetCmd[R]) Examples() []kingkong.Example {
 	return nil
 }
 
-func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapGettable(empty)
 
@@ -207,9 +207,9 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandb
 
 	if cmd.Watch != nil {
 		watch := cmp.Or(*cmd.Watch, 2*time.Second)
-		return watcher.WatchOutput(ctx, watch, cfg.Stdout, render)
+		return watcher.WatchOutput(ctx, watch, stdio.Stdout, render)
 	}
-	return render(cfg.Stdout)
+	return render(stdio.Stdout)
 }
 
 type ResourceWaitCmd[R resource.GettableResource] struct {
@@ -234,7 +234,7 @@ func (cmd ResourceWaitCmd[R]) Examples() []kingkong.Example {
 	return nil
 }
 
-func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	var empty R
 	if len(cmd.Name) == 0 {
 		return fmt.Errorf("no %s specified", empty.Type().Names)
@@ -274,7 +274,7 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 
 			return cmd.Output.
 				WithDefault(PrinterTypeKeyValue).
-				Print(cfg.Stdout, cmd.Field, empty, resources...)
+				Print(stdio.Stdout, cmd.Field, empty, resources...)
 		}
 		log.G(ctx).Debug().
 			Strs("resources", cmd.Name).
@@ -359,7 +359,7 @@ func (cmd ResourceRemoveCmd[R]) Examples() []kingkong.Example {
 	return nil
 }
 
-func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
 	resources, err := r.Get(ctx, cmd.Name)
@@ -374,7 +374,7 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 
 	return cmd.Output.
 		WithDefault(PrinterTypeQuiet).
-		Print(cfg.Stdout, cmd.Field, empty, resources...)
+		Print(stdio.Stdout, cmd.Field, empty, resources...)
 }
 
 type ResourceEditCmd[R resource.EditableResource] struct {
@@ -472,7 +472,7 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 	return spec, nil
 }
 
-func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	spec, err := cmd.toPatchSpec()
 	if err != nil {
 		return err
@@ -522,7 +522,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		return err
 	}
 	if cmd.Visual {
-		patched, err = patch.VisualEdit(ctx, cfg, res, fields, patched)
+		patched, err = patch.VisualEdit(ctx, stdio, res, fields, patched)
 		if err != nil {
 			return err
 		}
@@ -530,7 +530,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	patched = patch.FilterPatchableFields(patched)
 
 	if cmd.DryRun {
-		return PrintPatches(cfg.Stdout, patched, false)
+		return PrintPatches(stdio.Stdout, patched, false)
 	}
 
 	updated := []resource.Resource{res}
@@ -545,7 +545,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 			Str("resource", res.Key().String()).
 			Msg("no edits made")
 	}
-	return Diff(cfg.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
+	return Diff(stdio.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
 }
 
 type ResourceCreateCmd[R resource.CreatableResource] struct {
@@ -598,7 +598,7 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 	return spec, nil
 }
 
-func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	spec, err := cmd.toPatchSpec()
 	if err != nil {
 		return err
@@ -617,7 +617,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 
 	if cmd.Visual {
 		// FIXME: should allow required fields
-		patched, err = patch.VisualCreate(ctx, cfg, empty, fields, patched)
+		patched, err = patch.VisualCreate(ctx, stdio, empty, fields, patched)
 		if err != nil {
 			return err
 		}
@@ -626,7 +626,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 	fields = patch.FilterCreatableFields(patched)
 
 	if cmd.DryRun {
-		return PrintPatches(cfg.Stdout, fields, true)
+		return PrintPatches(stdio.Stdout, fields, true)
 	}
 
 	resources, err := r.Create(ctx, fields)
@@ -635,5 +635,5 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 	}
 	return cmd.Output.
 		WithDefault(PrinterTypeKeyValue).
-		Print(cfg.Stdout, cmd.Field, empty, resources...)
+		Print(stdio.Stdout, cmd.Field, empty, resources...)
 }

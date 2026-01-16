@@ -7,6 +7,7 @@ package main
 
 import (
 	"iter"
+	"path/filepath"
 	"slices"
 	"sort"
 	"testing"
@@ -21,11 +22,12 @@ import (
 )
 
 func TestExamples(t *testing.T) {
-	configDir := t.TempDir()
-	t.Setenv(config.UnikraftConfigDirEnv, configDir)
+	configPath := filepath.Join(t.TempDir(), "config.yaml")
+	t.Setenv("UNIKRAFT_CONFIG", configPath)
 
 	cfg := &config.Config{
-		Profile: "default",
+		Path:           configPath,
+		DefaultProfile: "default",
 		Profiles: map[string]config.Profile{
 			"default": {
 				Name: "default",
@@ -33,7 +35,7 @@ func TestExamples(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, cfg.SaveTo(configDir))
+	require.NoError(t, cfg.Save())
 
 	parser, err := cmd.NewParser(&cmd.UnikraftCLI{})
 	require.NoError(t, err)

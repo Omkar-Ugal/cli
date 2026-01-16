@@ -12,7 +12,9 @@ import (
 // G is a shorthand for FromContextOrDefault.
 // It enables a logging API similar to [containerd/log].
 // [containerd/log]: https://pkg.go.dev/github.com/containerd/log
-var G = FromContextOrDefault
+func G(ctx context.Context) *Config {
+	return FromContextOrDefault(ctx)
+}
 
 // contextKey is how we find the config in a context.Context.
 type contextKey struct{}

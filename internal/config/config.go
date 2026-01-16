@@ -6,91 +6,74 @@
 package config
 
 import (
-	"context"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
 
 	jujuerrors "github.com/juju/errors"
-	"gopkg.in/yaml.v3"
-	"unikraft.com/x/log"
+	"sigs.k8s.io/yaml"
 )
-
-// DefaultConfigFilename is the default name of the configuration file used by
-// the Unikraft CLI.
-var DefaultConfigFilename = "config.yaml"
 
 // Config represents the global configuration for the Unikraft CLI.
 type Config struct {
-	// Hidden configuration.
-	Context context.Context `kong:"-" yaml:"-" json:"-"`
-	Stdin   io.Reader       `kong:"-" yaml:"-" json:"-"`
-	Stdout  io.Writer       `kong:"-" yaml:"-" json:"-"`
-	Stderr  io.Writer       `kong:"-" yaml:"-" json:"-"`
+	Path string `json:"-"`
 
-	// Global configuration.
-	Config    string `group:"flag-global" name:"config" help:"Set the configuration file." placeholder:"file" type:"yamlfile" yaml:"-" json:"-"`
-	Telemetry bool   `group:"flag-global" name:"telemetry" help:"Enable or disable telemetry." default:"true" negatable:"" yaml:"telemetry" json:"telemetry"`
-	Emojis    bool   `group:"flag-global" name:"emojis" help:"Enable or disable emojis in the CLI output." default:"true" negatable:"" yaml:"emojis" json:"emojis"`
+	DefaultProfile string             `json:"profile"`
+	Profiles       map[string]Profile `json:"profiles"`
 
-	// Logging configuration.
-	LogLevel log.Level `group:"flag-global" name:"log-level" env:"UNIKRAFT_LOG_LEVEL" help:"Set the logging level." enum:"trace,debug,info,warn,error,fatal" placeholder:"level" default:"info" yaml:"-" json:"-"`
-	LogType  log.Type  `group:"flag-global" name:"log-type" env:"UNIKRAFT_LOG_TYPE" help:"Set the log type." enum:"text,json" placeholder:"type" default:"text" yaml:"-" json:"-"`
+	selectedProfile string
+}
 
-	// Profile configuration.
-	Profile  string             `group:"flag-global" name:"profile" help:"Set the current profile." placeholder:"name" default:"default"`
-	Profiles map[string]Profile `hidden:"" help:"List of profiles." json:"profiles"`
+// defaultConfigFilename is the default name of the configuration file used by
+// the Unikraft CLI.
+var defaultConfigFilename = "config.yaml"
+
+// ConfigFilePath returns the path to the Unikraft CLI configuration file.
+func ConfigFilePath() (string, error) {
+	if path, ok := os.LookupEnv("UNIKRAFT_CONFIG"); ok {
+		return path, nil
+	}
+
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "getting user config dir")
+	}
+	return filepath.Join(userConfigDir, "unikraft", defaultConfigFilename), nil
 }
 
 // Save the current configuration to the configuration file.
 func (c *Config) Save() error {
-	return c.SaveTo(ConfigDir())
-}
-
-func (c *Config) SaveTo(dir string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return jujuerrors.Annotate(err, "creating config directory")
+	if c.Path == "" {
+		return jujuerrors.New("config file path is not set")
 	}
 
-	// Open the existing configuration file or create a new one.
-	configFile := filepath.Join(dir, DefaultConfigFilename)
-	f, err := os.OpenFile(configFile, os.O_RDWR|os.O_CREATE, 0o644)
+	dt, err := yaml.Marshal(c)
+	if err != nil {
+		return jujuerrors.Annotate(err, "marshalling config to yaml")
+	}
+
+	if err := os.MkdirAll(filepath.Dir(c.Path), 0o755); err != nil {
+		return jujuerrors.Annotate(err, "creating config directory")
+	}
+	f, err := os.Create(c.Path)
 	if err != nil {
 		return jujuerrors.Annotate(err, "opening config file")
 	}
 
-	defer f.Close()
-
-	headData, err := yaml.Marshal(c)
-	if err != nil {
-		return jujuerrors.Annotate(err, "marshalling latest config")
+	if _, err := f.Write(dt); err != nil {
+		f.Close()
+		return jujuerrors.Annotate(err, "writing config file")
 	}
-
-	var headNode yaml.Node
-	if err := yaml.Unmarshal(headData, &headNode); err != nil {
-		return jujuerrors.Annotate(err, "parsing latest config")
+	if err := f.Close(); err != nil {
+		return jujuerrors.Annotate(err, "closing config file")
 	}
-	// Skip document root.
-	headNode = *headNode.Content[0]
-
-	// Write the merged configuration back to the file.
-	if err := f.Truncate(0); err != nil {
-		return jujuerrors.Annotate(err, "truncating config file")
-	}
-	if _, err := f.Seek(0, 0); err != nil {
-		return jujuerrors.Annotate(err, "seeking start of the config file")
-	}
-
-	encoder := yaml.NewEncoder(f)
-	encoder.SetIndent(2)
-
-	return encoder.Encode(headNode)
+	return nil
 }
 
-func LoadFrom(dir string) (*Config, error) {
-	configFile := filepath.Join(dir, DefaultConfigFilename)
-	f, err := os.Open(configFile)
+// Load reads the configuration from the specified file path.
+func Load(path string) (*Config, error) {
+	f, err := os.Open(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
@@ -98,11 +81,28 @@ func LoadFrom(dir string) (*Config, error) {
 	}
 	defer f.Close()
 
+	dt, err := io.ReadAll(f)
+	if err != nil {
+		return nil, jujuerrors.Annotate(err, "reading config file")
+	}
+
 	c := Config{}
-	decoder := yaml.NewDecoder(f)
-	if err := decoder.Decode(&c); err != nil {
+	if err := yaml.Unmarshal(dt, &c); err != nil {
 		return nil, jujuerrors.Annotate(err, "decoding config file")
 	}
 
+	var validationErrs error
+	for name, profile := range c.Profiles {
+		profile.Name = name
+		if err := profile.Validate(); err != nil {
+			validationErrs = errors.Join(validationErrs, jujuerrors.Annotatef(err, "validating profile %q", name))
+		}
+		c.Profiles[name] = profile
+	}
+	if validationErrs != nil {
+		return nil, validationErrs
+	}
+
+	c.Path = path
 	return &c, nil
 }

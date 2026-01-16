@@ -20,6 +20,7 @@ import (
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
+	"unikraft.com/cli/internal/logfmt"
 )
 
 type LoginCmd struct {
@@ -40,23 +41,18 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		defer cmd.Token.Close()
 	}
 
-	profile, err := config.G(ctx).CurrentProfile()
-	if err != nil && jujuerrors.Is(err, config.ErrNoCurrentProfile) {
-		// Set up a new profile if no current profile exists.
+	profile, err := cfg.CurrentProfile()
+	if err != nil {
+		var notFound config.ErrProfileNotFound
+		if !jujuerrors.Is(err, config.ErrNotSetup) && !jujuerrors.As(err, &notFound) {
+			return jujuerrors.Annotate(err, "getting current profile")
+		}
+
 		profile = &config.Profile{
 			Type:         config.ProfileTypeCloud,
-			Name:         config.DefaultProfileName,
+			Name:         cfg.CurrentProfileName(),
 			ControlPlane: cmd.ControlPlane,
 		}
-	} else if err != nil && jujuerrors.Is(err, config.ErrProfileNotFound) {
-		// Set up a new profile for the new profile.
-		profile = &config.Profile{
-			Type:         config.ProfileTypeCloud,
-			Name:         cfg.Profile,
-			ControlPlane: cmd.ControlPlane,
-		}
-	} else if err != nil {
-		return jujuerrors.Annotate(err, "getting current profile")
 	}
 
 	if cmd.Check {
@@ -130,7 +126,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		})
 	}
 
-	cfg.Profile = profile.Name
+	cfg.DefaultProfile = profile.Name
 	if cfg.Profiles == nil {
 		cfg.Profiles = make(map[string]config.Profile)
 	}
@@ -178,7 +174,7 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 		return nil, jujuerrors.New("no data received from control plane, please try again")
 	}
 
-	if config.G(ctx).LogType == log.TextType {
+	if logfmt.LogType(ctx) == log.TextType {
 		log.G(ctx).Info().Msg(" ")
 		log.G(ctx).Info().Msg("to authenticate, please visit:")
 		log.G(ctx).Info().Msg(" ")

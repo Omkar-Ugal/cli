@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
 	"reflect"
@@ -21,6 +20,7 @@ import (
 
 	"unikraft.com/cli/internal/cmd"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/logfmt"
 	"unikraft.com/x/colors"
 	"unikraft.com/x/log"
 )
@@ -32,13 +32,15 @@ func main() {
 	var (
 		err error
 
-		args   = os.Args[1:]
-		stdin  = os.Stdin
-		stdout = os.Stdout
-		stderr = os.Stderr
+		args  = os.Args[1:]
+		stdio = config.Stdio{
+			Stdin:  os.Stdin,
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		}
 	)
 
-	ctx, err = run(ctx, args, stdin, stdout, stderr)
+	ctx, err = run(ctx, args, stdio)
 	if err == nil {
 		// catch context cancellation errors, and make sure we show them, even if
 		// the command succeeded
@@ -46,7 +48,7 @@ func main() {
 	}
 
 	if err != nil && !errors.Is(err, context.Canceled) {
-		if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
+		if logfmt.LogType(ctx) == log.TextType {
 			log.G(ctx).Error().Msg(" ")
 			log.G(ctx).Error().Msg(colors.ErrorFg("error:"))
 		}
@@ -63,7 +65,7 @@ func main() {
 			logErr(ctx, err.Error())
 		}
 
-		if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
+		if logfmt.LogType(ctx) == log.TextType {
 			log.G(ctx).Error().Msg(" ")
 		}
 	}
@@ -73,7 +75,7 @@ func main() {
 }
 
 func logErr(ctx context.Context, msg string) {
-	if config.G(ctx).LogType == log.TextType || config.G(ctx).LogType == "" {
+	if logfmt.LogType(ctx) == log.TextType {
 		for line := range strings.SplitSeq(msg, "\n") {
 			log.G(ctx).Error().Msgf("  %s", line)
 		}
@@ -94,19 +96,16 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 	return method
 }
 
-func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (context.Context, error) {
-	cli, opts, cleanup, err := cmd.NewRootCmd(ctx, args, stdin, stdout, stderr)
+func run(ctx context.Context, args []string, stdio config.Stdio) (context.Context, error) {
+	ctx, cli, opts, cleanup, err := cmd.NewRootCmd(ctx, args, stdio)
 	if err != nil {
-		if opts != nil && opts.Context != nil {
-			return opts.Context, err
-		}
 		return ctx, err
 	}
 
 	node := cli.Selected()
 	if node == nil {
 		if len(cli.Path) == 0 {
-			return opts.Context, fmt.Errorf("no command selected")
+			return ctx, fmt.Errorf("no command selected")
 		}
 
 		selected := cli.Path[0].Node()
@@ -118,7 +117,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		}
 
 		if node == nil {
-			return opts.Context, fmt.Errorf("no command selected")
+			return ctx, fmt.Errorf("no command selected")
 		}
 	}
 
@@ -126,5 +125,5 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	if cleanup != nil {
 		err = errors.Join(err, cleanup())
 	}
-	return opts.Context, err
+	return ctx, err
 }

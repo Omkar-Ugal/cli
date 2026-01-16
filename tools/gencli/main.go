@@ -18,8 +18,8 @@ import (
 
 // CLI is the root command structure.
 type CLI struct {
-	LogLevel log.Level `group:"flag-global" name:"log-level"  enum:"trace,debug,info,warn,error,fatal" placeholder:"level" default:"info"`
-	LogType  log.Type  `group:"flag-global" name:"log-type"  enum:"text,json" placeholder:"type" default:"text"`
+	LogLevel log.Level `group:"flag-global" name:"log-level" env:"UNIKRAFT_LOG_LEVEL" enum:"trace,debug,info,warn,error,fatal" placeholder:"level" default:"info"`
+	LogType  log.Type  `group:"flag-global" name:"log-type" env:"UNIKRAFT_LOG_TYPE" enum:"text,json" placeholder:"type" default:"text"`
 
 	Docs DocsCmd `cmd:"" help:"Generate markdown documentation for the CLI."`
 	Man  ManCmd  `cmd:"" help:"Generate man pages for the CLI."`

@@ -47,8 +47,7 @@ func (i Metro) Fields() ([]resource.Field, error) {
 }
 
 func (Metro) List(ctx context.Context) ([]resource.Resource, error) {
-	cfg := config.FromContextOrDefault(ctx)
-	profile, err := cfg.CurrentProfile()
+	profile, err := config.G(ctx).CurrentProfile()
 	if err != nil {
 		return nil, err
 	}

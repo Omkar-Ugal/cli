@@ -23,8 +23,7 @@ type MetroClient struct {
 }
 
 func NewClient(ctx context.Context) (*group.Group[MetroClient], error) {
-	cfg := config.FromContextOrDefault(ctx)
-	profile, err := cfg.CurrentProfile()
+	profile, err := config.G(ctx).CurrentProfile()
 	if err != nil {
 		return nil, err
 	}

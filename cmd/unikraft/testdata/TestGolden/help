@@ -48,23 +48,16 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config
-	          Set the configuration file.
-	      --[no-]telemetry
-	          Enable or disable telemetry.
-	          [default: true]
-	      --[no-]emojis
-	          Enable or disable emojis in the CLI output.
-	          [default: true]
+	      --config ($UNIKRAFT_CONFIG)
+	          Path to the configuration file.
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
 	          [default: info, choice: trace,debug,info,warn,error,fatal]
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile
+	      --profile ($UNIKRAFT_PROFILE)
 	          Set the current profile.
-	          [default: default]
 	      --version
 	          Print version information.
 
