@@ -3,8 +3,6 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-//go:build integration
-
 package main
 
 import (
@@ -62,48 +60,27 @@ type command struct {
 var testCases []testCase
 
 var (
-	token  string
-	metros []string
+	testToken  string
+	testMetros []string
 )
 
 const (
 	defaultMetro = "test"
 )
 
-func init() {
-	if v, ok := os.LookupEnv("UKC_TOKEN"); ok {
-		token = v
-		os.Unsetenv("UKC_TOKEN")
-	}
-
-	if v, ok := os.LookupEnv("UKC_METRO"); ok {
-		metros = append(metros, v)
-		os.Unsetenv("UKC_METRO")
-	}
-	if v, ok := os.LookupEnv("UKC_METROS"); ok {
-		metros = append(metros, strings.Split(v, ",")...)
-		os.Unsetenv("UKC_METROS")
-	}
-
-	testCases = append(testCases, helpTestCases...)
-	testCases = append(testCases, authTestCases...)
-	testCases = append(testCases, instancesTestCases...)
-	testCases = append(testCases, volumesTestCases...)
-	testCases = append(testCases, servicesTestCases...)
-	testCases = append(testCases, certificatesTestCases...)
-	testCases = append(testCases, imagesTestCases...)
-}
-
 func TestGolden(t *testing.T) {
+	if len(testCases) == 0 {
+		t.Skip("no test cases")
+	}
 	t.Parallel()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.online && token == "" {
+			if tc.online && testToken == "" {
 				t.Skip("skipping online test that requires UKC_TOKEN")
 			}
-			if tc.online && len(metros) == 0 {
+			if tc.online && len(testMetros) == 0 {
 				t.Skip("skipping online test that requires UKC_METRO/UKC_METROS")
 			}
 
@@ -158,7 +135,7 @@ func TestGolden(t *testing.T) {
 				cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
 				cmd.Env = append(cmd.Env, config.UnikraftConfigDirEnv+"="+configdir)
 				if command.token {
-					cmd.Env = append(cmd.Env, "UKC_TOKEN="+token)
+					cmd.Env = append(cmd.Env, "UKC_TOKEN="+testToken)
 				}
 
 				err := cmd.Run()
@@ -443,7 +420,7 @@ func defaultCfg() (*config.Config, *config.Profile) {
 		Name:  "default",
 		Token: "", // populated via login
 	}
-	for _, metro := range metros {
+	for _, metro := range testMetros {
 		profile.Metros = append(profile.Metros, config.Metro{
 			Name:     defaultMetro,
 			Endpoint: metro,

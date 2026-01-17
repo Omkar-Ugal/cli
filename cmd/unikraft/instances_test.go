@@ -3,8 +3,6 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-//go:build integration
-
 package main
 
 import "regexp"
@@ -29,9 +27,6 @@ var instancesTestCases = []testCase{
 				"--set", "service.services=443:8080/tls+http",
 				"--set", "service.domains=name=$UNIQ_DOMAIN",
 			}},
-
-			// HACK: sleep to allow for instance to be ready
-			{args: []string{"sleep", "5"}},
 
 			{args: []string{unikraftCmd, "instance", "list"}},
 			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
