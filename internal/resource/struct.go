@@ -20,7 +20,7 @@ import (
 // FieldsFromStruct is a helper that converts a struct into a slice of Fields
 // based on the `field` tags defined on the struct's fields.
 func FieldsFromStruct(s any) (fields []Field, err error) {
-	field, err := fieldFromStruct("", reflect.ValueOf(s))
+	field, err := fieldFromStruct(true, reflect.ValueOf(s))
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ type ValueField interface {
 	Parse(s string) error
 }
 
-func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) {
+func fieldFromStruct(embed bool, v reflect.Value) (field *Field, err error) {
 	s := v
 	if s.Kind() == reflect.Pointer {
 		if s.IsNil() {
@@ -46,10 +46,7 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 	}
 	t := s.Type()
 
-	if pkgPath == "" {
-		pkgPath = s.Type().PkgPath()
-	}
-	if t.PkgPath() != "" && t.PkgPath() != pkgPath {
+	if t.Name() != "" && !embed {
 		return nil, nil
 	}
 
@@ -76,7 +73,7 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 			Edit:      parsedField.Edit,
 		}
 
-		newField, err := fieldFromStruct(pkgPath, fieldVal)
+		newField, err := fieldFromStruct(parsedField.Embed, fieldVal)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +83,7 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 			result.Verbosity = max(result.Verbosity, newField.Verbosity)
 		}
 
-		newField, err = fieldFromSlice(pkgPath, fieldVal)
+		newField, err = fieldFromSlice(parsedField.Embed, fieldVal)
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +113,7 @@ func fieldFromStruct(pkgPath string, v reflect.Value) (field *Field, err error) 
 	}, nil
 }
 
-func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
+func fieldFromSlice(embed bool, v reflect.Value) (field *Field, err error) {
 	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			v = reflect.New(v.Type().Elem())
@@ -130,7 +127,7 @@ func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 
 	elemType := v.Type().Elem()
 	elemVal := reflect.New(elemType).Elem()
-	elem, err := fieldFromStruct(pkgPath, elemVal)
+	elem, err := fieldFromStruct(embed, elemVal)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +138,7 @@ func fieldFromSlice(pkgPath string, v reflect.Value) (field *Field, err error) {
 	var fields []Field
 	for i := range v.Len() {
 		vv := v.Index(i)
-		field, err := fieldFromStruct(pkgPath, vv)
+		field, err := fieldFromStruct(embed, vv)
 		if err != nil {
 			return nil, err
 		}
@@ -163,6 +160,8 @@ type ParsedField struct {
 	Name      string
 	Type      reflect.Type
 	Verbosity FieldVerbosity
+
+	Embed bool
 
 	Edit   *Patch
 	Create *Patch
@@ -207,10 +206,13 @@ func ParseField(field reflect.StructField) (*ParsedField, error) {
 		return nil, err
 	}
 
+	embed := slices.Contains(opts, "embed")
+
 	return &ParsedField{
 		Name:      name,
 		Verbosity: verbosity,
 		Type:      field.Type,
+		Embed:     embed,
 		Edit:      edit,
 		Create:    create,
 	}, nil

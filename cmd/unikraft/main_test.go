@@ -154,6 +154,23 @@ var testCases = []testCase{
 			{args: []string{unikraftCmd, "certificate", "delete", "test-$UNIQ_CERT_A", "test-$UNIQ_CERT_B"}},
 		},
 	},
+
+	{
+		name:   "images",
+		online: true,
+		commands: []command{
+			{args: []string{unikraftCmd, "login"}, token: true},
+			{args: []string{unikraftCmd, "image", "list", "--filter", "ref~=^nginx:"}},
+			{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
+		},
+		cleaners: []cleaner{
+			{
+				// exact nginx version numbers may change between runs
+				pattern: regexp.MustCompile(`nginx:[0-9]+\.[0-9]+`),
+				repl:    "nginx:X.Y",
+			},
+		},
+	},
 }
 
 var (
@@ -377,6 +394,11 @@ var cleaners = []cleaner{
 		// uuids like "12345678-1234-1234-1234-123456789abc" change between runs
 		pattern: regexp.MustCompile(`\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b`),
 		repl:    "12345678-1234-1234-1234-123456789abc",
+	},
+	{
+		// image digests like "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" may change between runs
+		pattern: regexp.MustCompile(`\bsha256:[0-9a-f]{64}\b`),
+		repl:    "sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
 	},
 }
 
