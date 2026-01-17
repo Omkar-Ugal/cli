@@ -1,6 +1,14 @@
 name: build
 
 on:
+  push:
+    branches:
+    - staging
+    paths:
+    - '**'
+    - '!.github/**'
+    - '.github/workflows/build.yaml'
+    - '!README.md'
   pull_request:
     types:
     - opened
@@ -71,7 +79,7 @@ jobs:
     - name: Upload build artifacts to GitHub
       uses: actions/upload-artifact@v6
       with:
-        name: unikraft-cli-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number}}
+        name: unikraft-cli-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number || github.sha }}
         path: ./dist/unikraft
         if-no-files-found: error
         retention-days: 7
