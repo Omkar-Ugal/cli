@@ -48,14 +48,14 @@ type ServiceGroup struct {
 		CreatedAt time.Time `mirror:"service_group.created_at"`
 	}
 
-	Domains []Domain `mirror:"service_group.domains" create:"set" edit:"set,add,del"`
+	Domains []Domain `mirror:"service_group.domains" field:",embed" create:"set" edit:"set,add,del"`
 
 	Instances []struct {
 		Name string `mirror:"name" field:",long"`
 		UUID string `mirror:"uuid" field:",long"`
 	} `mirror:"service_group.instances"`
 
-	Services []*Service `mirror:"service_group.services" create:"set,required" edit:"set,add,del"`
+	Services []*Service `mirror:"service_group.services" field:",embed" create:"set,required" edit:"set,add,del"`
 
 	ServiceGroup platform.ServiceGroup `field:"-" json:"service_group"`
 	Metro        *config.Metro         `field:"-" json:"metro"`
