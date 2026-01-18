@@ -1,4 +1,4 @@
-name: build
+name: docs
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     paths:
     - '**'
     - '!.github/**'
-    - '.github/workflows/build.yaml'
+    - '.github/workflows/docs.yaml'
     - '!README.md'
   pull_request:
     types:
@@ -19,7 +19,7 @@ on:
     paths:
     - '**'
     - '!.github/**'
-    - '.github/workflows/build.yaml'
+    - '.github/workflows/docs.yaml'
     - '!README.md'
 
 # Automatically cancel in-progress actions on the same branch
@@ -28,24 +28,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  cli:
+  docs:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-        - GOOS: darwin
-          GOARCH: amd64
-        - GOOS: darwin
-          GOARCH: arm64
-        - GOOS: linux
-          GOARCH: amd64
-        - GOOS: linux
-          GOARCH: arm64
-
+    env:
+      TASK_X_REMOTE_TASKFILES: 1
     steps:
     - name: Checkout
       uses: actions/checkout@v6
+
+    - name: Setup Task
+      uses: go-task/setup-task@v1
 
     - name: Setup Go
       uses: actions/setup-go@v6
@@ -71,16 +63,25 @@ jobs:
         restore-keys: |
           ${{ github.job }}-${{ runner.os }}-go-
 
-    - name: Build
+    - name: Build docs
       shell: bash
       run: |
-        VERSION=pr-${{ github.event.number }} GOOS=${{ matrix.GOOS }} GOARCH=${{ matrix.GOARCH }} make
+        task --yes docs
 
-    - name: Upload build artifacts to GitHub
+    - name: Upload docs artifacts to GitHub
       uses: actions/upload-artifact@v6
       with:
-        name: unikraft-cli-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number || github.sha }}
-        path: ./dist/unikraft
+        name: unikraft-docs-${{ github.event.pull_request.number || github.sha }}
+        path: ./dist/docs
+        if-no-files-found: error
+        retention-days: 7
+        overwrite: true
+
+    - name: Upload man artifacts to GitHub
+      uses: actions/upload-artifact@v6
+      with:
+        name: unikraft-man-${{ github.event.pull_request.number || github.sha }}
+        path: ./dist/man
         if-no-files-found: error
         retention-days: 7
         overwrite: true
