@@ -20,7 +20,11 @@ tasks:
       vars:
         package: ./cmd/unikraft
 
-  unit:
+  lint:
+    cmds:
+      - task: go:lint
+
+  test:
     cmds:
     - task: go:test
 
