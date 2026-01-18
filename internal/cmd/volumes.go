@@ -22,7 +22,8 @@ import (
 )
 
 type VolumesCmd struct {
-	cmd.ResourceCmd[Volume]          `set:"name=volume" set:"names=volumes"`
+	cmd.ResourceCmd[Volume]
+	cmd.GettableResourceCmd[Volume]  `set:"name=volume" set:"names=volumes"`
 	cmd.DeletableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
 	cmd.EditableResourceCmd[Volume]  `set:"name=volume" set:"names=volumes"`
 	cmd.CreatableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`

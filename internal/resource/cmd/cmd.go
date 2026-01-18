@@ -23,9 +23,23 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
 	"unikraft.com/cli/internal/tui/watcher"
+	"unikraft.com/x/kingkong"
 )
 
-type ResourceCmd[R resource.GettableResource] struct {
+type ResourceCmdInterface interface {
+	Underlying() resource.Resource
+}
+
+type ResourceCmd[R resource.Resource] struct{}
+
+var _ ResourceCmdInterface = (*ResourceCmd[resource.GettableResource])(nil)
+
+func (cmd ResourceCmd[R]) Underlying() resource.Resource {
+	var empty R
+	return empty
+}
+
+type GettableResourceCmd[R resource.GettableResource] struct {
 	List ResourceListCmd[R]    `cmd:"" help:"List ${names}." aliases:"ls"`
 	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
 }
@@ -39,9 +53,44 @@ type CreatableResourceCmd[R resource.CreatableResource] struct {
 	Create ResourceCreateCmd[R] `cmd:"" help:"Create a ${name}."`
 }
 
-func (cmd *ResourceCmd[R]) Help() string {
+func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	var r R
-	return fmt.Sprintf("Manage %s.", r.Type().Names)
+
+	fields, err := r.Fields()
+	if err != nil {
+		panic(err)
+	}
+	fields, err = resourceFields(fields, true, resource.FieldVerbosityHidden, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	buf := &bytes.Buffer{}
+
+	for _, field := range fields {
+		paths := []string{}
+		base := kingkong.DimmedColor(field.Name)
+		paths = append(paths, base)
+		for path := range resource.IterFields(field.Subfields) {
+			parts := make([]string, 0, len(path)+1)
+			parts = append(parts, base)
+			for _, part := range path {
+				if part == "*" {
+					part = kingkong.Bold(part)
+				}
+				parts = append(parts, kingkong.DimmedMoreColor(part))
+			}
+			paths = append(paths, strings.Join(parts, kingkong.DimmedColor(".")))
+		}
+		fmt.Fprintln(buf, strings.Join(paths, kingkong.DimmedColor(", ")))
+	}
+
+	return []kingkong.HelpSection{
+		{
+			Title:   "Fields",
+			Content: buf.String(),
+		},
+	}
 }
 
 type FormatOpts struct {
@@ -62,8 +111,8 @@ type ResourceListCmd[R resource.GettableResource] struct {
 	FormatOpts
 }
 
-func (cmd *ResourceListCmd[R]) Help() string {
-	return "Lister"
+func (cmd ResourceListCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
 }
 
 func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -116,6 +165,10 @@ type ResourceInspectCmd[R resource.GettableResource] struct {
 	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
+}
+
+func (cmd ResourceInspectCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
 }
 
 func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -189,6 +242,10 @@ type ResourceRemoveCmd[R resource.DeletableResource] struct {
 	Name []string `arg:"" help:"Names of the ${names} to remove."`
 }
 
+func (cmd ResourceRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
+}
+
 func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
@@ -207,6 +264,10 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
+}
+
+func (cmd ResourceEditCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
 }
 
 func (cmd *ResourceEditCmd[R]) toPatchSpec() patch.PatchSpec {
@@ -318,6 +379,10 @@ type ResourceCreateCmd[R resource.CreatableResource] struct {
 	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
+}
+
+func (cmd ResourceCreateCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
 }
 
 func (cmd *ResourceCreateCmd[R]) toPatchSpec() patch.PatchSpec {

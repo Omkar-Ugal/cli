@@ -18,7 +18,8 @@ import (
 )
 
 type MetrosCmd struct {
-	cmd.ResourceCmd[Metro] `set:"name=metro" set:"names=metros"`
+	cmd.ResourceCmd[Metro]
+	cmd.GettableResourceCmd[Metro] `set:"name=metro" set:"names=metros"`
 }
 
 type Metro struct {

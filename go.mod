@@ -36,10 +36,10 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 	tailscale.com v1.92.5
 	unikraft.com/cloud/sdk v0.0.0-20260106155929-09ab9b333e25
-	unikraft.com/x/colors v0.0.0-20260105163520-49d071286efd
-	unikraft.com/x/kingkong v0.0.0-20260107171923-82c0f5ef829a
-	unikraft.com/x/log v0.0.0-20260105163520-49d071286efd
-	unikraft.com/x/ptr v0.0.0-20260105163520-49d071286efd
+	unikraft.com/x/colors v0.0.0-20260116231133-1da0081544af
+	unikraft.com/x/kingkong v0.0.0-20260116231133-1da0081544af
+	unikraft.com/x/log v0.0.0-20260116231133-1da0081544af
+	unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af
 )
 
 require (
@@ -58,7 +58,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dblohm7/wingoes v0.0.0-20240119213807-a09d6be7affa // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
-	github.com/getsentry/sentry-go v0.36.2 // indirect
+	github.com/getsentry/sentry-go v0.40.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250813024750-ebf49471dced // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
@@ -86,7 +86,7 @@ require (
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	unikraft.com/x/guesstermwidth v0.0.0-20251010132444-b0be607b7949 // indirect
+	unikraft.com/x/guesstermwidth v0.0.0-20260116231133-1da0081544af // indirect
 )
 
 // Includes a fix for stripping hyperlinks

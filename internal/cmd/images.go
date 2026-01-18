@@ -25,7 +25,8 @@ import (
 )
 
 type ImagesCmd struct {
-	cmd.ResourceCmd[Image] `set:"name=image" set:"names=images"`
+	cmd.ResourceCmd[Image]
+	cmd.GettableResourceCmd[Image] `set:"name=image" set:"names=images"`
 }
 
 type Image struct {
