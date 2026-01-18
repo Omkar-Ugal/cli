@@ -7,34 +7,118 @@ package cmd
 
 import (
 	"bytes"
+	"encoding"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"slices"
 	"strings"
-	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/juju/ansiterm"
 	"github.com/muesli/termenv"
+	"sigs.k8s.io/yaml"
 
 	"unikraft.com/cli/internal/kvwriter"
 	"unikraft.com/cli/internal/resource"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
-func printTable[R resource.Resource](out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
+type PrinterType string
+
+const (
+	PrinterTypeTable    PrinterType = "table"
+	PrinterTypeKeyValue PrinterType = "kv"
+	PrinterTypeJSON     PrinterType = "json"
+	PrinterTypeYAML     PrinterType = "yaml"
+	PrinterTypeRaw      PrinterType = "raw"
+	PrinterTypeQuiet    PrinterType = "quiet"
+	PrinterTypeTemplate PrinterType = "template"
+)
+
+func (pt PrinterType) Validate() error {
+	switch pt {
+	case PrinterTypeTable, PrinterTypeKeyValue, PrinterTypeJSON, PrinterTypeYAML, PrinterTypeRaw, PrinterTypeQuiet, PrinterTypeTemplate:
+		return nil
+	default:
+		return fmt.Errorf("unknown printer type: %s", pt)
+	}
+}
+
+type Printer struct {
+	Type  PrinterType
+	Value string
+}
+
+var _ encoding.TextUnmarshaler = (*Printer)(nil)
+
+func (p *Printer) UnmarshalText(text []byte) error {
+	if len(text) == 0 {
+		return nil
+	}
+
+	k, v, _ := strings.Cut(string(text), "=")
+	pt := PrinterType(k)
+	if err := pt.Validate(); err != nil {
+		return err
+	}
+	p.Type = pt
+	p.Value = v
+	return nil
+}
+
+func ParsePrinter(s string) (Printer, error) {
+	pr := Printer{}
+	err := pr.UnmarshalText([]byte(s))
+	if err != nil {
+		return Printer{}, err
+	}
+	return pr, nil
+}
+
+func (p Printer) WithDefault(tp PrinterType) Printer {
+	if p.Type == "" {
+		p.Type = tp
+	}
+	return p
+}
+
+func (p Printer) Print(out io.Writer, fieldSpecs []string, base resource.Resource, resources ...resource.Resource) error {
+	switch p.Type {
+	case "":
+		return fmt.Errorf("printer type not specified")
+	case PrinterTypeTable:
+		return printTableFormatted(out, fieldSpecs, base, resources...)
+	case PrinterTypeKeyValue:
+		return printKVFormatted(out, fieldSpecs, resources...)
+	case PrinterTypeJSON:
+		return printJSON(out, resources...)
+	case PrinterTypeYAML:
+		return printYAML(out, resources...)
+	case PrinterTypeRaw:
+		return printRaw(out, resources...)
+	case PrinterTypeQuiet:
+		return printQuiet(out, resources...)
+	case PrinterTypeTemplate:
+		return printTemplate(out, p.Value, resources...)
+	default:
+		return fmt.Errorf("unknown printer type: %s", p.Type)
+	}
+}
+
+func printTableFormatted(out io.Writer, fieldSpecs []string, base resource.Resource, resources ...resource.Resource) error {
 	tw := ansiterm.NewTabWriter(out, 0, 8, 2, ' ', 0)
-	err := printTabSeparated[R](tw, fieldSpecs, resources...)
+	err := printTable(tw, fieldSpecs, base, resources...)
 	if err != nil {
 		return err
 	}
 	return tw.Flush()
 }
 
-func printInspect(out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
+func printKVFormatted(out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
 	bw := kvwriter.KeyValueWriter(out, "")
 	err := printKV(bw, fieldSpecs, resources...)
 	if err != nil {
@@ -107,9 +191,8 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 	return nil
 }
 
-func printTabSeparated[R resource.Resource](out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
-	var r R
-	headers, err := r.Fields()
+func printTable(out io.Writer, fieldSpecs []string, base resource.Resource, resources ...resource.Resource) error {
+	headers, err := base.Fields()
 	if err != nil {
 		return err
 	}
@@ -223,6 +306,40 @@ func printQuiet(out io.Writer, resources ...resource.Resource) error {
 		}
 	}
 	return nil
+}
+
+func printJSON(out io.Writer, resources ...resource.Resource) error {
+	input := make([]any, 0, len(resources))
+	for _, res := range resources {
+		fields, err := res.Fields()
+		if err != nil {
+			return err
+		}
+		input = append(input, resource.FieldsToMap(fields))
+	}
+	dt, err := json.MarshalIndent(input, "", "  ")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintln(out, string(dt))
+	return err
+}
+
+func printYAML(out io.Writer, resources ...resource.Resource) error {
+	input := make([]any, 0, len(resources))
+	for _, res := range resources {
+		fields, err := res.Fields()
+		if err != nil {
+			return err
+		}
+		input = append(input, resource.FieldsToMap(fields))
+	}
+	dt, err := yaml.Marshal(input)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprint(out, string(dt))
+	return err
 }
 
 func printRaw(out io.Writer, resources ...resource.Resource) error {

@@ -99,9 +99,7 @@ type FormatOpts struct {
 	Field  []string `short:"f" help:"Specify which fields to include in the output."`
 	Filter []string `help:"Filter output based on a field value (e.g. --filter status==active)." sep:"none"`
 
-	Quiet  bool   `short:"q" help:"Only display resource keys."`
-	Format string `help:"Format the output using a Go template."`
-	Raw    bool   `help:"Output raw JSON API response."`
+	Output Printer `short:"o" help:"Output format. One of: kv, table, json, yaml, raw, quiet, template."`
 }
 
 type ResourceListCmd[R resource.GettableResource] struct {
@@ -136,22 +134,13 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		if err != nil {
 			return err
 		}
-
 		resources, err = filterResources(resources, filter)
 		if err != nil {
 			return err
 		}
-
-		switch {
-		case cmd.Quiet:
-			return printQuiet(out, resources...)
-		case cmd.Raw:
-			return printRaw(out, resources...)
-		case cmd.Format != "":
-			return printTemplate(out, cmd.Format, resources...)
-		default:
-			return printTable[R](out, cmd.Field, resources...)
-		}
+		return cmd.FormatOpts.Output.
+			WithDefault(PrinterTypeTable).
+			Print(out, cmd.Field, empty, resources...)
 	}
 
 	if cmd.Watch > 0 {
@@ -186,22 +175,13 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 		if err != nil {
 			return err
 		}
-
 		resources, err = filterResources(resources, filter)
 		if err != nil {
 			return err
 		}
-
-		switch {
-		case cmd.Quiet:
-			return printQuiet(out, resources...)
-		case cmd.Raw:
-			return printRaw(out, resources...)
-		case cmd.Format != "":
-			return printTemplate(out, cmd.Format, resources...)
-		default:
-			return printInspect(out, cmd.Field, resources...)
-		}
+		return cmd.FormatOpts.Output.
+			WithDefault(PrinterTypeKeyValue).
+			Print(out, cmd.Field, empty, resources...)
 	}
 
 	if cmd.Watch > 0 {
@@ -424,5 +404,5 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 	if err != nil {
 		return err
 	}
-	return printInspect(cfg.Stdout, nil, res)
+	return printKVFormatted(cfg.Stdout, nil, res)
 }
