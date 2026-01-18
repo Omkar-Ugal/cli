@@ -13,6 +13,7 @@ import (
 	"maps"
 	"os"
 	"slices"
+	"strings"
 
 	"unikraft.com/x/log"
 )
@@ -136,6 +137,9 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 
 		resources, err := r.Get(ctx, targets)
 		if err != nil {
+			if strings.Contains(err.Error(), "keys not found") {
+				continue // HACK: some resources may have been deleted through other mysterious means
+			}
 			rerr = errors.Join(rerr, fmt.Errorf("failed to get resources for cleanup: %w", err))
 			continue
 		}

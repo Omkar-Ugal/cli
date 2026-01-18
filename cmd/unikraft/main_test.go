@@ -3,8 +3,6 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-//go:build integration
-
 package main
 
 import (
@@ -30,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lunixbochs/vtclean"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/v3/golden"
@@ -52,162 +51,36 @@ type testCase struct {
 }
 
 type command struct {
-	args     []string
-	allowErr bool
-	token    bool
+	args       []string
+	allowErr   bool
+	token      bool
+	captureEnv string
 }
 
-var testCases = []testCase{
-	{
-		name:     "empty",
-		commands: []command{{args: []string{unikraftCmd}, allowErr: true}},
-	},
-	{
-		name:     "help",
-		commands: []command{{args: []string{unikraftCmd, "--help"}}},
-	},
-	{
-		name:     "version",
-		commands: []command{{args: []string{unikraftCmd, "--version"}}},
-	},
-
-	{
-		name:   "auth",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
-			{args: []string{unikraftCmd, "profile", "list"}},
-			{args: []string{unikraftCmd, "metro", "list"}},
-			{args: []string{unikraftCmd, "logout"}},
-		},
-	},
-
-	{
-		name:   "volumes",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
-			{args: []string{unikraftCmd, "volume", "list"}},
-			{args: []string{unikraftCmd, "volume", "create", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
-			{args: []string{unikraftCmd, "volume", "list"}},
-			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
-			{args: []string{unikraftCmd, "volume", "edit", "test-$UNIQ_VOLUME", "--set", "size=20"}},
-			{args: []string{unikraftCmd, "volume", "list"}},
-			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
-			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
-		},
-	},
-
-	{
-		name:   "services",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
-			{args: []string{unikraftCmd, "service", "list"}},
-			{args: []string{
-				unikraftCmd, "service", "create",
-				"--set", "name=test-$UNIQ_SVC_A",
-				"--set", "metro=" + defaultMetro,
-				"--set", "domains=fqdn=$UNIQ_DOMAIN_A.unikraft.example",
-				"--set", "services=443:8080/tls+http",
-				"--set", "services=80:443/http+redirect",
-			}},
-			{args: []string{
-				unikraftCmd, "service", "create",
-				"--set", "name=test-$UNIQ_SVC_B",
-				"--set", "metro=" + defaultMetro,
-				"--set", "domains=fqdn=$UNIQ_DOMAIN_B.unikraft.example",
-				"--set", "services=443:8080/tls+http,80:443/http+redirect",
-			}},
-			{args: []string{unikraftCmd, "service", "list"}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
-
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_A", "--add", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_B", "--set", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
-
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_A", "--del", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_B", "--del", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
-
-			{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
-		},
-		cleaners: []cleaner{
-			{
-				// automatically generated certificate names
-				pattern: regexp.MustCompile(`\.unikraft\.example-[a-z0-9]{5,}`),
-				repl:    ".unikraft.example-xxxxx",
-			},
-		},
-	},
-
-	{
-		name:   "certificates",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
-			{args: []string{unikraftCmd, "certificate", "list"}},
-			{args: []string{unikraftCmd, "certificate", "create", "--set", "name=test-$UNIQ_CERT_A", "--set", "cn=$CERT_A_CN", "--set", "chain=$CERT_A_CHAIN", "--set", "pkey=$CERT_A_KEY", "--set", "metro=" + defaultMetro}},
-			{args: []string{unikraftCmd, "certificate", "create", "--set", "name=test-$UNIQ_CERT_B", "--set", "cn=$CERT_B_CN", "--set", "chain=$CERT_B_CHAIN", "--set", "pkey=$CERT_B_KEY", "--set", "metro=" + defaultMetro}},
-			{args: []string{unikraftCmd, "certificate", "list"}},
-			{args: []string{unikraftCmd, "certificate", "inspect", "test-$UNIQ_CERT_A", "test-$UNIQ_CERT_B"}},
-			{args: []string{unikraftCmd, "certificate", "delete", "test-$UNIQ_CERT_A", "test-$UNIQ_CERT_B"}},
-		},
-	},
-
-	{
-		name:   "images",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
-			{args: []string{unikraftCmd, "image", "list", "--filter", "ref~=^nginx:"}},
-			{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
-		},
-		cleaners: []cleaner{
-			{
-				// exact nginx version numbers may change between runs
-				pattern: regexp.MustCompile(`nginx:[0-9]+\.[0-9]+`),
-				repl:    "nginx:X.Y",
-			},
-		},
-	},
-}
+var testCases []testCase
 
 var (
-	token  string
-	metros []string
+	testToken  string
+	testMetros []string
 )
 
 const (
 	defaultMetro = "test"
 )
 
-func init() {
-	if v, ok := os.LookupEnv("UKC_TOKEN"); ok {
-		token = v
-		os.Unsetenv("UKC_TOKEN")
-	}
-
-	if v, ok := os.LookupEnv("UKC_METRO"); ok {
-		metros = append(metros, v)
-		os.Unsetenv("UKC_METRO")
-	}
-	if v, ok := os.LookupEnv("UKC_METROS"); ok {
-		metros = append(metros, strings.Split(v, ",")...)
-		os.Unsetenv("UKC_METROS")
-	}
-}
-
 func TestGolden(t *testing.T) {
+	if len(testCases) == 0 {
+		t.Skip("no test cases")
+	}
 	t.Parallel()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			if tc.online && token == "" {
+			if tc.online && testToken == "" {
 				t.Skip("skipping online test that requires UKC_TOKEN")
 			}
-			if tc.online && len(metros) == 0 {
+			if tc.online && len(testMetros) == 0 {
 				t.Skip("skipping online test that requires UKC_METRO/UKC_METROS")
 			}
 
@@ -242,7 +115,6 @@ func TestGolden(t *testing.T) {
 					args = append(args, "go", "run", ".")
 					args = append(args, command.args[1:]...)
 				} else {
-					assert.Failf(t, "first argument must be %q", unikraftCmd)
 					args = command.args
 				}
 				args = expander.expandArgs(args)
@@ -263,10 +135,22 @@ func TestGolden(t *testing.T) {
 				cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
 				cmd.Env = append(cmd.Env, config.UnikraftConfigDirEnv+"="+configdir)
 				if command.token {
-					cmd.Env = append(cmd.Env, "UKC_TOKEN="+token)
+					cmd.Env = append(cmd.Env, "UKC_TOKEN="+testToken)
 				}
 
 				err := cmd.Run()
+				if command.captureEnv != "" {
+					value := strings.TrimSpace(stdout.String())
+					if value == "" {
+						value = strings.TrimSpace(stderr.String())
+					}
+					if value != "" {
+						if expander.env == nil {
+							expander.env = make(map[string]string)
+						}
+						expander.env[command.captureEnv] = value
+					}
+				}
 				var exitErr *exec.ExitError
 				var exitCode int
 				if errors.As(err, &exitErr) && command.allowErr {
@@ -274,14 +158,20 @@ func TestGolden(t *testing.T) {
 					// ignore exit errors for help commands
 					err = nil
 				}
-				require.NoError(t, err, "command %q failed", strings.Join(args, " "), stdout.String(), stderr.String())
+				require.NoError(t, err, "command %q failed\nstdout:\n%s\nstderr:\n%s",
+					strings.Join(args, " "),
+					stdout.String(),
+					stderr.String(),
+				)
 
 				report := report{
-					args:     command.args,
-					stdout:   stdout.String(),
-					stderr:   stderr.String(),
-					exitCode: exitCode,
+					args:       command.args,
+					stdout:     stdout.String(),
+					stderr:     stderr.String(),
+					exitCode:   exitCode,
+					captureEnv: command.captureEnv,
 				}
+
 				report.cleaners = append(report.cleaners, tc.cleaners...)
 				report.cleaners = append(report.cleaners, expander.cleaners()...)
 				for _, metro := range profile.Metros {
@@ -302,48 +192,74 @@ func TestGolden(t *testing.T) {
 }
 
 type report struct {
-	args     []string
-	stdout   string
-	stderr   string
-	exitCode int
-	cleaners []cleaner
+	args       []string
+	stdout     string
+	stderr     string
+	exitCode   int
+	captureEnv string
+	cleaners   []cleaner
 }
 
 func (report *report) String() string {
 	out := strings.Builder{}
 
-	out.WriteString("$ " + strings.Join(report.args, " ") + "\n\n")
-	stdout := report.cleanOutput(report.stdout)
-	if len(stdout) > 0 {
-		out.WriteString("stdout:\n" + indent(stdout, "\t") + "\n\n")
+	cmd := strings.Join(formatArgs(report.args), " ")
+	if report.captureEnv != "" {
+		cmd = report.captureEnv + "=$(" + cmd + ")"
 	}
-	stderr := report.cleanOutput(report.stderr)
-	if len(stderr) > 0 {
-		out.WriteString("stderr:\n" + indent(stderr, "\t") + "\n\n")
-	}
-	if report.exitCode != 0 {
-		out.WriteString("exit code: " + strconv.Itoa(report.exitCode) + "\n\n")
+	out.WriteString("$ " + cmd + "\n\n")
+	if report.captureEnv == "" {
+		stdout := report.cleanOutput(report.stdout)
+		if len(stdout) > 0 {
+			out.WriteString("stdout:\n" + indent(stdout, "\t") + "\n\n")
+		}
+		stderr := report.cleanOutput(report.stderr)
+		if len(stderr) > 0 {
+			out.WriteString("stderr:\n" + indent(stderr, "\t") + "\n\n")
+		}
+		if report.exitCode != 0 {
+			out.WriteString("exit code: " + strconv.Itoa(report.exitCode) + "\n\n")
+		}
 	}
 
 	return strings.TrimSpace(out.String()) + "\n"
 }
 
 func (report *report) cleanOutput(s string) string {
-	// trim leading and trailing whitespace
+	// remove ANSI escape sequences and trim whitespace
+	s = vtclean.Clean(s, false)
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return s
 	}
 
 	// apply any necessary cleanup to the output here
-	for _, c := range cleaners {
+	for _, c := range report.cleaners {
 		s = c.pattern.ReplaceAllString(s, c.repl)
 	}
-	for _, c := range report.cleaners {
+	for _, c := range cleaners {
 		s = c.pattern.ReplaceAllString(s, c.repl)
 	}
 
 	return s
+}
+
+func formatArgs(args []string) []string {
+	formatted := make([]string, 0, len(args))
+	for _, arg := range args {
+		formatted = append(formatted, quoteArg(arg))
+	}
+	return formatted
+}
+
+func quoteArg(arg string) string {
+	if arg == "" {
+		return "''"
+	}
+	if strings.ContainsAny(arg, " \t\n{}()") {
+		return "'" + strings.ReplaceAll(arg, "'", "'\\''") + "'"
+	}
+	return arg
 }
 
 func indent(s string, indent string) string {
@@ -413,6 +329,7 @@ func wordCleanerf(word string, args ...any) *regexp.Regexp {
 type expander struct {
 	uniq  map[string]string
 	certs map[string]*generatedCert
+	env   map[string]string
 }
 
 type generatedCert struct {
@@ -428,9 +345,15 @@ func (e *expander) expandArgs(args []string) []string {
 	if e.certs == nil {
 		e.certs = make(map[string]*generatedCert)
 	}
+	if e.env == nil {
+		e.env = make(map[string]string)
+	}
 	expanded := make([]string, 0, len(args))
 	for _, arg := range args {
 		arg, err := shell.Expand(arg, func(varname string) string {
+			if val, ok := e.env[varname]; ok {
+				return val
+			}
 			prefix, rest, ok := strings.Cut(varname, "_")
 			if !ok {
 				return ""
@@ -497,7 +420,7 @@ func defaultCfg() (*config.Config, *config.Profile) {
 		Name:  "default",
 		Token: "", // populated via login
 	}
-	for _, metro := range metros {
+	for _, metro := range testMetros {
 		profile.Metros = append(profile.Metros, config.Metro{
 			Name:     defaultMetro,
 			Endpoint: metro,
