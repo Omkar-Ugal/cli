@@ -104,7 +104,7 @@ stdout:
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
 
-$ FQDN=$(unikraft instance inspect test-$UNIQ_INST --format '{{ (index (index (index (index . 0) "service") "domains") 0).fqdn }}')
+$ FQDN=$(unikraft instance inspect test-$UNIQ_INST --output 'template={{ (index (index (index (index . 0) "service") "domains") 0).fqdn }}')
 
 $ curl -k --fail --silent --show-error --output /dev/null --write-out 'HTTP %{http_code} OK\n%header{server}\n' --retry 10 --retry-delay 2 --retry-all-errors --connect-timeout 5 --max-time 10 https://$FQDN
 
