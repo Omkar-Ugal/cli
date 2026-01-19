@@ -2,7 +2,7 @@ name: check/static
 
 on:
   push:
-    branches: [prod-staging, prod-stable]
+    branches: [staging, stable]
   pull_request:
     branches:
     - staging
