@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/lunixbochs/vtclean"
 	"github.com/mitchellh/copystructure"
@@ -25,9 +26,10 @@ import (
 
 var baseTestStore = map[string]resourcet.TestResource{
 	"test1": {
-		ID:   "id-test1",
-		Name: "test1",
-		URL:  "https://example.com",
+		ID:    "id-test1",
+		Name:  "test1",
+		State: "pending",
+		URL:   "https://example.com",
 		Settings: resourcet.TestSettings{
 			X: 42,
 			Y: "hello",
@@ -38,9 +40,10 @@ var baseTestStore = map[string]resourcet.TestResource{
 		},
 	},
 	"test2": {
-		ID:   "id-test2",
-		Name: "test2",
-		URL:  "https://example.org",
+		ID:    "id-test2",
+		Name:  "test2",
+		State: "pending",
+		URL:   "https://example.org",
 		Settings: resourcet.TestSettings{
 			X: 7,
 			Y: "world",
@@ -333,6 +336,50 @@ func TestGet(t *testing.T) {
 		output = out.String()
 		assert.Contains(t, output, "test1")
 		assert.NotContains(t, output, "test2")
+	})
+}
+
+func TestWait(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	t.Run("already_matching", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		resourceOne := resourcet.TestStore["test1"]
+		resourceOne.State = "ready"
+		resourcet.TestStore["test1"] = resourceOne
+
+		resourceTwo := resourcet.TestStore["test2"]
+		resourceTwo.State = "ready"
+		resourcet.TestStore["test2"] = resourceTwo
+
+		cmd := &ResourceWaitCmd[resourcet.TestResource]{
+			Name:     []string{"test1", "test2"},
+			Until:    []string{"state==ready"},
+			Timeout:  time.Second,
+			Interval: 10 * time.Millisecond,
+		}
+		err = cmd.Run(ctx, testConfig(&bytes.Buffer{}), sandbox)
+		require.NoError(t, err)
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		cmd := &ResourceWaitCmd[resourcet.TestResource]{
+			Name:     []string{"test1", "test2"},
+			Until:    []string{"state==ready"},
+			Timeout:  1 * time.Second,
+			Interval: 10 * time.Millisecond,
+		}
+		err = cmd.Run(ctx, testConfig(&bytes.Buffer{}), sandbox)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
 }
 

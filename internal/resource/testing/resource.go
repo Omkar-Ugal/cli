@@ -17,6 +17,7 @@ import (
 type TestResource struct {
 	ID       string
 	Name     string
+	State    string
 	URL      string
 	Settings TestSettings
 	Authors  []TestAuthor
@@ -71,6 +72,11 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 			Create: &resource.Patch{
 				Set: "",
 			},
+		},
+		{
+			Name:      "state",
+			Value:     t.State,
+			Verbosity: resource.FieldVerbosityShort,
 		},
 		{
 			Name:      "url",
