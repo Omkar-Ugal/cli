@@ -8,8 +8,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/logs"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
@@ -40,6 +42,8 @@ type RunCmd struct {
 	Replicas      int64    `help:"Number of replicas."`
 	WaitTimeoutMs int64    `help:"Wait timeout in milliseconds."`
 	Features      []string `help:"Enable instance features."`
+
+	Follow bool `short:"f" help:"Follow instance logs after creation."`
 }
 
 func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -91,8 +95,28 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintln(cfg.Stdout, created.Key())
-	return err
+	instance := created.(Instance)
+	fmt.Fprintln(cfg.Stdout, created.Key())
+
+	if c.Follow {
+		cl, err := multimetro.NewClient(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = multimetro.DoKeyExact(ctx, cl, instance.key(), func(ctx context.Context, mc *multimetro.MetroClient) (any, error) {
+			r, err := logs.InstanceLogs(ctx, mc).Reader(instance.key().NameOrUUID(), 0, true)
+			if err != nil {
+				return nil, err
+			}
+			_, err = io.Copy(cfg.Stdout, r)
+			return nil, err
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *RunCmd) applyCreatePatches(fields []resource.Field, env map[string]string, volumes []*InstanceVolume, services []*Service, domains []Domain, scaleToZero *InstanceScaleToZero) error {
