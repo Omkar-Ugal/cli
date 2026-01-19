@@ -228,6 +228,16 @@ func (s *Sandbox) WrapGettable(r GettableResource) GettableResource {
 	}
 }
 
+func (s *Sandbox) WrapListable(r ListableResource) ListableResource {
+	if s == nil {
+		return r
+	}
+	return sanboxedListableResource{
+		ListableResource: r,
+		sandbox:          s,
+	}
+}
+
 func (s *Sandbox) WrapEditable(r EditableResource) EditableResource {
 	if s == nil {
 		return r
@@ -275,8 +285,13 @@ func (r sandboxedGettableResource) Get(ctx context.Context, keys []string) ([]Re
 	return resources, nil
 }
 
-func (r sandboxedGettableResource) List(ctx context.Context) ([]Resource, error) {
-	resources, err := r.GettableResource.List(ctx)
+type sanboxedListableResource struct {
+	ListableResource
+	sandbox *Sandbox
+}
+
+func (r sanboxedListableResource) List(ctx context.Context) ([]Resource, error) {
+	resources, err := r.ListableResource.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -294,13 +309,6 @@ func (r sandboxedEditableResource) Get(ctx context.Context, keys []string) ([]Re
 		GettableResource: r.EditableResource,
 		sandbox:          r.sandbox,
 	}.Get(ctx, keys)
-}
-
-func (r sandboxedEditableResource) List(ctx context.Context) ([]Resource, error) {
-	return sandboxedGettableResource{
-		GettableResource: r.EditableResource,
-		sandbox:          r.sandbox,
-	}.List(ctx)
 }
 
 func (r sandboxedEditableResource) Edit(ctx context.Context, target Resource, fields []Field) (Resource, error) {
@@ -322,13 +330,6 @@ func (r sandboxedCreatableResource) Get(ctx context.Context, keys []string) ([]R
 	}.Get(ctx, keys)
 }
 
-func (r sandboxedCreatableResource) List(ctx context.Context) ([]Resource, error) {
-	return sandboxedGettableResource{
-		GettableResource: r.CreatableResource,
-		sandbox:          r.sandbox,
-	}.List(ctx)
-}
-
 func (r sandboxedCreatableResource) Create(ctx context.Context, fields []Field) (Resource, error) {
 	res, err := r.CreatableResource.Create(ctx, fields)
 	if err != nil {
@@ -347,13 +348,6 @@ func (r sandboxedDeletableResource) Get(ctx context.Context, keys []string) ([]R
 		GettableResource: r.DeletableResource,
 		sandbox:          r.sandbox,
 	}.Get(ctx, keys)
-}
-
-func (r sandboxedDeletableResource) List(ctx context.Context) ([]Resource, error) {
-	return sandboxedGettableResource{
-		GettableResource: r.DeletableResource,
-		sandbox:          r.sandbox,
-	}.List(ctx)
 }
 
 func (r sandboxedDeletableResource) Delete(ctx context.Context, targets []Resource) error {

@@ -7,10 +7,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"maps"
-	"slices"
-	"strings"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
@@ -20,6 +16,7 @@ import (
 type MetrosCmd struct {
 	cmd.ResourceCmd[Metro]
 	cmd.GettableResourceCmd[Metro] `set:"name=metro" set:"names=metros"`
+	cmd.ListableResourceCmd[Metro] `set:"name=metro" set:"names=metros"`
 }
 
 type Metro struct {
@@ -67,33 +64,5 @@ func (Metro) List(ctx context.Context) ([]resource.Resource, error) {
 }
 
 func (Metro) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cfg := config.FromContextOrDefault(ctx)
-	profile, err := cfg.CurrentProfile()
-	if err != nil {
-		return nil, err
-	}
-
-	keySet := make(map[string]int, len(keys))
-	for i, key := range keys {
-		keySet[key] = i
-	}
-
-	results := make([]resource.Resource, len(keys))
-	for _, metro := range profile.Metros {
-		i, ok := keySet[metro.Name]
-		if !ok {
-			continue
-		}
-		delete(keySet, metro.Name)
-		result := Metro{
-			Name:     metro.Name,
-			Country:  metro.Country,
-			Endpoint: metro.Endpoint,
-		}
-		results[i] = result
-	}
-	if len(keySet) > 0 {
-		return nil, fmt.Errorf("metro not found: %s", strings.Join(slices.Collect(maps.Keys(keySet)), ", "))
-	}
-	return results, nil
+	return getFromListable(ctx, Metro{}, keys)
 }

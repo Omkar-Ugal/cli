@@ -7,10 +7,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"maps"
-	"slices"
-	"strings"
 
 	jujuerrors "github.com/juju/errors"
 	"unikraft.com/cli/internal/config"
@@ -22,6 +18,7 @@ import (
 type ProfileCmd struct {
 	cmd.ResourceCmd[Profile]
 	cmd.GettableResourceCmd[Profile] `set:"name=profile" set:"names=profiles"`
+	cmd.ListableResourceCmd[Profile] `set:"name=profile" set:"names=profiles"`
 
 	Use UseCmd `cmd:"" help:"Switch between profiles."`
 }
@@ -74,38 +71,7 @@ func (Profile) List(ctx context.Context) ([]resource.Resource, error) {
 }
 
 func (Profile) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cfg := config.FromContextOrDefault(ctx)
-	profiles := cfg.Profiles
-
-	keySet := make(map[string]int, len(keys))
-	for i, key := range keys {
-		keySet[key] = i
-	}
-
-	var results []resource.Resource
-	for _, key := range keys {
-		for _, profile := range profiles {
-			if profile.Name != key {
-				continue
-			}
-			delete(keySet, key)
-
-			metroNames := make([]string, 0, len(profile.Metros))
-			for _, metro := range profile.Metros {
-				metroNames = append(metroNames, metro.Name)
-			}
-			result := Profile{
-				Name:   profile.Name,
-				Active: profile.Name == cfg.Profile,
-				Metros: metroNames,
-			}
-			results = append(results, result)
-		}
-	}
-	if len(keySet) > 0 {
-		return nil, fmt.Errorf("profile not found: %s", strings.Join(slices.Collect(maps.Keys(keySet)), ", "))
-	}
-	return results, nil
+	return getFromListable(ctx, Profile{}, keys)
 }
 
 type UseCmd struct {
