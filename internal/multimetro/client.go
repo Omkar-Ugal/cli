@@ -71,6 +71,14 @@ func NewClient(ctx context.Context) (*Client, error) {
 	}, nil
 }
 
+func (c *Client) Metros() []config.Metro {
+	metros := make([]config.Metro, 0, len(c.clients))
+	for _, client := range c.clients {
+		metros = append(metros, client.Metro)
+	}
+	return metros
+}
+
 func (c *Client) getByMetro(metro string) (*MetroClient, error) {
 	client, ok := c.clientsMap[metro]
 	if !ok {

@@ -1,13 +1,14 @@
-$ unikraft image list --filter ref~="^nginx:latest$"
+$ unikraft image list --filter ref~="/official/nginx:latest$"
 
 stdout:
-	METRO  REF           DIGEST
-	test   nginx:latest  sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	METRO  REF                                                           DIGEST
+	test   index.test.unikraft.internal/official/nginx:latest  sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
 
 $ unikraft image inspect nginx:latest
 
 stdout:
-	metro:  test
-	ref:    nginx:latest
-	refs:   [nginx:latest nginx:X.Y]
-	digest: sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	ref:        index.unikraft.io/official/nginx:latest
+	digest:     sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	config:
+	  platform: kraftcloud/x86_64
+	  cmd:      [/usr/bin/nginx -c /etc/nginx/nginx.conf]
