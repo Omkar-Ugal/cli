@@ -10,10 +10,12 @@ var authTestCases = []testCase{
 		name:   "auth",
 		online: true,
 		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
+			{args: []string{unikraftCmd, "login", "--check"}},
 			{args: []string{unikraftCmd, "profile", "list"}},
 			{args: []string{unikraftCmd, "metro", "list"}},
 			{args: []string{unikraftCmd, "logout"}},
+			{args: []string{unikraftCmd, "profile", "list"}, allowErr: true},
+			{args: []string{unikraftCmd, "metro", "list"}, allowErr: true},
 		},
 	},
 }

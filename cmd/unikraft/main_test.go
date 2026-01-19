@@ -53,7 +53,6 @@ type testCase struct {
 type command struct {
 	args       []string
 	allowErr   bool
-	token      bool
 	captureEnv string
 }
 
@@ -134,9 +133,6 @@ func TestGolden(t *testing.T) {
 				cmd.Env = append(cmd.Env, "NO_COLOR=1") // color makes golden files harder to read
 				cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
 				cmd.Env = append(cmd.Env, config.UnikraftConfigDirEnv+"="+configdir)
-				if command.token {
-					cmd.Env = append(cmd.Env, "UKC_TOKEN="+testToken)
-				}
 
 				err := cmd.Run()
 				if command.captureEnv != "" {
@@ -418,7 +414,7 @@ func defaultCfg() (*config.Config, *config.Profile) {
 	profile := &config.Profile{
 		Type:  config.ProfileTypeCloud,
 		Name:  "default",
-		Token: "", // populated via login
+		Token: testToken,
 	}
 	for _, metro := range testMetros {
 		profile.Metros = append(profile.Metros, config.Metro{
@@ -429,9 +425,9 @@ func defaultCfg() (*config.Config, *config.Profile) {
 		break
 	}
 	cfg := &config.Config{
-		Profile: "test",
+		Profile: profile.Name,
 		Profiles: map[string]config.Profile{
-			"test": *profile,
+			profile.Name: *profile,
 		},
 	}
 	return cfg, profile

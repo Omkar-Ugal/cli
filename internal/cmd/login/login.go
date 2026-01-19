@@ -7,7 +7,6 @@ package login
 
 import (
 	"context"
-	"os"
 	"time"
 
 	jujuerrors "github.com/juju/errors"
@@ -20,10 +19,13 @@ import (
 )
 
 type LoginCmd struct {
-	Timeout       time.Duration `short:"t" long:"timeout" default:"5m" help:"Timeout for the login request."`
-	Controlplane  string        `long:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
-	AllowInsecure bool          `long:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
-	NoBrowser     bool          `long:"no-browser" help:"Do not open the browser automatically for login."`
+	Check   bool          `long:"check" help:"Check if the user is already logged in."`
+	Timeout time.Duration `short:"t" long:"timeout" default:"5m" help:"Timeout for the login request."`
+
+	Controlplane  string `long:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
+	AllowInsecure bool   `long:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
+
+	NoBrowser bool `long:"no-browser" help:"Do not open the browser automatically for login."`
 }
 
 func (cmd *LoginCmd) Run(cfg *config.Config) error {
@@ -48,24 +50,26 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 		return jujuerrors.Annotate(err, "getting current profile")
 	}
 
+	if cmd.Check {
+		if profile.Token != "" {
+			log.G(ctx).Info().
+				Msg("existing authentication token found")
+			return nil
+		}
+		return jujuerrors.Errorf("no existing authentication token found")
+	}
+
 	if profile.Token != "" {
 		log.G(ctx).Info().
 			Msg("existing authentication token found, re-authenticating")
 	}
 
-	if token := os.Getenv("UKC_TOKEN"); token != "" {
-		// TODO: validate token
-		log.G(ctx).Info().
-			Msg("using authentication token from UKC_TOKEN environment variable")
-		profile.Token = token
-	} else {
-		resp, err := cmd.getAuth(ctx, profile)
-		if err != nil {
-			return jujuerrors.Annotate(err, "getting authentication token")
-		}
-		profile.Token = *resp.Token
-		profile.Organization = *resp.OrganizationName
+	resp, err := cmd.getAuth(ctx, profile)
+	if err != nil {
+		return jujuerrors.Annotate(err, "getting authentication token")
 	}
+	profile.Token = *resp.Token
+	profile.Organization = *resp.OrganizationName
 
 	log.G(ctx).
 		Warn().

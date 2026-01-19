@@ -12,7 +12,6 @@ var servicesTestCases = []testCase{
 		name:   "services",
 		online: true,
 		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
 			{args: []string{unikraftCmd, "service", "list"}},
 			{args: []string{
 				unikraftCmd, "service", "create",

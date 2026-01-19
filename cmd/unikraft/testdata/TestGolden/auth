@@ -1,15 +1,12 @@
-$ unikraft login
+$ unikraft login --check
 
 stderr:
-	HH:MM INF using authentication token from UKC_TOKEN environment variable
-	HH:MM WRN no metros configured; please add them manually
-	HH:MM INF login successful
+	HH:MM INF existing authentication token found
 
 $ unikraft profile list
 
 stdout:
 	NAME     ACTIVE  METROS
-	default  true    [test]
 	default  true    [test]
 
 $ unikraft metro list
@@ -22,3 +19,23 @@ $ unikraft logout
 
 stderr:
 	HH:MM INF logout successful
+
+$ unikraft profile list
+
+stdout:
+	NAME  ACTIVE  METROS
+
+$ unikraft metro list
+
+stderr:
+	HH:MM ERR  
+	HH:MM ERR error:
+	HH:MM ERR   profile not setup;
+	HH:MM ERR   
+	HH:MM ERR   use `unikraft login` to get started,
+	HH:MM ERR   
+	HH:MM ERR   or visit https://unikraft.com/docs/cli for more information
+	HH:MM ERR  
+	exit status 1
+
+exit code: 1
