@@ -17,13 +17,10 @@ import (
 
 	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/lunixbochs/vtclean"
-	"github.com/sergi/go-diff/diffmatchpatch"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/kvwriter"
-	"unikraft.com/cli/internal/prettydiff"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
 	"unikraft.com/cli/internal/tui/watcher"
@@ -480,31 +477,15 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		return PrintPatches(cfg.Stdout, patched, false)
 	}
 
-	start := &bytes.Buffer{}
-	err = printKV(start, nil, res)
-	if err != nil {
-		return err
-	}
+	updated := []resource.Resource{res}
 	if len(patched) > 0 {
-		res, err = r.Edit(ctx, res, patched)
+		result, err := r.Edit(ctx, res, patched)
 		if err != nil {
 			return err
 		}
+		updated = []resource.Resource{result}
 	}
-	end := &bytes.Buffer{}
-	err = printKV(end, nil, res)
-	if err != nil {
-		return err
-	}
-
-	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(start.String(), end.String(), false)
-	tw := kvwriter.KeyValueWriter(cfg.Stdout, kvwriter.WithIndent("  "))
-	_, err = io.Copy(tw, strings.NewReader(prettydiff.Render(diffs)))
-	if err != nil {
-		return err
-	}
-	return tw.Flush()
+	return Diff(cfg.Stdout, []resource.Resource{res}, updated)
 }
 
 type ResourceCreateCmd[R resource.CreatableResource] struct {
