@@ -20,7 +20,7 @@ type Key struct {
 }
 
 const (
-	MetroKeySeparator = "#"
+	MetroKeySeparator = "/"
 	KeyNamePrefix     = "name:"
 	KeyUUIDPrefix     = "uuid:"
 )
