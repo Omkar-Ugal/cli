@@ -50,6 +50,10 @@ func (ir ImageRef[T]) String() string {
 	return reference.FamiliarString(ir.Reference)
 }
 
+func (ir ImageRef[T]) MarshalText() ([]byte, error) {
+	return []byte(ir.String()), nil
+}
+
 // InstanceState is a wrapper around platform.InstanceState to automatically
 // add pretty colors.
 type InstanceState platform.InstanceState
