@@ -24,7 +24,7 @@ on:
 
 # Automatically cancel in-progress actions on the same branch
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -78,8 +78,9 @@ jobs:
 
     - name: Upload build artifacts to GitHub
       uses: actions/upload-artifact@v6
+      if: github.event_name == 'push'
       with:
-        name: unikraft-cli-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.event.pull_request.number || github.sha }}
+        name: unikraft-cli-${{ matrix.GOOS }}-${{ matrix.GOARCH }}-${{ github.sha }}
         path: ./dist/unikraft
         if-no-files-found: error
         retention-days: 7
