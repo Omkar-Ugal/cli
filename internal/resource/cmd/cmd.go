@@ -210,7 +210,7 @@ func filterResources(resources []resource.Resource, filter filters.Filter) (filt
 				return "", false
 			}
 			// HACK: vtclean to remove any escape sequences from rendered output
-			return vtclean.Clean(fields[0].ValueString(), false), true
+			return vtclean.Clean(fields[0].FormatString(), false), true
 		})) {
 			filtered = append(filtered, res)
 		}
@@ -244,6 +244,7 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
+	DryRun bool `help:"Print patches without applying them."`
 }
 
 func (cmd ResourceEditCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -328,6 +329,10 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	}
 	patched = patch.FilterPatchableFields(patched)
 
+	if cmd.DryRun {
+		return printPatches(cfg.Stdout, patched, false)
+	}
+
 	start := &bytes.Buffer{}
 	err = printKV(start, nil, res)
 	if err != nil {
@@ -347,7 +352,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(start.String(), end.String(), false)
-	tw := kvwriter.KeyValueWriter(cfg.Stdout, "  ")
+	tw := kvwriter.KeyValueWriter(cfg.Stdout, kvwriter.WithIndent("  "))
 	_, err = io.Copy(tw, strings.NewReader(prettydiff.Render(diffs)))
 	if err != nil {
 		return err
@@ -359,6 +364,7 @@ type ResourceCreateCmd[R resource.CreatableResource] struct {
 	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
+	DryRun bool `help:"Print patches without applying them."`
 }
 
 func (cmd ResourceCreateCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -399,6 +405,10 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 	}
 
 	fields = patch.FilterCreatableFields(patched)
+
+	if cmd.DryRun {
+		return printPatches(cfg.Stdout, fields, true)
+	}
 
 	res, err := r.Create(ctx, fields)
 	if err != nil {

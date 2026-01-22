@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/lunixbochs/vtclean"
@@ -369,6 +370,38 @@ func TestCreate(t *testing.T) {
 	assert.Contains(t, resourcet.TestStore, "test-new")
 }
 
+func TestCreateDryRun(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+	resourcet.TestStore = map[string]resourcet.TestResource{}
+
+	var out bytes.Buffer
+	cmd := &ResourceCreateCmd[resourcet.TestResource]{
+		DryRun: true,
+		Set: []map[string]string{
+			{"name": "test-dry"},
+			{"settings.x": "100"},
+			{"settings.y": "created"},
+		},
+	}
+	err := cmd.Run(ctx, testConfig(&out), sandbox)
+	require.NoError(t, err)
+
+	assert.NotContains(t, resourcet.TestStore, "test-dry")
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	require.Len(t, lines, 3)
+
+	expected := [][]string{
+		{"name", ":=", "test-dry"},
+		{"settings.x", ":=", "100"},
+		{"settings.y", ":=", "created"},
+	}
+	for i, expectedFields := range expected {
+		assert.Equal(t, expectedFields, strings.Fields(lines[i]))
+	}
+}
+
 func TestEdit(t *testing.T) {
 	ctx := context.Background()
 
@@ -420,6 +453,53 @@ func TestEdit(t *testing.T) {
 	stored := resourcet.TestStore["test-edit"]
 	assert.Equal(t, 999, stored.Settings.X)
 	assert.Equal(t, "modified", stored.Settings.Y)
+}
+
+func TestEditDryRun(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	editStore := map[string]resourcet.TestResource{
+		"test-edit": {
+			ID:   "id-edit",
+			Name: "test-edit",
+			URL:  "https://example.com",
+			Settings: resourcet.TestSettings{
+				X: 10,
+				Y: "original",
+			},
+		},
+	}
+	cloned, err := copystructure.Copy(editStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	var out bytes.Buffer
+	cmd := &ResourceEditCmd[resourcet.TestResource]{
+		Name:   "test-edit",
+		DryRun: true,
+		Set: []map[string]string{
+			{"settings.x": "999"},
+			{"settings.y": "modified"},
+		},
+	}
+	err = cmd.Run(ctx, testConfig(&out), sandbox)
+	require.NoError(t, err)
+
+	stored := resourcet.TestStore["test-edit"]
+	assert.Equal(t, 10, stored.Settings.X)
+	assert.Equal(t, "original", stored.Settings.Y)
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	require.Len(t, lines, 2)
+
+	expected := [][]string{
+		{"settings.x", ":=", "999"},
+		{"settings.y", ":=", "modified"},
+	}
+	for i, expectedFields := range expected {
+		assert.Equal(t, expectedFields, strings.Fields(lines[i]))
+	}
 }
 
 func TestDelete(t *testing.T) {

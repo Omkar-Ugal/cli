@@ -21,11 +21,42 @@ type keyValueWriter struct {
 	w      io.Writer
 	buffer []byte
 
-	cut int
+	cells []cell
 
-	keys      [][]byte
-	cleankeys [][]byte
-	values    [][]byte
+	cut             int
+	separators      []string
+	alignSeparators bool
+}
+
+type cell struct {
+	key      []byte
+	cleankey []byte
+	value    []byte
+	split    []byte
+}
+
+func (entry cell) width() int {
+	return len(entry.cleankey) + len(entry.split)
+}
+
+type KeyValueOpt func(*keyValueWriter)
+
+func WithSeparator(splits ...string) KeyValueOpt {
+	return func(b *keyValueWriter) {
+		b.separators = splits
+	}
+}
+
+func WithAlignedSeparator() KeyValueOpt {
+	return func(b *keyValueWriter) {
+		b.alignSeparators = true
+	}
+}
+
+func WithIndent(indent string) KeyValueOpt {
+	return func(b *keyValueWriter) {
+		b.cut = len(indent)
+	}
 }
 
 // KeyValueWriter returns a Writer that formats key-value pairs written to it.
@@ -34,8 +65,15 @@ type keyValueWriter struct {
 // The keys will be aligned based on the longest key, and styling rules are
 // applied to them based on their leading whitespace after the specified indent
 // is removed.
-func KeyValueWriter(w io.Writer, indent string) WriteFlusher {
-	return &keyValueWriter{w: w, cut: len(indent)}
+func KeyValueWriter(w io.Writer, opts ...KeyValueOpt) WriteFlusher {
+	kv := &keyValueWriter{w: w}
+	for _, opt := range opts {
+		opt(kv)
+	}
+	if len(kv.separators) == 0 {
+		kv.separators = []string{":"}
+	}
+	return kv
 }
 
 func (b *keyValueWriter) Write(p []byte) (n int, err error) {
@@ -50,23 +88,40 @@ func (b *keyValueWriter) Write(p []byte) (n int, err error) {
 	b.buffer = b.buffer[lastNewline+1:]
 
 	for line := range lines {
-		key, value, ok := bytes.Cut(line, []byte(":"))
-		if ok && len(value) > 0 {
-			if value[0] != ' ' && value[0] != '\t' && value[0] != '\n' {
-				ok = false
-			}
-		}
-		if ok {
-			b.keys = append(b.keys, key)
-			b.cleankeys = append(b.cleankeys, []byte(vtclean.Clean(string(key), false)))
-			b.values = append(b.values, bytes.TrimSpace(value))
-		} else {
-			b.keys = append(b.keys, nil)
-			b.cleankeys = append(b.cleankeys, nil)
-			b.values = append(b.values, line)
-		}
+		b.cells = append(b.cells, b.parseLine(line))
 	}
 	return len(p), nil
+}
+
+func (b *keyValueWriter) parseLine(line []byte) cell {
+	parsed, ok := b.splitLine(line)
+	if ok {
+		return parsed
+	}
+	return cell{value: line}
+}
+
+func (b *keyValueWriter) splitLine(line []byte) (cell, bool) {
+	for _, split := range b.separators {
+		if split == "" {
+			continue
+		}
+		splitBytes := []byte(split)
+		key, value, ok := bytes.Cut(line, splitBytes)
+		if !ok {
+			continue
+		}
+		if len(value) != 0 && !slices.Contains([]byte(" \n"), value[0]) {
+			continue
+		}
+		return cell{
+			key:      key,
+			cleankey: []byte(vtclean.Clean(string(key), false)),
+			value:    bytes.TrimSpace(value),
+			split:    splitBytes,
+		}, true
+	}
+	return cell{}, false
 }
 
 func (b *keyValueWriter) flush() error {
@@ -80,19 +135,25 @@ func (b *keyValueWriter) flush() error {
 	color := lipgloss.ColorProfile() != termenv.Ascii
 
 	maxKeyLen := 0
-	for _, key := range b.cleankeys {
-		maxKeyLen = max(maxKeyLen, len(key))
+	for _, entry := range b.cells {
+		if entry.key == nil {
+			continue
+		}
+		maxKeyLen = max(maxKeyLen, entry.width())
 	}
 
-	for i, key := range b.keys {
-		value := b.values[i]
-		cleankey := b.cleankeys[i]
-
-		if key == nil {
-			if _, err := fmt.Fprint(b.w, string(value)); err != nil {
+	for _, entry := range b.cells {
+		if entry.key == nil {
+			if _, err := fmt.Fprint(b.w, string(entry.value)); err != nil {
 				return err
 			}
 			continue
+		}
+		key := entry.key
+		cleankey := entry.cleankey
+		if b.alignSeparators {
+			key = bytes.TrimRight(key, " ")
+			cleankey = bytes.TrimRight(cleankey, " ")
 		}
 		if len(cleankey) > 0 {
 			var styleSeq, resetSeq ansi.Style
@@ -111,7 +172,7 @@ func (b *keyValueWriter) flush() error {
 				}
 			}
 
-			padding := maxKeyLen - len(cleankey)
+			padding := max(0, maxKeyLen-(len(cleankey)+len(entry.split))+1)
 			line := []byte{}
 			if styleSeq != nil {
 				line = append(line, []byte(styleSeq.String())...)
@@ -120,11 +181,20 @@ func (b *keyValueWriter) flush() error {
 			if styleSeq != nil {
 				line = append(line, []byte(resetSeq.String())...)
 			}
-			line = append(line, ':')
-			if len(value) > 0 {
+			if b.alignSeparators {
 				line = append(line, bytes.Repeat([]byte(" "), padding)...)
-				line = append(line, ' ')
-				line = append(line, value...)
+				line = append(line, entry.split...)
+				if len(entry.value) > 0 {
+					line = append(line, ' ')
+				}
+			} else {
+				line = append(line, entry.split...)
+				if len(entry.value) > 0 {
+					line = append(line, bytes.Repeat([]byte(" "), padding)...)
+				}
+			}
+			if len(entry.value) > 0 {
+				line = append(line, entry.value...)
 			}
 			line = append(line, '\n')
 			if _, err := b.w.Write(line); err != nil {

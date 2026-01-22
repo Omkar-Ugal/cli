@@ -111,15 +111,15 @@ type Patch struct {
 	Required bool `json:"required,omitempty"`
 }
 
-func (f Field) ValueString() string {
-	return valueString(f.Value)
+func (f Field) FormatString() string {
+	return FormatValue(f.Value)
 }
 
 type Wrapped interface {
 	Unwrap() any
 }
 
-func valueString(value any) string {
+func FormatValue(value any) string {
 	for {
 		unwrapped, ok := value.(Wrapped)
 		if !ok {
@@ -142,14 +142,14 @@ func valueString(value any) string {
 	case reflect.Slice, reflect.Array:
 		var result []string
 		for i := range v.Len() {
-			result = append(result, valueString(v.Index(i).Interface()))
+			result = append(result, FormatValue(v.Index(i).Interface()))
 		}
 		return "[" + strings.Join(result, " ") + "]"
 	case reflect.Map:
 		var result []string
 		for _, key := range v.MapKeys() {
 			val := v.MapIndex(key)
-			result = append(result, fmt.Sprintf("%s:%s", valueString(key.Interface()), valueString(val.Interface())))
+			result = append(result, fmt.Sprintf("%s:%s", FormatValue(key.Interface()), FormatValue(val.Interface())))
 		}
 		return "{" + strings.Join(result, " ") + "}"
 	default:

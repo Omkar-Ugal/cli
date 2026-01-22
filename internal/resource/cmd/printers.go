@@ -119,7 +119,7 @@ func printTableFormatted(out io.Writer, fieldSpecs []string, base resource.Resou
 }
 
 func printKVFormatted(out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
-	bw := kvwriter.KeyValueWriter(out, "")
+	bw := kvwriter.KeyValueWriter(out)
 	err := printKV(bw, fieldSpecs, resources...)
 	if err != nil {
 		return err
@@ -162,7 +162,7 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 			nextCurrent = indent
 			nextIndent = indent
 			if field.Value != nil {
-				line.WriteString(field.ValueString())
+				line.WriteString(field.FormatString())
 				line.WriteString("\n")
 			}
 		} else {
@@ -174,7 +174,7 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 			line.WriteString(field.Name + ":")
 			if field.Value != nil {
 				line.WriteString(" ")
-				line.WriteString(field.ValueString())
+				line.WriteString(field.FormatString())
 			}
 			line.WriteString("\n")
 		}
@@ -265,7 +265,7 @@ func printTable(out io.Writer, fieldSpecs []string, base resource.Resource, reso
 					continue
 				}
 
-				value := field.ValueString()
+				value := field.FormatString()
 				if field.Hyperlink != "" {
 					// TODO: use lipgloss styles when it supports hyperlinks
 					// https://github.com/charmbracelet/lipgloss/issues/220
@@ -431,4 +431,39 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 	}
 
 	return result, nil
+}
+
+func printPatches(out io.Writer, fields []resource.Field, create bool) error {
+	tw := kvwriter.KeyValueWriter(
+		out,
+		kvwriter.WithSeparator(":=", "+=", "-="),
+		kvwriter.WithAlignedSeparator(),
+	)
+	for path, field := range resource.IterFields(fields) {
+		var patch *resource.Patch
+		if create {
+			patch = field.Create
+		} else {
+			patch = field.Edit
+		}
+		if patch == nil {
+			continue
+		}
+		if patch.Set != nil {
+			if _, err := fmt.Fprintf(tw, "%s := %s\n", path.String(), resource.FormatValue(patch.Set)); err != nil {
+				return err
+			}
+		}
+		if patch.Add != nil {
+			if _, err := fmt.Fprintf(tw, "%s += %s\n", path.String(), resource.FormatValue(patch.Add)); err != nil {
+				return err
+			}
+		}
+		if patch.Del != nil {
+			if _, err := fmt.Fprintf(tw, "%s -= %s\n", path.String(), resource.FormatValue(patch.Del)); err != nil {
+				return err
+			}
+		}
+	}
+	return tw.Flush()
 }

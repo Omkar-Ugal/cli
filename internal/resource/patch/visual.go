@@ -247,6 +247,8 @@ func patchField(path resource.FieldPath, before *resource.Field, after *resource
 			return fmt.Errorf("cannot assign value of type %T to patch of type %T for field %s", after.Value, patch.Set, path.String())
 		}
 		patch.Set = after.Value
+		patch.Add = nil
+		patch.Del = nil
 	} else if before.Elem != nil && !reflect.DeepEqual(before.Subfields, after.Subfields) {
 		if patch == nil {
 			return fmt.Errorf("no patch available for field %s", path.String())
@@ -267,6 +269,8 @@ func patchField(path resource.FieldPath, before *resource.Field, after *resource
 			// might not be exactly identical, so we check DeepEqual on the collected
 			// values as well
 			patch.Set = next
+			patch.Add = nil
+			patch.Del = nil
 		} else {
 			patch = nil
 		}
