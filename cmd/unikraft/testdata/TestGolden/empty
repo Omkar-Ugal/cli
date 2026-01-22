@@ -1,5 +1,57 @@
 $ unikraft
 
+stdout:
+	Usage:
+	  unikraft <command> [flags]
+
+	Version:
+	  dev (GOOS/GOARCH)
+
+	Commands:
+	  login
+	          Login to Unikraft Cloud.
+	  logout
+	          Logout from Unikraft Cloud.
+	  profile, profiles
+	          Manage Unikraft Cloud profiles.
+	  metros, metro
+	          Manage Unikraft Cloud metros.
+	  instances, instance
+	          Manage Unikraft Cloud instances.
+	  volumes, volume
+	          Manage Unikraft Cloud volumes.
+	  services, service
+	          Manage Unikraft Cloud services.
+	  certificates, certificate
+	          Manage Unikraft Cloud certificates.
+	  images, image
+	          Manage Unikraft Cloud images.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	  -c, --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	  -v, --version
+	          Print version information.
+
+	Run "unikraft <command> --help" for more information on a command.
+
 stderr:
 	HH:MM ERR  
 	HH:MM ERR error:
