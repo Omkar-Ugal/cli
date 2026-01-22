@@ -10,7 +10,6 @@ var volumesTestCases = []testCase{
 		name:   "volumes",
 		online: true,
 		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
 			{args: []string{unikraftCmd, "volume", "list"}},
 			{args: []string{unikraftCmd, "volume", "create", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
 			{args: []string{unikraftCmd, "volume", "list"}},

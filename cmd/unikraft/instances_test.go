@@ -12,7 +12,6 @@ var instancesTestCases = []testCase{
 		name:   "instances",
 		online: true,
 		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
 			{args: []string{unikraftCmd, "instance", "list"}},
 
 			// Create an nginx instance with a service

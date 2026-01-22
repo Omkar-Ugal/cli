@@ -10,7 +10,6 @@ var certificatesTestCases = []testCase{
 		name:   "certificates",
 		online: true,
 		commands: []command{
-			{args: []string{unikraftCmd, "login"}, token: true},
 			{args: []string{unikraftCmd, "certificate", "list"}},
 			{args: []string{unikraftCmd, "certificate", "create", "--set", "name=test-$UNIQ_CERT_A", "--set", "cn=$CERT_A_CN", "--set", "chain=$CERT_A_CHAIN", "--set", "pkey=$CERT_A_KEY", "--set", "metro=" + defaultMetro}},
 			{args: []string{unikraftCmd, "certificate", "create", "--set", "name=test-$UNIQ_CERT_B", "--set", "cn=$CERT_B_CN", "--set", "chain=$CERT_B_CHAIN", "--set", "pkey=$CERT_B_KEY", "--set", "metro=" + defaultMetro}},

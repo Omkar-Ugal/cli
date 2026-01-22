@@ -1,10 +1,3 @@
-$ unikraft login
-
-stderr:
-	HH:MM INF using authentication token from UKC_TOKEN environment variable
-	HH:MM WRN no metros configured; please add them manually
-	HH:MM INF login successful
-
 $ unikraft certificate list
 
 stdout:
