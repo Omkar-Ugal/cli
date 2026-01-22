@@ -70,8 +70,8 @@ func (c Certificate) key() multimetro.Key {
 	}
 }
 
-func (c Certificate) Key() string {
-	return c.key().String()
+func (c Certificate) Key() resource.Key {
+	return c.key()
 }
 
 func (c Certificate) Raw() any {

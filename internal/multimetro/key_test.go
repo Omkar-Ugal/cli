@@ -162,3 +162,104 @@ func TestParseKeys(t *testing.T) {
 
 	assert.Equal(t, expected, ParseKeys(inputs))
 }
+
+func TestCompleteKey(t *testing.T) {
+	key := Key{Metro: "ams", Name: "api-key", UUID: testUUID}
+
+	tests := []struct {
+		name     string
+		prefix   string
+		expected []string
+	}{
+		{
+			name:     "empty prefix",
+			prefix:   "",
+			expected: []string{"api-key"},
+		},
+		{
+			name:     "non-matching prefix",
+			prefix:   "non-match",
+			expected: nil,
+		},
+
+		{
+			name:     "matching metro prefix",
+			prefix:   "am",
+			expected: []string{"ams/api-key"},
+		},
+		{
+			name:     "matching double",
+			prefix:   "a",
+			expected: []string{"api-key", "ams/api-key"},
+		},
+
+		{
+			name:     "matching metro",
+			prefix:   "ams/",
+			expected: []string{"ams/api-key"},
+		},
+		{
+			name:     "non-matching metro",
+			prefix:   "lhr/",
+			expected: nil,
+		},
+
+		{
+			name:     "matching name",
+			prefix:   "api",
+			expected: []string{"api-key"},
+		},
+		{
+			name:     "matching metro and name",
+			prefix:   "ams/api",
+			expected: []string{"ams/api-key"},
+		},
+		{
+			name:     "matching uuid",
+			prefix:   testUUID[:8],
+			expected: []string{testUUID},
+		},
+		{
+			name:     "matching metro and uuid",
+			prefix:   "ams/" + testUUID[:8],
+			expected: []string{"ams/" + testUUID},
+		},
+
+		{
+			name:     "matching explicit name",
+			prefix:   "name:api",
+			expected: []string{"name:api-key"},
+		},
+		{
+			name:     "matching explicit name clean",
+			prefix:   "name:",
+			expected: []string{"name:api-key"},
+		},
+		{
+			name:     "matching explicit name unclear",
+			prefix:   "name",
+			expected: nil, // don't complete to name:..., that's a bit weird
+		},
+		{
+			name:     "matching explicit uuid",
+			prefix:   "uuid:" + testUUID[:8],
+			expected: []string{"uuid:" + testUUID},
+		},
+		{
+			name:     "matching explicit uuid clean",
+			prefix:   "uuid:",
+			expected: []string{"uuid:" + testUUID},
+		},
+		{
+			name:     "matching explicit uuid unclear",
+			prefix:   "uuid",
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, key.Complete(tt.prefix))
+		})
+	}
+}

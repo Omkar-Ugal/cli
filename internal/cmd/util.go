@@ -23,7 +23,7 @@ func getFromListable(ctx context.Context, listable resource.ListableResource, ke
 loop:
 	for _, key := range keys {
 		for _, resource := range all {
-			if resource.Key() == key {
+			if resource.Key().String() == key {
 				found = append(found, resource)
 				continue loop
 			}

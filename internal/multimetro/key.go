@@ -6,6 +6,7 @@
 package multimetro
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/google/uuid"
@@ -94,6 +95,44 @@ func (k Key) String() string {
 		s += k.Name
 	}
 	return s
+}
+
+func (k Key) Complete(prefix string) (completions []string) {
+	if prefix == "" {
+		return []string{cmp.Or(k.Name, k.UUID)}
+	}
+
+	metro, rest, hasMetro := strings.Cut(prefix, MetroKeySeparator)
+	if !hasMetro {
+		metro = ""
+	}
+	if metro == k.Metro {
+		metro += MetroKeySeparator
+		prefix = rest
+		if prefix == "" {
+			completions = append(completions, metro+cmp.Or(k.Name, k.UUID))
+			return completions
+		}
+	}
+
+	if strings.HasPrefix(prefix, KeyNamePrefix) {
+		completions = append(completions, metro+KeyNamePrefix+k.Name)
+	}
+	if strings.HasPrefix(prefix, KeyUUIDPrefix) {
+		completions = append(completions, metro+KeyUUIDPrefix+k.UUID)
+	}
+
+	if strings.HasPrefix(k.Name, prefix) {
+		completions = append(completions, metro+k.Name)
+	}
+	if strings.HasPrefix(k.UUID, prefix) {
+		completions = append(completions, metro+k.UUID)
+	}
+	if !hasMetro && strings.HasPrefix(k.Metro, prefix) {
+		completions = append(completions, k.Metro+MetroKeySeparator+cmp.Or(k.Name, k.UUID))
+	}
+
+	return completions
 }
 
 type Keys []Key

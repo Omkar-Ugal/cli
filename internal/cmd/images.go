@@ -65,8 +65,8 @@ func (Image) Type() resource.Type {
 	}
 }
 
-func (i Image) Key() string {
-	return i.Ref.Reference.String()
+func (i Image) Key() resource.Key {
+	return staticKey(i.Ref.Reference.String())
 }
 
 func (i Image) Raw() any {
@@ -135,8 +135,8 @@ func (ImageEntry) Type() resource.Type {
 	}
 }
 
-func (i ImageEntry) Key() string {
-	return i.Ref.Reference.String()
+func (i ImageEntry) Key() resource.Key {
+	return staticKey(i.Ref.Reference.String())
 }
 
 func (i ImageEntry) Raw() any {

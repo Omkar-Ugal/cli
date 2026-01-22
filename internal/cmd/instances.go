@@ -199,8 +199,8 @@ func (i Instance) key() multimetro.Key {
 	}
 }
 
-func (i Instance) Key() string {
-	return i.key().String()
+func (i Instance) Key() resource.Key {
+	return i.key()
 }
 
 func (i Instance) Raw() any {
@@ -385,7 +385,7 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 	if err != nil {
 		return nil, err
 	}
-	results, err := Instance{}.Get(ctx, []string{instance.Key()})
+	results, err := Instance{}.Get(ctx, []string{instance.Key().String()})
 	if err != nil {
 		return nil, err
 	}

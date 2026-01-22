@@ -50,8 +50,14 @@ func (TestResource) Type() resource.Type {
 	}
 }
 
-func (t TestResource) Key() string {
-	return t.Name
+type staticKey string
+
+func (k staticKey) String() string {
+	return string(k)
+}
+
+func (t TestResource) Key() resource.Key {
+	return staticKey(t.Name)
 }
 
 func (t TestResource) Raw() any {

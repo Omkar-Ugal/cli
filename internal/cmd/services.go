@@ -129,8 +129,8 @@ func (s ServiceGroup) key() multimetro.Key {
 	}
 }
 
-func (s ServiceGroup) Key() string {
-	return s.key().String()
+func (s ServiceGroup) Key() resource.Key {
+	return s.key()
 }
 
 func (s ServiceGroup) Raw() any {
@@ -345,7 +345,7 @@ func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields [
 	if err != nil {
 		return nil, err
 	}
-	results, err := ServiceGroup{}.Get(ctx, []string{sg.Key()})
+	results, err := ServiceGroup{}.Get(ctx, []string{sg.Key().String()})
 	if err != nil {
 		return nil, err
 	}

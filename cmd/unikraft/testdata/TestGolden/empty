@@ -8,6 +8,8 @@ stdout:
 	  dev (GOOS/GOARCH)
 
 	Commands:
+	  completion
+	          Outputs shell code for initialising tab completions
 	  login
 	          Login to Unikraft Cloud.
 	  logout
@@ -30,7 +32,7 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	  -c, --config ($UNIKRAFT_CONFIG)
+	      --config ($UNIKRAFT_CONFIG)
 	          Set the configuration file.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Enable or disable telemetry.
@@ -55,7 +57,7 @@ stdout:
 stderr:
 	HH:MM ERR  
 	HH:MM ERR error:
-	HH:MM ERR   parsing arguments: expected one of "login", "logout", "profile", "metros", "instances", ...
+	HH:MM ERR   parsing arguments: expected one of "completion", "login", "logout", "profile", "metros", ...
 	HH:MM ERR  
 	exit status 1
 

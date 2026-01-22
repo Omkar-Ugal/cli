@@ -109,7 +109,7 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R resource.GettableListableResource] struct {
-	Name  []string      `arg:"" optional:"" help:"Names of the ${names} to list."`
+	Name  []string      `arg:"" optional:"" predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
 	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
@@ -157,7 +157,7 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 }
 
 type ResourceInspectCmd[R resource.GettableResource] struct {
-	Name  []string      `arg:"" help:"Names of the ${names} to inspect."`
+	Name  []string      `arg:"" predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
 	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
@@ -198,7 +198,7 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 }
 
 type ResourceWaitCmd[R resource.GettableResource] struct {
-	Name  []string `arg:"" help:"Names of the ${names} to wait for."`
+	Name  []string `arg:"" predictor:"resource-key-${name}" help:"Names of the ${names} to wait for."`
 	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none"`
 
 	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
@@ -257,19 +257,21 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		passed := passing
 		passing = map[string]bool{}
 		for _, res := range filtered {
-			passing[res.Key()] = true
-			if ok := passed[res.Key()]; !ok {
-				log.G(ctx).Info().Str("resource", res.Key()).
+			key := res.Key().String()
+			passing[key] = true
+			if ok := passed[key]; !ok {
+				log.G(ctx).Info().Str("resource", key).
 					Msg("resource now matches the specified conditions")
 			}
 		}
 		for _, res := range resources {
-			if _, ok := passing[res.Key()]; ok {
+			key := res.Key().String()
+			if _, ok := passing[key]; ok {
 				continue
 			}
-			passing[res.Key()] = false
-			if ok := passed[res.Key()]; ok {
-				log.G(ctx).Info().Str("resource", res.Key()).
+			passing[key] = false
+			if ok := passed[key]; ok {
+				log.G(ctx).Info().Str("resource", key).
 					Msg("resource no longer matches the specified conditions")
 			}
 		}
@@ -311,7 +313,7 @@ func filterResources(resources []resource.Resource, filter filters.Filter) (filt
 }
 
 type ResourceRemoveCmd[R resource.DeletableResource] struct {
-	Name []string `arg:"" help:"Names of the ${names} to remove."`
+	Name []string `arg:"" predictor:"resource-key-${name}" help:"Names of the ${names} to remove."`
 }
 
 func (cmd ResourceRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -329,7 +331,7 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sand
 }
 
 type ResourceEditCmd[R resource.EditableResource] struct {
-	Name string `arg:"" help:"Name of the ${name} to edit."`
+	Name string `arg:"" predictor:"resource-key-${name}" help:"Name of the ${name} to edit."`
 
 	Set []map[string]string `help:"Key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
 	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
@@ -433,7 +435,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	if len(resources) > 1 {
 		var keys []string
 		for _, res := range resources {
-			keys = append(keys, res.Key())
+			keys = append(keys, res.Key().String())
 		}
 		return fmt.Errorf("ambiguous resource name: %s (found %v)", cmd.Name, keys)
 	}

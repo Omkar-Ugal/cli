@@ -37,8 +37,8 @@ func (Profile) Type() resource.Type {
 	}
 }
 
-func (i Profile) Key() string {
-	return i.Name
+func (i Profile) Key() resource.Key {
+	return staticKey(i.Name)
 }
 
 func (i Profile) Raw() any {
