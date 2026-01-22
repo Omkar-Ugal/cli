@@ -193,3 +193,9 @@ var SandboxedResources = []resource.Resource{
 	ServiceGroup{},
 	Volume{},
 }
+
+type staticKey string
+
+func (s staticKey) String() string {
+	return string(s)
+}

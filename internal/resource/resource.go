@@ -17,9 +17,13 @@ type Type struct {
 	Names string
 }
 
+type Key interface {
+	fmt.Stringer
+}
+
 type Resource interface {
 	Type() Type
-	Key() string
+	Key() Key
 	Fields() ([]Field, error)
 	Raw() any
 }

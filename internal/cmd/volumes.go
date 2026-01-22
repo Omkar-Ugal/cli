@@ -75,8 +75,8 @@ func (i Volume) key() multimetro.Key {
 	}
 }
 
-func (i Volume) Key() string {
-	return i.key().String()
+func (i Volume) Key() resource.Key {
+	return i.key()
 }
 
 func (i Volume) Raw() any {
@@ -253,7 +253,7 @@ func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resou
 	if err != nil {
 		return nil, err
 	}
-	results, err := Volume{}.Get(ctx, []string{volume.Key()})
+	results, err := Volume{}.Get(ctx, []string{volume.Key().String()})
 	if err != nil {
 		return nil, err
 	}

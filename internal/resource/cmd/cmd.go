@@ -257,19 +257,21 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		passed := passing
 		passing = map[string]bool{}
 		for _, res := range filtered {
-			passing[res.Key()] = true
-			if ok := passed[res.Key()]; !ok {
-				log.G(ctx).Info().Str("resource", res.Key()).
+			key := res.Key().String()
+			passing[key] = true
+			if ok := passed[key]; !ok {
+				log.G(ctx).Info().Str("resource", key).
 					Msg("resource now matches the specified conditions")
 			}
 		}
 		for _, res := range resources {
-			if _, ok := passing[res.Key()]; ok {
+			key := res.Key().String()
+			if _, ok := passing[key]; ok {
 				continue
 			}
-			passing[res.Key()] = false
-			if ok := passed[res.Key()]; ok {
-				log.G(ctx).Info().Str("resource", res.Key()).
+			passing[key] = false
+			if ok := passed[key]; ok {
+				log.G(ctx).Info().Str("resource", key).
 					Msg("resource no longer matches the specified conditions")
 			}
 		}
@@ -433,7 +435,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	if len(resources) > 1 {
 		var keys []string
 		for _, res := range resources {
-			keys = append(keys, res.Key())
+			keys = append(keys, res.Key().String())
 		}
 		return fmt.Errorf("ambiguous resource name: %s (found %v)", cmd.Name, keys)
 	}

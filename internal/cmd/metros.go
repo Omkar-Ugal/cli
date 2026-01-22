@@ -32,8 +32,8 @@ func (Metro) Type() resource.Type {
 	}
 }
 
-func (i Metro) Key() string {
-	return i.Name
+func (i Metro) Key() resource.Key {
+	return staticKey(i.Name)
 }
 
 func (i Metro) Raw() any {
