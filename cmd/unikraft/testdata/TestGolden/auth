@@ -1,7 +1,7 @@
 $ unikraft login --check
 
 stderr:
-	HH:MM INF existing authentication token found
+	│ existing authentication token found
 
 $ unikraft profile list
 
@@ -18,7 +18,7 @@ stdout:
 $ unikraft logout
 
 stderr:
-	HH:MM INF logout successful
+	│ logout successful
 
 $ unikraft profile list
 
@@ -28,14 +28,14 @@ stdout:
 $ unikraft metro list
 
 stderr:
-	HH:MM ERR  
-	HH:MM ERR error:
-	HH:MM ERR   profile not setup;
-	HH:MM ERR   
-	HH:MM ERR   use `unikraft login` to get started,
-	HH:MM ERR   
-	HH:MM ERR   or visit https://unikraft.com/docs/cli for more information
-	HH:MM ERR  
+	│  
+	│ error:
+	│   profile not setup;
+	│   
+	│   use `unikraft login` to get started,
+	│   
+	│   or visit https://unikraft.com/docs/cli for more information
+	│  
 	exit status 1
 
 exit code: 1
