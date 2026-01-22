@@ -20,6 +20,7 @@ import (
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
 	ctrdlog "github.com/containerd/log"
+	kongcompletion "github.com/jotaen/kong-completion"
 	jujuerrors "github.com/juju/errors"
 	"github.com/sirupsen/logrus"
 	"unikraft.com/x/kingkong"
@@ -28,6 +29,7 @@ import (
 	"unikraft.com/cli/internal/cmd/login"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/version"
 )
 
@@ -35,6 +37,8 @@ type UnikraftCLI struct {
 	config.Config
 
 	Version version.VersionFlag `group:"flag-global" short:"v" name:"version" help:"Print version information." env:"-"`
+
+	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions"`
 
 	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
 	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
@@ -57,6 +61,17 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	}
 	parser.Stdout = stdout
 	parser.Stderr = stderr
+
+	kongcompletion.Register(
+		parser,
+		kongcompletion.WithPredictor("resource-key-profile", cmd.PredictResourceKey[Profile](ctx)),
+		kongcompletion.WithPredictor("resource-key-metro", cmd.PredictResourceKey[Metro](ctx)),
+		kongcompletion.WithPredictor("resource-key-instance", cmd.PredictResourceKey[Instance](ctx)),
+		kongcompletion.WithPredictor("resource-key-volume", cmd.PredictResourceKey[Volume](ctx)),
+		kongcompletion.WithPredictor("resource-key-service", cmd.PredictResourceKey[ServiceGroup](ctx)),
+		kongcompletion.WithPredictor("resource-key-certificate", cmd.PredictResourceKey[Certificate](ctx)),
+		kongcompletion.WithPredictor("resource-key-image", cmd.PredictResourceKey[ImageEntry](ctx)),
+	)
 
 	kctx, err := parser.Parse(args)
 

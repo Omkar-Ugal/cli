@@ -30,7 +30,7 @@ type Config struct {
 	Stderr  io.Writer       `kong:"-" yaml:"-" json:"-"`
 
 	// Global configuration.
-	Config    string `group:"flag-global" name:"config" short:"c" help:"Set the configuration file." placeholder:"file" type:"yamlfile" yaml:"-" json:"-"`
+	Config    string `group:"flag-global" name:"config" help:"Set the configuration file." placeholder:"file" type:"yamlfile" yaml:"-" json:"-"`
 	Telemetry bool   `group:"flag-global" name:"telemetry" help:"Enable or disable telemetry." default:"true" negatable:"" yaml:"telemetry" json:"telemetry"`
 	Emojis    bool   `group:"flag-global" name:"emojis" help:"Enable or disable emojis in the CLI output." default:"true" negatable:"" yaml:"emojis" json:"emojis"`
 
