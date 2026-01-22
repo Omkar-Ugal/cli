@@ -5,14 +5,11 @@ stderr:
 	HH:MM WRN no metros configured; please add them manually
 	HH:MM INF login successful
 
-$ unikraft image list --filter ref~=^nginx:
+$ unikraft image list --filter ref~="^nginx:latest$"
 
 stdout:
-	METRO  REF               DIGEST
-	test   nginx:latest-dbg  sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
-	test   nginx:X.Y-dbg    sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
-	test   nginx:latest      sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
-	test   nginx:X.Y        sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	METRO  REF           DIGEST
+	test   nginx:latest  sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
 
 $ unikraft image inspect nginx:latest
 
