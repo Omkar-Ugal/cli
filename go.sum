@@ -132,8 +132,8 @@ github.com/in-toto/in-toto-golang v0.9.0 h1:tHny7ac4KgtsfrG6ybU8gVOZux2H8jN05AXJ
 github.com/in-toto/in-toto-golang v0.9.0/go.mod h1:xsBVrVsHNsB61++S6Dy2vWosKhuA3lUTQd+eF9HdeMo=
 github.com/jedevc/vtclean v0.0.0-20251216110630-4486acca2b5a h1:hAzNCuiABwEt+PKga1qpfU132pXxqeOrrAtP9LLbKHc=
 github.com/jedevc/vtclean v0.0.0-20251216110630-4486acca2b5a/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
-github.com/jotaen/kong-completion v0.0.9 h1:yXKSRvjWuuZlTGpPMpvo96sFjh5PEh/skrcK4DjJnfg=
-github.com/jotaen/kong-completion v0.0.9/go.mod h1:dyIG20e3qq128SUBtF8jzI7YtkfzjWMlgbqkAJd6xHQ=
+github.com/jotaen/kong-completion v0.0.10-0.20260122220523-38a74cf1b408 h1:SVUh8jsGCtnLM62rjZVEvlnbAG7HNZzQndX9guG2XAY=
+github.com/jotaen/kong-completion v0.0.10-0.20260122220523-38a74cf1b408/go.mod h1:dyIG20e3qq128SUBtF8jzI7YtkfzjWMlgbqkAJd6xHQ=
 github.com/juju/ansiterm v1.0.0 h1:gmMvnZRq7JZJx6jkfSq9/+2LMrVEwGwt7UR6G+lmDEg=
 github.com/juju/ansiterm v1.0.0/go.mod h1:PyXUpnI3olx3bsPcHt98FGPX/KCFZ1Fi+hw1XLI6384=
 github.com/juju/errors v1.0.0 h1:yiq7kjCLll1BiaRuNY53MGI0+EQ3rF6GB+wvboZDefM=

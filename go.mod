@@ -20,7 +20,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
 	github.com/google/uuid v1.6.0
-	github.com/jotaen/kong-completion v0.0.9
+	github.com/jotaen/kong-completion v0.0.10-0.20260122220523-38a74cf1b408
 	github.com/juju/ansiterm v1.0.0
 	github.com/juju/errors v1.0.0
 	github.com/lunixbochs/vtclean v1.0.0
