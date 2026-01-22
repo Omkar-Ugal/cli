@@ -43,9 +43,11 @@ func (cmd ResourceCmd[R]) Underlying() resource.Resource {
 }
 
 type GettableResourceCmd[R resource.GettableResource] struct {
-	List ResourceListCmd[R]    `cmd:"" help:"List ${names}." aliases:"ls"`
 	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
 	Wait ResourceWaitCmd[R]    `cmd:"" help:"Wait for ${names} to match a filter."`
+}
+type ListableResourceCmd[R resource.GettableListableResource] struct {
+	List ResourceListCmd[R] `cmd:"" help:"List ${names}." aliases:"ls"`
 }
 type DeletableResourceCmd[R resource.DeletableResource] struct {
 	Delete ResourceRemoveCmd[R] `cmd:"" help:"Remove a ${name}." aliases:"rm,remove"`
@@ -106,7 +108,7 @@ type FormatOpts struct {
 	Output Printer `short:"o" help:"Output format. One of: kv, table, json, yaml, raw, quiet, template."`
 }
 
-type ResourceListCmd[R resource.GettableResource] struct {
+type ResourceListCmd[R resource.GettableListableResource] struct {
 	Name  []string      `arg:"" optional:"" help:"Names of the ${names} to list."`
 	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
@@ -125,14 +127,15 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	ctx = resource.WithFilter(ctx, filter)
 
 	var empty R
-	r := sandbox.WrapGettable(empty)
 
 	render := func(out io.Writer) error {
 		var resources []resource.Resource
 		var err error
 		if len(cmd.Name) > 0 {
+			r := sandbox.WrapGettable(empty)
 			resources, err = r.Get(ctx, cmd.Name)
 		} else {
+			r := sandbox.WrapListable(empty)
 			resources, err = r.List(ctx)
 		}
 		if err != nil {

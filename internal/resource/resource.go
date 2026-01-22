@@ -27,7 +27,16 @@ type Resource interface {
 type GettableResource interface {
 	Resource
 	Get(ctx context.Context, keys []string) ([]Resource, error)
+}
+
+type ListableResource interface {
+	Resource
 	List(ctx context.Context) ([]Resource, error)
+}
+
+type GettableListableResource interface {
+	GettableResource
+	ListableResource
 }
 
 type EditableResource interface {

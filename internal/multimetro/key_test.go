@@ -21,22 +21,22 @@ func TestParseKey(t *testing.T) {
 	}{
 		{
 			name:     "metro with uuid",
-			input:    "ams#" + testUUID,
+			input:    "ams/" + testUUID,
 			expected: Key{Metro: "ams", UUID: testUUID},
 		},
 		{
 			name:     "metro with explicit uuid",
-			input:    "ams#uuid:" + testUUID,
+			input:    "ams/uuid:" + testUUID,
 			expected: Key{Metro: "ams", UUID: testUUID},
 		},
 		{
 			name:     "metro with name",
-			input:    "ams#api-key",
+			input:    "ams/api-key",
 			expected: Key{Metro: "ams", Name: "api-key"},
 		},
 		{
 			name:     "metro with explicit name",
-			input:    "ams#name:api-key",
+			input:    "ams/name:api-key",
 			expected: Key{Metro: "ams", Name: "api-key"},
 		},
 		{
@@ -92,7 +92,7 @@ func TestKeyString(t *testing.T) {
 		{
 			name:     "uuid output with metro",
 			key:      Key{Metro: "ams", UUID: testUUID},
-			expected: "ams#" + testUUID,
+			expected: "ams/" + testUUID,
 		},
 		{
 			name:     "uuid needs prefix for non-uuid",
@@ -112,7 +112,7 @@ func TestKeyString(t *testing.T) {
 		{
 			name:     "name output with metro",
 			key:      Key{Metro: "ams", Name: "api-key"},
-			expected: "ams#api-key",
+			expected: "ams/api-key",
 		},
 		{
 			name:     "name needs prefix for uuid",
@@ -132,12 +132,12 @@ func TestKeyString(t *testing.T) {
 		{
 			name:     "metro name needs prefix",
 			key:      Key{Metro: "ams", Name: testUUID},
-			expected: "ams#name:" + testUUID,
+			expected: "ams/name:" + testUUID,
 		},
 		{
 			name:     "metro uuid non-uuid",
 			key:      Key{Metro: "ams", UUID: "not-a-uuid"},
-			expected: "ams#uuid:not-a-uuid",
+			expected: "ams/uuid:not-a-uuid",
 		},
 	}
 
@@ -150,8 +150,8 @@ func TestKeyString(t *testing.T) {
 
 func TestParseKeys(t *testing.T) {
 	inputs := []string{
-		"ams#" + testUUID,
-		"lhr#name:api-key",
+		"ams/" + testUUID,
+		"lhr/name:api-key",
 		"uuid:not-a-uuid",
 	}
 	expected := Keys{

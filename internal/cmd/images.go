@@ -8,39 +8,54 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
+	"github.com/containerd/platforms"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/log"
 
+	imagespec "unikraft.com/x/image-spec"
+
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/dockerutil"
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	xreference "unikraft.com/cli/internal/x/reference"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type ImagesCmd struct {
-	cmd.ResourceCmd[Image]
-	cmd.GettableResourceCmd[Image] `set:"name=image" set:"names=images"`
+	cmd.ResourceCmd[ImageEntry]
+	cmd.GettableResourceCmd[Image]      `set:"name=image" set:"names=images"`
+	cmd.ListableResourceCmd[ImageEntry] `set:"name=image" set:"names=images"`
+
+	Copy ImagesCopyCmd `cmd:"" help:"Copy images."`
 }
 
 type Image struct {
-	MetroName string `mirror:"metro.name" field:"metro,short"`
+	Ref    ImageRef[reference.Named] `field:",short"`
+	Digest digest.Digest             `field:",short"`
 
-	Ref    ImageRef[reference.NamedTagged]   `field:",short"`
-	Refs   []ImageRef[reference.NamedTagged] `field:",long"`
-	Digest digest.Digest                     `field:",short"`
+	Config ImageConfig `field:",embed"`
 
-	Namespace string
-	Dangling  bool `field:",long"`
+	Image imagespec.Image `field:"-" json:"image"`
+}
 
-	Image platform.Image `field:"-" json:"image"`
-	Metro *config.Metro  `field:"-" json:"metro"`
+type ImageConfig struct {
+	Platform string `field:",short"`
+
+	Entrypoint []string `field:",long"`
+	Cmd        []string `field:",long"`
+	Env        []string `field:",long"`
+
+	ExposedPorts []string `field:",long"`
+	Volumes      []string `field:",long"`
 }
 
 func (Image) Type() resource.Type {
@@ -50,22 +65,85 @@ func (Image) Type() resource.Type {
 	}
 }
 
-func (i Image) key() multimetro.Key {
-	return multimetro.Key{
-		Metro: i.Metro.Name,
-		Name:  i.Ref.String(),
-	}
-}
-
 func (i Image) Key() string {
-	return i.key().String()
+	return i.Ref.Reference.String()
 }
 
 func (i Image) Raw() any {
-	return i.Image
+	return nil // NOTE: no platform API response associated
 }
 
 func (i Image) Fields() ([]resource.Field, error) {
+	return resource.FieldsFromStruct(i)
+}
+
+func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
+	opts, err := storageOpts(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resources := make([]resource.Resource, 0, len(keys))
+	for _, key := range keys {
+		img, err := imagespec.Load(ctx, key, opts...)
+		if err != nil {
+			return nil, err
+		}
+		defer img.Close()
+
+		config := img.Image
+		resource := Image{
+			Ref: ImageRef[reference.Named]{
+				Reference: img.Name,
+			},
+			Digest: img.Descriptor.Digest,
+			Image:  *img,
+			Config: ImageConfig{
+				Entrypoint:   config.Config.Entrypoint,
+				Cmd:          config.Config.Cmd,
+				Env:          config.Config.Env,
+				Platform:     platforms.Format(config.Platform),
+				ExposedPorts: slices.Collect(maps.Keys(config.Config.ExposedPorts)),
+				Volumes:      slices.Collect(maps.Keys(config.Config.Volumes)),
+			},
+		}
+		resources = append(resources, &resource)
+	}
+	return resources, nil
+}
+
+type ImageEntry struct {
+	MetroName string `mirror:"metro.name" field:"metro,short"`
+
+	Ref    ImageRef[reference.NamedTagged]   `field:",short"`
+	Refs   []ImageRef[reference.NamedTagged] `field:",long"`
+	Digest digest.Digest                     `field:",short"`
+
+	Namespace string
+	Dangling  bool `field:",long"`
+
+	Canonical reference.Canonical `field:"-"`
+
+	Image platform.Image `field:"-" json:"image"`
+	Metro *config.Metro  `field:"-" json:"metro"`
+}
+
+func (ImageEntry) Type() resource.Type {
+	return resource.Type{
+		Name:  "image",
+		Names: "images",
+	}
+}
+
+func (i ImageEntry) Key() string {
+	return i.Ref.Reference.String()
+}
+
+func (i ImageEntry) Raw() any {
+	return i.Image
+}
+
+func (i ImageEntry) Fields() ([]resource.Field, error) {
 	result, err := resource.FieldsFromStruct(i)
 	if err != nil {
 		return nil, err
@@ -73,7 +151,7 @@ func (i Image) Fields() ([]resource.Field, error) {
 	return result, nil
 }
 
-func (Image) List(ctx context.Context) ([]resource.Resource, error) {
+func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
 	cl, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
@@ -86,7 +164,7 @@ func (Image) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		for _, image := range resp.Data.Images {
-			result, err := Image{}.load(image, &mc.Metro, false)
+			result, err := ImageEntry{}.load(image, &mc.Metro, false)
 			if err != nil {
 				return nil, err
 			}
@@ -102,13 +180,22 @@ func (Image) List(ctx context.Context) ([]resource.Resource, error) {
 	return xslices.Flatten(resources), nil
 }
 
-func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
+func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
 	cl, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resources, err := multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(keys), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]resource.Resource, []multimetro.Key, error) {
+	multimetroKeys := make([]multimetro.Key, 0, len(keys))
+	for _, key := range keys {
+		named, err := parseNormalizedNamed(key)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse image key %q: %w", key, err)
+		}
+		multimetroKeys = append(multimetroKeys, imageRefToKey(cl.Metros(), named))
+	}
+
+	resources, err := multimetro.DoKeys(ctx, cl, multimetroKeys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]resource.Resource, []multimetro.Key, error) {
 		log.G(ctx).Trace().Msg("getting images")
 		resp, err := mc.GetImages(ctx, platform.TagOrDigest{}, "")
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
@@ -117,13 +204,13 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 		var found []multimetro.Key
 		var results []resource.Resource
 		for _, image := range resp.Data.Images {
-			result, err := Image{}.load(image, &mc.Metro, true)
+			result, err := ImageEntry{}.load(image, &mc.Metro, true)
 			if err != nil {
 				return nil, nil, err
 			}
 			for _, key := range keys {
 				for _, result := range result {
-					if result.matches(key.Name) {
+					if xreference.MatchNamed(result.Canonical, key.Name) {
 						found = append(found, key)
 						results = append(results, result)
 						break
@@ -139,41 +226,11 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 	return resources, nil
 }
 
-func (i Image) matches(target string) bool {
-	named, err := reference.ParseNormalizedNamed(target)
-	if err != nil {
-		return false
-	}
-	named = reference.TagNameOnly(named)
-
-	ref := i.Ref.Reference
-	if named.Name() != ref.Name() {
-		return false
-	}
-	if i.Dangling {
-		if _, ok := named.(reference.Digested); !ok {
-			return false
-		}
-	}
-
-	if digestRef, ok := named.(reference.Digested); ok {
-		if i.Digest != digestRef.Digest() {
-			return false
-		}
-	} else if tagged, ok := named.(reference.Tagged); ok {
-		if ref.Tag() != tagged.Tag() {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (Image) load(image platform.Image, metro *config.Metro, allowDangling bool) ([]Image, error) {
+func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling bool) ([]ImageEntry, error) {
 	if image.Digest == nil {
 		return nil, fmt.Errorf("image has no digest")
 	}
-	base, err := reference.ParseNormalizedNamed(*image.Digest)
+	base, err := parseNormalizedNamedMetro(metro, *image.Digest)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image ref %q: %w", *image.Digest, err)
 	}
@@ -189,23 +246,28 @@ func (Image) load(image platform.Image, metro *config.Metro, allowDangling bool)
 		if err != nil {
 			return nil, fmt.Errorf("could not create dangling image tag: %w", err)
 		}
+		canonical, err := reference.WithDigest(ref, baseDigested.Digest())
+		if err != nil {
+			return nil, fmt.Errorf("could not create dangling image canonical reference: %w", err)
+		}
 
-		result := Image{
-			Image: image,
-			Metro: metro,
+		result := ImageEntry{
+			Image:     image,
+			Metro:     metro,
+			Canonical: canonical,
+			Digest:    baseDigested.Digest(),
+			Dangling:  true,
 		}
 		err = mirror.Mirror(result, &result)
 		if err != nil {
 			return nil, fmt.Errorf("could not mirror image data: %w", err)
 		}
 
-		result.Dangling = true
-		result.Digest = baseDigested.Digest()
 		result.Ref.Reference = ref
 		if ns, _, ok := strings.Cut(reference.Path(ref), "/"); ok {
 			result.Namespace = ns
 		}
-		return []Image{result}, nil
+		return []ImageEntry{result}, nil
 	}
 
 	tagged := make([]reference.NamedTagged, 0, len(image.Tags))
@@ -232,13 +294,20 @@ func (Image) load(image platform.Image, metro *config.Metro, allowDangling bool)
 		tagged = append([]reference.NamedTagged{latest}, tagged...)
 	}
 
-	results := make([]Image, 0, len(image.Tags))
+	results := make([]ImageEntry, 0, len(image.Tags))
 	for _, tag := range tagged {
-		result := Image{
-			Image: image,
-			Metro: metro,
+		canonical, err := reference.WithDigest(tag, baseDigested.Digest())
+		if err != nil {
+			return nil, fmt.Errorf("could not create dangling image canonical reference: %w", err)
 		}
-		err := mirror.Mirror(result, &result)
+
+		result := ImageEntry{
+			Image:     image,
+			Metro:     metro,
+			Canonical: canonical,
+			Digest:    baseDigested.Digest(),
+		}
+		err = mirror.Mirror(result, &result)
 		if err != nil {
 			return nil, fmt.Errorf("could not mirror image data: %w", err)
 		}
@@ -252,10 +321,83 @@ func (Image) load(image platform.Image, metro *config.Metro, allowDangling bool)
 				Reference: t,
 			})
 		}
-		result.Digest = baseDigested.Digest()
 
 		results = append(results, result)
 	}
 
 	return results, nil
+}
+
+func parseNormalizedNamed(key string) (reference.Named, error) {
+	return parseNormalizedNamedMetro(nil, key)
+}
+
+func parseNormalizedNamedMetro(metro *config.Metro, key string) (reference.Named, error) {
+	index := "index.unikraft.io"
+	if metro != nil {
+		index = metro.Index()
+	}
+	return xreference.ParseNormalizedNamed(
+		key,
+		xreference.WithDefaultDomain(index),
+		xreference.WithDefaultPrefix("official"),
+	)
+}
+
+func imageRefToKey(metros []config.Metro, named reference.Named) multimetro.Key {
+	domain := reference.Domain(named)
+	if domain == "index.unikraft.io/" {
+		return multimetro.Key{
+			Name: named.String(),
+		}
+	}
+	for _, metro := range metros {
+		if domain == metro.Index() {
+			return multimetro.Key{
+				Metro: metro.Name,
+				Name:  named.String(),
+			}
+		}
+	}
+	return multimetro.Key{
+		Name: named.String(),
+	}
+}
+
+type ImagesCopyCmd struct {
+	Source string `arg:"" help:"Source image reference."`
+	Dest   string `arg:"" help:"Destination image reference."`
+}
+
+func (cmd ImagesCopyCmd) Run(ctx context.Context) error {
+	opts, err := storageOpts(ctx)
+	if err != nil {
+		return fmt.Errorf("getting storage options: %w", err)
+	}
+
+	img, err := imagespec.Load(ctx, cmd.Source, opts...)
+	if err != nil {
+		return fmt.Errorf("loading image from source: %w", err)
+	}
+	defer img.Close()
+
+	err = imagespec.Save(ctx, cmd.Dest, img, opts...)
+	if err != nil {
+		return fmt.Errorf("saving image to destination: %w", err)
+	}
+
+	return nil
+}
+
+func storageOpts(ctx context.Context) ([]imagespec.StorageOpt, error) {
+	cfg := config.FromContextOrDefault(ctx)
+	profile, err := cfg.CurrentProfile()
+	if err != nil {
+		return nil, err
+	}
+
+	return []imagespec.StorageOpt{
+		imagespec.WithResolver(dockerutil.Resolver(profile)),
+		imagespec.WithReferenceParser(parseNormalizedNamed),
+	}, nil
 }

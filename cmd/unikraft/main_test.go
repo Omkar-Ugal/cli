@@ -171,10 +171,17 @@ func TestGolden(t *testing.T) {
 				report.cleaners = append(report.cleaners, tc.cleaners...)
 				report.cleaners = append(report.cleaners, expander.cleaners()...)
 				for _, metro := range profile.Metros {
-					report.cleaners = append(report.cleaners, cleaner{
-						pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Endpoint)),
-						repl:    "https://api." + metro.Name + ".unikraft.internal/",
-					})
+					report.cleaners = append(
+						report.cleaners,
+						cleaner{
+							pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Endpoint)),
+							repl:    "https://api." + metro.Name + ".unikraft.internal/",
+						},
+						cleaner{
+							pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index())),
+							repl:    "index." + metro.Name + ".unikraft.internal",
+						},
+					)
 				}
 				if i != 0 {
 					output.WriteString("\n")

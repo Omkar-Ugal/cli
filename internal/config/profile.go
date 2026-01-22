@@ -7,6 +7,8 @@ package config
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/MakeNowJust/heredoc"
 	jujuerrors "github.com/juju/errors"
@@ -62,6 +64,19 @@ type Metro struct {
 	Name     string `hidden:"" help:"Name of the metro." json:"name" yaml:"name"`
 	Endpoint string `hidden:"" help:"Endpoint for the metro." json:"endpoint" yaml:"endpoint"`
 	Country  string `hidden:"" help:"Country code for the metro." json:"country" yaml:"country"`
+}
+
+func (m Metro) Index() string {
+	u, err := url.Parse(m.Endpoint)
+	if err != nil {
+		return m.Endpoint
+	}
+	hostname := u.Hostname()
+	hostname, ok := strings.CutPrefix(hostname, "api.")
+	if !ok {
+		return m.Endpoint
+	}
+	return "index." + hostname
 }
 
 var _ fmt.Stringer = Profile{}

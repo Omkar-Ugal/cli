@@ -19,7 +19,9 @@ import (
 
 	"github.com/alecthomas/kong"
 	kongyaml "github.com/alecthomas/kong-yaml"
+	ctrdlog "github.com/containerd/log"
 	jujuerrors "github.com/juju/errors"
+	"github.com/sirupsen/logrus"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 
@@ -97,8 +99,9 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	default:
 		level = log.InfoLevel
 	}
-
 	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.LogType, level))
+	cli.Context = ctrdlog.WithLogger(cli.Context, logrus.NewEntry(log.ToLogrus(log.G(cli.Context))))
+
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
 	kctx.BindTo(cli.Context, (*context.Context)(nil))
 

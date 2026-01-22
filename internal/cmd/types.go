@@ -35,12 +35,23 @@ func (s SizeMB) String() string {
 	return units.HumanSize(units.MB * float64(s))
 }
 
-type ImageRef[T reference.Reference] struct {
+type ImageRef[T interface {
+	reference.Reference
+	comparable
+}] struct {
 	Reference T
 }
 
 func (ir ImageRef[T]) String() string {
+	var zero T
+	if ir.Reference == zero {
+		return ""
+	}
 	return reference.FamiliarString(ir.Reference)
+}
+
+func (ir ImageRef[T]) MarshalText() ([]byte, error) {
+	return []byte(ir.String()), nil
 }
 
 // InstanceState is a wrapper around platform.InstanceState to automatically

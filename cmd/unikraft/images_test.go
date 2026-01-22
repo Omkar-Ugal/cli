@@ -12,7 +12,7 @@ var imagesTestCases = []testCase{
 		name:   "images",
 		online: true,
 		commands: []command{
-			{args: []string{unikraftCmd, "image", "list", "--filter", `ref~="^nginx:latest$"`}},
+			{args: []string{unikraftCmd, "image", "list", "--filter", `ref~="/official/nginx:latest$"`}},
 			{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
 		},
 		cleaners: []cleaner{
