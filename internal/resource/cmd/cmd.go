@@ -16,6 +16,8 @@ import (
 	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/lunixbochs/vtclean"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"unikraft.com/x/kingkong"
+	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/kvwriter"
@@ -23,7 +25,6 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
 	"unikraft.com/cli/internal/tui/watcher"
-	"unikraft.com/x/kingkong"
 )
 
 type ResourceCmdInterface interface {
@@ -42,6 +43,7 @@ func (cmd ResourceCmd[R]) Underlying() resource.Resource {
 type GettableResourceCmd[R resource.GettableResource] struct {
 	List ResourceListCmd[R]    `cmd:"" help:"List ${names}." aliases:"ls"`
 	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+	Wait ResourceWaitCmd[R]    `cmd:"" help:"Wait for ${names} to match a filter."`
 }
 type DeletableResourceCmd[R resource.DeletableResource] struct {
 	Delete ResourceRemoveCmd[R] `cmd:"" help:"Remove a ${name}." aliases:"rm,remove"`
@@ -188,6 +190,91 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
 	}
 	return render(cfg.Stdout)
+}
+
+type ResourceWaitCmd[R resource.GettableResource] struct {
+	Name  []string `arg:"" help:"Names of the ${names} to wait for."`
+	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none"`
+
+	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
+	Timeout  time.Duration `long:"timeout" default:"0" help:"Timeout before giving up."`
+}
+
+func (cmd ResourceWaitCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+	var empty R
+	if len(cmd.Name) == 0 {
+		return fmt.Errorf("no %s specified", empty.Type().Names)
+	}
+	r := sandbox.WrapGettable(empty)
+
+	filter, err := filters.ParseAll(cmd.Until...)
+	if err != nil {
+		return err
+	}
+	ctx = resource.WithFilter(ctx, filter)
+
+	if cmd.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cmd.Timeout)
+		defer cancel()
+	}
+
+	ticker := time.NewTicker(cmd.Interval)
+	defer ticker.Stop()
+
+	passing := map[string]bool{}
+	for {
+		resources, err := r.Get(ctx, cmd.Name)
+		if err != nil {
+			return err
+		}
+
+		filtered, err := filterResources(resources, filter)
+		if err != nil {
+			return err
+		}
+		if len(filtered) == len(resources) {
+			log.G(ctx).Info().
+				Strs("resources", cmd.Name).
+				Msg("all resources match the specified conditions")
+			return nil
+		}
+		log.G(ctx).Debug().
+			Strs("resources", cmd.Name).
+			Int("matching", len(filtered)).
+			Int("total", len(resources)).
+			Msg("not all resources match the specified conditions yet")
+
+		passed := passing
+		passing = map[string]bool{}
+		for _, res := range filtered {
+			passing[res.Key()] = true
+			if ok := passed[res.Key()]; !ok {
+				log.G(ctx).Info().Str("resource", res.Key()).
+					Msg("resource now matches the specified conditions")
+			}
+		}
+		for _, res := range resources {
+			if _, ok := passing[res.Key()]; ok {
+				continue
+			}
+			passing[res.Key()] = false
+			if ok := passed[res.Key()]; ok {
+				log.G(ctx).Info().Str("resource", res.Key()).
+					Msg("resource no longer matches the specified conditions")
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
 }
 
 func filterResources(resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
