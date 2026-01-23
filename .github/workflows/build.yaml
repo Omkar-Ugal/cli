@@ -1,14 +1,6 @@
 name: build
 
 on:
-  push:
-    branches:
-    - staging
-    paths:
-    - '**'
-    - '!.github/**'
-    - '.github/workflows/build.yaml'
-    - '!README.md'
   pull_request:
     types:
     - opened
