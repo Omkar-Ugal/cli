@@ -9,7 +9,8 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
+
+	"unikraft.com/cli/internal/resource/value"
 )
 
 type Type struct {
@@ -124,56 +125,15 @@ type Patch struct {
 	Required bool `json:"required,omitempty"`
 }
 
-func (f Field) FormatString() string {
-	return FormatValue(f.Value)
-}
-
-type Wrapped interface {
-	Unwrap() any
-}
-
-func FormatValue(value any) string {
-	for {
-		unwrapped, ok := value.(Wrapped)
-		if !ok {
-			break
-		}
-		value = unwrapped.Unwrap()
-	}
-	if value, ok := value.(fmt.Stringer); ok {
-		return value.String()
-	}
-
-	if value == nil {
-		return "<nil>"
-	}
-
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.String:
-		return v.String()
-	case reflect.Slice, reflect.Array:
-		var result []string
-		for i := range v.Len() {
-			result = append(result, FormatValue(v.Index(i).Interface()))
-		}
-		return "[" + strings.Join(result, " ") + "]"
-	case reflect.Map:
-		var result []string
-		for _, key := range v.MapKeys() {
-			val := v.MapIndex(key)
-			result = append(result, fmt.Sprintf("%s:%s", FormatValue(key.Interface()), FormatValue(val.Interface())))
-		}
-		return "{" + strings.Join(result, " ") + "}"
-	default:
-		return fmt.Sprintf("%v", value)
-	}
+func (f Field) Render() (string, error) {
+	return value.Format(f.Value)
 }
 
 type FieldVerbosity int
 
 const (
-	FieldVerbosityInvisible FieldVerbosity = iota
+	FieldVerbosityUnknown FieldVerbosity = iota
+	FieldVerbosityInvisible
 	FieldVerbosityHidden
 	FieldVerbosityLong
 	FieldVerbosityShort
@@ -184,6 +144,8 @@ func (v FieldVerbosity) String() string {
 		v = FieldVerbosityHidden
 	}
 	switch v {
+	case FieldVerbosityUnknown:
+		return "unknown"
 	case FieldVerbosityInvisible:
 		return "invisible"
 	case FieldVerbosityHidden:

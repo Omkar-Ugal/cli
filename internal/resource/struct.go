@@ -6,6 +6,8 @@
 package resource
 
 import (
+	"cmp"
+	"encoding"
 	"fmt"
 	"reflect"
 	"slices"
@@ -20,19 +22,14 @@ import (
 // FieldsFromStruct is a helper that converts a struct into a slice of Fields
 // based on the `field` tags defined on the struct's fields.
 func FieldsFromStruct(s any) (fields []Field, err error) {
-	field, err := fieldFromStruct(true, reflect.ValueOf(s))
+	field, err := fieldFromStruct(nil, reflect.ValueOf(s))
 	if err != nil {
 		return nil, err
 	}
 	return field.Subfields, nil
 }
 
-type ValueField interface {
-	String() string
-	Parse(s string) error
-}
-
-func fieldFromStruct(embed bool, v reflect.Value) (field *Field, err error) {
+func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error) {
 	s := v
 	if s.Kind() == reflect.Pointer {
 		if s.IsNil() {
@@ -46,7 +43,7 @@ func fieldFromStruct(embed bool, v reflect.Value) (field *Field, err error) {
 	}
 	t := s.Type()
 
-	if t.Name() != "" && !embed {
+	if t.Name() != "" && pf != nil && !pf.Embed {
 		return nil, nil
 	}
 
@@ -73,17 +70,17 @@ func fieldFromStruct(embed bool, v reflect.Value) (field *Field, err error) {
 			Edit:      parsedField.Edit,
 		}
 
-		newField, err := fieldFromStruct(parsedField.Embed, fieldVal)
+		newField, err := fieldFromStruct(parsedField, fieldVal)
 		if err != nil {
 			return nil, err
 		}
 		if newField != nil {
 			result.Value = newField.Value
 			result.Subfields = newField.Subfields
-			result.Verbosity = max(result.Verbosity, newField.Verbosity)
+			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity, FieldVerbosityHidden)
 		}
 
-		newField, err = fieldFromSlice(parsedField.Embed, fieldVal)
+		newField, err = fieldFromSlice(parsedField, fieldVal)
 		if err != nil {
 			return nil, err
 		}
@@ -91,15 +88,18 @@ func fieldFromStruct(embed bool, v reflect.Value) (field *Field, err error) {
 			result.Value = newField.Value
 			result.Elem = newField.Elem
 			result.Subfields = newField.Subfields
-			result.Verbosity = max(result.Verbosity, newField.Verbosity)
+			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity, FieldVerbosityHidden)
 		}
 
 		fields = append(fields, result)
 	}
 
 	var value any
-	if ValueField, ok := v.Interface().(ValueField); ok {
-		value = ValueField
+	if v, ok := v.Interface().(interface {
+		encoding.TextMarshaler
+		encoding.TextUnmarshaler
+	}); ok {
+		value = v
 	}
 
 	verbosity := FieldVerbosity(0)
@@ -113,7 +113,7 @@ func fieldFromStruct(embed bool, v reflect.Value) (field *Field, err error) {
 	}, nil
 }
 
-func fieldFromSlice(embed bool, v reflect.Value) (field *Field, err error) {
+func fieldFromSlice(pf *ParsedField, v reflect.Value) (field *Field, err error) {
 	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			v = reflect.New(v.Type().Elem())
@@ -127,7 +127,7 @@ func fieldFromSlice(embed bool, v reflect.Value) (field *Field, err error) {
 
 	elemType := v.Type().Elem()
 	elemVal := reflect.New(elemType).Elem()
-	elem, err := fieldFromStruct(embed, elemVal)
+	elem, err := fieldFromStruct(pf, elemVal)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func fieldFromSlice(embed bool, v reflect.Value) (field *Field, err error) {
 	var fields []Field
 	for i := range v.Len() {
 		vv := v.Index(i)
-		field, err := fieldFromStruct(embed, vv)
+		field, err := fieldFromStruct(pf, vv)
 		if err != nil {
 			return nil, err
 		}
@@ -193,8 +193,6 @@ func ParseField(field reflect.StructField) (*ParsedField, error) {
 		verbosity = FieldVerbosityShort
 	case slices.Contains(opts, "long"):
 		verbosity = FieldVerbosityLong
-	default:
-		verbosity = FieldVerbosityHidden
 	}
 
 	edit, err := parsePatch(field.Type, field.Tag.Get("edit"))

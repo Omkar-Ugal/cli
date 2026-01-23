@@ -68,15 +68,20 @@ type Service struct {
 	Handlers    []platform.ServiceHandlers `mirror:"handlers" json:"handlers" field:",short"`
 }
 
-func (s *Service) String() string {
+func (s *Service) MarshalText() ([]byte, error) {
 	handlers := make([]string, len(s.Handlers))
 	for i, handler := range s.Handlers {
 		handlers[i] = string(handler)
 	}
-	return fmt.Sprintf("%d:%d/%s", s.Source, s.Destination, strings.Join(handlers, "+"))
+	return fmt.Appendf([]byte{}, "%d:%d/%s",
+		s.Source,
+		s.Destination,
+		strings.Join(handlers, "+"),
+	), nil
 }
 
-func (s *Service) Parse(str string) error {
+func (s *Service) UnmarshalText(text []byte) error {
+	str := string(text)
 	ports, handlers, _ := strings.Cut(str, "/")
 	src, dest, ok := strings.Cut(ports, ":")
 	if !ok {

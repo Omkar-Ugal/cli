@@ -7,7 +7,7 @@ $ unikraft profile list
 
 stdout:
 	NAME     ACTIVE  METROS
-	default  true    [test]
+	default  true    test
 
 $ unikraft metro list
 

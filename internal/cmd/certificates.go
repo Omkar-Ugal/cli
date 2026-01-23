@@ -34,6 +34,7 @@ type Certificate struct {
 	Name      string `mirror:"certificate.name" field:",short" create:"set"`
 	UUID      string `mirror:"certificate.uuid" field:",long"`
 
+	// create-only fields
 	CN         string `field:"cn,invisible" create:"set,required"`
 	Chain      string `field:"chain,invisible" create:"set,required"`
 	PrivateKey string `field:"pkey,invisible" create:"set,required"`

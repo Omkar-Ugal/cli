@@ -15,7 +15,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
-	"unikraft.com/cli/internal/resource/patch"
+	"unikraft.com/cli/internal/resource/value"
 )
 
 type RunCmd struct {
@@ -54,23 +54,23 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 		return fmt.Errorf("metro is required")
 	}
 
-	env, err := patch.ParseNewValue[map[string]string](c.Env)
+	env, err := value.Parse[map[string]string](c.Env)
 	if err != nil {
 		return err
 	}
-	volumes, err := patch.ParseNewValue[[]*InstanceVolume](c.Volume)
+	volumes, err := value.Parse[[]*InstanceVolume](c.Volume)
 	if err != nil {
 		return err
 	}
-	services, err := patch.ParseNewValue[[]*Service](c.Publish)
+	services, err := value.Parse[[]*Service](c.Publish)
 	if err != nil {
 		return err
 	}
-	domains, err := patch.ParseNewValue[[]Domain](c.Domain)
+	domains, err := value.Parse[[]Domain](c.Domain)
 	if err != nil {
 		return err
 	}
-	scaleToZero, err := patch.ParseNewValue[*InstanceScaleToZero](c.ScaleToZero)
+	scaleToZero, err := value.Parse[*InstanceScaleToZero](c.ScaleToZero)
 	if err != nil {
 		return err
 	}

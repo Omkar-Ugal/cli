@@ -65,10 +65,12 @@ type Instance struct {
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
 
 	Service struct {
-		UUID      string     `mirror:"uuid" field:",long" create:"set"`
-		Name      string     `mirror:"name" field:",long" create:"set"`
-		Services  []*Service `field:",long,embed" create:"set"`
-		Domains   []Domain   `mirror:"domains" field:",long,embed" create:"set"`
+		UUID    string   `mirror:"uuid" field:",long" create:"set"`
+		Name    string   `mirror:"name" field:",long" create:"set"`
+		Domains []Domain `mirror:"domains" field:",short,embed" create:"set"`
+
+		// create-only fields
+		Services  []*Service `field:",invisible,embed" create:"set"`
 		SoftLimit uint32     `field:",long" create:"set"`
 		HardLimit uint32     `field:",long" create:"set"`
 	} `mirror:"instance.service_group"`
@@ -124,7 +126,7 @@ type InstanceVolume struct {
 	Readonly bool   `mirror:"readonly" json:"readonly,omitempty" field:",long"`
 }
 
-func (v *InstanceVolume) String() string {
+func (v *InstanceVolume) MarshalText() ([]byte, error) {
 	parts := []string{cmp.Or(v.Name, v.UUID)}
 	if v.SizeMB > 0 {
 		parts = append(parts, strconv.FormatInt(v.SizeMB, 10)+"M")
@@ -133,10 +135,11 @@ func (v *InstanceVolume) String() string {
 	if v.Readonly {
 		parts = append(parts, "ro")
 	}
-	return strings.Join(parts, ":")
+	return []byte(strings.Join(parts, ":")), nil
 }
 
-func (v *InstanceVolume) Parse(str string) error {
+func (v *InstanceVolume) UnmarshalText(data []byte) error {
+	str := string(data)
 	parts := strings.Split(str, ":")
 	if len(parts) < 2 {
 		return fmt.Errorf("invalid volume format, expected NAME:AT[:ro] or UUID:AT[:ro] or NAME:SIZE:AT[:ro]")
