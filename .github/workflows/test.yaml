@@ -19,7 +19,8 @@ concurrency:
 
 jobs:
   go:
-    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
+    # runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
     env:
       TASK_X_REMOTE_TASKFILES: 1
     steps:

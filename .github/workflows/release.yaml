@@ -21,7 +21,8 @@ concurrency:
 
 jobs:
   goreleaser:
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
     if: >
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
