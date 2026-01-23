@@ -16,6 +16,8 @@ stdout:
 	          Logout from Unikraft Cloud.
 	  profile, profiles
 	          Manage Unikraft Cloud profiles.
+	  run
+	          Run an image as an instance.
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance
@@ -49,7 +51,7 @@ stdout:
 	      --profile ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	          [default: default]
-	  -v, --version
+	      --version
 	          Print version information.
 
 	Run "unikraft <command> --help" for more information on a command.
@@ -57,7 +59,7 @@ stdout:
 stderr:
 	HH:MM ERR  
 	HH:MM ERR error:
-	HH:MM ERR   parsing arguments: expected one of "completion", "login", "logout", "profile", "metros", ...
+	HH:MM ERR   parsing arguments: expected one of "completion", "login", "logout", "profile", "run", ...
 	HH:MM ERR  
 	exit status 1
 

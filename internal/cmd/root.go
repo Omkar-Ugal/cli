@@ -36,13 +36,14 @@ import (
 type UnikraftCLI struct {
 	config.Config
 
-	Version version.VersionFlag `group:"flag-global" short:"v" name:"version" help:"Print version information." env:"-"`
+	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information." env:"-"`
 
 	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions"`
 
 	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
 	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
 	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
+	Run     RunCmd          `cmd:"" help:"Run an image as an instance."`
 
 	Metros       MetrosCmd       `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
 	Instances    InstancesCmd    `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`

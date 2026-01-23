@@ -433,7 +433,7 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 	return result, nil
 }
 
-func printPatches(out io.Writer, fields []resource.Field, create bool) error {
+func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 	tw := kvwriter.KeyValueWriter(
 		out,
 		kvwriter.WithSeparator(":=", "+=", "-="),

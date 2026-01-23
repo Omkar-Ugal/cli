@@ -477,7 +477,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	patched = patch.FilterPatchableFields(patched)
 
 	if cmd.DryRun {
-		return printPatches(cfg.Stdout, patched, false)
+		return PrintPatches(cfg.Stdout, patched, false)
 	}
 
 	start := &bytes.Buffer{}
@@ -581,7 +581,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 	fields = patch.FilterCreatableFields(patched)
 
 	if cmd.DryRun {
-		return printPatches(cfg.Stdout, fields, true)
+		return PrintPatches(cfg.Stdout, fields, true)
 	}
 
 	res, err := r.Create(ctx, fields)

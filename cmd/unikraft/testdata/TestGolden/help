@@ -16,6 +16,8 @@ stdout:
 	          Logout from Unikraft Cloud.
 	  profile, profiles
 	          Manage Unikraft Cloud profiles.
+	  run
+	          Run an image as an instance.
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance
@@ -49,7 +51,7 @@ stdout:
 	      --profile ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	          [default: default]
-	  -v, --version
+	      --version
 	          Print version information.
 
 	Run "unikraft <command> --help" for more information on a command.
