@@ -23,36 +23,7 @@ import (
 // The diffs are broken down into a line-by-line format, grouped into hunks,
 // and rendered with appropriate ANSI color codes for the terminal display.
 func Render(diffs []diffmatchpatch.Diff) string {
-	var lines []line
-	var current []diffmatchpatch.Diff
-
-	for _, diff := range diffs {
-		text := diff.Text
-
-		for len(text) > 0 {
-			idx := strings.IndexByte(text, '\n')
-
-			if idx == -1 {
-				current = append(current, diffmatchpatch.Diff{
-					Type: diff.Type,
-					Text: text,
-				})
-				break
-			}
-			current = append(current, diffmatchpatch.Diff{
-				Type: diff.Type,
-				Text: text[:idx], // cut the newline character
-			})
-
-			lines = append(lines, parseLine(current)...)
-
-			current = nil
-			text = text[idx+1:]
-		}
-	}
-	if len(current) > 0 {
-		lines = append(lines, parseLine(current)...)
-	}
+	lines := splitLines(diffs)
 
 	color := lipgloss.ColorProfile() != termenv.Ascii
 
@@ -96,86 +67,101 @@ type line struct {
 	diffs []diffmatchpatch.Diff
 }
 
-func parseLine(lineDiffs []diffmatchpatch.Diff) []line {
-	hasInsert, hasDelete := getLineType(lineDiffs)
-	if !hasInsert && !hasDelete {
-		return []line{{
-			op:    diffmatchpatch.DiffEqual,
-			diffs: lineDiffs,
-		}}
-	}
-
+func splitLines(diffs []diffmatchpatch.Diff) []line {
 	var lines []line
+	var oldLine []diffmatchpatch.Diff
+	var newLine []diffmatchpatch.Diff
 
-	// deletions
-	if hasInsert && !hasDelete {
-		var equalDiffs []diffmatchpatch.Diff
-		for _, d := range lineDiffs {
-			if d.Type == diffmatchpatch.DiffEqual {
-				equalDiffs = append(equalDiffs, d)
+	for _, diff := range diffs {
+		text := diff.Text
+
+		for len(text) > 0 {
+			idx := strings.IndexByte(text, '\n')
+			segment := text
+			ended := idx != -1
+			if ended {
+				segment = text[:idx]
 			}
-		}
-		if len(equalDiffs) > 0 {
-			lines = append(lines, line{
-				op:    diffmatchpatch.DiffDelete,
-				diffs: equalDiffs,
-			})
-		}
-	}
-	if hasDelete {
-		var delDiffs []diffmatchpatch.Diff
-		for _, d := range lineDiffs {
-			if d.Type == diffmatchpatch.DiffDelete || d.Type == diffmatchpatch.DiffEqual {
-				delDiffs = append(delDiffs, d)
+			part := diffmatchpatch.Diff{Type: diff.Type, Text: segment}
+			if diff.Type != diffmatchpatch.DiffInsert {
+				oldLine = append(oldLine, part)
 			}
+			if diff.Type != diffmatchpatch.DiffDelete {
+				newLine = append(newLine, part)
+			}
+			if !ended {
+				break
+			}
+
+			// determine where the newline occurred - this affects what gets flushed.
+			oldEnded, newEnded := false, false
+			switch diff.Type {
+			case diffmatchpatch.DiffEqual:
+				oldEnded = true
+				newEnded = true
+			case diffmatchpatch.DiffDelete:
+				oldEnded = true
+			case diffmatchpatch.DiffInsert:
+				newEnded = true
+			}
+			lines = flushLines(lines, &oldLine, &newLine, oldEnded, newEnded)
+			text = text[idx+1:]
 		}
-		lines = append(lines, line{
-			op:    diffmatchpatch.DiffDelete,
-			diffs: delDiffs,
-		})
 	}
 
-	// additions
-	if hasDelete && !hasInsert {
-		var equalDiffs []diffmatchpatch.Diff
-		for _, d := range lineDiffs {
-			if d.Type == diffmatchpatch.DiffEqual {
-				equalDiffs = append(equalDiffs, d)
-			}
-		}
-		if len(equalDiffs) > 0 {
-			lines = append(lines, line{
-				op:    diffmatchpatch.DiffInsert,
-				diffs: equalDiffs,
-			})
-		}
-	}
-	if hasInsert {
-		var insDiffs []diffmatchpatch.Diff
-		for _, d := range lineDiffs {
-			if d.Type == diffmatchpatch.DiffInsert || d.Type == diffmatchpatch.DiffEqual {
-				insDiffs = append(insDiffs, d)
-			}
-		}
-		lines = append(lines, line{
-			op:    diffmatchpatch.DiffInsert,
-			diffs: insDiffs,
-		})
+	if len(oldLine) > 0 || len(newLine) > 0 {
+		lines = flushLines(lines, &oldLine, &newLine, len(oldLine) > 0, len(newLine) > 0)
 	}
 
 	return lines
 }
 
-func getLineType(lineDiffs []diffmatchpatch.Diff) (hasInsert bool, hasDelete bool) {
-	for _, d := range lineDiffs {
-		switch d.Type {
-		case diffmatchpatch.DiffInsert:
-			hasInsert = true
-		case diffmatchpatch.DiffDelete:
-			hasDelete = true
+func flushLines(lines []line, oldLine, newLine *[]diffmatchpatch.Diff, oldEnded, newEnded bool) []line {
+	if !oldEnded && !newEnded {
+		return lines
+	}
+	if oldEnded && newEnded {
+		oldText := lineText(*oldLine)
+		newText := lineText(*newLine)
+		if oldText == newText {
+			// diff segments can still be mixed even when the visible line text
+			// matches (e.g. insertions splitting shared prefixes), so we've had to
+			// compare text
+			if oldText != "" {
+				lines = append(lines, line{
+					op: diffmatchpatch.DiffEqual,
+					diffs: []diffmatchpatch.Diff{{
+						Type: diffmatchpatch.DiffEqual,
+						Text: oldText,
+					}},
+				})
+			}
+			*oldLine = nil
+			*newLine = nil
+			return lines
 		}
 	}
-	return hasInsert, hasDelete
+	if oldEnded {
+		if len(*oldLine) > 0 {
+			lines = append(lines, line{op: diffmatchpatch.DiffDelete, diffs: *oldLine})
+		}
+		*oldLine = nil
+	}
+	if newEnded {
+		if len(*newLine) > 0 {
+			lines = append(lines, line{op: diffmatchpatch.DiffInsert, diffs: *newLine})
+		}
+		*newLine = nil
+	}
+	return lines
+}
+
+func lineText(lineDiffs []diffmatchpatch.Diff) string {
+	var buff strings.Builder
+	for _, diff := range lineDiffs {
+		buff.WriteString(diff.Text)
+	}
+	return buff.String()
 }
 
 // ANSI color codes for backgrounds

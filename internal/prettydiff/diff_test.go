@@ -111,3 +111,35 @@ func TestDiffPrettyText_EmptyStrings(t *testing.T) {
 	clean = vtclean.Clean(result, false)
 	require.Equal(t, "- old line\n", clean)
 }
+
+func TestDiffPrettyText_InsertBlockBeforeSimilarPrefix(t *testing.T) {
+	dmp := diffmatchpatch.New()
+	before := strings.Join([]string{
+		"image:        nginx",
+		"resources:",
+		"  memory:     128",
+		"  vcpus:      1",
+		"",
+	}, "\n")
+	after := strings.Join([]string{
+		"image:        nginx",
+		"runtime:",
+		"  env:        {A:1 B:2}",
+		"resources:",
+		"  memory:     128",
+		"  vcpus:      1",
+		"",
+	}, "\n")
+
+	diffs := dmp.DiffMain(before, after, false)
+	result := Render(diffs)
+	clean := vtclean.Clean(result, false)
+	require.Equal(t, []string{
+		"  image:        nginx",
+		"+ runtime:",
+		"+   env:        {A:1 B:2}",
+		"  resources:",
+		"    memory:     128",
+		"    vcpus:      1",
+	}, strings.Split(strings.TrimSuffix(clean, "\n"), "\n"))
+}
