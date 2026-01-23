@@ -45,7 +45,7 @@ require (
 	unikraft.com/x/colors v0.0.0-20260116231133-1da0081544af
 	unikraft.com/x/image-spec v0.0.0-20260122232605-1672b2b1f81e
 	unikraft.com/x/kingkong v0.0.0-20260116231133-1da0081544af
-	unikraft.com/x/log v0.0.0-20260121151350-0debc2b75f29
+	unikraft.com/x/log v0.0.0-20260123171130-d7f7471d74c0
 	unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af
 )
 
