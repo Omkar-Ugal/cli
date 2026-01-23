@@ -9,7 +9,23 @@ import "regexp"
 
 var instancesTestCases = []testCase{
 	{
-		name:   "instances",
+		name: "instances/help",
+		commands: []command{
+			{args: []string{unikraftCmd, "instance", "--help"}},
+			{args: []string{unikraftCmd, "instance", "get", "--help"}},
+			{args: []string{unikraftCmd, "instance", "list", "--help"}},
+			{args: []string{unikraftCmd, "instance", "wait", "--help"}},
+			{args: []string{unikraftCmd, "instance", "create", "--help"}},
+			{args: []string{unikraftCmd, "instance", "edit", "--help"}},
+			{args: []string{unikraftCmd, "instance", "delete", "--help"}},
+			{args: []string{unikraftCmd, "instance", "logs", "--help"}},
+			{args: []string{unikraftCmd, "instance", "start", "--help"}},
+			{args: []string{unikraftCmd, "instance", "stop", "--help"}},
+			{args: []string{unikraftCmd, "instance", "restart", "--help"}},
+		},
+	},
+	{
+		name:   "instances/create",
 		online: true,
 		commands: []command{
 			{args: []string{unikraftCmd, "instance", "list"}},

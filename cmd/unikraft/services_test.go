@@ -9,7 +9,19 @@ import "regexp"
 
 var servicesTestCases = []testCase{
 	{
-		name:   "services",
+		name: "services/help",
+		commands: []command{
+			{args: []string{unikraftCmd, "service", "--help"}},
+			{args: []string{unikraftCmd, "service", "get", "--help"}},
+			{args: []string{unikraftCmd, "service", "list", "--help"}},
+			{args: []string{unikraftCmd, "service", "wait", "--help"}},
+			{args: []string{unikraftCmd, "service", "create", "--help"}},
+			{args: []string{unikraftCmd, "service", "edit", "--help"}},
+			{args: []string{unikraftCmd, "service", "delete", "--help"}},
+		},
+	},
+	{
+		name:   "services/create",
 		online: true,
 		commands: []command{
 			{args: []string{unikraftCmd, "service", "list"}},

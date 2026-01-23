@@ -7,7 +7,18 @@ package main
 
 var certificatesTestCases = []testCase{
 	{
-		name:   "certificates",
+		name: "certificates/help",
+		commands: []command{
+			{args: []string{unikraftCmd, "certificate", "--help"}},
+			{args: []string{unikraftCmd, "certificate", "get", "--help"}},
+			{args: []string{unikraftCmd, "certificate", "list", "--help"}},
+			{args: []string{unikraftCmd, "certificate", "wait", "--help"}},
+			{args: []string{unikraftCmd, "certificate", "create", "--help"}},
+			{args: []string{unikraftCmd, "certificate", "delete", "--help"}},
+		},
+	},
+	{
+		name:   "certificates/create",
 		online: true,
 		commands: []command{
 			{args: []string{unikraftCmd, "certificate", "list"}},

@@ -1,0 +1,431 @@
+$ unikraft volume --help
+
+stdout:
+	Usage:
+	  unikraft volumes <command> [flags]
+
+	Manage Unikraft Cloud volumes.
+
+	Commands:
+	  get, inspect, show
+	          Inspect a volume.
+	  wait
+	          Wait for volumes to match a filter.
+	  list, ls
+	          List volumes.
+	  delete, rm, remove
+	          Remove a volume.
+	  edit
+	          Edit a volume.
+	  create
+	          Create a volume.
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft volume get --help
+
+stdout:
+	Usage:
+	  unikraft volumes get <name> ... [flags]
+
+	Inspect a volume.
+
+	Arguments:
+	  <name> ...
+	          Names of the volumes to inspect.
+
+	Examples:
+	  # Inspect a volume by name or UUID
+	  unikraft volume get demo-volume
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Flags:
+	  -w, --watch ($UNIKRAFT_WATCH)
+	          Watch for changes and refresh output.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft volume list --help
+
+stdout:
+	Usage:
+	  unikraft volumes list [<name> ...] [flags]
+
+	List volumes.
+
+	Arguments:
+	  [<name> ...]
+	          Names of the volumes to list.
+
+	Examples:
+	  # List all volumes
+	  unikraft volume list
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Flags:
+	      --filter ($UNIKRAFT_FILTER)
+	          Filter output based on a field value (e.g. --filter state==running).
+	  -w, --watch ($UNIKRAFT_WATCH)
+	          Watch for changes and refresh output.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft volume wait --help
+
+stdout:
+	Usage:
+	  unikraft volumes wait <name> ... [flags]
+
+	Wait for volumes to match a filter.
+
+	Arguments:
+	  <name> ...
+	          Names of the volumes to wait for.
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Flags:
+	      --until ($UNIKRAFT_UNTIL)
+	          Filter expression to wait for (e.g. --until state==running).
+	      --interval ($UNIKRAFT_INTERVAL)
+	          Polling interval.
+	          [default: 2s]
+	      --timeout ($UNIKRAFT_TIMEOUT)
+	          Timeout before giving up.
+	          [default: 0]
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft volume create --help
+
+stdout:
+	Usage:
+	  unikraft volumes create [flags]
+
+	Create a volume.
+
+	Examples:
+	  # Create a new volume
+	  unikraft volume create \
+	    --set name=demo-volume \
+	    --set size=10 \
+	    --set metro=fra
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Flags:
+	      --set ($UNIKRAFT_SET)
+	          Key-value pairs for creating the volume.
+	      --set-file ($UNIKRAFT_SET_FILE)
+	          Files containing key-value pairs for creating the volume.
+	  -e, --visual ($UNIKRAFT_VISUAL)
+	          Open an editor to set fields visually.
+	      --dry-run ($UNIKRAFT_DRY_RUN)
+	          Print patches without applying them.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft volume edit --help
+
+stdout:
+	Usage:
+	  unikraft volumes edit <name> [flags]
+
+	Edit a volume.
+
+	Arguments:
+	  <name>
+	          Name of the volume to edit.
+
+	Examples:
+	  # Resize a volume
+	  unikraft volume edit demo-volume --set size=20
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Flags:
+	      --set ($UNIKRAFT_SET)
+	          Key-value pairs to update the volume with.
+	      --add ($UNIKRAFT_ADD)
+	          Key-value pairs to add to the volume.
+	      --del ($UNIKRAFT_DEL)
+	          Keys to delete from the volume.
+	      --set-file ($UNIKRAFT_SET_FILE)
+	          Files containing key-value pairs to update the volume with.
+	      --add-file ($UNIKRAFT_ADD_FILE)
+	          Files containing key-value pairs to add to the volume.
+	      --del-file ($UNIKRAFT_DEL_FILE)
+	          Files containing keys to delete from the volume.
+	  -e, --visual ($UNIKRAFT_VISUAL)
+	          Open an editor to modify fields visually.
+	      --dry-run ($UNIKRAFT_DRY_RUN)
+	          Print patches without applying them.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft volume delete --help
+
+stdout:
+	Usage:
+	  unikraft volumes delete <name> ... [flags]
+
+	Remove a volume.
+
+	Arguments:
+	  <name> ...
+	          Names of the volumes to remove.
+
+	Examples:
+	  # Delete a volume by name or UUID
+	  unikraft volume delete demo-volume
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  size
+	  persistent
+	  timestamps
+	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
+	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
+	  by.*.read-only
+
+	Flags:
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.

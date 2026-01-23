@@ -7,7 +7,23 @@ package main
 
 var authTestCases = []testCase{
 	{
-		name:   "auth",
+		name: "auth/help",
+		commands: []command{
+			{args: []string{unikraftCmd, "login", "--help"}},
+			{args: []string{unikraftCmd, "logout", "--help"}},
+			{args: []string{unikraftCmd, "profile", "--help"}},
+			{args: []string{unikraftCmd, "profile", "get", "--help"}},
+			{args: []string{unikraftCmd, "profile", "list", "--help"}},
+			{args: []string{unikraftCmd, "profile", "wait", "--help"}},
+			{args: []string{unikraftCmd, "profile", "use", "--help"}},
+			{args: []string{unikraftCmd, "metro", "--help"}},
+			{args: []string{unikraftCmd, "metro", "get", "--help"}},
+			{args: []string{unikraftCmd, "metro", "list", "--help"}},
+			{args: []string{unikraftCmd, "metro", "wait", "--help"}},
+		},
+	},
+	{
+		name:   "auth/flow",
 		online: true,
 		commands: []command{
 			{args: []string{unikraftCmd, "login", "--check"}},

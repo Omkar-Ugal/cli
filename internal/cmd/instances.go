@@ -736,6 +736,8 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error 
 
 type InstancesStartCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to start."`
+
+	cmd.FormatOpts
 }
 
 func (cmd InstancesStartCmd) Examples() []kingkong.Example {
@@ -774,13 +776,14 @@ func (c *InstancesStartCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(cfg.Stdout, before, updated)
+	return cmd.Diff(cfg.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type InstancesStopCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to stop."`
-
 	StopOpts
+
+	cmd.FormatOpts
 }
 
 func (cmd InstancesStopCmd) Examples() []kingkong.Example {
@@ -833,13 +836,14 @@ func (c *InstancesStopCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(cfg.Stdout, before, updated)
+	return cmd.Diff(cfg.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type InstancesRestartCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to restart."`
-
 	StopOpts
+
+	cmd.FormatOpts
 }
 
 func (cmd InstancesRestartCmd) Examples() []kingkong.Example {
@@ -888,7 +892,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(cfg.Stdout, before, updated)
+	return cmd.Diff(cfg.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type StopOpts struct {

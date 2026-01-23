@@ -10,6 +10,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/juju/ansiterm"
 	"github.com/lunixbochs/vtclean"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"unikraft.com/cli/internal/kvwriter"
@@ -19,35 +20,70 @@ import (
 
 // Diff produces a pretty diff between two sets of resources, writing the
 // output to the provided writer.
-func Diff(out io.Writer, before []resource.Resource, after []resource.Resource) error {
+func Diff(out io.Writer, format FormatOpts, empty resource.Resource, before []resource.Resource, after []resource.Resource) error {
 	before, after = diffOrder(before, after)
-	start := &bytes.Buffer{}
-	if err := printKV(start, nil, before...); err != nil {
-		return err
-	}
-	end := &bytes.Buffer{}
-	if err := printKV(end, nil, after...); err != nil {
-		return err
-	}
 
-	dmp := diffmatchpatch.New()
-	diffs := dmp.DiffMain(
-		// clean all ANSI escape sequences from the output before diffing to avoid
-		// trying to diff them
-		// NOTE: it would be nice to preserve those in the output, but the diffing
-		// would have to be done differently
-		vtclean.Clean(start.String(), false),
-		vtclean.Clean(end.String(), false),
-		false,
-	)
-	tw := kvwriter.KeyValueWriter(out, kvwriter.WithIndent("  "))
-	if _, err := io.Copy(tw, strings.NewReader(prettydiff.Render(diffs))); err != nil {
-		return err
+	switch format.Output.Type {
+	case "", PrinterTypeKeyValue:
+		start := &bytes.Buffer{}
+		if err := printKV(start, format.Field, before...); err != nil {
+			return err
+		}
+		end := &bytes.Buffer{}
+		if err := printKV(end, format.Field, after...); err != nil {
+			return err
+		}
+
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(
+			// clean all ANSI escape sequences from the output before diffing to avoid
+			// trying to diff them
+			// NOTE: it would be nice to preserve those in the output, but the diffing
+			// would have to be done differently
+			vtclean.Clean(start.String(), false),
+			vtclean.Clean(end.String(), false),
+			false,
+		)
+
+		tw := kvwriter.KeyValueWriter(out, kvwriter.WithIndent("  "))
+		if _, err := io.Copy(tw, strings.NewReader(prettydiff.Render(diffs))); err != nil {
+			return err
+		}
+		if err := tw.Flush(); err != nil {
+			return err
+		}
+		return nil
+
+	case PrinterTypeTable:
+		start := &bytes.Buffer{}
+		if err := printTable(start, format.Field, empty, before...); err != nil {
+			return err
+		}
+		end := &bytes.Buffer{}
+		if err := printTable(end, format.Field, empty, after...); err != nil {
+			return err
+		}
+
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(
+			// same cleaning as above
+			vtclean.Clean(start.String(), false),
+			vtclean.Clean(end.String(), false),
+			false,
+		)
+
+		tw := ansiterm.NewTabWriter(out, 0, 8, 2, ' ', 0)
+		if _, err := io.Copy(tw, strings.NewReader(prettydiff.Render(diffs))); err != nil {
+			return err
+		}
+		if err := tw.Flush(); err != nil {
+			return err
+		}
+		return nil
+
+	default:
+		return format.Output.Print(out, format.Field, nil, after...)
 	}
-	if err := tw.Flush(); err != nil {
-		return err
-	}
-	return nil
 }
 
 // diffOrder reorders the after resources to match the order of the before

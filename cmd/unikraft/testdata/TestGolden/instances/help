@@ -1,0 +1,731 @@
+$ unikraft instance --help
+
+stdout:
+	Usage:
+	  unikraft instances <command> [flags]
+
+	Manage Unikraft Cloud instances.
+
+	Commands:
+	  get, inspect, show
+	          Inspect a instance.
+	  wait
+	          Wait for instances to match a filter.
+	  list, ls
+	          List instances.
+	  delete, rm, remove
+	          Remove a instance.
+	  edit
+	          Edit a instance.
+	  create
+	          Create a instance.
+	  logs
+	          Fetch and display instance logs
+	  start
+	          Start one or more instances
+	  stop
+	          Stop one or more instances
+	  restart
+	          Restart one or more instances
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance get --help
+
+stdout:
+	Usage:
+	  unikraft instances get <name> ... [flags]
+
+	Inspect a instance.
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to inspect.
+
+	Examples:
+	  # Inspect an instance by name or UUID
+	  unikraft instance get demo-instance
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Flags:
+	  -w, --watch ($UNIKRAFT_WATCH)
+	          Watch for changes and refresh output.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance list --help
+
+stdout:
+	Usage:
+	  unikraft instances list [<name> ...] [flags]
+
+	List instances.
+
+	Arguments:
+	  [<name> ...]
+	          Names of the instances to list.
+
+	Examples:
+	  # List instances across metros
+	  unikraft instance list
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Flags:
+	      --filter ($UNIKRAFT_FILTER)
+	          Filter output based on a field value (e.g. --filter state==running).
+	  -w, --watch ($UNIKRAFT_WATCH)
+	          Watch for changes and refresh output.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance wait --help
+
+stdout:
+	Usage:
+	  unikraft instances wait <name> ... [flags]
+
+	Wait for instances to match a filter.
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to wait for.
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Flags:
+	      --until ($UNIKRAFT_UNTIL)
+	          Filter expression to wait for (e.g. --until state==running).
+	      --interval ($UNIKRAFT_INTERVAL)
+	          Polling interval.
+	          [default: 2s]
+	      --timeout ($UNIKRAFT_TIMEOUT)
+	          Timeout before giving up.
+	          [default: 0]
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance create --help
+
+stdout:
+	Usage:
+	  unikraft instances create [flags]
+
+	Create a instance.
+
+	Examples:
+	  # Create a new instance
+	  unikraft instance create \
+	    --set name=demo-instance \
+	    --set metro=fra \
+	    --set image=nginx:latest \
+	    --set autostart=true \
+	    --set resources.memory=128 \
+	    --set resources.vcpus=1
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Flags:
+	      --set ($UNIKRAFT_SET)
+	          Key-value pairs for creating the instance.
+	      --set-file ($UNIKRAFT_SET_FILE)
+	          Files containing key-value pairs for creating the instance.
+	  -e, --visual ($UNIKRAFT_VISUAL)
+	          Open an editor to set fields visually.
+	      --dry-run ($UNIKRAFT_DRY_RUN)
+	          Print patches without applying them.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance edit --help
+
+stdout:
+	Usage:
+	  unikraft instances edit <name> [flags]
+
+	Edit a instance.
+
+	Arguments:
+	  <name>
+	          Name of the instance to edit.
+
+	Examples:
+	  # Resize instance memory
+	  unikraft instance edit demo-instance --set resources.memory=256
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Flags:
+	      --set ($UNIKRAFT_SET)
+	          Key-value pairs to update the instance with.
+	      --add ($UNIKRAFT_ADD)
+	          Key-value pairs to add to the instance.
+	      --del ($UNIKRAFT_DEL)
+	          Keys to delete from the instance.
+	      --set-file ($UNIKRAFT_SET_FILE)
+	          Files containing key-value pairs to update the instance with.
+	      --add-file ($UNIKRAFT_ADD_FILE)
+	          Files containing key-value pairs to add to the instance.
+	      --del-file ($UNIKRAFT_DEL_FILE)
+	          Files containing keys to delete from the instance.
+	  -e, --visual ($UNIKRAFT_VISUAL)
+	          Open an editor to modify fields visually.
+	      --dry-run ($UNIKRAFT_DRY_RUN)
+	          Print patches without applying them.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance delete --help
+
+stdout:
+	Usage:
+	  unikraft instances delete <name> ... [flags]
+
+	Remove a instance.
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to remove.
+
+	Examples:
+	  # Delete an instance by name or UUID
+	  unikraft instance delete demo-instance
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  state
+	  image
+	  runtime, runtime.args, runtime.env
+	  resources, resources.memory, resources.vcpus
+	  volumes, volumes.*
+	  service, service.uuid, service.name, service.domains, service.domains.*,
+	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+	  timestamps
+	  scale-to-zero
+	  timing
+	  restart
+	  stop
+	  autostart
+	  replicas
+	  wait_timeout_ms
+	  features
+
+	Flags:
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance logs --help
+
+stdout:
+	Usage:
+	  unikraft instances logs <name> ... [flags]
+
+	Fetch and display instance logs
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to fetch logs for.
+
+	Examples:
+	  # Fetch logs from an instance
+	  unikraft instance logs my-instance
+
+	  # Fetch the last 100 lines of logs from an instance
+	  unikraft instance logs my-instance --tail 100
+
+	  # Follow logs from an instance in real-time
+	  unikraft instance logs my-instance --follow
+
+	Flags:
+	      --tail ($UNIKRAFT_TAIL)
+	          Number of lines to show from the end of the logs.
+	  -f, --follow ($UNIKRAFT_FOLLOW)
+	          Follow log output.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance start --help
+
+stdout:
+	Usage:
+	  unikraft instances start <name> ... [flags]
+
+	Start one or more instances
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to start.
+
+	Examples:
+	  # Start an instance
+	  unikraft instance start demo-instance
+
+	Flags:
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance stop --help
+
+stdout:
+	Usage:
+	  unikraft instances stop <name> ... [flags]
+
+	Stop one or more instances
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to stop.
+
+	Examples:
+	  # Stop an instance
+	  unikraft instance stop demo-instance
+
+	  # Stop with a drain timeout
+	  unikraft instance stop demo-instance --drain-timeout 30000
+
+	  # Force stop an instance
+	  unikraft instance stop demo-instance --force
+
+	Flags:
+	      --force ($UNIKRAFT_FORCE)
+	          Force stop the instance immediately.
+	      --drain-timeout ($UNIKRAFT_DRAIN_TIMEOUT)
+	          Timeout in milliseconds for draining connections before stopping.
+	          [default: -1]
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft instance restart --help
+
+stdout:
+	Usage:
+	  unikraft instances restart <name> ... [flags]
+
+	Restart one or more instances
+
+	Arguments:
+	  <name> ...
+	          Names of the instances to restart.
+
+	Examples:
+	  # Restart an instance
+	  unikraft instance restart demo-instance
+
+	  # Force restart an instance
+	  unikraft instance restart demo-instance --force
+
+	Flags:
+	      --force ($UNIKRAFT_FORCE)
+	          Force stop the instance immediately.
+	      --drain-timeout ($UNIKRAFT_DRAIN_TIMEOUT)
+	          Timeout in milliseconds for draining connections before stopping.
+	          [default: -1]
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.

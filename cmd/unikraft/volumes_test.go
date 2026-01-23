@@ -7,7 +7,19 @@ package main
 
 var volumesTestCases = []testCase{
 	{
-		name:   "volumes",
+		name: "volumes/help",
+		commands: []command{
+			{args: []string{unikraftCmd, "volume", "--help"}},
+			{args: []string{unikraftCmd, "volume", "get", "--help"}},
+			{args: []string{unikraftCmd, "volume", "list", "--help"}},
+			{args: []string{unikraftCmd, "volume", "wait", "--help"}},
+			{args: []string{unikraftCmd, "volume", "create", "--help"}},
+			{args: []string{unikraftCmd, "volume", "edit", "--help"}},
+			{args: []string{unikraftCmd, "volume", "delete", "--help"}},
+		},
+	},
+	{
+		name:   "volumes/create",
 		online: true,
 		commands: []command{
 			{args: []string{unikraftCmd, "volume", "list"}},
