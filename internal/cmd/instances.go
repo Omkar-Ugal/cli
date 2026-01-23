@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -124,21 +125,11 @@ type InstanceVolume struct {
 }
 
 func (v *InstanceVolume) String() string {
-	if v.UUID != "" {
-		parts := []string{v.UUID, v.At}
-		if v.Readonly {
-			parts = append(parts, "ro")
-		}
-		return strings.Join(parts, ":")
-	}
+	parts := []string{cmp.Or(v.Name, v.UUID)}
 	if v.SizeMB > 0 {
-		parts := []string{v.Name, strconv.FormatInt(v.SizeMB, 10) + "M", v.At}
-		if v.Readonly {
-			parts = append(parts, "ro")
-		}
-		return strings.Join(parts, ":")
+		parts = append(parts, strconv.FormatInt(v.SizeMB, 10)+"M")
 	}
-	parts := []string{v.Name, v.At}
+	parts = append(parts, v.At)
 	if v.Readonly {
 		parts = append(parts, "ro")
 	}
