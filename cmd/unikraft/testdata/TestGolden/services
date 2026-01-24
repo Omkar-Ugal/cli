@@ -122,7 +122,6 @@ stdout:
 	- - 443:8080/tls+http
 	- - 80:443/http+redirect
 	+ - 1000:2000/tls
-	+
 
 $ unikraft service inspect test-$UNIQ_SVC_A test-$UNIQ_SVC_B
 
