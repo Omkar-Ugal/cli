@@ -27,6 +27,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/lunixbochs/vtclean"
 	"github.com/stretchr/testify/assert"
@@ -229,11 +230,11 @@ func (report *report) String() string {
 }
 
 func (report *report) cleanOutput(s string) string {
-	// remove ANSI escape sequences and trim whitespace
+	// remove ANSI escape sequences
 	s = vtclean.Clean(s, false)
-	s = strings.TrimSpace(s)
+	s = strings.TrimRightFunc(s, unicode.IsSpace)
 	if s == "" {
-		return s
+		return ""
 	}
 
 	// apply any necessary cleanup to the output here

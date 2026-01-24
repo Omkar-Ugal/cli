@@ -90,6 +90,11 @@ var instancesTestCases = []testCase{
 				pattern: regexp.MustCompile(`\bstate:(\s+)(running|starting)`),
 				repl:    "state:${1}running",
 			},
+			{
+				// states can be stopping/stoped
+				pattern: regexp.MustCompile(`\bstate:(\s+)(stopping|stopped)`),
+				repl:    "state:${1}stopped",
+			},
 		},
 	},
 }

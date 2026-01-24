@@ -659,32 +659,32 @@ type InstancesStartCmd struct {
 	Name []string `arg:"" predictor:"resource-key-instance" help:"Names of the instances to start."`
 }
 
-func (cmd *InstancesStartCmd) Run(ctx context.Context) error {
+func (c *InstancesStartCmd) Run(ctx context.Context) error {
+	cfg := config.FromContextOrDefault(ctx)
+
+	keys := multimetro.ParseKeys(c.Name)
+	before, err := Instance{}.Get(ctx, keys.Strings())
+	if err != nil {
+		return err
+	}
 	cl, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(cmd.Name), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
-		log.G(ctx).Trace().Msg("starting instances")
-		resp, err := mc.StartInstances(ctx, keys.NamesOrUUIDs())
-		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
-			return nil, nil, err
-		}
-		var started []multimetro.Key
-		for _, instance := range resp.Data.Instances {
-			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
-				continue
-			}
-			started = append(started, multimetro.Key{
-				Metro: mc.Metro.Name,
-				Name:  *instance.Name,
-				UUID:  *instance.Uuid,
-			})
-		}
-		return nil, started, nil
-	})
-	// FIXME: show diff view
-	return err
+	var targetKeys []multimetro.Key
+	for _, res := range before {
+		targetKeys = append(targetKeys, res.(Instance).key())
+	}
+
+	started, err := startInstances(ctx, cl, targetKeys)
+	if err != nil {
+		return err
+	}
+	updated, err := Instance{}.Get(ctx, started.Strings())
+	if err != nil {
+		return err
+	}
+	return cmd.Diff(cfg.Stdout, before, updated)
 }
 
 type InstancesStopCmd struct {
@@ -693,36 +693,34 @@ type InstancesStopCmd struct {
 	StopOpts
 }
 
-func (cmd *InstancesStopCmd) Run(ctx context.Context) error {
+func (c *InstancesStopCmd) Run(ctx context.Context) error {
+	cfg := config.FromContextOrDefault(ctx)
+
+	keys := multimetro.ParseKeys(c.Name)
+	before, err := Instance{}.Get(ctx, keys.Strings())
+	if err != nil {
+		return err
+	}
 	cl, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(cmd.Name), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
-		log.G(ctx).Trace().Msg("stopping instances")
-		reqs := make([]platform.StopInstancesRequestItem, 0, len(keys))
-		for _, key := range keys {
-			reqs = append(reqs, cmd.toReq(key.NameOrUUID()))
-		}
-		resp, err := mc.StopInstances(ctx, reqs)
-		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
-			return nil, nil, err
-		}
-		var stopped []multimetro.Key
-		for _, instance := range resp.Data.Instances {
-			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
-				continue
-			}
-			stopped = append(stopped, multimetro.Key{
-				Metro: mc.Metro.Name,
-				Name:  *instance.Name,
-				UUID:  *instance.Uuid,
-			})
-		}
-		return nil, stopped, nil
-	})
-	// FIXME: show diff view
-	return err
+	var targetKeys []multimetro.Key
+	for _, res := range before {
+		targetKeys = append(targetKeys, res.(Instance).key())
+	}
+	if len(targetKeys) == 0 {
+		targetKeys = keys
+	}
+	stopped, err := stopInstances(ctx, cl, targetKeys, c.StopOpts)
+	if err != nil {
+		return err
+	}
+	updated, err := Instance{}.Get(ctx, stopped.Strings())
+	if err != nil {
+		return err
+	}
+	return cmd.Diff(cfg.Stdout, before, updated)
 }
 
 type InstancesRestartCmd struct {
@@ -731,65 +729,36 @@ type InstancesRestartCmd struct {
 	StopOpts
 }
 
-func (cmd *InstancesRestartCmd) Run(ctx context.Context) error {
+func (c *InstancesRestartCmd) Run(ctx context.Context) error {
+	cfg := config.FromContextOrDefault(ctx)
+
+	keys := multimetro.ParseKeys(c.Name)
+	before, err := Instance{}.Get(ctx, keys.Strings())
+	if err != nil {
+		return err
+	}
 	cl, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
+	var targetKeys []multimetro.Key
+	for _, res := range before {
+		targetKeys = append(targetKeys, res.(Instance).key())
+	}
 
-	// First stop the instances
-	keys := multimetro.ParseKeys(cmd.Name)
-	keys, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]multimetro.Key, []multimetro.Key, error) {
-		log.G(ctx).Trace().Msg("stopping instances for restart")
-		reqs := make([]platform.StopInstancesRequestItem, 0, len(keys))
-		for _, key := range keys {
-			reqs = append(reqs, cmd.toReq(key.NameOrUUID()))
-		}
-		resp, err := mc.StopInstances(ctx, reqs)
-		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
-			return nil, nil, err
-		}
-		var stopped []multimetro.Key
-		for _, instance := range resp.Data.Instances {
-			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
-				continue
-			}
-			stopped = append(stopped, multimetro.Key{
-				Metro: mc.Metro.Name,
-				Name:  *instance.Name,
-				UUID:  *instance.Uuid,
-			})
-		}
-		return stopped, stopped, nil
-	})
+	stopped, err := stopInstances(ctx, cl, targetKeys, c.StopOpts)
 	if err != nil {
 		return err
 	}
-
-	// Then start the instances
-	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
-		log.G(ctx).Trace().Msg("starting instances for restart")
-		resp, err := mc.StartInstances(ctx, keys.NamesOrUUIDs())
-		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
-			return nil, nil, err
-		}
-		var started []multimetro.Key
-		for _, instance := range resp.Data.Instances {
-			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
-				continue
-			}
-			started = append(started, multimetro.Key{
-				Metro: mc.Metro.Name,
-				Name:  *instance.Name,
-				UUID:  *instance.Uuid,
-			})
-		}
-		return nil, started, nil
-	})
-
-	// FIXME: show diff view (start count will be different)
-
-	return err
+	started, err := startInstances(ctx, cl, stopped)
+	if err != nil {
+		return err
+	}
+	updated, err := Instance{}.Get(ctx, started.Strings())
+	if err != nil {
+		return err
+	}
+	return cmd.Diff(cfg.Stdout, before, updated)
 }
 
 type StopOpts struct {
@@ -810,4 +779,60 @@ func (args *StopOpts) toReq(nameOrUUID platform.NameOrUUID) platform.StopInstanc
 		req.DrainTimeoutMs = &timeout
 	}
 	return req
+}
+
+func startInstances(ctx context.Context, cl *multimetro.Client, keys multimetro.Keys) (multimetro.Keys, error) {
+	started, err := multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]multimetro.Key, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("starting instances")
+		resp, err := mc.StartInstances(ctx, keys.NamesOrUUIDs())
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, nil, err
+		}
+		var started []multimetro.Key
+		for _, instance := range resp.Data.Instances {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			started = append(started, multimetro.Key{
+				Metro: mc.Metro.Name,
+				Name:  *instance.Name,
+				UUID:  *instance.Uuid,
+			})
+		}
+		return started, started, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return multimetro.Keys(started), nil
+}
+
+func stopInstances(ctx context.Context, cl *multimetro.Client, keys multimetro.Keys, opts StopOpts) (multimetro.Keys, error) {
+	stopped, err := multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]multimetro.Key, []multimetro.Key, error) {
+		log.G(ctx).Trace().Msg("stopping instances")
+		reqs := make([]platform.StopInstancesRequestItem, 0, len(keys))
+		for _, key := range keys {
+			reqs = append(reqs, opts.toReq(key.NameOrUUID()))
+		}
+		resp, err := mc.StopInstances(ctx, reqs)
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, nil, err
+		}
+		var stopped []multimetro.Key
+		for _, instance := range resp.Data.Instances {
+			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			stopped = append(stopped, multimetro.Key{
+				Metro: mc.Metro.Name,
+				Name:  *instance.Name,
+				UUID:  *instance.Uuid,
+			})
+		}
+		return stopped, stopped, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return multimetro.Keys(stopped), nil
 }

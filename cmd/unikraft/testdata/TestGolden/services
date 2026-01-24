@@ -86,7 +86,7 @@ stdout:
 $ unikraft service edit test-$UNIQ_SVC_A --add services=1000:2000/tls
 
 stdout:
-	metro:         test
+	  metro:         test
 	  name:          test-<SVC_A>
 	  uuid:          12345678-1234-1234-1234-123456789abc
 	  persistent:    true
@@ -106,7 +106,7 @@ stdout:
 $ unikraft service edit test-$UNIQ_SVC_B --set services=1000:2000/tls
 
 stdout:
-	metro:         test
+	  metro:         test
 	  name:          test-<SVC_B>
 	  uuid:          12345678-1234-1234-1234-123456789abc
 	  persistent:    true
@@ -161,7 +161,7 @@ stdout:
 $ unikraft service edit test-$UNIQ_SVC_A --del services=1000:2000/tls
 
 stdout:
-	metro:         test
+	  metro:         test
 	  name:          test-<SVC_A>
 	  uuid:          12345678-1234-1234-1234-123456789abc
 	  persistent:    true
@@ -181,7 +181,7 @@ stdout:
 $ unikraft service edit test-$UNIQ_SVC_B --del services=1000:2000/tls
 
 stdout:
-	metro:         test
+	  metro:         test
 	  name:          test-<SVC_B>
 	  uuid:          12345678-1234-1234-1234-123456789abc
 	  persistent:    true
