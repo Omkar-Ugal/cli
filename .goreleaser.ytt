@@ -37,10 +37,60 @@ release:
     owner: unikraft
     name: cli
   draft: false
-  prerelease: #@ getattr(data.values, "PRERELEASE", True)
+  prerelease: #@ getattr(data.values, "PRERELEASE", "true") == "true"
   mode: replace
+  #@ if getattr(data.values, "PRERELEASE", "true") == "true":
+  #@yaml/text-templated-strings
   header: |
-    ## Unikraft CLI {{ .Tag }} ({{ .Date }})
+    # Unikraft CLI {{ .Tag }} ({{ .Date }})
+    > [!WARNING]
+    >
+    > This is a **pre-release** version of the Unikraft CLI.  It may contain features that are still in development and could be unstable.
+
+    ## Installation
+    ### Debian/Ubuntu
+    ```bash
+    # Download and add the GPG key
+    sudo install -d -m 0755 /etc/apt/keyrings
+
+    sudo curl -fsSL \
+      -o /etc/apt/keyrings/unikraft-cli.gpg \
+      https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
+
+    echo "deb [signed-by=/etc/apt/keyrings/unikraft-cli.gpg] \
+      https://pkg.unikraft.com/debian/cli-apt/ $(. /etc/os-release && echo "${VERSION_CODENAME}") stable staging" \
+      | sudo tee /etc/apt/sources.list.d/unikraft-cli.list > /dev/null
+
+    # Update and install
+    sudo apt-get update
+    sudo apt-get install unikraft-cli=(@= "{}:{}~{}+{}".format(getattr(data.values, "DEB_EPOCH", "1"), "{{ .Version }}", getattr(data.values, "DEB_PRERELEASE", ""), getattr(data.values, "DEB_METADATA", "")) @)
+    ```
+  #@ else:
+  #@yaml/text-templated-strings
+  header: |
+    # Unikraft CLI {{ .Tag }} ({{ .Date }})
+    > [!INFO]
+    >
+    > This is a **stable** version of the Unikraft CLI.
+
+    ## Installation
+    ### Debian/Ubuntu
+    ```bash
+    # Download and add the GPG key
+    sudo install -d -m 0755 /etc/apt/keyrings
+
+    sudo curl -fsSL \
+      -o /etc/apt/keyrings/unikraft-cli.gpg \
+      https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
+
+    echo "deb [signed-by=/etc/apt/keyrings/unikraft-cli.gpg] \
+      https://pkg.unikraft.com/debian/cli-apt/ $(. /etc/os-release && echo "${VERSION_CODENAME}") stable staging" \
+      | sudo tee /etc/apt/sources.list.d/unikraft-cli.list > /dev/null
+
+    # Update and install
+    sudo apt-get update
+    sudo apt-get install unikraft-cli
+  #@ end
 
 builds:
 #@ for os, archs in oses.items():
