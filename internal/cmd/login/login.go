@@ -22,7 +22,7 @@ type LoginCmd struct {
 	Check   bool          `name:"check" help:"Check if the user is already logged in."`
 	Timeout time.Duration `short:"t" name:"timeout" default:"5m" help:"Timeout for the login request."`
 
-	Controlplane  string `name:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
+	ControlPlane  string `name:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
 	AllowInsecure bool   `name:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
 
 	NoBrowser bool `name:"no-browser" help:"Do not open the browser automatically for login."`
@@ -37,14 +37,14 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 		profile = &config.Profile{
 			Type:         config.ProfileTypeCloud,
 			Name:         config.DefaultProfileName,
-			Controlplane: cmd.Controlplane,
+			ControlPlane: cmd.ControlPlane,
 		}
 	} else if err != nil && jujuerrors.Is(err, config.ErrProfileNotFound) {
 		// Set up a new profile for the new profile.
 		profile = &config.Profile{
 			Type:         config.ProfileTypeCloud,
 			Name:         cfg.Profile,
-			Controlplane: cmd.Controlplane,
+			ControlPlane: cmd.ControlPlane,
 		}
 	} else if err != nil {
 		return jujuerrors.Annotate(err, "getting current profile")
@@ -91,10 +91,10 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 }
 
 func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.CheckAuthorizationResponseData, error) {
-	server := profile.Controlplane
-	if len(cmd.Controlplane) > 0 {
+	server := profile.ControlPlane
+	if len(cmd.ControlPlane) > 0 {
 		// Override the control plane if one is provided via the command line.
-		server = cmd.Controlplane
+		server = cmd.ControlPlane
 	} else if len(server) == 0 {
 		// If no control plane is set, use the default control plane.
 		server = controlplane.DefaultEndpoint
