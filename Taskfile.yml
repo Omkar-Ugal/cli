@@ -6,8 +6,21 @@ includes:
     taskfile: https://github.com/unikraft-cloud/x.git//Taskfile.go.yml?ref=prod-staging
     vars:
       go_module: unikraft.com/cli
+      goreleaser_version: v2.13.3
 
-# TODO: svu?
+vars:
+  go_bin:
+    ref: .go_bin | default "go"
+
+  workdir:
+    sh: pwd
+  distdir: "{{.workdir}}/dist"
+
+  ytt_version: v0.52.0
+  ytt_bin: "{{.go_bin}} run carvel.dev/ytt/cmd/ytt@{{.ytt_version}}"
+
+  svu_version: v3.2.3
+  svu_bin: "{{.go_bin}} run github.com/caarlos0/svu/v3@{{.svu_version}}"
 
 tasks:
   default:
@@ -15,20 +28,28 @@ tasks:
     - task: cli
 
   cli:
+    desc: The `unikraft` CLI.
+    silent: true
     cmds:
     - task: go:build
       vars:
         package: ./cmd/unikraft
 
   lint:
+    desc: Lint the project.
+    silent: true
     cmds:
       - task: go:lint
 
   test:
+    desc: Run unit tests.
+    silent: true
     cmds:
     - task: go:test
 
   integration:
+    desc: Run integration tests.
+    silent: true
     cmds:
     - task: go:test
       vars:
@@ -40,6 +61,90 @@ tasks:
       go test -v ./cmd/unikraft -tags integration --update
 
   docs:
+    desc: Generate all documentation.
+    silent: true
+    deps:
+    - task: docs:man
+    - task: docs:mdx
+
+  docs:man:
+    desc: Generate man page documentation.
+    silent: true
+    cmd: |
+      {{.go_bin}} run {{.workdir}}/tools/gencli man --compress {{.workdir}}/docs/man
+    generates:
+    - "{{.workdir}}/docs/man/**/*"
+
+  docs:mdx:
+    desc: Generate markdown documentation.
+    silent: true
+    cmd: |
+      {{.go_bin}} run {{.workdir}}/tools/gencli docs {{.workdir}}/docs/mdx
+    generates:
+    - "{{.workdir}}/docs/mdx/**/*"
+
+  goreleaser.yaml:
+    desc: Generate the GoReleaser configuration file.
+    sources:
+    - .goreleaser.ytt
+    generates:
+    - .goreleaser.yaml
     cmds:
-    - go run ./tools/gencli docs ./dist/docs
-    - go run ./tools/gencli man --compress ./dist/man
+    - |
+      cat {{.workdir}}/.goreleaser.ytt | {{.ytt_bin}} --data-values-env YTT -f- > {{.workdir}}/.goreleaser.yaml
+
+  hash-version:
+    desc: Show the version of the CLI based on repo state.
+    silent: true
+    cmds:
+    - |
+      HASH_COMMIT=HEAD
+      HASH=$(git update-index -q --refresh && git describe --tags)
+      DIRTY=$(git update-index -q --refresh && git diff-index --quiet HEAD -- {{.WORKDIR}} || echo "-dirty")
+      echo "${HASH}${DIRTY}"
+
+  last-version:
+    desc: Show the last version of the CLI.
+    silent: true
+    cmds:
+    - |
+      {{.svu_bin}} current
+
+  next-stable:
+    desc: Show the next stable version of the CLI.
+    silent: true
+    cmds:
+    - |
+      PRERELEASE="${PRERELEASE:-}"
+      {{.svu_bin}} next --v0 --tag.prefix "v" --tag.pattern "v[0-9]*.[0-9]*.[0-9]*" --prerelease "$PRERELEASE"
+
+  next-staging:
+    desc: Show the next staging version of the CLI.
+    silent: true
+    cmds:
+    - |
+      NEXT=$({{.svu_bin}} current)
+      if [[ "$NEXT" == *"staging"* ]]; then
+        NEXT=$(echo "$NEXT" | awk -F. '{print $1 "." $2 "." $3 "." $4 + 1}')
+      else
+        NEXT=$(PRERELEASE=staging.1 task next-stable)
+      fi
+      echo $NEXT
+
+  last-stable:
+    desc: Show the last stable version of the CLI.
+    silent: true
+    cmds:
+    - git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude='*-*' --abbrev=0 | awk -F. -v OFS=. '{$NF += 1 ; print}'
+
+  snapshot:
+    desc: Generate a snapshot release.
+    silent: true
+    deps:
+    - goreleaser.yaml
+    cmds:
+    - |
+      {{.goreleaser_bin}} release \
+        --snapshot \
+        --skip=publish \
+        --clean
