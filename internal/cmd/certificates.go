@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
@@ -21,7 +22,6 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/types"
-	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type CertificatesCmd struct {
@@ -87,19 +87,19 @@ func (c Certificate) Fields() ([]resource.Field, error) {
 }
 
 func (Certificate) List(ctx context.Context) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := multimetro.DoAll(ctx, cl, func(ctx context.Context, mc *multimetro.MetroClient) ([]resource.Resource, error) {
+	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing certificates")
-		resp, err := mc.GetCertificates(ctx, nil, true)
+		resp, err := c.GetCertificates(ctx, nil, true)
 		if err != nil {
 			return nil, err
 		}
 		var results []resource.Resource
 		for _, certificate := range resp.Data.Certificates {
-			result, err := Certificate{}.load(certificate, &mc.Metro)
+			result, err := Certificate{}.load(certificate, &c.Metro)
 			if err != nil {
 				return nil, err
 			}
@@ -107,36 +107,31 @@ func (Certificate) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		return results, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return xslices.Flatten(resources), nil
 }
 
 func (Certificate) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	resources, err := multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(keys), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]resource.Resource, []multimetro.Key, error) {
+	return group.CollectRefsSlices(ctx, g, multimetro.ParseKeys(keys).Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]resource.Resource, group.Refs, error) {
 		log.G(ctx).Trace().Msg("getting certificates")
-		resp, err := mc.GetCertificates(ctx, keys.NamesOrUUIDs(), true)
+		resp, err := c.GetCertificates(ctx, refs.NameOrUUIDs(), true)
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
-		var found []multimetro.Key
+		var found []group.Ref
 		var results []resource.Resource
 		for _, certificate := range resp.Data.Certificates {
 			if certificate.Status == nil || *certificate.Status != "success" {
 				continue
 			}
-			result, err := Certificate{}.load(certificate, &mc.Metro)
+			result, err := Certificate{}.load(certificate, &c.Metro)
 			if err != nil {
 				return nil, nil, err
 			}
-			found = append(found, multimetro.Key{
-				Metro: mc.Metro.Name,
+			found = append(found, group.Ref{
+				Metro: c.Metro.Name,
 				Name:  result.Name,
 				UUID:  result.UUID,
 			})
@@ -144,10 +139,6 @@ func (Certificate) Get(ctx context.Context, keys []string) ([]resource.Resource,
 		}
 		return results, found, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
 }
 
 func (Certificate) load(certificate platform.Certificate, metro *config.Metro) (Certificate, error) {
@@ -169,23 +160,22 @@ func (Certificate) Delete(ctx context.Context, targets []resource.Resource) erro
 		keys = append(keys, certificate.key())
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, metroClient *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting certificates")
-		var deleted []multimetro.Key
-		for _, key := range keys {
-			_, err := metroClient.DeleteCertificateByUUID(ctx, key.UUID)
+		var deleted []group.Ref
+		for _, key := range refs {
+			_, err := c.DeleteCertificateByUUID(ctx, key.UUID)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 			deleted = append(deleted, key)
 		}
-		return nil, deleted, nil
+		return deleted, nil
 	})
-	return err
 }
 
 func (Certificate) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
@@ -209,13 +199,13 @@ func (Certificate) Create(ctx context.Context, fields []resource.Field) ([]resou
 		}
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (multimetro.Keys, error) {
+	keys, err := group.CollectMetro(ctx, g, metro, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("creating certificate")
-		resp, err := mc.CreateCertificate(ctx, req)
+		resp, err := c.CreateCertificate(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +215,7 @@ func (Certificate) Create(ctx context.Context, fields []resource.Field) ([]resou
 		created := make(multimetro.Keys, 0, len(resp.Data.Certificates))
 		for _, certificate := range resp.Data.Certificates {
 			key := multimetro.Key{
-				Metro: mc.Metro.Name,
+				Metro: c.Metro.Name,
 				UUID:  ptr.ZeroIfNil(certificate.Uuid),
 				Name:  ptr.ZeroIfNil(certificate.Name),
 			}

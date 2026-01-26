@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 
+	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/log"
 
 	xmaps "unikraft.com/cli/internal/x/maps"
@@ -138,7 +138,8 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 
 		resources, err := r.Get(ctx, targets)
 		if err != nil {
-			if strings.Contains(err.Error(), "keys not found") {
+			var notFoundErr group.ErrRefNotFound
+			if errors.As(err, &notFoundErr) {
 				continue // HACK: some resources may have been deleted through other mysterious means
 			}
 			rerr = errors.Join(rerr, fmt.Errorf("failed to get resources for cleanup: %w", err))

@@ -40,13 +40,13 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.0.0-20260128085901-20a57163e9f1
+	unikraft.com/cloud/sdk v0.0.0-20260203165110-781485da6b76
 	unikraft.com/x/colors v0.0.0-20260116231133-1da0081544af
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/guesstermwidth v0.0.0-20260116231133-1da0081544af
-	unikraft.com/x/image-spec v0.0.0-20260122232605-1672b2b1f81e
-	unikraft.com/x/kingkong v0.0.0-20260126094137-ab6e717e5679
-	unikraft.com/x/log v0.0.0-20260123171130-d7f7471d74c0
+	unikraft.com/x/image-spec v0.0.0-20260126171022-af62c17fcdf7
+	unikraft.com/x/kingkong v0.0.0-20260126171022-af62c17fcdf7
+	unikraft.com/x/log v0.0.0-20260126171022-af62c17fcdf7
 	unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af
 )
 
@@ -83,7 +83,8 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
-	github.com/in-toto/in-toto-golang v0.9.0 // indirect
+	github.com/in-toto/attestation v1.1.2 // indirect
+	github.com/in-toto/in-toto-golang v0.10.0 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -104,7 +105,7 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/secure-systems-lab/go-securesystemslib v0.9.1 // indirect
+	github.com/secure-systems-lab/go-securesystemslib v0.10.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect

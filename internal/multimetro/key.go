@@ -10,15 +10,10 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
 )
 
-type Key struct {
-	Metro string
-
-	Name string
-	UUID string
-}
+type Key group.Ref
 
 const (
 	MetroKeySeparator = "/"
@@ -51,13 +46,6 @@ func parseKeyValue(key string) (name string, id string) {
 	return key, ""
 }
 
-func (k Key) NameOrUUID() platform.NameOrUUID {
-	if k.UUID != "" {
-		return platform.NameOrUUID{Uuid: &k.UUID}
-	}
-	return platform.NameOrUUID{Name: &k.Name}
-}
-
 func requiresNamePrefix(name string) bool {
 	if name == "" {
 		return false
@@ -76,6 +64,10 @@ func requiresIDPrefix(id string) bool {
 		return true
 	}
 	return uuid.Validate(id) != nil
+}
+
+func (k Key) Ref() group.Ref {
+	return group.Ref(k)
 }
 
 func (k Key) String() string {
@@ -138,23 +130,23 @@ func (k Key) Complete(prefix string) (completions []string) {
 type Keys []Key
 
 func ParseKeys(ss []string) Keys {
-	var keys []Key
+	keys := make([]Key, 0, len(ss))
 	for _, s := range ss {
 		keys = append(keys, ParseKey(s))
 	}
 	return keys
 }
 
-func (ks Keys) NamesOrUUIDs() []platform.NameOrUUID {
-	var nou []platform.NameOrUUID
+func (ks Keys) Refs() []group.Ref {
+	refs := make([]group.Ref, 0, len(ks))
 	for _, k := range ks {
-		nou = append(nou, k.NameOrUUID())
+		refs = append(refs, k.Ref())
 	}
-	return nou
+	return refs
 }
 
 func (ks Keys) Strings() []string {
-	var ss []string
+	ss := make([]string, 0, len(ks))
 	for _, k := range ks {
 		ss = append(ss, k.String())
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 
@@ -29,7 +30,6 @@ import (
 	"unikraft.com/cli/internal/types"
 	xmaps "unikraft.com/cli/internal/x/maps"
 	xreference "unikraft.com/cli/internal/x/reference"
-	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type ImagesCmd struct {
@@ -179,19 +179,19 @@ func (ImageEntry) Examples() map[cmd.CmdType][]kingkong.Example {
 }
 
 func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := multimetro.DoAll(ctx, cl, func(ctx context.Context, mc *multimetro.MetroClient) ([]resource.Resource, error) {
+	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing images")
-		resp, err := mc.GetImages(ctx, platform.TagOrDigest{}, "")
+		resp, err := c.GetImages(ctx, platform.TagOrDigest{}, "")
 		if err != nil {
 			return nil, err
 		}
 		var results []resource.Resource
 		for _, image := range resp.Data.Images {
-			result, err := ImageEntry{}.load(image, &mc.Metro, false)
+			result, err := ImageEntry{}.load(image, &c.Metro, false)
 			if err != nil {
 				return nil, err
 			}
@@ -201,41 +201,43 @@ func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		return results, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return xslices.Flatten(resources), nil
 }
 
 func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	cfg := config.FromContextOrDefault(ctx)
+	profile, err := cfg.CurrentProfile()
 	if err != nil {
 		return nil, err
 	}
 
-	multimetroKeys := make([]multimetro.Key, 0, len(keys))
+	g, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	multimetroKeys := make(multimetro.Keys, 0, len(keys))
 	for _, key := range keys {
 		named, err := parseNormalizedNamed(key)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse image key %q: %w", key, err)
 		}
-		multimetroKeys = append(multimetroKeys, imageRefToKey(cl.Metros(), named))
+		multimetroKeys = append(multimetroKeys, imageRefToKey(profile.Metros, named))
 	}
 
-	resources, err := multimetro.DoKeys(ctx, cl, multimetroKeys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]resource.Resource, []multimetro.Key, error) {
+	return group.CollectRefsSlices(ctx, g, multimetroKeys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]resource.Resource, group.Refs, error) {
 		log.G(ctx).Trace().Msg("getting images")
-		resp, err := mc.GetImages(ctx, platform.TagOrDigest{}, "")
+		resp, err := c.GetImages(ctx, platform.TagOrDigest{}, "")
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
-		var found []multimetro.Key
+		var found []group.Ref
 		var results []resource.Resource
 		for _, image := range resp.Data.Images {
-			result, err := ImageEntry{}.load(image, &mc.Metro, true)
+			result, err := ImageEntry{}.load(image, &c.Metro, true)
 			if err != nil {
 				return nil, nil, err
 			}
-			for _, key := range keys {
+			for _, key := range refs {
 				for _, result := range result {
 					if xreference.MatchNamed(result.Canonical, key.Name) {
 						found = append(found, key)
@@ -247,10 +249,6 @@ func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, 
 		}
 		return results, found, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
 }
 
 func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling bool) ([]ImageEntry, error) {
