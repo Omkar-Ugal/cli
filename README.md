@@ -7,6 +7,11 @@
 This repository contains the code for a work-in-progress, internal tool for
 managing the [Unikraft Cloud Platform](https://unikraft.com/). Eventually, this will replace [kraft](https://github.com/unikraft/kraftkit).
 
+> [!TIP]
+>
+> Internal preview docs are available at <https://cli-preview.ukp-stable.apw.unikraft.internal/docs/cli-new/unikraft>.
+> See <https://github.com/unikraft-cloud/www/pull/497> for more info.
+
 ## Setup
 
 To clone the repository, run:
@@ -60,6 +65,7 @@ profiles:
   default:
     type: cloud
     name: default
+    organization: <org-name>
     token: <api-token>
     metros:
       - name: <metro-name> # e.g. fra
@@ -78,6 +84,14 @@ To see all available commands, run:
 
 ```bash
 unikraft --help
+```
+
+### Auto-completion
+
+To see instructions to enable auto-completion for your shell, run:
+
+```bash
+unikraft completion
 ```
 
 ## Documentation
