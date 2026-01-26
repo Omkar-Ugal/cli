@@ -189,7 +189,7 @@ func (TestResource) Get(ctx context.Context, keys []string) ([]resource.Resource
 	return resources, nil
 }
 
-func (TestResource) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+func (TestResource) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	t := TestResource{
 		Settings: TestSettings{},
 	}
@@ -209,7 +209,7 @@ func (TestResource) Create(ctx context.Context, fields []resource.Field) (resour
 	}
 
 	TestStore[t.Name] = t
-	return t, nil
+	return []resource.Resource{t}, nil
 }
 
 func (TestResource) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {

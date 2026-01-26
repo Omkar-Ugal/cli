@@ -410,8 +410,9 @@ func TestCreate(t *testing.T) {
 
 	res, err := empty.Create(ctx, templateFields)
 	require.NoError(t, err)
+	require.Len(t, res, 1)
 
-	created := res.(resourcet.TestResource)
+	created := res[0].(resourcet.TestResource)
 	assert.Equal(t, "test-new", created.Name)
 	assert.Equal(t, 100, created.Settings.X)
 	assert.Equal(t, "created", created.Settings.Y)

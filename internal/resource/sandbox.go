@@ -330,12 +330,17 @@ func (r sandboxedCreatableResource) Get(ctx context.Context, keys []string) ([]R
 	}.Get(ctx, keys)
 }
 
-func (r sandboxedCreatableResource) Create(ctx context.Context, fields []Field) (Resource, error) {
-	res, err := r.CreatableResource.Create(ctx, fields)
+func (r sandboxedCreatableResource) Create(ctx context.Context, fields []Field) ([]Resource, error) {
+	resources, err := r.CreatableResource.Create(ctx, fields)
 	if err != nil {
 		return nil, err
 	}
-	return res, r.sandbox.Add(ctx, res)
+	for _, res := range resources {
+		if err := r.sandbox.Add(ctx, res); err != nil {
+			return nil, err
+		}
+	}
+	return resources, nil
 }
 
 type sandboxedDeletableResource struct {

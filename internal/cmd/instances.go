@@ -18,6 +18,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/log"
+	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/logs"
@@ -425,7 +426,7 @@ func (Instance) getPatchRequest(uuid string, key resource.FieldPath, value any, 
 	}
 }
 
-func (Instance) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	var req platform.CreateInstanceRequest
 	var metro string
 	for key, field := range resource.IterFields(fields) {
@@ -579,27 +580,34 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) (resource.R
 	if err != nil {
 		return nil, err
 	}
-	uuid, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (string, error) {
+	keys, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("creating instance")
 		resp, err := mc.CreateInstance(ctx, req)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return *resp.Data.Instances[0].Uuid, nil
+		if len(resp.Data.Instances) == 0 {
+			return nil, fmt.Errorf("no instances created")
+		}
+		created := make(multimetro.Keys, 0, len(resp.Data.Instances))
+		for _, instance := range resp.Data.Instances {
+			key := multimetro.Key{
+				Metro: mc.Metro.Name,
+				UUID:  ptr.ZeroIfNil(instance.Uuid),
+				Name:  ptr.ZeroIfNil(instance.Name),
+			}
+			created = append(created, key)
+		}
+		return created, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	key := multimetro.Key{
-		Metro: metro,
-		UUID:  uuid,
-	}
-	results, err := Instance{}.Get(ctx, []string{key.String()})
+	results, err := Instance{}.Get(ctx, keys.Strings())
 	if err != nil {
 		return nil, err
 	}
-	return results[0], nil
+	return results, nil
 }
 
 type InstancesLogsCmd struct {

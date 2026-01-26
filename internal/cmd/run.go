@@ -7,9 +7,11 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
+	"golang.org/x/sync/errgroup"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/logs"
 	"unikraft.com/cli/internal/multimetro"
@@ -95,25 +97,48 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	if err != nil {
 		return err
 	}
-	instance := created.(Instance)
-	fmt.Fprintln(cfg.Stdout, created.Key())
+	if len(created) == 0 {
+		return fmt.Errorf("no instances created")
+	}
+	for _, res := range created {
+		fmt.Fprintln(cfg.Stdout, res.Key())
+	}
 
 	if c.Follow {
+		keys := make(multimetro.Keys, 0, len(created))
+		for _, res := range created {
+			instance, ok := res.(Instance)
+			if !ok {
+				return fmt.Errorf("unexpected resource type %T", res)
+			}
+			keys = append(keys, instance.key())
+		}
 		cl, err := multimetro.NewClient(ctx)
 		if err != nil {
 			return err
 		}
-		_, err = multimetro.DoKeyExact(ctx, cl, instance.key(), func(ctx context.Context, mc *multimetro.MetroClient) (any, error) {
-			r, err := logs.InstanceLogs(ctx, mc).Reader(instance.key().NameOrUUID(), 0, true)
-			if err != nil {
-				return nil, err
+		eg, ctx := errgroup.WithContext(ctx)
+		_, err = multimetro.DoKeys(ctx, cl, keys, func(_ context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+			for _, key := range keys {
+				eg.Go(func() error {
+					r, err := logs.InstanceLogs(ctx, mc).Reader(key.NameOrUUID(), 0, true)
+					if err != nil {
+						return err
+					}
+					_, err = io.Copy(cfg.Stdout, r)
+					return err
+				})
 			}
-			_, err = io.Copy(cfg.Stdout, r)
-			return nil, err
+			return nil, keys, nil
 		})
 		if err != nil {
 			return err
 		}
+		err = eg.Wait()
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
+		return err
 	}
 
 	return nil
