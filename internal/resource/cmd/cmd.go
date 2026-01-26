@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -106,8 +107,8 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R resource.GettableListableResource] struct {
-	Name  []string      `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
-	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
+	Name  []string       `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
+	Watch *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
 
 	FormatOpts
 }
@@ -147,15 +148,16 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 			Print(out, cmd.Field, empty, resources...)
 	}
 
-	if cmd.Watch > 0 {
-		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
+	if cmd.Watch != nil {
+		watch := cmp.Or(*cmd.Watch, 2*time.Second)
+		return watcher.WatchOutput(ctx, watch, cfg.Stdout, render)
 	}
 	return render(cfg.Stdout)
 }
 
 type ResourceInspectCmd[R resource.GettableResource] struct {
-	Name  []string      `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
-	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
+	Name  []string       `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
+	Watch *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
 
 	FormatOpts
 }
@@ -188,8 +190,9 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 			Print(out, cmd.Field, empty, resources...)
 	}
 
-	if cmd.Watch > 0 {
-		return watcher.WatchOutput(ctx, cmd.Watch, cfg.Stdout, render)
+	if cmd.Watch != nil {
+		watch := cmp.Or(*cmd.Watch, 2*time.Second)
+		return watcher.WatchOutput(ctx, watch, cfg.Stdout, render)
 	}
 	return render(cfg.Stdout)
 }
