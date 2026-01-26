@@ -106,7 +106,7 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R resource.GettableListableResource] struct {
-	Name  []string      `arg:"" optional:"" predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
+	Name  []string      `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
 	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
@@ -154,7 +154,7 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 }
 
 type ResourceInspectCmd[R resource.GettableResource] struct {
-	Name  []string      `arg:"" predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
+	Name  []string      `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
 	Watch time.Duration `short:"w" help:"Watch for changes and refresh output."`
 
 	FormatOpts
@@ -195,7 +195,7 @@ func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, s
 }
 
 type ResourceWaitCmd[R resource.GettableResource] struct {
-	Name  []string `arg:"" predictor:"resource-key-${name}" help:"Names of the ${names} to wait for."`
+	Name  []string `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to wait for."`
 	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none"`
 
 	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
@@ -310,7 +310,7 @@ func filterResources(resources []resource.Resource, filter filters.Filter) (filt
 }
 
 type ResourceRemoveCmd[R resource.DeletableResource] struct {
-	Name []string `arg:"" predictor:"resource-key-${name}" help:"Names of the ${names} to remove."`
+	Name []string `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to remove."`
 }
 
 func (cmd ResourceRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -328,7 +328,7 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sand
 }
 
 type ResourceEditCmd[R resource.EditableResource] struct {
-	Name string `arg:"" predictor:"resource-key-${name}" help:"Name of the ${name} to edit."`
+	Name string `arg:"" completion-predictor:"resource-key-${name}" help:"Name of the ${name} to edit."`
 
 	Set []map[string]string `help:"Key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
 	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
