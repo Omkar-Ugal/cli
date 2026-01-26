@@ -455,7 +455,7 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
-				return spec, fmt.Errorf("failed	 to read del file for key %s: %w", k, err)
+				return spec, fmt.Errorf("failed to read del file for key %s: %w", k, err)
 			}
 			spec.Del[k] = append(spec.Del[k], strings.TrimSpace(string(data)))
 		}
