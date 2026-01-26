@@ -13,19 +13,20 @@ import (
 	"github.com/pkg/browser"
 	"unikraft.com/cloud/sdk/controlplane"
 	"unikraft.com/x/log"
+	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
 )
 
 type LoginCmd struct {
-	Check   bool          `long:"check" help:"Check if the user is already logged in."`
-	Timeout time.Duration `short:"t" long:"timeout" default:"5m" help:"Timeout for the login request."`
+	Check   bool          `name:"check" help:"Check if the user is already logged in."`
+	Timeout time.Duration `short:"t" name:"timeout" default:"5m" help:"Timeout for the login request."`
 
-	Controlplane  string `long:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
-	AllowInsecure bool   `long:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
+	ControlPlane  string `name:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
+	AllowInsecure bool   `name:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
 
-	NoBrowser bool `long:"no-browser" help:"Do not open the browser automatically for login."`
+	NoBrowser bool `name:"no-browser" help:"Do not open the browser automatically for login."`
 }
 
 func (cmd *LoginCmd) Run(cfg *config.Config) error {
@@ -37,14 +38,14 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 		profile = &config.Profile{
 			Type:         config.ProfileTypeCloud,
 			Name:         config.DefaultProfileName,
-			Controlplane: cmd.Controlplane,
+			ControlPlane: cmd.ControlPlane,
 		}
 	} else if err != nil && jujuerrors.Is(err, config.ErrProfileNotFound) {
 		// Set up a new profile for the new profile.
 		profile = &config.Profile{
 			Type:         config.ProfileTypeCloud,
 			Name:         cfg.Profile,
-			Controlplane: cmd.Controlplane,
+			ControlPlane: cmd.ControlPlane,
 		}
 	} else if err != nil {
 		return jujuerrors.Annotate(err, "getting current profile")
@@ -68,12 +69,46 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 	if err != nil {
 		return jujuerrors.Annotate(err, "getting authentication token")
 	}
-	profile.Token = *resp.Token
-	profile.Organization = *resp.OrganizationName
+	if resp.Status == string(controlplane.ResponseStatusERROR) {
+		return jujuerrors.Annotate(jujuerrors.New(resp.Message), "authentication failed")
+	}
+	if resp.Data == nil {
+		return jujuerrors.New("no data received from control plane, please try again")
+	}
+	if resp.Data.Token == nil {
+		return jujuerrors.New("no authentication token received from control plane, please try again")
+	}
 
-	log.G(ctx).
-		Warn().
-		Msg("no metros configured; please add them manually")
+	profile.Token = *resp.Data.Token
+	profile.Organization = ptr.ZeroIfNil(resp.Data.OrganizationName)
+	profile.Metros = nil
+
+	// Instantiate a new client to fetch the list of metros.
+	client := controlplane.NewClient(
+		controlplane.WithDefaultEndpoint(profile.ControlPlane),
+		controlplane.WithToken(profile.Token),
+	)
+
+	metroResp, err := client.ListMetros(ctx)
+	if err != nil {
+		log.G(ctx).
+			Warn().
+			Err(err).
+			Msg("could not list metros for profile: please add metros manually")
+	} else if metroResp.Data == nil {
+		log.G(ctx).
+			Warn().
+			Msg("could not list metros for profile: please add metros manually")
+	}
+
+	metros := ptr.ZeroIfNil(metroResp.Data)
+	for _, metro := range metros.Metros {
+		profile.Metros = append(profile.Metros, config.Metro{
+			Name:     ptr.ZeroIfNil(metro.Name),
+			Endpoint: ptr.ZeroIfNil(metro.Endpoint),
+			Country:  ptr.ZeroIfNil(metro.Country),
+		})
+	}
 
 	cfg.Profile = profile.Name
 	if cfg.Profiles == nil {
@@ -90,11 +125,11 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 	return nil
 }
 
-func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.CheckAuthorizationResponseData, error) {
-	server := profile.Controlplane
-	if len(cmd.Controlplane) > 0 {
+func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.Response[controlplane.CheckAuthorizationResponseData], error) {
+	server := profile.ControlPlane
+	if len(cmd.ControlPlane) > 0 {
 		// Override the control plane if one is provided via the command line.
-		server = cmd.Controlplane
+		server = cmd.ControlPlane
 	} else if len(server) == 0 {
 		// If no control plane is set, use the default control plane.
 		server = controlplane.DefaultEndpoint
@@ -156,13 +191,7 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 				if event == nil {
 					continue
 				}
-				if event.Status == string(controlplane.ResponseStatusSUCCESS) {
-					return
-				} else {
-					log.G(ctx).
-						Error().
-						Err(jujuerrors.Errorf("login failed: %s", event.Message))
-				}
+				return
 			case <-ctx.Done():
 				log.G(ctx).
 					Error().
@@ -192,5 +221,5 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 		return nil, jujuerrors.New("no event received, please try again")
 	}
 
-	return event.Data, nil
+	return event, nil
 }

@@ -56,7 +56,7 @@ type Profile struct {
 	Name         string      `hidden:"" help:"Name of the profile." json:"name" yaml:"name"`
 	Token        string      `hidden:"" help:"Authentication token for the profile." json:"token" yaml:"token"`
 	Organization string      `hidden:"" help:"Organization associated with the profile." json:"organization,omitempty" yaml:"organization,omitempty"`
-	Controlplane string      `hidden:"" help:"Control plane endpoint for the profile." json:"controlplane,omitempty" yaml:"controlplane,omitempty"`
+	ControlPlane string      `hidden:"" help:"Control plane endpoint for the profile." json:"controlplane,omitempty" yaml:"controlplane,omitempty"`
 	Metros       []Metro     `hidden:"" embed:"" prefix:"metro." help:"Static list of metros." json:"metros,omitempty" yaml:"metros,omitempty"`
 }
 
