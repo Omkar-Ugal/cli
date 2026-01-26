@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -378,9 +377,9 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
 	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
-	SetFile []map[string]*os.File `help:"Files containing key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
-	AddFile []map[string]*os.File `help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
-	DelFile []map[string]*os.File `help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
+	SetFile []map[string]string `help:"Files containing key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
+	AddFile []map[string]string `help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
+	DelFile []map[string]string `help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
@@ -420,7 +419,12 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.SetFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open set file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed to read set file for key %s: %w", k, err)
@@ -429,7 +433,12 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.AddFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open add file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed to read add file for key %s: %w", k, err)
@@ -438,7 +447,12 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.DelFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open del file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed	 to read del file for key %s: %w", k, err)
@@ -449,28 +463,11 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 	return spec, nil
 }
 
-func (cmd *ResourceEditCmd[R]) Close() error {
-	var err error
-	for _, m := range cmd.SetFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	for _, m := range cmd.AddFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	for _, m := range cmd.DelFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	return err
-}
-
 func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
-	defer cmd.Close()
+	spec, err := cmd.toPatchSpec()
+	if err != nil {
+		return err
+	}
 
 	var empty R
 	r := sandbox.WrapEditable(empty)
@@ -489,8 +486,6 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		return fmt.Errorf("ambiguous resource name: %s (found %v)", cmd.Name, keys)
 	}
 	res := resources[0]
-
-	spec, _ := cmd.toPatchSpec()
 
 	// Check for duplicate field paths across Set/Add/Del
 	allFields := make(map[string]int)
@@ -543,7 +538,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 type ResourceCreateCmd[R resource.CreatableResource] struct {
 	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
-	SetFile []map[string]*os.File `help:"Files containing key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
+	SetFile []map[string]string `help:"Files containing key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
@@ -572,7 +567,12 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.SetFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open set file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed to read set file for key %s: %w", k, err)
@@ -583,28 +583,17 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 	return spec, nil
 }
 
-func (cmd *ResourceCreateCmd[R]) Close() error {
-	var err error
-	for _, m := range cmd.SetFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	return err
-}
-
 func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
-	defer cmd.Close()
+	spec, err := cmd.toPatchSpec()
+	if err != nil {
+		return err
+	}
 
 	var empty R
 	r := sandbox.WrapCreatable(empty)
 	fields, err := r.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
-	}
-	spec, err := cmd.toPatchSpec()
-	if err != nil {
-		return err
 	}
 	patched, err := patch.PatchedFields(fields, spec)
 	if err != nil {

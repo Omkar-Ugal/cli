@@ -458,7 +458,7 @@ func TestCreatePatchSpecFileArgs(t *testing.T) {
 
 	cmd := &ResourceCreateCmd[resourcet.TestResource]{
 		Set: []map[string]string{{"name": "test-inline"}},
-		SetFile: []map[string]*os.File{
+		SetFile: []map[string]string{
 			{"name": nameFile},
 			{"settings.x": setFile},
 			{"settings.y": setTextFile},
@@ -467,7 +467,6 @@ func TestCreatePatchSpecFileArgs(t *testing.T) {
 
 	spec, err := cmd.toPatchSpec()
 	require.NoError(t, err)
-	require.NoError(t, cmd.Close())
 
 	assert.Equal(t, []string{"test-inline", "test-file"}, spec.Set["name"])
 	assert.Equal(t, []string{"123"}, spec.Set["settings.x"])
@@ -485,7 +484,7 @@ func TestCreateSetFile(t *testing.T) {
 
 	var out bytes.Buffer
 	cmd := &ResourceCreateCmd[resourcet.TestResource]{
-		SetFile: []map[string]*os.File{
+		SetFile: []map[string]string{
 			{"name": nameFile},
 			{"settings.x": setFile},
 			{"settings.y": setTextFile},
@@ -610,14 +609,13 @@ func TestEditPatchSpecFileArgs(t *testing.T) {
 		Set:     []map[string]string{{"settings.y": "inline"}},
 		Add:     []map[string]string{{"authors": "inline-entry"}},
 		Del:     []map[string]string{{"url": "inline-entry"}},
-		SetFile: []map[string]*os.File{{"settings.x": setFile}},
-		AddFile: []map[string]*os.File{{"authors": addFile}},
-		DelFile: []map[string]*os.File{{"url": delFile}},
+		SetFile: []map[string]string{{"settings.x": setFile}},
+		AddFile: []map[string]string{{"authors": addFile}},
+		DelFile: []map[string]string{{"url": delFile}},
 	}
 
 	spec, err := cmd.toPatchSpec()
 	require.NoError(t, err)
-	require.NoError(t, cmd.Close())
 
 	assert.Equal(t, []string{"inline"}, spec.Set["settings.y"])
 	assert.Equal(t, []string{"123"}, spec.Set["settings.x"])
@@ -660,7 +658,7 @@ func TestDelete(t *testing.T) {
 	assert.Empty(t, resources)
 }
 
-func tempFile(t *testing.T, contents string) *os.File {
+func tempFile(t *testing.T, contents string) string {
 	t.Helper()
 
 	file, err := os.CreateTemp(t.TempDir(), "set-file-*")
@@ -672,7 +670,7 @@ func tempFile(t *testing.T, contents string) *os.File {
 	_, err = file.Seek(0, io.SeekStart)
 	require.NoError(t, err)
 
-	return file
+	return file.Name()
 }
 
 func testConfig(out io.Writer) *config.Config {
