@@ -65,6 +65,7 @@ profiles:
   default:
     type: cloud
     name: default
+    organization: <org-name>
     token: <api-token>
     metros:
       - name: <metro-name> # e.g. fra
