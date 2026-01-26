@@ -1,7 +1,7 @@
 $ unikraft instance list
 
 stdout:
-	METRO  NAME  STATE  IMAGE  ARGS  MEMORY  VCPUS  SERVICES  FQDN
+	METRO  NAME  STATE  IMAGE  ARGS  MEMORY  VCPUS  FQDN
 
 $ unikraft instance create --set name=test-$UNIQ_INST --set metro=test --set image=nginx:latest --set autostart=true --set resources.memory=128 --set resources.vcpus=1 --set service.services=443:8080/tls+http --set service.domains=name=$UNIQ_DOMAIN
 
@@ -28,8 +28,8 @@ stdout:
 $ unikraft instance list
 
 stdout:
-	METRO  NAME               STATE    IMAGE  ARGS  MEMORY  VCPUS  SERVICES  FQDN
-	test   test-<INST>  running  nginx  []    128     1                <DOMAIN>.unikraft.internal
+	METRO  NAME               STATE    IMAGE  ARGS  MEMORY  VCPUS  FQDN
+	test   test-<INST>  running  nginx        128     1      <DOMAIN>.unikraft.internal
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -156,4 +156,4 @@ $ unikraft instance delete test-$UNIQ_INST
 $ unikraft instance list
 
 stdout:
-	METRO  NAME  STATE  IMAGE  ARGS  MEMORY  VCPUS  SERVICES  FQDN
+	METRO  NAME  STATE  IMAGE  ARGS  MEMORY  VCPUS  FQDN

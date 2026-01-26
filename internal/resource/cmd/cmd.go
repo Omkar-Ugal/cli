@@ -304,7 +304,8 @@ func filterResources(resources []resource.Resource, filter filters.Filter) (filt
 				return "", false
 			}
 			// HACK: vtclean to remove any escape sequences from rendered output
-			return vtclean.Clean(fields[0].FormatString(), false), true
+			out, _ := fields[0].Render()
+			return vtclean.Clean(out, false), true
 		})) {
 			filtered = append(filtered, res)
 		}
