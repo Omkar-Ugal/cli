@@ -31,6 +31,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/version"
+	xkong "unikraft.com/cli/internal/x/kong"
 )
 
 type UnikraftCLI struct {
@@ -202,6 +203,7 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 				Title: kingkong.Underline("Subcommand flags") + ":",
 			},
 		}),
+		kong.NamedMapper("optional", xkong.Optional()),
 	)
 	return parser, err
 }
