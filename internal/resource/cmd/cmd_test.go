@@ -254,7 +254,7 @@ func TestGet(t *testing.T) {
 	assert.NotEmpty(t, fields)
 
 	var inspectOut bytes.Buffer
-	inspectCmd := &ResourceInspectCmd[resourcet.TestResource]{
+	inspectCmd := &ResourceGetCmd[resourcet.TestResource]{
 		Name: []string{"test1"},
 	}
 	err = inspectCmd.Run(ctx, testConfig(&inspectOut), sandbox)
@@ -267,7 +267,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("no_args", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
 			Name: []string{},
 		}
 		err := cmd.Run(ctx, testConfig(&out), sandbox)
@@ -276,7 +276,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("multiple", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
 			Name: []string{"test1", "test2"},
 		}
 		err := cmd.Run(ctx, testConfig(&out), sandbox)
@@ -291,7 +291,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("field", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Field: []string{"id", "url"},
@@ -318,7 +318,7 @@ func TestGet(t *testing.T) {
 
 	t.Run("filter", func(t *testing.T) {
 		var out bytes.Buffer
-		cmd := &ResourceInspectCmd[resourcet.TestResource]{
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
 			Name: []string{"test1"},
 			FormatOpts: FormatOpts{
 				Filter: []string{"id==id-test1"},

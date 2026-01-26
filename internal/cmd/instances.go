@@ -17,6 +17,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
 
@@ -613,11 +614,77 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 	return results, nil
 }
 
+func (Instance) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Inspect an instance by name or UUID",
+				Commands:    []string{"unikraft instance get demo-instance"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List instances across metros",
+				Commands:    []string{"unikraft instance list"},
+			},
+		},
+		cmd.CmdTypeCreate: {
+			{
+				Description: "Create a new instance",
+				Commands: []string{
+					`unikraft instance create \
+  --set name=demo-instance \
+  --set metro=fra \
+  --set image=nginx:latest \
+  --set autostart=true \
+  --set resources.memory=128 \
+  --set resources.vcpus=1`,
+				},
+			},
+		},
+		cmd.CmdTypeEdit: {
+			{
+				Description: "Resize instance memory",
+				Commands:    []string{"unikraft instance edit demo-instance --set resources.memory=256"},
+			},
+		},
+		cmd.CmdTypeDelete: {
+			{
+				Description: "Delete an instance by name or UUID",
+				Commands:    []string{"unikraft instance delete demo-instance"},
+			},
+		},
+	}
+}
+
 type InstancesLogsCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to fetch logs for."`
 
 	Tail   int  `help:"Number of lines to show from the end of the logs."`
 	Follow bool `short:"f" help:"Follow log output."`
+}
+
+func (cmd InstancesLogsCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Fetch logs from an instance",
+			Commands: []string{
+				"unikraft instance logs my-instance",
+			},
+		},
+		{
+			Description: "Fetch the last 100 lines of logs from an instance",
+			Commands: []string{
+				"unikraft instance logs my-instance --tail 100",
+			},
+		},
+		{
+			Description: "Follow logs from an instance in real-time",
+			Commands: []string{
+				"unikraft instance logs my-instance --follow",
+			},
+		},
+	}
 }
 
 func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error {
@@ -670,6 +737,17 @@ type InstancesStartCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to start."`
 }
 
+func (cmd InstancesStartCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Start an instance",
+			Commands: []string{
+				"unikraft instance start demo-instance",
+			},
+		},
+	}
+}
+
 func (c *InstancesStartCmd) Run(ctx context.Context) error {
 	cfg := config.FromContextOrDefault(ctx)
 
@@ -702,6 +780,29 @@ type InstancesStopCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to stop."`
 
 	StopOpts
+}
+
+func (cmd InstancesStopCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Stop an instance",
+			Commands: []string{
+				"unikraft instance stop demo-instance",
+			},
+		},
+		{
+			Description: "Stop with a drain timeout",
+			Commands: []string{
+				"unikraft instance stop demo-instance --drain-timeout 30000",
+			},
+		},
+		{
+			Description: "Force stop an instance",
+			Commands: []string{
+				"unikraft instance stop demo-instance --force",
+			},
+		},
+	}
 }
 
 func (c *InstancesStopCmd) Run(ctx context.Context) error {
@@ -738,6 +839,23 @@ type InstancesRestartCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to restart."`
 
 	StopOpts
+}
+
+func (cmd InstancesRestartCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Restart an instance",
+			Commands: []string{
+				"unikraft instance restart demo-instance",
+			},
+		},
+		{
+			Description: "Force restart an instance",
+			Commands: []string{
+				"unikraft instance restart demo-instance --force",
+			},
+		},
+	}
 }
 
 func (c *InstancesRestartCmd) Run(ctx context.Context) error {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
 
@@ -363,6 +364,47 @@ func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields [
 		return nil, err
 	}
 	return results[0], nil
+}
+
+func (ServiceGroup) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Inspect a service group by name or UUID",
+				Commands:    []string{"unikraft service get demo-service"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List all service groups",
+				Commands:    []string{"unikraft service list"},
+			},
+		},
+		cmd.CmdTypeCreate: {
+			{
+				Description: "Create a new service group",
+				Commands: []string{
+					`unikraft service create \
+  --set name=demo-service \
+  --set metro=fra \
+  --set domains=name=demo \
+  --set services=443:8080/tls+http`,
+				},
+			},
+		},
+		cmd.CmdTypeEdit: {
+			{
+				Description: "Add a new service port",
+				Commands:    []string{"unikraft service edit demo-service --add services=8443:8080/tls"},
+			},
+		},
+		cmd.CmdTypeDelete: {
+			{
+				Description: "Delete a service group by name or UUID",
+				Commands:    []string{"unikraft service delete demo-service"},
+			},
+		},
+	}
 }
 
 func (ServiceGroup) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateServiceGroupsRequestItem) {

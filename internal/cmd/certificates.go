@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
 
@@ -239,4 +240,44 @@ func (Certificate) Create(ctx context.Context, fields []resource.Field) ([]resou
 		return nil, err
 	}
 	return results, nil
+}
+
+func (Certificate) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Get a certificate by name or UUID",
+				Commands:    []string{"unikraft certificate get demo-cert"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List all certificates",
+				Commands:    []string{"unikraft certificate list"},
+			},
+		},
+		cmd.CmdTypeCreate: {
+			{
+				Description: "Create a new certificate",
+				Commands: []string{
+					`openssl req -x509 -newkey rsa:2048 -sha256 -days 365 -nodes \
+  -subj "/CN=demo.unikraft.dev" \
+  -keyout cert.key \
+  -out cert.pem`,
+					`unikraft certificate create \
+  --set name=demo-cert \
+  --set cn=demo.unikraft.dev. \
+  --set-file chain=cert.pem \
+  --set-file pkey=cert.key \
+  --set metro=fra`,
+				},
+			},
+		},
+		cmd.CmdTypeDelete: {
+			{
+				Description: "Delete a certificate by name or UUID",
+				Commands:    []string{"unikraft certificate delete demo-cert"},
+			},
+		},
+	}
 }

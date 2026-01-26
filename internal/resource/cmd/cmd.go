@@ -41,8 +41,8 @@ func (cmd ResourceCmd[R]) Underlying() resource.Resource {
 }
 
 type GettableResourceCmd[R resource.GettableResource] struct {
-	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
-	Wait ResourceWaitCmd[R]    `cmd:"" help:"Wait for ${names} to match a filter."`
+	Get  ResourceGetCmd[R]  `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+	Wait ResourceWaitCmd[R] `cmd:"" help:"Wait for ${names} to match a filter."`
 }
 type ListableResourceCmd[R resource.GettableListableResource] struct {
 	List ResourceListCmd[R] `cmd:"" help:"List ${names}." aliases:"ls"`
@@ -97,6 +97,14 @@ func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	}
 }
 
+func (cmd ResourceCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeNone] // top-level
+	}
+	return nil
+}
+
 type FormatOpts struct {
 	// FIXME: not able to pass values beginning with -
 	// https://github.com/alecthomas/kong/issues/290
@@ -115,6 +123,14 @@ type ResourceListCmd[R resource.GettableListableResource] struct {
 
 func (cmd ResourceListCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceListCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeList]
+	}
+	return nil
 }
 
 func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -155,18 +171,26 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	return render(cfg.Stdout)
 }
 
-type ResourceInspectCmd[R resource.GettableResource] struct {
+type ResourceGetCmd[R resource.GettableResource] struct {
 	Name  []string       `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
 	Watch *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
 
 	FormatOpts
 }
 
-func (cmd ResourceInspectCmd[R]) HelpSections() []kingkong.HelpSection {
+func (cmd ResourceGetCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
 }
 
-func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd ResourceGetCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeGet]
+	}
+	return nil
+}
+
+func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
@@ -207,6 +231,14 @@ type ResourceWaitCmd[R resource.GettableResource] struct {
 
 func (cmd ResourceWaitCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceWaitCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeWait]
+	}
+	return nil
 }
 
 func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -321,6 +353,14 @@ func (cmd ResourceRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
 }
 
+func (cmd ResourceRemoveCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeDelete]
+	}
+	return nil
+}
+
 func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
@@ -348,6 +388,14 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 
 func (cmd ResourceEditCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceEditCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeEdit]
+	}
+	return nil
 }
 
 func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
@@ -503,6 +551,14 @@ type ResourceCreateCmd[R resource.CreatableResource] struct {
 
 func (cmd ResourceCreateCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceCreateCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeCreate]
+	}
+	return nil
 }
 
 func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {

@@ -12,6 +12,7 @@ import (
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 )
 
@@ -72,6 +73,23 @@ func (Profile) List(ctx context.Context) ([]resource.Resource, error) {
 
 func (Profile) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
 	return getFromListable(ctx, Profile{}, keys)
+}
+
+func (Profile) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Inspect a profile by name",
+				Commands:    []string{"unikraft profile get default"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List all profiles",
+				Commands:    []string{"unikraft profile list"},
+			},
+		},
+	}
 }
 
 type UseCmd struct {

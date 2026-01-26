@@ -11,6 +11,7 @@ import (
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/x/kingkong"
 )
 
 type MetrosCmd struct {
@@ -65,4 +66,21 @@ func (Metro) List(ctx context.Context) ([]resource.Resource, error) {
 
 func (Metro) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
 	return getFromListable(ctx, Metro{}, keys)
+}
+
+func (Metro) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Inspect a metro by name",
+				Commands:    []string{"unikraft metro get fra"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List all metros",
+				Commands:    []string{"unikraft metro list"},
+			},
+		},
+	}
 }
