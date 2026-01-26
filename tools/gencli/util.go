@@ -15,6 +15,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	"unikraft.com/cli/internal/cmd"
+	"unikraft.com/x/kingkong"
 )
 
 // CreateParser creates a kong parser for documentation generation.
@@ -77,6 +78,36 @@ func SeeAlso(node *kong.Node) iter.Seq[*kong.Node] {
 			}
 		}
 	}
+}
+
+// ExamplesForNode returns examples for a command node if available.
+func ExamplesForNode(node *kong.Node) []kingkong.Example {
+	if node == nil || !node.Target.IsValid() || !node.Target.CanInterface() {
+		return nil
+	}
+	if ep, ok := node.Target.Interface().(kingkong.ExamplesProvider); ok {
+		return ep.Examples()
+	}
+	return nil
+}
+
+func formatExampleCommands(example kingkong.Example) string {
+	commands := make([]string, 0, len(example.Commands))
+	for _, cmd := range example.Commands {
+		commands = append(commands, strings.TrimRight(cmd, "\n"))
+	}
+	return strings.Join(commands, "\n")
+}
+
+func prefixLines(value, prefix string) string {
+	if value == "" {
+		return ""
+	}
+	lines := strings.Split(value, "\n")
+	for i, line := range lines {
+		lines[i] = prefix + line
+	}
+	return strings.Join(lines, "\n")
 }
 
 // CollectLocalFlags returns non-hidden flags defined on this node.

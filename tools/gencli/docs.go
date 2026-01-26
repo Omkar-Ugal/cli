@@ -76,6 +76,8 @@ func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 		fmt.Fprintf(buf, "```\n%s\n```\n\n", kingkong.Summary(node))
 	}
 
+	printDocsExamples(buf, node)
+
 	printDocsOptions(buf, node)
 
 	if target, ok := node.Target.Interface().(cmd.ResourceCmdInterface); ok {
@@ -135,6 +137,23 @@ func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 	err = w.Close()
 	w = nil
 	return err
+}
+
+func printDocsExamples(buf *bytes.Buffer, node *kong.Node) {
+	examples := ExamplesForNode(node)
+	if len(examples) == 0 {
+		return
+	}
+
+	buf.WriteString("## Examples\n\n")
+	for _, example := range examples {
+		if example.Description != "" {
+			buf.WriteString(example.Description + ":\n\n")
+		}
+		buf.WriteString("```bash\n")
+		buf.WriteString(formatExampleCommands(example))
+		buf.WriteString("\n```\n\n")
+	}
 }
 
 func printDocsOptions(buf *bytes.Buffer, node *kong.Node) {
