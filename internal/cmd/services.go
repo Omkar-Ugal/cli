@@ -14,6 +14,7 @@ import (
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/log"
+	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/mirror"
@@ -260,7 +261,7 @@ func (ServiceGroup) Delete(ctx context.Context, targets []resource.Resource) err
 	return err
 }
 
-func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	var req platform.CreateServiceGroupRequest
 	var metro string
 	for key, field := range resource.IterFields(fields) {
@@ -303,27 +304,34 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) (resour
 	if err != nil {
 		return nil, err
 	}
-	uuid, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (string, error) {
+	keys, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("creating service group")
 		resp, err := mc.CreateServiceGroup(ctx, req)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return *resp.Data.ServiceGroups[0].Uuid, nil
+		if len(resp.Data.ServiceGroups) == 0 {
+			return nil, fmt.Errorf("no service groups created")
+		}
+		created := make(multimetro.Keys, 0, len(resp.Data.ServiceGroups))
+		for _, group := range resp.Data.ServiceGroups {
+			key := multimetro.Key{
+				Metro: mc.Metro.Name,
+				UUID:  ptr.ZeroIfNil(group.Uuid),
+				Name:  ptr.ZeroIfNil(group.Name),
+			}
+			created = append(created, key)
+		}
+		return created, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	key := multimetro.Key{
-		Metro: metro,
-		UUID:  uuid,
-	}
-	results, err := ServiceGroup{}.Get(ctx, []string{key.String()})
+	results, err := ServiceGroup{}.Get(ctx, keys.Strings())
 	if err != nil {
 		return nil, err
 	}
-	return results[0], nil
+	return results, nil
 }
 
 func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {

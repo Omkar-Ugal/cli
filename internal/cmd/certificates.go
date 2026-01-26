@@ -12,6 +12,7 @@ import (
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/log"
+	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/mirror"
@@ -184,7 +185,7 @@ func (Certificate) Delete(ctx context.Context, targets []resource.Resource) erro
 	return err
 }
 
-func (Certificate) Create(ctx context.Context, fields []resource.Field) (resource.Resource, error) {
+func (Certificate) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	var req platform.CreateCertificateRequest
 	var metro string
 	for key, field := range resource.IterFields(fields) {
@@ -209,25 +210,32 @@ func (Certificate) Create(ctx context.Context, fields []resource.Field) (resourc
 	if err != nil {
 		return nil, err
 	}
-	uuid, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (string, error) {
+	keys, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("creating certificate")
 		resp, err := mc.CreateCertificate(ctx, req)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		return *resp.Data.Certificates[0].Uuid, nil
+		if len(resp.Data.Certificates) == 0 {
+			return nil, fmt.Errorf("no certificates created")
+		}
+		created := make(multimetro.Keys, 0, len(resp.Data.Certificates))
+		for _, certificate := range resp.Data.Certificates {
+			key := multimetro.Key{
+				Metro: mc.Metro.Name,
+				UUID:  ptr.ZeroIfNil(certificate.Uuid),
+				Name:  ptr.ZeroIfNil(certificate.Name),
+			}
+			created = append(created, key)
+		}
+		return created, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	key := multimetro.Key{
-		Metro: metro,
-		UUID:  uuid,
-	}
-	results, err := Certificate{}.Get(ctx, []string{key.String()})
+	results, err := Certificate{}.Get(ctx, keys.Strings())
 	if err != nil {
 		return nil, err
 	}
-	return results[0], nil
+	return results, nil
 }

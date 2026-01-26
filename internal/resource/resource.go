@@ -50,7 +50,7 @@ type EditableResource interface {
 
 type CreatableResource interface {
 	GettableResource
-	Create(ctx context.Context, fields []Field) (Resource, error)
+	Create(ctx context.Context, fields []Field) ([]Resource, error)
 }
 
 type DeletableResource interface {

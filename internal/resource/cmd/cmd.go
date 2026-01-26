@@ -568,9 +568,9 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 		return PrintPatches(cfg.Stdout, fields, true)
 	}
 
-	res, err := r.Create(ctx, fields)
+	resources, err := r.Create(ctx, fields)
 	if err != nil {
 		return err
 	}
-	return printKVFormatted(cfg.Stdout, nil, res)
+	return printKVFormatted(cfg.Stdout, nil, resources...)
 }
