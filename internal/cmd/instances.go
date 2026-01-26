@@ -603,7 +603,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) (resource.R
 }
 
 type InstancesLogsCmd struct {
-	Name []string `arg:"" predictor:"resource-key-instance" help:"Names of the instances to fetch logs for."`
+	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to fetch logs for."`
 
 	Tail   int  `help:"Number of lines to show from the end of the logs."`
 	Follow bool `short:"f" help:"Follow log output."`
@@ -656,7 +656,7 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error 
 }
 
 type InstancesStartCmd struct {
-	Name []string `arg:"" predictor:"resource-key-instance" help:"Names of the instances to start."`
+	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to start."`
 }
 
 func (c *InstancesStartCmd) Run(ctx context.Context) error {
@@ -688,7 +688,7 @@ func (c *InstancesStartCmd) Run(ctx context.Context) error {
 }
 
 type InstancesStopCmd struct {
-	Name []string `arg:"" predictor:"resource-key-instance" help:"Names of the instances to stop."`
+	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to stop."`
 
 	StopOpts
 }
@@ -724,7 +724,7 @@ func (c *InstancesStopCmd) Run(ctx context.Context) error {
 }
 
 type InstancesRestartCmd struct {
-	Name []string `arg:"" predictor:"resource-key-instance" help:"Names of the instances to restart."`
+	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to restart."`
 
 	StopOpts
 }
