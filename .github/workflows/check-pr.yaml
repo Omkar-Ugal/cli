@@ -6,6 +6,13 @@ on:
     branches: [staging]
 
 jobs:
-  pr-check:
-    uses: unikraft-cloud/x/.github/workflows/check-pr.yaml@prod-staging
+  check-pr:
+    # runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
+    - name: Run check-pr
+      uses: unikraft-cloud/x/.github/actions/check-pr@prod-staging
