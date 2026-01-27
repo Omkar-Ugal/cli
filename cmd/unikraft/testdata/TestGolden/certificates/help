@@ -1,0 +1,356 @@
+$ unikraft certificate --help
+
+stdout:
+	Usage:
+	  unikraft certificates <command> [flags]
+
+	Manage Unikraft Cloud certificates.
+
+	Commands:
+	  get, inspect, show
+	          Inspect a certificate.
+	  wait
+	          Wait for certificates to match a filter.
+	  list, ls
+	          List certificates.
+	  delete, rm, remove
+	          Remove a certificate.
+	  create
+	          Create a certificate.
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  common-name
+	  subject
+	  issuer
+	  serial-number
+	  state
+	  timestamps, timestamps.not-before, timestamps.not-after
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft certificate get --help
+
+stdout:
+	Usage:
+	  unikraft certificates get <name> ... [flags]
+
+	Inspect a certificate.
+
+	Arguments:
+	  <name> ...
+	          Names of the certificates to inspect.
+
+	Examples:
+	  # Get a certificate by name or UUID
+	  unikraft certificate get demo-cert
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  common-name
+	  subject
+	  issuer
+	  serial-number
+	  state
+	  timestamps, timestamps.not-before, timestamps.not-after
+
+	Flags:
+	  -w, --watch ($UNIKRAFT_WATCH)
+	          Watch for changes and refresh output.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft certificate list --help
+
+stdout:
+	Usage:
+	  unikraft certificates list [<name> ...] [flags]
+
+	List certificates.
+
+	Arguments:
+	  [<name> ...]
+	          Names of the certificates to list.
+
+	Examples:
+	  # List all certificates
+	  unikraft certificate list
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  common-name
+	  subject
+	  issuer
+	  serial-number
+	  state
+	  timestamps, timestamps.not-before, timestamps.not-after
+
+	Flags:
+	      --filter ($UNIKRAFT_FILTER)
+	          Filter output based on a field value (e.g. --filter state==running).
+	  -w, --watch ($UNIKRAFT_WATCH)
+	          Watch for changes and refresh output.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft certificate wait --help
+
+stdout:
+	Usage:
+	  unikraft certificates wait <name> ... [flags]
+
+	Wait for certificates to match a filter.
+
+	Arguments:
+	  <name> ...
+	          Names of the certificates to wait for.
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  common-name
+	  subject
+	  issuer
+	  serial-number
+	  state
+	  timestamps, timestamps.not-before, timestamps.not-after
+
+	Flags:
+	      --until ($UNIKRAFT_UNTIL)
+	          Filter expression to wait for (e.g. --until state==running).
+	      --interval ($UNIKRAFT_INTERVAL)
+	          Polling interval.
+	          [default: 2s]
+	      --timeout ($UNIKRAFT_TIMEOUT)
+	          Timeout before giving up.
+	          [default: 0]
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft certificate create --help
+
+stdout:
+	Usage:
+	  unikraft certificates create [flags]
+
+	Create a certificate.
+
+	Examples:
+	  # Create a new certificate
+	  openssl req -x509 -newkey rsa:2048 -sha256 -days 365 -nodes \
+	    -subj "/CN=demo.unikraft.dev" \
+	    -keyout cert.key \
+	    -out cert.pem
+	  unikraft certificate create \
+	    --set name=demo-cert \
+	    --set cn=demo.unikraft.dev. \
+	    --set-file chain=cert.pem \
+	    --set-file pkey=cert.key \
+	    --set metro=fra
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  common-name
+	  subject
+	  issuer
+	  serial-number
+	  state
+	  timestamps, timestamps.not-before, timestamps.not-after
+
+	Flags:
+	      --set ($UNIKRAFT_SET)
+	          Key-value pairs for creating the certificate.
+	      --set-file ($UNIKRAFT_SET_FILE)
+	          Files containing key-value pairs for creating the certificate.
+	  -e, --visual ($UNIKRAFT_VISUAL)
+	          Open an editor to set fields visually.
+	      --dry-run ($UNIKRAFT_DRY_RUN)
+	          Print patches without applying them.
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+$ unikraft certificate delete --help
+
+stdout:
+	Usage:
+	  unikraft certificates delete <name> ... [flags]
+
+	Remove a certificate.
+
+	Arguments:
+	  <name> ...
+	          Names of the certificates to remove.
+
+	Examples:
+	  # Delete a certificate by name or UUID
+	  unikraft certificate delete demo-cert
+
+	Fields:
+	  metro
+	  name
+	  uuid
+	  common-name
+	  subject
+	  issuer
+	  serial-number
+	  state
+	  timestamps, timestamps.not-before, timestamps.not-after
+
+	Flags:
+	  -f, --field ($UNIKRAFT_FIELD)
+	          Specify which fields to include in the output.
+	  -o, --output ($UNIKRAFT_OUTPUT)
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.

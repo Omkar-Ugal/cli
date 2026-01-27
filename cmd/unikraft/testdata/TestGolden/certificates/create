@@ -68,3 +68,7 @@ stdout:
 	  not-after:   YYYY-MM-DD HH:MM:SS +0000 UTC
 
 $ unikraft certificate delete test-$UNIQ_CERT_A test-$UNIQ_CERT_B
+
+stdout:
+	test/12345678-1234-1234-1234-123456789abc
+	test/12345678-1234-1234-1234-123456789abc

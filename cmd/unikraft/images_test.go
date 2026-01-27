@@ -9,7 +9,17 @@ import "regexp"
 
 var imagesTestCases = []testCase{
 	{
-		name:   "images",
+		name: "images/help",
+		commands: []command{
+			{args: []string{unikraftCmd, "image", "--help"}},
+			{args: []string{unikraftCmd, "image", "get", "--help"}},
+			{args: []string{unikraftCmd, "image", "list", "--help"}},
+			{args: []string{unikraftCmd, "image", "wait", "--help"}},
+			{args: []string{unikraftCmd, "image", "copy", "--help"}},
+		},
+	},
+	{
+		name:   "images/inspect",
 		online: true,
 		commands: []command{
 			{args: []string{unikraftCmd, "image", "list", "--filter", `ref~="/official/nginx:latest$"`}},

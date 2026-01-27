@@ -229,3 +229,7 @@ stdout:
 	    uuid:      12345678-1234-1234-1234-123456789abc
 
 $ unikraft service delete test-$UNIQ_SVC_A test-$UNIQ_SVC_B
+
+stdout:
+	test/12345678-1234-1234-1234-123456789abc
+	test/12345678-1234-1234-1234-123456789abc

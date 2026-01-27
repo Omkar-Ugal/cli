@@ -107,15 +107,15 @@ func (cmd ResourceCmd[R]) Examples() []kingkong.Example {
 type FormatOpts struct {
 	// FIXME: not able to pass values beginning with -
 	// https://github.com/alecthomas/kong/issues/290
-	Field  []string `short:"f" help:"Specify which fields to include in the output."`
-	Filter []string `help:"Filter output based on a field value (e.g. --filter status==active)." sep:"none"`
+	Field []string `short:"f" help:"Specify which fields to include in the output."`
 
 	Output Printer `short:"o" help:"Output format. One of: kv, table, json, yaml, raw, quiet, template."`
 }
 
 type ResourceListCmd[R resource.GettableListableResource] struct {
-	Name  []string       `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
-	Watch *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
+	Name   []string       `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
+	Filter []string       `help:"Filter output based on a field value (e.g. --filter state==running)." sep:"none"`
+	Watch  *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
 
 	FormatOpts
 }
@@ -158,7 +158,7 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		if err != nil {
 			return err
 		}
-		return cmd.FormatOpts.Output.
+		return cmd.Output.
 			WithDefault(PrinterTypeTable).
 			Print(out, cmd.Field, empty, resources...)
 	}
@@ -190,12 +190,6 @@ func (cmd ResourceGetCmd[R]) Examples() []kingkong.Example {
 }
 
 func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
-	filter, err := filters.ParseAll(cmd.Filter...)
-	if err != nil {
-		return err
-	}
-	ctx = resource.WithFilter(ctx, filter)
-
 	var empty R
 	r := sandbox.WrapGettable(empty)
 
@@ -204,11 +198,7 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandb
 		if err != nil {
 			return err
 		}
-		resources, err = filterResources(resources, filter)
-		if err != nil {
-			return err
-		}
-		return cmd.FormatOpts.Output.
+		return cmd.Output.
 			WithDefault(PrinterTypeKeyValue).
 			Print(out, cmd.Field, empty, resources...)
 	}
@@ -226,6 +216,8 @@ type ResourceWaitCmd[R resource.GettableResource] struct {
 
 	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
 	Timeout  time.Duration `long:"timeout" default:"0" help:"Timeout before giving up."`
+
+	FormatOpts
 }
 
 func (cmd ResourceWaitCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -274,10 +266,13 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 			return err
 		}
 		if len(filtered) == len(resources) {
-			log.G(ctx).Info().
+			log.G(ctx).Debug().
 				Strs("resources", cmd.Name).
 				Msg("all resources match the specified conditions")
-			return nil
+
+			return cmd.Output.
+				WithDefault(PrinterTypeKeyValue).
+				Print(cfg.Stdout, cmd.Field, empty, resources...)
 		}
 		log.G(ctx).Debug().
 			Strs("resources", cmd.Name).
@@ -346,6 +341,8 @@ func filterResources(resources []resource.Resource, filter filters.Filter) (filt
 
 type ResourceRemoveCmd[R resource.DeletableResource] struct {
 	Name []string `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to remove."`
+
+	FormatOpts
 }
 
 func (cmd ResourceRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -360,14 +357,22 @@ func (cmd ResourceRemoveCmd[R]) Examples() []kingkong.Example {
 	return nil
 }
 
-func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sandbox) error {
+func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
 	resources, err := r.Get(ctx, cmd.Name)
 	if err != nil {
 		return err
 	}
-	return r.Delete(ctx, resources)
+
+	err = r.Delete(ctx, resources)
+	if err != nil {
+		return err
+	}
+
+	return cmd.Output.
+		WithDefault(PrinterTypeQuiet).
+		Print(cfg.Stdout, cmd.Field, empty, resources...)
 }
 
 type ResourceEditCmd[R resource.EditableResource] struct {
@@ -383,6 +388,8 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
+
+	FormatOpts
 }
 
 func (cmd ResourceEditCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -532,7 +539,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		}
 		updated = []resource.Resource{result}
 	}
-	return Diff(cfg.Stdout, []resource.Resource{res}, updated)
+	return Diff(cfg.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
 }
 
 type ResourceCreateCmd[R resource.CreatableResource] struct {
@@ -542,6 +549,8 @@ type ResourceCreateCmd[R resource.CreatableResource] struct {
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
+
+	FormatOpts
 }
 
 func (cmd ResourceCreateCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -618,5 +627,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 	if err != nil {
 		return err
 	}
-	return printKVFormatted(cfg.Stdout, nil, resources...)
+	return cmd.Output.
+		WithDefault(PrinterTypeKeyValue).
+		Print(cfg.Stdout, cmd.Field, empty, resources...)
 }

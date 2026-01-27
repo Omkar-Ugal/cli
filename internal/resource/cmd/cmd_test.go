@@ -110,9 +110,7 @@ func TestList(t *testing.T) {
 	t.Run("filter", func(t *testing.T) {
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
-			FormatOpts: FormatOpts{
-				Filter: []string{"name==test1"},
-			},
+			Filter: []string{"name==test1"},
 		}
 		err := cmd.Run(ctx, testConfig(&out), sandbox)
 		require.NoError(t, err)
@@ -148,7 +146,7 @@ func TestListOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		err = cmd.Run(ctx, testConfig(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -315,30 +313,36 @@ func TestGet(t *testing.T) {
 		assert.Contains(t, output, "id-test2")
 		assert.Contains(t, output, "https://example.org")
 	})
+}
 
-	t.Run("filter", func(t *testing.T) {
+func TestGetOutput(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	runInspect := func(t *testing.T, printer Printer) string {
+		t.Helper()
 		var out bytes.Buffer
 		cmd := &ResourceGetCmd[resourcet.TestResource]{
-			Name: []string{"test1"},
+			Name: []string{"test1", "test2"},
 			FormatOpts: FormatOpts{
-				Filter: []string{"id==id-test1"},
+				Output: printer,
 			},
 		}
-		err := cmd.Run(ctx, testConfig(&out), sandbox)
-		require.NoError(t, err)
-
-		output := out.String()
-		assert.Contains(t, output, "test1")
-
-		out.Reset()
-		cmd.Name = []string{"test1", "test2"}
 		err = cmd.Run(ctx, testConfig(&out), sandbox)
 		require.NoError(t, err)
+		return out.String()
+	}
 
-		output = out.String()
-		assert.Contains(t, output, "test1")
-		assert.NotContains(t, output, "test2")
+	t.Run("quiet", func(t *testing.T) {
+		output := runInspect(t, Printer{Type: PrinterTypeQuiet})
+		assert.Equal(t, "test1\ntest2\n", output)
 	})
+
+	// Other formats are covered in TestListOutput.
 }
 
 func TestWait(t *testing.T) {
@@ -385,6 +389,43 @@ func TestWait(t *testing.T) {
 	})
 }
 
+func TestWaitOutput(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	for key, res := range resourcet.TestStore {
+		res.State = "ready"
+		resourcet.TestStore[key] = res
+	}
+
+	runWait := func(t *testing.T, printer Printer) string {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceWaitCmd[resourcet.TestResource]{
+			Name:     []string{"test1", "test2"},
+			Until:    []string{"state==ready"},
+			Interval: 10 * time.Millisecond,
+			FormatOpts: FormatOpts{
+				Output: printer,
+			},
+		}
+		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	t.Run("quiet", func(t *testing.T) {
+		output := runWait(t, Printer{Type: PrinterTypeQuiet})
+		assert.Equal(t, "test1\ntest2\n", output)
+	})
+
+	// Other formats are covered in TestListOutput.
+}
+
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
 
@@ -417,6 +458,37 @@ func TestCreate(t *testing.T) {
 	assert.Equal(t, 100, created.Settings.X)
 	assert.Equal(t, "created", created.Settings.Y)
 	assert.Contains(t, resourcet.TestStore, "test-new")
+}
+
+func TestCreateOutput(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+	resourcet.TestStore = map[string]resourcet.TestResource{}
+
+	runCreate := func(t *testing.T, printer Printer) string {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceCreateCmd[resourcet.TestResource]{
+			Set: []map[string]string{
+				{"name": "test-output"},
+				{"settings.x": "100"},
+				{"settings.y": "created"},
+			},
+			FormatOpts: FormatOpts{
+				Output: printer,
+			},
+		}
+		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	t.Run("quiet", func(t *testing.T) {
+		output := runCreate(t, Printer{Type: PrinterTypeQuiet})
+		assert.Equal(t, "test-output\n", output)
+	})
+
+	// Other formats are covered in TestListOutput.
 }
 
 func TestCreateDryRun(t *testing.T) {
@@ -553,6 +625,50 @@ func TestEdit(t *testing.T) {
 	assert.Equal(t, "modified", stored.Settings.Y)
 }
 
+func TestEditOutput(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	editStore := map[string]resourcet.TestResource{
+		"test-edit": {
+			ID:   "id-edit",
+			Name: "test-edit",
+			URL:  "https://example.com",
+			Settings: resourcet.TestSettings{
+				X: 10,
+				Y: "original",
+			},
+		},
+	}
+	cloned, err := copystructure.Copy(editStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	runEdit := func(t *testing.T, printer Printer) string {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceEditCmd[resourcet.TestResource]{
+			Name: "test-edit",
+			Set: []map[string]string{
+				{"settings.x": "999"},
+			},
+			FormatOpts: FormatOpts{
+				Output: printer,
+			},
+		}
+		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	t.Run("quiet", func(t *testing.T) {
+		output := runEdit(t, Printer{Type: PrinterTypeQuiet})
+		assert.Equal(t, "test-edit\n", output)
+	})
+
+	// Other formats are covered in TestListOutput.
+}
+
 func TestEditDryRun(t *testing.T) {
 	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
@@ -656,6 +772,45 @@ func TestDelete(t *testing.T) {
 	resources, err = empty.Get(ctx, []string{"test-delete"})
 	require.NoError(t, err)
 	assert.Empty(t, resources)
+}
+
+func TestRemoveOutput(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	runRemove := func(t *testing.T, printer Printer) string {
+		t.Helper()
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		var out bytes.Buffer
+		cmd := &ResourceRemoveCmd[resourcet.TestResource]{
+			Name: []string{"test1", "test2"},
+			FormatOpts: FormatOpts{
+				Output: printer,
+			},
+		}
+		err = cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	t.Run("quiet", func(t *testing.T) {
+		output := runRemove(t, Printer{Type: PrinterTypeQuiet})
+		assert.Equal(t, "test1\ntest2\n", output)
+	})
+
+	t.Run("kv", func(t *testing.T) {
+		output := runRemove(t, Printer{Type: PrinterTypeKeyValue})
+		assert.Contains(t, output, "name:")
+		assert.Contains(t, output, "id:")
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "id-test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	// Other formats are covered in TestListOutput.
 }
 
 func tempFile(t *testing.T, contents string) string {
