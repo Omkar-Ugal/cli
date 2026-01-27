@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/kingkong"
@@ -27,6 +28,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
@@ -124,19 +126,27 @@ type Instance struct {
 type InstanceVolume struct {
 	UUID     string `mirror:"uuid" json:"uuid,omitempty" field:",long"`
 	Name     string `mirror:"name" json:"name,omitempty" field:",long"`
-	SizeMB   int64  `json:"size_mb,omitempty"`
 	At       string `mirror:"at" json:"at" field:",long"`
 	Readonly bool   `mirror:"readonly" json:"readonly,omitempty" field:",long"`
+
+	// create-only field
+	Size types.SizeMebibytes `field:",invisible,embed" create:"set"`
 }
 
 func (v *InstanceVolume) MarshalText() ([]byte, error) {
-	parts := []string{cmp.Or(v.Name, v.UUID)}
-	if v.SizeMB > 0 {
-		parts = append(parts, strconv.FormatInt(v.SizeMB, 10)+"M")
+	parts := []string{
+		cmp.Or(v.Name, v.UUID),
+		v.At,
 	}
-	parts = append(parts, v.At)
 	if v.Readonly {
 		parts = append(parts, "ro")
+	}
+	if v.Size > 0 {
+		s, err := value.Format(v.Size)
+		if err != nil {
+			return nil, err
+		}
+		parts = append(parts, fmt.Sprintf("size=%s", s))
 	}
 	return []byte(strings.Join(parts, ":")), nil
 }
@@ -145,33 +155,45 @@ func (v *InstanceVolume) UnmarshalText(data []byte) error {
 	str := string(data)
 	parts := strings.Split(str, ":")
 	if len(parts) < 2 {
-		return fmt.Errorf("invalid volume format, expected NAME:AT[:ro] or UUID:AT[:ro] or NAME:SIZE:AT[:ro]")
+		return fmt.Errorf("invalid volume format, expected NAME:AT, got %q", str)
 	}
 
-	// Check if last part is "ro"
-	if len(parts) > 0 && parts[len(parts)-1] == "ro" {
-		v.Readonly = true
-		parts = parts[:len(parts)-1]
-	}
+	name, at, parts := parts[0], parts[1], parts[2:]
+	readonly := false
+	size := types.SizeMebibytes(0)
 
-	if len(parts) == 2 {
-		// Could be NAME:AT or UUID:AT
-		v.Name = parts[0]
-		v.UUID = parts[0]
-		v.At = parts[1]
-	} else if len(parts) == 3 {
-		// NAME:SIZE:AT
-		v.Name = parts[0]
-		sizeStr := strings.TrimSuffix(parts[1], "M")
-		size, err := strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid size: %w", err)
+	var err error
+	for _, part := range parts {
+		k, v, ok := strings.Cut(part, "=")
+		switch k {
+		case "ro":
+			if ok {
+				readonly, err = strconv.ParseBool(v)
+				if err != nil {
+					return err
+				}
+			} else {
+				readonly = true
+			}
+		case "size":
+			size, err = value.Parse[types.SizeMebibytes]([]string{v})
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("invalid volume option: %q", k)
 		}
-		v.SizeMB = size
-		v.At = parts[2]
-	} else {
-		return fmt.Errorf("invalid volume format")
 	}
+
+	if name == "" {
+		v.Size = size
+	} else if uuid.Validate(name) == nil {
+		v.UUID = name
+	} else {
+		v.Name = name
+	}
+	v.At = at
+	v.Readonly = readonly
 
 	return nil
 }
@@ -488,8 +510,8 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 				if vol.Name != "" {
 					reqVol.Name = &vol.Name
 				}
-				if vol.SizeMB > 0 {
-					reqVol.SizeMb = &vol.SizeMB
+				if vol.Size > 0 {
+					reqVol.SizeMb = ptr.ToPtr(int64(vol.Size))
 				}
 				if vol.Readonly {
 					reqVol.Readonly = &vol.Readonly
