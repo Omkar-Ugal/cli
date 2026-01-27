@@ -43,7 +43,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop
@@ -106,7 +107,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop
@@ -177,7 +179,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop
@@ -246,7 +249,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop
@@ -325,7 +329,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop
@@ -402,7 +407,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop
@@ -487,7 +493,8 @@ stdout:
 	  service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time
 	  timing
 	  restart
 	  stop

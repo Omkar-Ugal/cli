@@ -11,6 +11,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	xmaps "unikraft.com/cli/internal/x/maps"
 )
 
 func Parse[T any](input []string) (T, error) {
@@ -139,7 +141,10 @@ func parseReflect(input []string, value reflect.Value) error {
 		return nil
 	case reflect.Struct:
 		s := reflect.New(output.Type()).Elem()
+
+		notFound := make(map[string]struct{})
 		for _, input := range input {
+		process:
 			for item := range strings.SplitSeq(input, ",") {
 				item = strings.TrimSpace(item)
 				if item == "" {
@@ -158,9 +163,14 @@ func parseReflect(input []string, value reflect.Value) error {
 						if err != nil {
 							return err
 						}
+						continue process
 					}
 				}
+				notFound[k] = struct{}{}
 			}
+		}
+		if len(notFound) > 0 {
+			return fmt.Errorf("unknown fields: %v", xmaps.OrderedKeys(notFound))
 		}
 		output.Set(s)
 		return nil
