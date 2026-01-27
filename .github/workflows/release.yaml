@@ -106,6 +106,7 @@ jobs:
         # Debian
         DISTROS+=("bullseye")
         DISTROS+=("bookworm")
+        DISTROS+=("trixie")
         # Ubuntu
         DISTROS+=("jammy")
         DISTROS+=("lunar")
