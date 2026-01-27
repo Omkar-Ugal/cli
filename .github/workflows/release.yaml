@@ -66,24 +66,28 @@ jobs:
           TAG=$(make --no-print-directory last-version)
         fi
 
+        YTT_DEB_RELEASE=""
+        YTT_DEB_METADATA="$(git rev-parse --short HEAD)"
+
         if [[ "${TAG}" == *"staging"* ]]; then
           YTT_PRERELEASE=true
           YTT_DEB_EPOCH=1
           YTT_DEB_PRERELEASE=$(echo "${TAG}" | awk -F'staging\\.' '{print $2}')
+          NEXT_STABLE=$(make next-stable)
+          YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_STABLE}~${DEB_PRERELEASE}+${DEB_METADATA}"
         else
           YTT_PRERELEASE=false
           YTT_DEB_EPOCH=5
           YTT_DEB_PRERELEASE=""
+          YTT_DEB_PRERELEASE_VERSION=""
         fi
-
-        YTT_DEB_METADATA="$(git rev-parse --short HEAD)"
-        YTT_DEB_RELEASE=""
 
         export YTT_PRERELEASE
         export YTT_DEB_EPOCH
         export YTT_DEB_PRERELEASE
         export YTT_DEB_METADATA
         export YTT_DEB_RELEASE
+        export YTT_DEB_PRERELEASE_VERSION
         make goreleaser-yaml
 
     - name: Run GoReleaser

@@ -63,7 +63,7 @@ release:
 
     # Update and install
     sudo apt-get update
-    sudo apt-get install unikraft-cli=(@= "{}:{}~{}+{}".format(getattr(data.values, "DEB_EPOCH", "1"), "{{ .Version }}", getattr(data.values, "DEB_PRERELEASE", ""), getattr(data.values, "DEB_METADATA", "")) @)
+    sudo apt-get install unikraft-cli=(@= "{}".format(getattr(data.values, "YTT_DEB_PRERELEASE_VERSION", "")) @)
     ```
   #@ else:
   #@yaml/text-templated-strings
