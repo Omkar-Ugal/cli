@@ -156,7 +156,7 @@ Name:ExampleApp
 
 func TestMultipleSeparators(t *testing.T) {
 	var buf bytes.Buffer
-	w := KeyValueWriter(&buf, WithSeparator("", ":", "=>"))
+	w := KeyValueWriter(&buf, WithSeparator(":", "=>"))
 
 	input := `
 Name: ExampleApp
@@ -199,6 +199,25 @@ Name     : ExampleApp
 Version => 1.0.0
 Owner    : Example Org
 Type    => Service
+	`
+	clean := vtclean.Clean(buf.String(), false)
+	require.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(clean))
+}
+
+func TestAlignSeparatorsWithSpacePrefix(t *testing.T) {
+	var buf bytes.Buffer
+	w := KeyValueWriter(&buf, WithSeparator(":=", "+=", "-="), WithAlignedSeparator())
+
+	input := `
+size := 30MiB
+	`
+	_, err := w.Write([]byte(strings.TrimSpace(input)))
+	require.NoError(t, err)
+	err = w.Flush()
+	require.NoError(t, err)
+
+	expected := `
+size := 30MiB
 	`
 	clean := vtclean.Clean(buf.String(), false)
 	require.Equal(t, strings.TrimSpace(expected), strings.TrimSpace(clean))

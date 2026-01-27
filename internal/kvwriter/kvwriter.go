@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"unicode"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -114,9 +115,11 @@ func (b *keyValueWriter) splitLine(line []byte) (cell, bool) {
 		if len(value) != 0 && !slices.Contains([]byte(" \n"), value[0]) {
 			continue
 		}
+		key = bytes.TrimRightFunc(key, unicode.IsSpace)
+		cleankey := []byte(vtclean.Clean(string(key), false))
 		return cell{
 			key:      key,
-			cleankey: []byte(vtclean.Clean(string(key), false)),
+			cleankey: cleankey,
 			value:    bytes.TrimSpace(value),
 			split:    splitBytes,
 		}, true
