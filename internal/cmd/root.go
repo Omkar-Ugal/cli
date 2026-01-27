@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -33,6 +32,7 @@ import (
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/version"
 	xkong "unikraft.com/cli/internal/x/kong"
+	xmaps "unikraft.com/cli/internal/x/maps"
 )
 
 type UnikraftCLI struct {
@@ -134,7 +134,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		return nil, nil, nil, jujuerrors.Annotate(err, "loading sandbox from environment")
 	}
 	if sandbox != nil {
-		sandboxed := slices.Collect(maps.Keys(sandbox.Keys))
+		sandboxed := xmaps.OrderedKeys(sandbox.Keys)
 		slices.Sort(sandboxed)
 		log.G(cli.Context).Debug().
 			Str("path", sandbox.Path).

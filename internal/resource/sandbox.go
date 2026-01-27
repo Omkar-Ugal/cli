@@ -10,12 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"slices"
 	"strings"
 
 	"unikraft.com/x/log"
+
+	xmaps "unikraft.com/cli/internal/x/maps"
 )
 
 // Sandbox represents a testing sandbox for resources. Resources created in the
@@ -90,7 +91,7 @@ func (s *Sandbox) Save() error {
 
 	keys := make(map[string][]string, len(s.Keys))
 	for rtype, rkeys := range s.Keys {
-		keys[rtype] = slices.Collect(maps.Keys(rkeys))
+		keys[rtype] = xmaps.OrderedKeys(rkeys)
 	}
 
 	enc := json.NewEncoder(f)
@@ -122,7 +123,7 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 			continue
 		}
 
-		targets := slices.Collect(maps.Keys(s.Keys[name]))
+		targets := xmaps.OrderedKeys(s.Keys[name])
 		if len(targets) == 0 {
 			log.G(ctx).Debug().
 				Str("resource", name).
