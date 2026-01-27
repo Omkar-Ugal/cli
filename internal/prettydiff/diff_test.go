@@ -143,3 +143,29 @@ func TestDiffPrettyText_InsertBlockBeforeSimilarPrefix(t *testing.T) {
 		"    vcpus:      1",
 	}, strings.Split(strings.TrimSuffix(clean, "\n"), "\n"))
 }
+
+func TestDiffPrettyText_EmptyLinesHandling(t *testing.T) {
+	dmp := diffmatchpatch.New()
+	before := strings.Join([]string{
+		"line1",
+		"",
+		"line3",
+	}, "\n")
+	after := strings.Join([]string{
+		"line1",
+		"line2",
+		"",
+		"line4",
+	}, "\n")
+
+	diffs := dmp.DiffMain(before, after, false)
+	result := Render(diffs)
+	clean := vtclean.Clean(result, false)
+	require.Equal(t, []string{
+		"  line1",
+		"+ line2",
+		"  ",
+		"- line3",
+		"+ line4",
+	}, strings.Split(strings.TrimSuffix(clean, "\n"), "\n"))
+}

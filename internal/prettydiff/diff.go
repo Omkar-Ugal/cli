@@ -127,15 +127,13 @@ func flushLines(lines []line, oldLine, newLine *[]diffmatchpatch.Diff, oldEnded,
 			// diff segments can still be mixed even when the visible line text
 			// matches (e.g. insertions splitting shared prefixes), so we've had to
 			// compare text
-			if oldText != "" {
-				lines = append(lines, line{
-					op: diffmatchpatch.DiffEqual,
-					diffs: []diffmatchpatch.Diff{{
-						Type: diffmatchpatch.DiffEqual,
-						Text: oldText,
-					}},
-				})
-			}
+			lines = append(lines, line{
+				op: diffmatchpatch.DiffEqual,
+				diffs: []diffmatchpatch.Diff{{
+					Type: diffmatchpatch.DiffEqual,
+					Text: oldText,
+				}},
+			})
 			*oldLine = nil
 			*newLine = nil
 			return lines
