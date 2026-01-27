@@ -3,7 +3,7 @@ $ unikraft instance list
 stdout:
 	METRO  NAME  STATE  IMAGE  ARGS  MEMORY  VCPUS  FQDN
 
-$ unikraft instance create --set name=test-$UNIQ_INST --set metro=test --set image=nginx:latest --set autostart=true --set resources.memory=128 --set resources.vcpus=1 --set service.services=443:8080/tls+http --set service.domains=name=$UNIQ_DOMAIN
+$ unikraft instance create --set name=test-$UNIQ_INST --set metro=test --set image=nginx:latest --set runtime.env=A=1,B=2,C=3 --set autostart=true --set resources.memory=128 --set resources.vcpus=1 --set service.services=443:8080/tls+http --set service.domains=name=$UNIQ_DOMAIN
 
 stdout:
 	metro:         test
@@ -11,6 +11,11 @@ stdout:
 	uuid:          12345678-1234-1234-1234-123456789abc
 	state:         running
 	image:         nginx
+	runtime:
+	  env:
+	    A:         1
+	    B:         2
+	    C:         3
 	resources:
 	  memory:      128MiB
 	  vcpus:       1
@@ -39,6 +44,11 @@ stdout:
 	uuid:          12345678-1234-1234-1234-123456789abc
 	state:         running
 	image:         nginx
+	runtime:
+	  env:
+	    A:         1
+	    B:         2
+	    C:         3
 	resources:
 	  memory:      128MiB
 	  vcpus:       1
@@ -62,6 +72,11 @@ stdout:
 	- state:         running
 	+ state:         stopped
 	  image:         nginx
+	  runtime:
+	    env:
+	      A:         1
+	      B:         2
+	      C:         3
 	  resources:
 	    memory:      128MiB
 	    vcpus:       1
@@ -84,6 +99,11 @@ stdout:
 	uuid:          12345678-1234-1234-1234-123456789abc
 	state:         stopped
 	image:         nginx
+	runtime:
+	  env:
+	    A:         1
+	    B:         2
+	    C:         3
 	resources:
 	  memory:      128MiB
 	  vcpus:       1
@@ -107,6 +127,11 @@ stdout:
 	- state:         stopped
 	+ state:         running
 	  image:         nginx
+	  runtime:
+	    env:
+	      A:         1
+	      B:         2
+	      C:         3
 	  resources:
 	    memory:      128MiB
 	    vcpus:       1
@@ -129,6 +154,11 @@ stdout:
 	uuid:          12345678-1234-1234-1234-123456789abc
 	state:         running
 	image:         nginx
+	runtime:
+	  env:
+	    A:         1
+	    B:         2
+	    C:         3
 	resources:
 	  memory:      128MiB
 	  vcpus:       1
