@@ -57,10 +57,10 @@ stdout:
 	Run "unikraft <command> --help" for more information on a command.
 
 stderr:
-	HH:MM ERR  
-	HH:MM ERR error:
-	HH:MM ERR   parsing arguments: expected one of "completion", "login", "logout", "profile", "run", ...
-	HH:MM ERR  
+	│  
+	│ error:
+	│   parsing arguments: expected one of "completion", "login", "logout", "profile", "run", ...
+	│  
 	exit status 1
 
 exit code: 1

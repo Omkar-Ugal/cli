@@ -28,6 +28,7 @@ import (
 
 	"unikraft.com/cli/internal/cmd/login"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/logfmt"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/version"
@@ -55,7 +56,13 @@ type UnikraftCLI struct {
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
-	cli := UnikraftCLI{}
+	cli := UnikraftCLI{
+		Config: config.Config{
+			Stdin:  stdin,
+			Stdout: stdout,
+			Stderr: stderr,
+		},
+	}
 
 	parser, err := NewParser(&cli)
 	if err != nil {
@@ -93,9 +100,6 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	}
 
 	cli.Context = ctx
-	cli.Stdin = stdin
-	cli.Stdout = stdout
-	cli.Stderr = stderr
 
 	var level log.Level
 	switch cli.LogLevel.String() {
@@ -116,7 +120,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	default:
 		level = log.InfoLevel
 	}
-	cli.Context = log.WithLogger(cli.Context, log.New(stderr, cli.LogType, level))
+	cli.Context = log.WithLogger(cli.Context, logfmt.New(stderr, cli.LogType, level))
 	cli.Context = ctrdlog.WithLogger(cli.Context, logrus.NewEntry(log.ToLogrus(
 		log.G(cli.Context),
 		log.WithLogrusLevelCap(logrus.DebugLevel),
@@ -167,6 +171,16 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 	globalFlagGroup := kong.Group{
 		Key:   "flag-global",
 		Title: kingkong.Underline("Global flags") + ":",
+	}
+
+	// Replace the global logger getter with our own which leverages our own
+	// log formatter and configuration.
+	log.G = func(ctx context.Context) *log.Logger {
+		if v, ok := ctx.Value(log.ContextKey{}).(*log.Logger); ok {
+			return v
+		}
+
+		return logfmt.New(cli.Stderr, cli.LogType, cli.LogLevel)
 	}
 
 	configFile := filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)
