@@ -6,56 +6,29 @@
 package login
 
 import (
-	"context"
-	"os/exec"
-	"runtime"
-	"strings"
-
-	"tailscale.com/hostinfo"
-	"tailscale.com/util/dnsname"
-	"unikraft.com/cloud/sdk/controlplane"
-	"unikraft.com/x/log"
-	"unikraft.com/x/ptr"
-
 	"unikraft.com/cli/internal/version"
+	"unikraft.com/cloud/sdk/controlplane"
+	"unikraft.com/x/fingerprint"
 )
 
-func getFingerprint(ctx context.Context) controlplane.RequestSigninRequest {
-	host := hostinfo.New()
-	container, _ := host.Container.Get()
-
-	if runtime.GOOS == "darwin" {
-		var err error
-		host.OSVersion, err = getMacOSVersion()
-		if err != nil {
-			log.G(ctx).
-				Warn().
-				Err(err).
-				Msg("failed to get macOS version")
-		}
-	}
-
-	return controlplane.RequestSigninRequest{
-		Hostname:       ptr.ToPtr(dnsname.TrimCommonSuffixes(host.Hostname)),
-		Os:             &host.OS,
-		Container:      &container,
-		Distro:         &host.Distro,
-		DistroCodename: &host.DistroCodeName,
-		DistroVersion:  &host.DistroVersion,
-		CliVersion:     &version.Version,
-		Goarch:         ptr.ToPtr(runtime.GOARCH),
-		Goos:           ptr.ToPtr(runtime.GOOS),
-		GoVersion:      ptr.ToPtr(runtime.Version()),
-		OsVersion:      &host.OSVersion,
-	}
-}
-
-func getMacOSVersion() (string, error) {
-	cmd := exec.Command("sw_vers", "-productVersion")
-	output, err := cmd.Output()
+func getFingerprint() (controlplane.RequestSigninRequest, error) {
+	fp, err := fingerprint.New()
 	if err != nil {
-		return "", err
+		return controlplane.RequestSigninRequest{}, err
 	}
-	version := strings.TrimSpace(string(output))
-	return version, nil
+
+	req := controlplane.RequestSigninRequest{
+		Hostname:       &fp.Hostname,
+		Os:             &fp.Os,
+		OsVersion:      fp.OsVersion,
+		Container:      &fp.Container,
+		Distro:         fp.Distro,
+		DistroVersion:  fp.DistroVersion,
+		DistroCodename: fp.DistroCodename,
+		CliVersion:     &version.Version,
+		Goarch:         &fp.Goarch,
+		Goos:           &fp.Goos,
+		GoVersion:      fp.GoVersion,
+	}
+	return req, nil
 }

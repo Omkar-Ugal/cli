@@ -147,7 +147,11 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 
 	client := controlplane.NewClient(copts...)
 
-	signinResp, err := client.RequestSignin(ctx, getFingerprint(ctx))
+	req, err := getFingerprint()
+	if err != nil {
+		return nil, jujuerrors.Annotate(err, "getting fingerprint")
+	}
+	signinResp, err := client.RequestSignin(ctx, req)
 	if err != nil {
 		return nil, jujuerrors.Annotate(err, "signing in")
 	} else if signinResp.Data == nil {
