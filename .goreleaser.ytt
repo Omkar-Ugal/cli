@@ -69,7 +69,7 @@ release:
   #@yaml/text-templated-strings
   header: |
     # Unikraft CLI {{ .Tag }} ({{ .Date }})
-    > [!INFO]
+    > [!NOTE]
     >
     > This is a **stable** version of the Unikraft CLI.
 
