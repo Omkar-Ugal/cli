@@ -19,6 +19,7 @@ import (
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
+	"unikraft.com/cloud/sdk/platform"
 )
 
 type RunCmd struct {
@@ -186,11 +187,7 @@ func (c *RunCmd) runCreatePatches(env map[string]string, volumes []*InstanceVolu
 		patches["restart.policy"] = c.Restart
 	}
 	if scaleToZero != nil {
-		if scaleToZero.Enabled != nil {
-			patches["scale-to-zero.enabled"] = *scaleToZero.Enabled
-		} else {
-			patches["scale-to-zero.enabled"] = true
-		}
+		patches["scale-to-zero.policy"] = string(platform.InstanceScaleToZeroPolicyOn)
 		if scaleToZero.Policy != "" {
 			patches["scale-to-zero.policy"] = scaleToZero.Policy
 		}

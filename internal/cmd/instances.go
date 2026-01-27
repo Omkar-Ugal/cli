@@ -90,7 +90,7 @@ type Instance struct {
 		StoppedAt time.Time `mirror:"instance.stopped_at"`
 	}
 
-	ScaleToZero InstanceScaleToZero `field:",long,embed" mirror:"instance.scale_to_zero"`
+	ScaleToZero InstanceScaleToZero `field:",embed" mirror:"instance.scale_to_zero"`
 
 	Timing struct {
 		Uptime   types.DurationMS `mirror:"instance.uptime_ms"`
@@ -177,10 +177,10 @@ func (v *InstanceVolume) UnmarshalText(data []byte) error {
 }
 
 type InstanceScaleToZero struct {
-	Enabled      *bool  `mirror:"enabled" create:"set"`
-	Policy       string `mirror:"policy" create:"set"`
-	Stateful     bool   `mirror:"stateful" create:"set"`
-	CooldownTime int64  `mirror:"cooldown_time_ms" create:"set"`
+	Enabled      bool   `mirror:"enabled" field:",long"`
+	Policy       string `mirror:"policy" field:",long" create:"set"`
+	Stateful     bool   `mirror:"stateful" field:",long" create:"set"`
+	CooldownTime int64  `mirror:"cooldown_time_ms" field:",long" create:"set"`
 }
 
 func (Instance) Type() resource.Type {
@@ -459,12 +459,6 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "restart.policy":
 			policy := platform.CreateInstanceRequestRestartPolicy(field.Create.Set.(string))
 			req.RestartPolicy = &policy
-		case "scale-to-zero.enabled":
-			if req.ScaleToZero == nil {
-				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
-			}
-			enabled := field.Create.Set.(bool)
-			req.ScaleToZero.Enabled = &enabled
 		case "scale-to-zero.policy":
 			if req.ScaleToZero == nil {
 				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
