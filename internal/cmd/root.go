@@ -55,6 +55,35 @@ type UnikraftCLI struct {
 	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images"`
 }
 
+func (cli UnikraftCLI) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Login to Unikraft Cloud",
+			Commands: []string{
+				"unikraft login",
+			},
+		},
+		{
+			Description: "List instances across metros",
+			Commands: []string{
+				"unikraft instances list",
+			},
+		},
+		{
+			Description: "Deploy a new instance from an image",
+			Commands: []string{
+				"unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero policy=on nginx:latest",
+			},
+		},
+		{
+			Description: "Switch to a different profile",
+			Commands: []string{
+				"unikraft profile use my-other-profile",
+			},
+		},
+	}
+}
+
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
 	cli := UnikraftCLI{
 		Config: config.Config{

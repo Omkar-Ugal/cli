@@ -65,7 +65,7 @@ func TestExamples(t *testing.T) {
 					require.NoError(t, err)
 
 					ctx, err := parser.Parse(args)
-					require.NoError(t, err)
+					require.NoError(t, err, "failed to parse: %s", command)
 					require.NotNil(t, runnableNode(ctx), "example does not select a runnable command")
 				}
 			}
