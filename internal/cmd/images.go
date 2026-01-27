@@ -16,6 +16,7 @@ import (
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 
 	imagespec "unikraft.com/x/image-spec"
@@ -112,6 +113,27 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 	return resources, nil
 }
 
+func (Image) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Inspect an image by tag",
+				Commands:    []string{"unikraft image get nginx:latest"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List all images",
+				Commands:    []string{"unikraft image list"},
+			},
+			{
+				Description: "Filter images by reference",
+				Commands:    []string{`unikraft image list --filter 'ref~="/nginx"'`},
+			},
+		},
+	}
+}
+
 type ImageEntry struct {
 	MetroName string `mirror:"metro.name" field:"metro,short"`
 
@@ -149,6 +171,10 @@ func (i ImageEntry) Fields() ([]resource.Field, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (ImageEntry) Examples() map[cmd.CmdType][]kingkong.Example {
+	return Image{}.Examples()
 }
 
 func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
@@ -367,6 +393,29 @@ func imageRefToKey(metros []config.Metro, named reference.Named) multimetro.Key 
 type ImagesCopyCmd struct {
 	Source string `arg:"" help:"Source image reference."`
 	Dest   string `arg:"" help:"Destination image reference."`
+}
+
+func (cmd ImagesCopyCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Create a copy of an image",
+			Commands: []string{
+				"unikraft image copy index.unikraft.io/official/nginx:latest index.unikraft.io/my-user/my-nginx",
+			},
+		},
+		{
+			Description: "Upload a local image to a remote registry",
+			Commands: []string{
+				"unikraft image copy ./my-local-image.tar index.unikraft.io/my-user/my-image:1.0.0",
+			},
+		},
+		{
+			Description: "Download an image from a remote registry",
+			Commands: []string{
+				"unikraft image copy index.unikraft.io/official/redis:latest ./my-redis-image.tar",
+			},
+		},
+	}
 }
 
 func (cmd ImagesCopyCmd) Run(ctx context.Context) error {

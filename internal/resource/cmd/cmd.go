@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -41,8 +40,8 @@ func (cmd ResourceCmd[R]) Underlying() resource.Resource {
 }
 
 type GettableResourceCmd[R resource.GettableResource] struct {
-	Get  ResourceInspectCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
-	Wait ResourceWaitCmd[R]    `cmd:"" help:"Wait for ${names} to match a filter."`
+	Get  ResourceGetCmd[R]  `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+	Wait ResourceWaitCmd[R] `cmd:"" help:"Wait for ${names} to match a filter."`
 }
 type ListableResourceCmd[R resource.GettableListableResource] struct {
 	List ResourceListCmd[R] `cmd:"" help:"List ${names}." aliases:"ls"`
@@ -97,6 +96,14 @@ func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	}
 }
 
+func (cmd ResourceCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeNone] // top-level
+	}
+	return nil
+}
+
 type FormatOpts struct {
 	// FIXME: not able to pass values beginning with -
 	// https://github.com/alecthomas/kong/issues/290
@@ -115,6 +122,14 @@ type ResourceListCmd[R resource.GettableListableResource] struct {
 
 func (cmd ResourceListCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceListCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeList]
+	}
+	return nil
 }
 
 func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -155,18 +170,26 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 	return render(cfg.Stdout)
 }
 
-type ResourceInspectCmd[R resource.GettableResource] struct {
+type ResourceGetCmd[R resource.GettableResource] struct {
 	Name  []string       `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to inspect."`
 	Watch *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
 
 	FormatOpts
 }
 
-func (cmd ResourceInspectCmd[R]) HelpSections() []kingkong.HelpSection {
+func (cmd ResourceGetCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
 }
 
-func (cmd *ResourceInspectCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (cmd ResourceGetCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeGet]
+	}
+	return nil
+}
+
+func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
 	filter, err := filters.ParseAll(cmd.Filter...)
 	if err != nil {
 		return err
@@ -207,6 +230,14 @@ type ResourceWaitCmd[R resource.GettableResource] struct {
 
 func (cmd ResourceWaitCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceWaitCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeWait]
+	}
+	return nil
 }
 
 func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
@@ -321,6 +352,14 @@ func (cmd ResourceRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
 }
 
+func (cmd ResourceRemoveCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeDelete]
+	}
+	return nil
+}
+
 func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
@@ -338,9 +377,9 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
 	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
-	SetFile []map[string]*os.File `help:"Files containing key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
-	AddFile []map[string]*os.File `help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
-	DelFile []map[string]*os.File `help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
+	SetFile []map[string]string `help:"Files containing key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
+	AddFile []map[string]string `help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
+	DelFile []map[string]string `help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
@@ -348,6 +387,14 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 
 func (cmd ResourceEditCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceEditCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeEdit]
+	}
+	return nil
 }
 
 func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
@@ -372,7 +419,12 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.SetFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open set file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed to read set file for key %s: %w", k, err)
@@ -381,7 +433,12 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.AddFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open add file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed to read add file for key %s: %w", k, err)
@@ -390,10 +447,15 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.DelFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open del file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
-				return spec, fmt.Errorf("failed	 to read del file for key %s: %w", k, err)
+				return spec, fmt.Errorf("failed to read del file for key %s: %w", k, err)
 			}
 			spec.Del[k] = append(spec.Del[k], strings.TrimSpace(string(data)))
 		}
@@ -401,28 +463,11 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 	return spec, nil
 }
 
-func (cmd *ResourceEditCmd[R]) Close() error {
-	var err error
-	for _, m := range cmd.SetFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	for _, m := range cmd.AddFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	for _, m := range cmd.DelFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	return err
-}
-
 func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
-	defer cmd.Close()
+	spec, err := cmd.toPatchSpec()
+	if err != nil {
+		return err
+	}
 
 	var empty R
 	r := sandbox.WrapEditable(empty)
@@ -441,8 +486,6 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		return fmt.Errorf("ambiguous resource name: %s (found %v)", cmd.Name, keys)
 	}
 	res := resources[0]
-
-	spec, _ := cmd.toPatchSpec()
 
 	// Check for duplicate field paths across Set/Add/Del
 	allFields := make(map[string]int)
@@ -495,7 +538,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 type ResourceCreateCmd[R resource.CreatableResource] struct {
 	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
-	SetFile []map[string]*os.File `help:"Files containing key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
+	SetFile []map[string]string `help:"Files containing key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
@@ -503,6 +546,14 @@ type ResourceCreateCmd[R resource.CreatableResource] struct {
 
 func (cmd ResourceCreateCmd[R]) HelpSections() []kingkong.HelpSection {
 	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceCreateCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeCreate]
+	}
+	return nil
 }
 
 func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
@@ -516,7 +567,12 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		}
 	}
 	for _, m := range cmd.SetFile {
-		for k, f := range m {
+		for k, path := range m {
+			f, err := os.Open(path)
+			if err != nil {
+				return spec, fmt.Errorf("failed to open set file for key %s: %w", k, err)
+			}
+			defer f.Close()
 			data, err := io.ReadAll(f)
 			if err != nil {
 				return spec, fmt.Errorf("failed to read set file for key %s: %w", k, err)
@@ -527,28 +583,17 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 	return spec, nil
 }
 
-func (cmd *ResourceCreateCmd[R]) Close() error {
-	var err error
-	for _, m := range cmd.SetFile {
-		for _, f := range m {
-			err = errors.Join(err, f.Close())
-		}
-	}
-	return err
-}
-
 func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
-	defer cmd.Close()
+	spec, err := cmd.toPatchSpec()
+	if err != nil {
+		return err
+	}
 
 	var empty R
 	r := sandbox.WrapCreatable(empty)
 	fields, err := r.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
-	}
-	spec, err := cmd.toPatchSpec()
-	if err != nil {
-		return err
 	}
 	patched, err := patch.PatchedFields(fields, spec)
 	if err != nil {

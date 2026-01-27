@@ -349,8 +349,8 @@ unikraft.com/x/guesstermwidth v0.0.0-20260116231133-1da0081544af h1:cRrCU4yhPnWe
 unikraft.com/x/guesstermwidth v0.0.0-20260116231133-1da0081544af/go.mod h1:q3EH6bLqLAJ1PqZgHlCJPpvvP6scnjJJspBMyGQtMt4=
 unikraft.com/x/image-spec v0.0.0-20260122232605-1672b2b1f81e h1:zk6sff0WXp8sDGNs0gKK2U4TNbc64l9OuYuLsP9ybxM=
 unikraft.com/x/image-spec v0.0.0-20260122232605-1672b2b1f81e/go.mod h1:knuzG5cFGbvrfuBi7lrdDs2F+Y+58EFbDUDIpeOHpvY=
-unikraft.com/x/kingkong v0.0.0-20260116231133-1da0081544af h1:3BAUegqUkOw7/J9bd50mvehjs1ojpf78QpOX/KGhsQY=
-unikraft.com/x/kingkong v0.0.0-20260116231133-1da0081544af/go.mod h1:SdVWaa62x8E4wlnQo0BirnGxk/Ev3sN6uoOHwblOFPY=
+unikraft.com/x/kingkong v0.0.0-20260126094137-ab6e717e5679 h1:VJvYXTP5KlM3geEcosGKXzrOxbEa5AMQ1dspa2aDLp8=
+unikraft.com/x/kingkong v0.0.0-20260126094137-ab6e717e5679/go.mod h1:qADEVxmns2gEIJwMHGj/bV2/beKl5L1mlYOGv48W7ig=
 unikraft.com/x/log v0.0.0-20260123171130-d7f7471d74c0 h1:e0hA163wbp2qkPKFEPU66wpXkmM2bCYIb0ql9jimNf8=
 unikraft.com/x/log v0.0.0-20260123171130-d7f7471d74c0/go.mod h1:f/+5628rnWTnRaRrCDD9mOMf7OV5QmkGIgARlTu4XGE=
 unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af h1:qEEtHdfIKn1p4OGrekAxbPe+Kbd1Gi1g5S3iJgTRcWM=

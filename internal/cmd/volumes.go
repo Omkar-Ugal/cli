@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
 
@@ -266,6 +267,46 @@ func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resou
 		return nil, err
 	}
 	return results[0], nil
+}
+
+func (Volume) Examples() map[cmd.CmdType][]kingkong.Example {
+	return map[cmd.CmdType][]kingkong.Example{
+		cmd.CmdTypeGet: {
+			{
+				Description: "Inspect a volume by name or UUID",
+				Commands:    []string{"unikraft volume get demo-volume"},
+			},
+		},
+		cmd.CmdTypeList: {
+			{
+				Description: "List all volumes",
+				Commands:    []string{"unikraft volume list"},
+			},
+		},
+		cmd.CmdTypeCreate: {
+			{
+				Description: "Create a new volume",
+				Commands: []string{
+					`unikraft volume create \
+  --set name=demo-volume \
+  --set size=10 \
+  --set metro=fra`,
+				},
+			},
+		},
+		cmd.CmdTypeEdit: {
+			{
+				Description: "Resize a volume",
+				Commands:    []string{"unikraft volume edit demo-volume --set size=20"},
+			},
+		},
+		cmd.CmdTypeDelete: {
+			{
+				Description: "Delete a volume by name or UUID",
+				Commands:    []string{"unikraft volume delete demo-volume"},
+			},
+		},
+	}
 }
 
 func (Volume) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateVolumesRequestItem) {
