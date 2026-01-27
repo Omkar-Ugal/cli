@@ -18,6 +18,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
+	xkong "unikraft.com/cli/internal/x/kong"
 )
 
 type RunCmd struct {
@@ -27,10 +28,10 @@ type RunCmd struct {
 	Name  string `short:"n" help:"Name of the instance."`
 	Metro string `help:"Metro to deploy the instance in." required:"" placeholder:"metro"`
 
-	Env    []string `short:"e" help:"Set environment variables (KEY=VALUE)."`
-	Memory int      `short:"m" help:"Memory in MB."`
-	Volume []string `short:"v" help:"Attach a volume (NAME:AT[:ro] or NAME:SIZE:AT[:ro] or UUID:AT[:ro])."`
-	Vcpus  int      `help:"Number of vCPUs."`
+	Env    []string  `short:"e" help:"Set environment variables (KEY=VALUE)."`
+	Memory xkong.IEC `short:"m" help:"Memory in IEC format (e.g., 128MiB, 1GiB, 1G)."`
+	Volume []string  `short:"v" help:"Attach a volume (NAME:AT[:ro] or NAME:SIZE:AT[:ro] or UUID:AT[:ro])."`
+	Vcpus  int       `help:"Number of vCPUs."`
 
 	DryRun bool `help:"Show the create preview without executing."`
 
@@ -74,6 +75,11 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	}
 	scaleToZero, err := value.Parse[*InstanceScaleToZero](c.ScaleToZero)
 	if err != nil {
+		return err
+	}
+
+	// Validate memory value
+	if _, err := c.Memory.Value(); err != nil {
 		return err
 	}
 
@@ -174,8 +180,8 @@ func (c *RunCmd) runCreatePatches(env map[string]string, volumes []*InstanceVolu
 	if len(env) > 0 {
 		patches["runtime.env"] = env
 	}
-	if c.Memory > 0 {
-		patches["resources.memory"] = c.Memory
+	if mb, err := c.Memory.Value(); err == nil && mb > 0 {
+		patches["resources.memory"] = mb
 	}
 	if c.Vcpus > 0 {
 		patches["resources.vcpus"] = c.Vcpus
