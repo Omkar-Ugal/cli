@@ -128,13 +128,12 @@ jobs:
 
         DISTROS=()
         # Debian
-        DISTROS+=("bullseye")
-        DISTROS+=("bookworm")
-        DISTROS+=("trixie")
+        DISTROS+=("bullseye") # 11
+        DISTROS+=("bookworm") # 12
+        DISTROS+=("trixie")   # 13
         # Ubuntu
-        DISTROS+=("jammy")
-        DISTROS+=("lunar")
-        DISTROS+=("mantic")
+        DISTROS+=("jammy")  # 22.04
+        DISTROS+=("noble")  # 24.04
 
         for DISTRO in "${DISTROS[@]}"; do
           for DEB in dist/*.deb; do
