@@ -19,6 +19,7 @@ import (
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
+	xmaps "unikraft.com/cli/internal/x/maps"
 	"unikraft.com/cloud/sdk/platform"
 )
 
@@ -156,7 +157,11 @@ func (c *RunCmd) applyCreatePatches(fields []resource.Field, env map[string]stri
 		field.Create = nil
 		if value, ok := patches[path.String()]; ok {
 			field.Create = &resource.Patch{Set: value}
+			delete(patches, path.String())
 		}
+	}
+	if len(patches) > 0 {
+		return fmt.Errorf("unknown create patches: %v", xmaps.OrderedKeys(patches))
 	}
 
 	return nil
