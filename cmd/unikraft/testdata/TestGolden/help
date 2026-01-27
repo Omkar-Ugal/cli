@@ -31,6 +31,20 @@ stdout:
 	  images, image
 	          Manage Unikraft Cloud images.
 
+	Examples:
+	  # Login to Unikraft Cloud
+	  unikraft login
+
+	  # List instances across metros
+	  unikraft instances list
+
+	  # Deploy a new instance from an image
+	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
+	  policy=on nginx:latest
+
+	  # Switch to a different profile
+	  unikraft profile use my-other-profile
+
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.

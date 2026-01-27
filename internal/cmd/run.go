@@ -21,6 +21,7 @@ import (
 	"unikraft.com/cli/internal/types"
 	xmaps "unikraft.com/cli/internal/x/maps"
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/x/kingkong"
 )
 
 type RunCmd struct {
@@ -50,6 +51,71 @@ type RunCmd struct {
 	DryRun bool `help:"Show the create preview without executing."`
 
 	Follow bool `short:"f" help:"Follow instance logs after creation."`
+}
+
+func (RunCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Deploy a new instance and expose a HTTPS service",
+			Commands: []string{
+				"unikraft run --metro=sfo -p 443:8080/http+tls nginx:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance and expose a HTTPS service and redirect from HTTP to HTTPS",
+			Commands: []string{
+				"unikraft run --metro=sfo -p 443:8080/http+tls -p 80:443/http+redirect nginx:latest",
+			},
+		},
+		{
+			Description: "Deploy and tail logs from a new instance",
+			Commands: []string{
+				"unikraft run --metro=fra -f nginx:latest",
+			},
+		},
+		{
+			Description: "Preview instance creation without executing",
+			Commands: []string{
+				"unikraft run --metro=dal --dry-run nginx:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance with environment variables",
+			Commands: []string{
+				"unikraft run --metro=was -e KEY1=VALUE1 -e KEY2=VALUE2 my-app:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance with attached volume",
+			Commands: []string{
+				"unikraft run --metro=sin -v my-volume:/data my-app:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance with attached volume which is read-only",
+			Commands: []string{
+				"unikraft run --metro=sin -v my-volume:/data:ro my-app:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance with custom resource allocations",
+			Commands: []string{
+				"unikraft run --metro=sfo -m 512MiB --vcpus 2 my-app:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance with scale-to-zero enabled",
+			Commands: []string{
+				"unikraft run --metro=fra --scale-to-zero policy=on,cooldown-time=300 my-app:latest",
+			},
+		},
+		{
+			Description: "Deploy a new instance with specific restart policy",
+			Commands: []string{
+				"unikraft run --metro=dal --restart=on-failure my-app:latest",
+			},
+		},
+	}
 }
 
 func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
