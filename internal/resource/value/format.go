@@ -10,6 +10,7 @@ import (
 	"encoding"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -71,6 +72,7 @@ func Format(value any) (string, error) {
 			}
 			result = append(result, fmt.Sprintf("%s=%s", keyStr, valStr))
 		}
+		slices.Sort(result)
 		return strings.Join(result, ","), nil
 	case reflect.Struct:
 		var result []string

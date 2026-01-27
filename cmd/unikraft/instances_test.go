@@ -20,6 +20,7 @@ var instancesTestCases = []testCase{
 				"--set", "name=test-$UNIQ_INST",
 				"--set", "metro=" + defaultMetro,
 				"--set", "image=nginx:latest",
+				"--set", "runtime.env=A=1,B=2,C=3",
 				"--set", "autostart=true",
 				"--set", "resources.memory=128",
 				"--set", "resources.vcpus=1",

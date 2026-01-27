@@ -8,7 +8,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 
@@ -28,6 +27,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/types"
+	xmaps "unikraft.com/cli/internal/x/maps"
 	xreference "unikraft.com/cli/internal/x/reference"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
@@ -105,8 +105,8 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 				Cmd:          config.Config.Cmd,
 				Env:          config.Config.Env,
 				Platform:     platforms.Format(config.Platform),
-				ExposedPorts: slices.Collect(maps.Keys(config.Config.ExposedPorts)),
-				Volumes:      slices.Collect(maps.Keys(config.Config.Volumes)),
+				ExposedPorts: xmaps.OrderedKeys(config.Config.ExposedPorts),
+				Volumes:      xmaps.OrderedKeys(config.Config.Volumes),
 			},
 		}
 		resources = append(resources, &resource)

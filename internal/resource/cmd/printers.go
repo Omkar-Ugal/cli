@@ -177,15 +177,9 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 				line.WriteString(strings.Repeat("  ", indent))
 			}
 			line.WriteString(field.Name + ":")
-			if field.Value != nil {
-				line.WriteString(" ")
-				out, err := field.Render()
-				if err != nil {
-					return err
-				}
-				line.WriteString(out)
+			if err := printKVValue(&line, field.Value, nextIndent); err != nil {
+				return err
 			}
-			line.WriteString("\n")
 		}
 		if _, err := io.Copy(out, &line); err != nil {
 			return err
@@ -198,6 +192,38 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 		}
 	}
 	return nil
+}
+
+func printKVValue(out io.Writer, v any, indent int) error {
+	if v == nil {
+		_, err := fmt.Fprintln(out)
+		return err
+	}
+
+	// FIXME: should probably be more configurable per-field
+
+	switch v := v.(type) {
+	case map[string]string:
+		_, err := fmt.Fprintln(out)
+		if err != nil {
+			return err
+		}
+		var lines []string
+		for key, val := range v {
+			line := fmt.Sprintf("%s%s: %s\n", strings.Repeat("  ", indent), key, val)
+			lines = append(lines, line)
+		}
+		slices.Sort(lines)
+		_, err = io.WriteString(out, strings.Join(lines, ""))
+		return err
+	default:
+		line, err := value.Format(v)
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(out, " %s\n", line)
+		return err
+	}
 }
 
 func printTable(out io.Writer, fieldSpecs []string, base resource.Resource, resources ...resource.Resource) error {
