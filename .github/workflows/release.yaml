@@ -74,7 +74,7 @@ jobs:
         git tag -a "${VERSION}" -m "${VERSION}"
         git push -u origin "${VERSION}"
 
-    - name: Generate GoReleaser config (staging)
+    - name: Generate GoReleaser config
       shell: bash
       run: |
         TAG=$(make --no-print-directory last-version)
