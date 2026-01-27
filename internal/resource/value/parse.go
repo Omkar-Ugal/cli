@@ -61,6 +61,12 @@ func parseReflect(input []string, value reflect.Value) error {
 	if ok {
 		return text.UnmarshalText([]byte(input[0]))
 	}
+	if value.CanAddr() {
+		textPtr, ok := value.Addr().Interface().(encoding.TextUnmarshaler)
+		if ok {
+			return textPtr.UnmarshalText([]byte(input[0]))
+		}
+	}
 
 	switch output.Kind() {
 	case reflect.String:

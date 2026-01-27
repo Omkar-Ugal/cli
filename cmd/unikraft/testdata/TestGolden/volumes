@@ -10,14 +10,14 @@ stdout:
 	name:       test-<VOLUME>
 	uuid:       12345678-1234-1234-1234-123456789abc
 	state:      available
-	size:       10MB
+	size:       10MiB
 	persistent: true
 
 $ unikraft volume list
 
 stdout:
 	METRO  NAME               STATE      SIZE
-	test   test-<VOLUME>  available  10MB
+	test   test-<VOLUME>  available  10MiB
 
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
@@ -26,7 +26,7 @@ stdout:
 	name:       test-<VOLUME>
 	uuid:       12345678-1234-1234-1234-123456789abc
 	state:      available
-	size:       10MB
+	size:       10MiB
 	persistent: true
 
 $ unikraft volume edit test-$UNIQ_VOLUME --set size=20
@@ -36,15 +36,15 @@ stdout:
 	  name:       test-<VOLUME>
 	  uuid:       12345678-1234-1234-1234-123456789abc
 	  state:      available
-	- size:       10MB
-	+ size:       20MB
+	- size:       10MiB
+	+ size:       20MiB
 	  persistent: true
 
 $ unikraft volume list
 
 stdout:
 	METRO  NAME               STATE      SIZE
-	test   test-<VOLUME>  available  20MB
+	test   test-<VOLUME>  available  20MiB
 
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
@@ -53,7 +53,7 @@ stdout:
 	name:       test-<VOLUME>
 	uuid:       12345678-1234-1234-1234-123456789abc
 	state:      available
-	size:       20MB
+	size:       20MiB
 	persistent: true
 
 $ unikraft volume delete test-$UNIQ_VOLUME

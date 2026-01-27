@@ -13,7 +13,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/ettle/strcase"
 	"github.com/mitchellh/mapstructure"
@@ -266,8 +265,7 @@ func DecodeStruct(input any, output any) error {
 		ErrorUnused:      true,
 		Result:           output,
 		WeaklyTypedInput: true,
-		// TODO: more hooks probably needed
-		DecodeHook: mapstructure.StringToTimeHookFunc(time.RFC3339),
+		DecodeHook:       mapstructure.TextUnmarshallerHookFunc(),
 	}
 	decoder, err := mapstructure.NewDecoder(&config)
 	if err != nil {
