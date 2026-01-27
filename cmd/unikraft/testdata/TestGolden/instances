@@ -12,7 +12,7 @@ stdout:
 	state:         running
 	image:         nginx
 	resources:
-	  memory:      128
+	  memory:      128MiB
 	  vcpus:       1
 	service:
 	  uuid:        12345678-1234-1234-1234-123456789abc
@@ -29,7 +29,7 @@ $ unikraft instance list
 
 stdout:
 	METRO  NAME               STATE    IMAGE  ARGS  MEMORY  VCPUS  FQDN
-	test   test-<INST>  running  nginx        128     1      <DOMAIN>.unikraft.internal
+	test   test-<INST>  running  nginx        128MiB  1      <DOMAIN>.unikraft.internal
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -40,7 +40,7 @@ stdout:
 	state:         running
 	image:         nginx
 	resources:
-	  memory:      128
+	  memory:      128MiB
 	  vcpus:       1
 	service:
 	  uuid:        12345678-1234-1234-1234-123456789abc
@@ -63,7 +63,7 @@ stdout:
 	+ state:         stopped
 	  image:         nginx
 	  resources:
-	    memory:      128
+	    memory:      128MiB
 	    vcpus:       1
 	  service:
 	    uuid:        12345678-1234-1234-1234-123456789abc
@@ -85,7 +85,7 @@ stdout:
 	state:         stopped
 	image:         nginx
 	resources:
-	  memory:      128
+	  memory:      128MiB
 	  vcpus:       1
 	service:
 	  uuid:        12345678-1234-1234-1234-123456789abc
@@ -108,7 +108,7 @@ stdout:
 	+ state:         running
 	  image:         nginx
 	  resources:
-	    memory:      128
+	    memory:      128MiB
 	    vcpus:       1
 	  service:
 	    uuid:        12345678-1234-1234-1234-123456789abc
@@ -130,7 +130,7 @@ stdout:
 	state:         running
 	image:         nginx
 	resources:
-	  memory:      128
+	  memory:      128MiB
 	  vcpus:       1
 	service:
 	  uuid:        12345678-1234-1234-1234-123456789abc

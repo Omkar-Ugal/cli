@@ -3,56 +3,12 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package cmd
+package types
 
 import (
-	"time"
-
-	"github.com/distribution/reference"
-	"github.com/docker/go-units"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/colors"
 )
-
-// DurationMS is a time wrapper that represents a duration in milliseconds.
-type DurationMS int64
-
-func (d DurationMS) Unwrap() any {
-	return time.Duration(d) * time.Millisecond
-}
-
-// DurationUS is a time wrapper that represents a duration in microseconds.
-type DurationUS int64
-
-func (d DurationUS) Unwrap() any {
-	return time.Duration(d) * time.Microsecond
-}
-
-// SizeMB is a size wrapper that represents a size in megabytes.
-type SizeMB int64
-
-func (s SizeMB) String() string {
-	return units.HumanSize(units.MB * float64(s))
-}
-
-type ImageRef[T interface {
-	reference.Reference
-	comparable
-}] struct {
-	Reference T
-}
-
-func (ir ImageRef[T]) String() string {
-	var zero T
-	if ir.Reference == zero {
-		return ""
-	}
-	return reference.FamiliarString(ir.Reference)
-}
-
-func (ir ImageRef[T]) MarshalText() ([]byte, error) {
-	return []byte(ir.String()), nil
-}
 
 // InstanceState is a wrapper around platform.InstanceState to automatically
 // add pretty colors.

@@ -20,6 +20,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/types"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
@@ -39,9 +40,9 @@ type Volume struct {
 
 	Tags []string `mirror:"volume.tags"`
 
-	State      VolumeState `mirror:"volume.state" field:",short"`
-	Size       SizeMB      `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
-	Persistent bool        `mirror:"volume.persistent" field:",long"`
+	State      types.VolumeState   `mirror:"volume.state" field:",short"`
+	Size       types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
+	Persistent bool                `mirror:"volume.persistent" field:",long"`
 
 	Timestamps struct {
 		CreatedAt time.Time `mirror:"volume.created_at"`
@@ -203,7 +204,7 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 			case "metro":
 				metro = field.Create.Set.(string)
 			case "size":
-				size := field.Create.Set.(SizeMB)
+				size := field.Create.Set.(types.SizeMebibytes)
 				req.SizeMb = uint64(size)
 			}
 		}
@@ -330,6 +331,7 @@ func (Volume) getPatchRequest(uuid string, key resource.FieldPath, value any, op
 	switch key.String() {
 	case "size":
 		prop = platform.UpdateVolumesRequestItemPropSize_mb
+		value = int64(value.(types.SizeMebibytes))
 	default:
 		return platform.UpdateVolumesRequestItem{}
 	}

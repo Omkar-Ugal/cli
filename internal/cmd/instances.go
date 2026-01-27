@@ -27,6 +27,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/types"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
@@ -51,8 +52,8 @@ type Instance struct {
 
 	Tags []string `mirror:"instance.tags"`
 
-	State InstanceState `mirror:"instance.state" field:",short"`
-	Image string        `mirror:"instance.image" field:",short" create:"set,required" edit:"set"`
+	State types.InstanceState `mirror:"instance.state" field:",short"`
+	Image string              `mirror:"instance.image" field:",short" create:"set,required" edit:"set"`
 
 	Runtime struct {
 		Args []string          `mirror:"instance.args" field:",short" create:"set" edit:"set"`
@@ -60,8 +61,8 @@ type Instance struct {
 	}
 
 	Resources struct {
-		Memory int `mirror:"instance.memory_mb" field:",short" create:"set" edit:"set"`
-		VCPUs  int `mirror:"instance.vcpus" field:"vcpus,short" create:"set" edit:"set"`
+		Memory types.SizeMebibytes `mirror:"instance.memory_mb" field:",short" create:"set" edit:"set"`
+		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short" create:"set" edit:"set"`
 	}
 
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
@@ -92,9 +93,9 @@ type Instance struct {
 	ScaleToZero InstanceScaleToZero `field:",long,embed" mirror:"instance.scale_to_zero"`
 
 	Timing struct {
-		Uptime   DurationMS `mirror:"instance.uptime_ms"`
-		BootTime DurationUS `mirror:"instance.boot_time_us"`
-		NetTime  DurationUS `mirror:"instance.net_time_us"`
+		Uptime   types.DurationMS `mirror:"instance.uptime_ms"`
+		BootTime types.DurationUS `mirror:"instance.boot_time_us"`
+		NetTime  types.DurationUS `mirror:"instance.net_time_us"`
 	}
 
 	Restart struct {
@@ -450,7 +451,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "runtime.env":
 			req.Env = field.Create.Set.(map[string]string)
 		case "resources.memory":
-			mem := int64(field.Create.Set.(int))
+			mem := int64(field.Create.Set.(types.SizeMebibytes))
 			req.MemoryMb = &mem
 		case "resources.vcpus":
 			vcpus := int32(field.Create.Set.(int))

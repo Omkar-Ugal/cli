@@ -18,22 +18,21 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
-	xkong "unikraft.com/cli/internal/x/kong"
+	"unikraft.com/cli/internal/types"
 )
 
 type RunCmd struct {
 	Image string   `arg:"" help:"Image to run."`
 	Args  []string `arg:"" optional:"" help:"Arguments to pass to the instance."`
+	Env   []string `short:"e" help:"Set environment variables (KEY=VALUE)."`
 
 	Name  string `short:"n" help:"Name of the instance."`
 	Metro string `help:"Metro to deploy the instance in." required:"" placeholder:"metro"`
 
-	Env    []string  `short:"e" help:"Set environment variables (KEY=VALUE)."`
-	Memory xkong.IEC `short:"m" help:"Memory in IEC format (e.g., 128MiB, 1GiB, 1G)."`
-	Volume []string  `short:"v" help:"Attach a volume (NAME:AT[:ro] or NAME:SIZE:AT[:ro] or UUID:AT[:ro])."`
-	Vcpus  int       `help:"Number of vCPUs."`
+	Memory types.SizeMebibytes `short:"m" help:"Memory in IEC format (e.g., 128MiB, 1GiB, 1G)."`
+	Vcpus  int                 `help:"Number of vCPUs."`
 
-	DryRun bool `help:"Show the create preview without executing."`
+	Volume []string `short:"v" help:"Attach a volume (NAME:AT[:ro] or NAME:SIZE:AT[:ro] or UUID:AT[:ro])."`
 
 	Service     string   `help:"Service group name."`
 	Publish     []string `short:"p" help:"Publish a service port (SOURCE:DESTINATION[/HANDLERS])."`
@@ -45,6 +44,8 @@ type RunCmd struct {
 	Replicas      int64    `help:"Number of replicas."`
 	WaitTimeoutMs int64    `help:"Wait timeout in milliseconds."`
 	Features      []string `help:"Enable instance features."`
+
+	DryRun bool `help:"Show the create preview without executing."`
 
 	Follow bool `short:"f" help:"Follow instance logs after creation."`
 }
@@ -75,11 +76,6 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	}
 	scaleToZero, err := value.Parse[*InstanceScaleToZero](c.ScaleToZero)
 	if err != nil {
-		return err
-	}
-
-	// Validate memory value
-	if _, err := c.Memory.Value(); err != nil {
 		return err
 	}
 
@@ -180,8 +176,8 @@ func (c *RunCmd) runCreatePatches(env map[string]string, volumes []*InstanceVolu
 	if len(env) > 0 {
 		patches["runtime.env"] = env
 	}
-	if mb, err := c.Memory.Value(); err == nil && mb > 0 {
-		patches["resources.memory"] = mb
+	if c.Memory > 0 {
+		patches["resources.memory"] = c.Memory
 	}
 	if c.Vcpus > 0 {
 		patches["resources.vcpus"] = c.Vcpus

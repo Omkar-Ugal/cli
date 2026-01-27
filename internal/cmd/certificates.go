@@ -20,6 +20,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/types"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
@@ -46,7 +47,7 @@ type Certificate struct {
 	Issuer       string `mirror:"certificate.issuer" field:",long"`
 	SerialNumber string `mirror:"certificate.serial_number" field:",long"`
 
-	State CertificateState `mirror:"certificate.state" field:",short"`
+	State types.CertificateState `mirror:"certificate.state" field:",short"`
 
 	Timestamps struct {
 		CreatedAt time.Time `mirror:"certificate.created_at"`

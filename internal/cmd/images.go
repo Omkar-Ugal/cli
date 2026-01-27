@@ -27,6 +27,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/types"
 	xreference "unikraft.com/cli/internal/x/reference"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
@@ -40,8 +41,8 @@ type ImagesCmd struct {
 }
 
 type Image struct {
-	Ref    ImageRef[reference.Named] `field:",short"`
-	Digest digest.Digest             `field:",short"`
+	Ref    types.ImageRef[reference.Named] `field:",short"`
+	Digest digest.Digest                   `field:",short"`
 
 	Config ImageConfig `field:",embed"`
 
@@ -94,7 +95,7 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 
 		config := img.Image
 		resource := Image{
-			Ref: ImageRef[reference.Named]{
+			Ref: types.ImageRef[reference.Named]{
 				Reference: img.Name,
 			},
 			Digest: img.Descriptor.Digest,
@@ -137,9 +138,9 @@ func (Image) Examples() map[cmd.CmdType][]kingkong.Example {
 type ImageEntry struct {
 	MetroName string `mirror:"metro.name" field:"metro,short"`
 
-	Ref    ImageRef[reference.NamedTagged]   `field:",short"`
-	Refs   []ImageRef[reference.NamedTagged] `field:",long"`
-	Digest digest.Digest                     `field:",short"`
+	Ref    types.ImageRef[reference.NamedTagged]   `field:",short"`
+	Refs   []types.ImageRef[reference.NamedTagged] `field:",long"`
+	Digest digest.Digest                           `field:",short"`
 
 	Namespace string
 	Dangling  bool `field:",long"`
@@ -343,7 +344,7 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling 
 			result.Namespace = ns
 		}
 		for _, t := range tagged {
-			result.Refs = append(result.Refs, ImageRef[reference.NamedTagged]{
+			result.Refs = append(result.Refs, types.ImageRef[reference.NamedTagged]{
 				Reference: t,
 			})
 		}
