@@ -92,7 +92,7 @@ jobs:
           YTT_DEB_EPOCH=1
           YTT_DEB_PRERELEASE=$(echo "${TAG}" | awk -F'staging\\.' '{print $2}')
           NEXT_STABLE=$(make next-stable)
-          YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_STABLE}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
+          YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_STABLE#v}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
         else
           YTT_PRERELEASE=false
           YTT_DEB_EPOCH=5
