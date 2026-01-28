@@ -29,14 +29,14 @@ func New(sink io.Writer, typ log.Type, level log.Level) *log.Logger {
 		fallthrough
 	default:
 		logger = zerolog.New(zerolog.ConsoleWriter{
-			Out: sink,
+			Out: newScreenWrappedWriter(sink),
 			FormatLevel: func(i any) string {
+				if i == nil {
+					return LogLevelSymbol
+				}
 				if ll, ok := i.(string); ok {
 					level, _ := zerolog.ParseLevel(ll)
 					return levelColors[level](LogLevelSymbol)
-				}
-				if i == nil {
-					return "?"
 				}
 				return fmt.Sprintf("%s", i)
 			},
