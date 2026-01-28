@@ -21,7 +21,6 @@ require (
 	github.com/ettle/strcase v0.2.0
 	github.com/google/uuid v1.6.0
 	github.com/jotaen/kong-completion v0.0.11
-	github.com/juju/ansiterm v1.0.0
 	github.com/juju/errors v1.0.0
 	github.com/lunixbochs/vtclean v1.0.0
 	github.com/mitchellh/copystructure v1.2.0
@@ -44,6 +43,7 @@ require (
 	unikraft.com/cloud/sdk v0.0.0-20260128085901-20a57163e9f1
 	unikraft.com/x/colors v0.0.0-20260116231133-1da0081544af
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
+	unikraft.com/x/guesstermwidth v0.0.0-20260116231133-1da0081544af
 	unikraft.com/x/image-spec v0.0.0-20260122232605-1672b2b1f81e
 	unikraft.com/x/kingkong v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/log v0.0.0-20260123171130-d7f7471d74c0
@@ -134,7 +134,6 @@ require (
 	google.golang.org/grpc v1.78.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	tailscale.com v1.94.1 // indirect
-	unikraft.com/x/guesstermwidth v0.0.0-20260116231133-1da0081544af // indirect
 )
 
 // Includes a fix for stripping hyperlinks

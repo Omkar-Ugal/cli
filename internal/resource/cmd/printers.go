@@ -18,13 +18,13 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/juju/ansiterm"
 	"github.com/muesli/termenv"
 	"sigs.k8s.io/yaml"
 
 	"unikraft.com/cli/internal/kvwriter"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/value"
+	"unikraft.com/cli/internal/tabwriter"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
 
@@ -42,13 +42,31 @@ const (
 	PrintTypeDebug PrinterType = "debug"
 )
 
-func (pt PrinterType) Validate() error {
-	switch pt {
-	case PrinterTypeTable, PrinterTypeKeyValue, PrinterTypeJSON, PrinterTypeYAML, PrinterTypeRaw, PrinterTypeQuiet, PrinterTypeTemplate, PrintTypeDebug:
-		return nil
+const (
+	PrinterTableValueAvailable = "available"
+	PrinterTableValueMax       = "max"
+)
+
+func (p Printer) Validate() error {
+	switch p.Type {
+	case PrinterTypeTable:
+		switch p.Value {
+		case "", PrinterTableValueAvailable, PrinterTableValueMax:
+		default:
+			return fmt.Errorf("table printer accepts only '' or '%s' or '%s' as value", PrinterTableValueAvailable, PrinterTableValueMax)
+		}
+	case PrinterTypeTemplate:
+		if p.Value == "" {
+			return fmt.Errorf("template printer requires a template string")
+		}
+	case PrinterTypeKeyValue, PrinterTypeJSON, PrinterTypeYAML, PrinterTypeRaw, PrinterTypeQuiet, PrintTypeDebug:
+		if p.Value != "" {
+			return fmt.Errorf("printer type %s does not accept a value", p.Type)
+		}
 	default:
-		return fmt.Errorf("unknown printer type: %s", pt)
+		return fmt.Errorf("unknown printer type: %s", p.Type)
 	}
+	return nil
 }
 
 type Printer struct {
@@ -64,13 +82,9 @@ func (p *Printer) UnmarshalText(text []byte) error {
 	}
 
 	k, v, _ := strings.Cut(string(text), "=")
-	pt := PrinterType(k)
-	if err := pt.Validate(); err != nil {
-		return err
-	}
-	p.Type = pt
+	p.Type = PrinterType(k)
 	p.Value = v
-	return nil
+	return p.Validate()
 }
 
 func ParsePrinter(s string) (Printer, error) {
@@ -94,9 +108,23 @@ func (p Printer) Print(out io.Writer, fieldSpecs []string, base resource.Resourc
 	case "":
 		return fmt.Errorf("printer type not specified")
 	case PrinterTypeTable:
-		return printTableFormatted(out, fieldSpecs, base, resources...)
+		opts := []tabwriter.TabWriterOpt{}
+		if p.Value == "" || p.Value == PrinterTableValueAvailable {
+			opts = append(opts, tabwriter.WithMaxScreenWidth())
+		}
+		tw := tabwriter.TabWriter(out, opts...)
+		err := printTable(tw, fieldSpecs, base, resources...)
+		if err != nil {
+			return err
+		}
+		return tw.Flush()
 	case PrinterTypeKeyValue:
-		return printKVFormatted(out, fieldSpecs, resources...)
+		bw := kvwriter.KeyValueWriter(out)
+		err := printKV(bw, fieldSpecs, resources...)
+		if err != nil {
+			return err
+		}
+		return bw.Flush()
 	case PrinterTypeJSON:
 		return printJSON(out, resources...)
 	case PrinterTypeYAML:
@@ -112,24 +140,6 @@ func (p Printer) Print(out io.Writer, fieldSpecs []string, base resource.Resourc
 	default:
 		return fmt.Errorf("unknown printer type: %s", p.Type)
 	}
-}
-
-func printTableFormatted(out io.Writer, fieldSpecs []string, base resource.Resource, resources ...resource.Resource) error {
-	tw := ansiterm.NewTabWriter(out, 0, 8, 2, ' ', 0)
-	err := printTable(tw, fieldSpecs, base, resources...)
-	if err != nil {
-		return err
-	}
-	return tw.Flush()
-}
-
-func printKVFormatted(out io.Writer, fieldSpecs []string, resources ...resource.Resource) error {
-	bw := kvwriter.KeyValueWriter(out)
-	err := printKV(bw, fieldSpecs, resources...)
-	if err != nil {
-		return err
-	}
-	return bw.Flush()
 }
 
 func printKV(out io.Writer, specs []string, resources ...resource.Resource) error {

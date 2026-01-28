@@ -10,12 +10,12 @@ import (
 	"io"
 	"strings"
 
-	"github.com/juju/ansiterm"
 	"github.com/lunixbochs/vtclean"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"unikraft.com/cli/internal/kvwriter"
 	"unikraft.com/cli/internal/prettydiff"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/tabwriter"
 )
 
 // Diff produces a pretty diff between two sets of resources, writing the
@@ -72,7 +72,7 @@ func Diff(out io.Writer, format FormatOpts, empty resource.Resource, before []re
 			false,
 		)
 
-		tw := ansiterm.NewTabWriter(out, 0, 8, 2, ' ', 0)
+		tw := tabwriter.TabWriter(out, tabwriter.WithMaxScreenWidth())
 		if _, err := io.Copy(tw, strings.NewReader(prettydiff.Render(diffs))); err != nil {
 			return err
 		}
