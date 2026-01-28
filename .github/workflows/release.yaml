@@ -89,8 +89,8 @@ jobs:
         if [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
           YTT_PRERELEASE=true
           YTT_DEB_EPOCH=1
-          YTT_DEB_PRERELEASE=$(echo "${{ steps.versions.outputs.last-version }}" | awk -F'staging\\.' '{print $2}')
-          NEXT_STABLE=$(make next-stable)
+          YTT_DEB_PRERELEASE=$(echo "${{ steps.versions.outputs.next-version }}" | awk -F'staging\\.' '{print $2}')
+          NEXT_STABLE="${{ steps.versions.outputs.next-stable }}"
           YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_STABLE#v}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
         else
           YTT_PRERELEASE=false
