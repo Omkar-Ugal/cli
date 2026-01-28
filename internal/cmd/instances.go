@@ -913,8 +913,8 @@ func (c *InstancesRestartCmd) Run(ctx context.Context) error {
 }
 
 type StopOpts struct {
-	Force        bool  `help:"Force stop the instance immediately."`
-	DrainTimeout int64 `help:"Timeout in milliseconds for draining connections before stopping." default:"-1"`
+	Force        bool             `help:"Force stop the instance immediately."`
+	DrainTimeout types.DurationMS `help:"Timeout in milliseconds for draining connections before stopping." default:"-1"`
 }
 
 func (args *StopOpts) toReq(nameOrUUID platform.NameOrUUID) platform.StopInstancesRequestItem {
@@ -926,6 +926,7 @@ func (args *StopOpts) toReq(nameOrUUID platform.NameOrUUID) platform.StopInstanc
 		req.Force = &args.Force
 	}
 	if args.DrainTimeout >= 0 {
+		fmt.Println(int64(args.DrainTimeout))
 		timeout := uint64(args.DrainTimeout)
 		req.DrainTimeoutMs = &timeout
 	}
