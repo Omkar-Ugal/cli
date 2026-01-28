@@ -21,6 +21,7 @@ stdout:
 	  ref
 	  refs
 	  digest
+	  namespace
 	  dangling
 
 	Global flags:
@@ -123,6 +124,7 @@ stdout:
 	  ref
 	  refs
 	  digest
+	  namespace
 	  dangling
 
 	Flags:

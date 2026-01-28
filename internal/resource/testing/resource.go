@@ -15,12 +15,14 @@ import (
 )
 
 type TestResource struct {
-	ID       string
-	Name     string
-	State    string
-	URL      string
-	Settings TestSettings
-	Authors  []TestAuthor
+	ID        string
+	Name      string
+	State     string
+	URL       string
+	Hidden    string
+	Invisible string
+	Settings  TestSettings
+	Authors   []TestAuthor
 }
 
 var (
@@ -88,6 +90,16 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 			Name:      "url",
 			Value:     t.URL,
 			Verbosity: resource.FieldVerbosityShort,
+		},
+		{
+			Name:      "hidden",
+			Value:     t.Hidden,
+			Verbosity: resource.FieldVerbosityHidden,
+		},
+		{
+			Name:      "invisible",
+			Value:     t.Invisible,
+			Verbosity: resource.FieldVerbosityInvisible,
 		},
 		{
 			Name:      "settings",

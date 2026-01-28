@@ -22,12 +22,15 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  cn
+	  chain
+	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Global flags:
 	  -h, --help
@@ -72,12 +75,15 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  cn
+	  chain
+	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	  -w, --watch ($UNIKRAFT_WATCH)
@@ -130,12 +136,15 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  cn
+	  chain
+	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --filter ($UNIKRAFT_FILTER)
@@ -186,12 +195,15 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  cn
+	  chain
+	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --until ($UNIKRAFT_UNTIL)
@@ -255,12 +267,15 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  cn
+	  chain
+	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --set ($UNIKRAFT_SET)
@@ -319,12 +334,15 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  cn
+	  chain
+	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	  -f, --field ($UNIKRAFT_FIELD)

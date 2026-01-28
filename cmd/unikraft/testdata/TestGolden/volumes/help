@@ -24,10 +24,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -75,10 +76,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -134,10 +136,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -191,10 +194,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -255,10 +259,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -320,10 +325,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -393,10 +399,11 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  size
 	  persistent
-	  timestamps
+	  timestamps, timestamps.created-at
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only

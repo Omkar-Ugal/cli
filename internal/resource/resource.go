@@ -140,8 +140,8 @@ const (
 )
 
 func (v FieldVerbosity) String() string {
-	if v < FieldVerbosityHidden {
-		v = FieldVerbosityHidden
+	if v < 0 {
+		v = 0
 	}
 	switch v {
 	case FieldVerbosityUnknown:

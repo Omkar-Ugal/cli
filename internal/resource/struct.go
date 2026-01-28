@@ -76,7 +76,7 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 		if newField != nil {
 			result.Value = newField.Value
 			result.Subfields = newField.Subfields
-			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity, FieldVerbosityHidden)
+			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity)
 		}
 
 		newField, err = fieldFromSlice(parsedField, fieldVal)
@@ -87,9 +87,10 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 			result.Value = newField.Value
 			result.Elem = newField.Elem
 			result.Subfields = newField.Subfields
-			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity, FieldVerbosityHidden)
+			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity)
 		}
 
+		result.Verbosity = cmp.Or(result.Verbosity, FieldVerbosityHidden)
 		fields = append(fields, result)
 	}
 
