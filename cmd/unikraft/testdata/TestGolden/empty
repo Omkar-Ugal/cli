@@ -9,7 +9,7 @@ stdout:
 
 	Commands:
 	  completion
-	          Outputs shell code for initialising tab completions
+	          Outputs shell code for initialising tab completions.
 	  login
 	          Login to Unikraft Cloud.
 	  logout
