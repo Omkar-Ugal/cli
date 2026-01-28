@@ -76,8 +76,8 @@ type Instance struct {
 
 		// create-only fields
 		Services  []*Service `field:",invisible,embed" create:"set"`
-		SoftLimit uint32     `field:",long" create:"set"`
-		HardLimit uint32     `field:",long" create:"set"`
+		SoftLimit uint32     `field:",invisible" create:"set"`
+		HardLimit uint32     `field:",invisible" create:"set"`
 	} `mirror:"instance.service_group"`
 
 	Networks []struct {
@@ -112,10 +112,11 @@ type Instance struct {
 		Code     int `mirror:"instance.stop_code"`
 	}
 
-	Autostart     bool     `field:",long" create:"set"`
-	Replicas      int64    `field:",long" create:"set"`
-	WaitTimeoutMs int64    `field:"wait_timeout_ms,long" create:"set"`
-	Features      []string `field:",long" create:"set"`
+	// create-only fields
+	Autostart   bool            `field:",invisible" create:"set"`
+	Replicas    int64           `field:",invisible" create:"set"`
+	WaitTimeout types.DurationS `field:",invisible" create:"set"`
+	Features    []string        `field:",invisible" create:"set"`
 
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
@@ -586,9 +587,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "replicas":
 			replicas := field.Create.Set.(int64)
 			req.Replicas = &replicas
-		case "wait_timeout_ms":
-			timeout := field.Create.Set.(int64)
-			req.WaitTimeoutMs = &timeout
+		case "wait-timeout":
+			timeout := field.Create.Set.(types.DurationS)
+			req.TimeoutS = ptr.ToPtr(int64(timeout))
 		case "features":
 			features := field.Create.Set.([]string)
 			for _, f := range features {
