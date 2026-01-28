@@ -441,7 +441,6 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 			continue
 		}
 		if field == "all" {
-			verbosity = resource.FieldVerbosityHidden
 			if base == nil {
 				base = []resource.FieldPath{}
 			}
@@ -462,17 +461,27 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 	var missing []resource.FieldPath
 
 	result, missing := resource.FilterFieldsByPath(fields, base, !header)
-	result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
-		if field.Verbosity < verbosity {
-			return resource.FilterExclude
-		}
-		if base == nil { // only exclude empty fields if no base specified
+	if base == nil {
+		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
+			// remove fields that are too verbose
+			if field.Verbosity < verbosity {
+				return resource.FilterExclude
+			}
+			// remove empty fields
 			if !header && field.IsEmpty() {
 				return resource.FilterExclude
 			}
-		}
-		return resource.FilterRecurse
-	})
+			return resource.FilterRecurse
+		})
+	} else {
+		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
+			// remove invisible fields
+			if field.Verbosity == resource.FieldVerbosityInvisible {
+				return resource.FilterExclude
+			}
+			return resource.FilterRecurse
+		})
+	}
 
 	if len(include) > 0 {
 		included, includeMissing := resource.FilterFieldsByPath(fields, include, !header)

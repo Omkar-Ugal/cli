@@ -28,10 +28,12 @@ import (
 
 var baseTestStore = map[string]resourcet.TestResource{
 	"test1": {
-		ID:    "id-test1",
-		Name:  "test1",
-		State: "pending",
-		URL:   "https://example.com",
+		ID:        "id-test1",
+		Name:      "test1",
+		State:     "pending",
+		URL:       "https://example.com",
+		Hidden:    "hidden-test1",
+		Invisible: "invisible-test1",
 		Settings: resourcet.TestSettings{
 			X: 42,
 			Y: "hello",
@@ -42,10 +44,12 @@ var baseTestStore = map[string]resourcet.TestResource{
 		},
 	},
 	"test2": {
-		ID:    "id-test2",
-		Name:  "test2",
-		State: "pending",
-		URL:   "https://example.org",
+		ID:        "id-test2",
+		Name:      "test2",
+		State:     "pending",
+		URL:       "https://example.org",
+		Hidden:    "hidden-test2",
+		Invisible: "invisible-test2",
 		Settings: resourcet.TestSettings{
 			X: 7,
 			Y: "world",
@@ -312,6 +316,79 @@ func TestGet(t *testing.T) {
 		assert.Contains(t, output, "https://example.com")
 		assert.Contains(t, output, "id-test2")
 		assert.Contains(t, output, "https://example.org")
+	})
+}
+
+func TestFieldVerbosity(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	runList := func(t *testing.T, fields []string) string {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{
+				Field: fields,
+			},
+		}
+		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	runInspect := func(t *testing.T, fields []string) string {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
+			Name: []string{"test1"},
+			FormatOpts: FormatOpts{
+				Field: fields,
+			},
+		}
+		err := cmd.Run(ctx, testConfig(&out), sandbox)
+		require.NoError(t, err)
+		return out.String()
+	}
+
+	t.Run("list_short_fields", func(t *testing.T) {
+		output := vtclean.Clean(runList(t, nil), false)
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "id-test1")
+		assert.NotContains(t, output, "hello")
+		assert.NotContains(t, output, "hidden-test1")
+		assert.NotContains(t, output, "invisible-test1")
+	})
+
+	t.Run("inspect_short_long_fields", func(t *testing.T) {
+		output := runInspect(t, nil)
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "id-test1")
+		assert.Contains(t, output, "hello")
+		assert.NotContains(t, output, "hidden-test1")
+		assert.NotContains(t, output, "invisible-test1")
+	})
+
+	t.Run("inspect_hidden_fields", func(t *testing.T) {
+		output := runInspect(t, []string{"hidden"})
+		assert.Contains(t, output, "hidden-test1")
+		assert.NotContains(t, output, "invisible-test1")
+	})
+
+	t.Run("inspect_all_fields", func(t *testing.T) {
+		output := runInspect(t, []string{"all"})
+		assert.Contains(t, output, "id-test1")
+		assert.Contains(t, output, "hello")
+		assert.Contains(t, output, "hidden-test1")
+		assert.NotContains(t, output, "invisible-test1")
+	})
+
+	t.Run("inspect_invisible_fields", func(t *testing.T) {
+		output := runInspect(t, []string{"invisible"})
+		assert.NotContains(t, output, "invisible-test1")
 	})
 }
 
