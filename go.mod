@@ -41,7 +41,7 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.0.0-20260106155929-09ab9b333e25
+	unikraft.com/cloud/sdk v0.0.0-20260128085901-20a57163e9f1
 	unikraft.com/x/colors v0.0.0-20260116231133-1da0081544af
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/image-spec v0.0.0-20260122232605-1672b2b1f81e

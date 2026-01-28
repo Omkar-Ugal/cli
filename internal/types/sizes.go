@@ -8,24 +8,9 @@ package types
 import (
 	"encoding/json"
 	"strconv"
-	"time"
 
 	"github.com/docker/go-units"
 )
-
-// DurationMS is a time wrapper that represents a duration in milliseconds.
-type DurationMS int64
-
-func (d DurationMS) Unwrap() any {
-	return time.Duration(d) * time.Millisecond
-}
-
-// DurationUS is a time wrapper that represents a duration in microseconds.
-type DurationUS int64
-
-func (d DurationUS) Unwrap() any {
-	return time.Duration(d) * time.Microsecond
-}
 
 // SizeMebibytes is a size wrapper that represents a size in mebibytes.
 type SizeMebibytes int64
@@ -51,12 +36,7 @@ func (m *SizeMebibytes) UnmarshalJSON(data []byte) error {
 		}
 		return m.UnmarshalText([]byte(text))
 	}
-	var size int64
-	if err := json.Unmarshal(data, &size); err != nil {
-		return err
-	}
-	*m = SizeMebibytes(size)
-	return nil
+	return m.UnmarshalText(data)
 }
 
 func (m SizeMebibytes) MarshalText() ([]byte, error) {
