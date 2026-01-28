@@ -1,8 +1,8 @@
 $ unikraft image list --filter ref~="/official/nginx:latest$"
 
 stdout:
-	METRO  REF                                                           DIGEST
-	test   index.test.unikraft.internal/official/nginx:latest  sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	METRO  REF
+	test   index.test.unikraft.internal/official/nginx:latest
 
 $ unikraft image inspect nginx:latest
 

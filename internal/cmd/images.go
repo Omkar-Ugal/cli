@@ -42,7 +42,7 @@ type ImagesCmd struct {
 
 type Image struct {
 	Ref    types.ImageRef[reference.Named] `field:",short"`
-	Digest digest.Digest                   `field:",short"`
+	Digest digest.Digest                   `field:",long"`
 
 	Config ImageConfig `field:",embed"`
 
@@ -140,7 +140,7 @@ type ImageEntry struct {
 
 	Ref    types.ImageRef[reference.NamedTagged]   `field:",short"`
 	Refs   []types.ImageRef[reference.NamedTagged] `field:",long"`
-	Digest digest.Digest                           `field:",short"`
+	Digest digest.Digest                           `field:",long"`
 
 	Namespace string
 	Dangling  bool `field:",long"`
