@@ -16,6 +16,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/lunixbochs/vtclean"
 	"github.com/muesli/termenv"
+
+	xio "unikraft.com/cli/internal/x/io"
 )
 
 type keyValueWriter struct {
@@ -66,7 +68,7 @@ func WithIndent(indent string) KeyValueOpt {
 // The keys will be aligned based on the longest key, and styling rules are
 // applied to them based on their leading whitespace after the specified indent
 // is removed.
-func KeyValueWriter(w io.Writer, opts ...KeyValueOpt) WriteFlusher {
+func KeyValueWriter(w io.Writer, opts ...KeyValueOpt) xio.WriteFlusher {
 	kv := &keyValueWriter{w: w}
 	for _, opt := range opts {
 		opt(kv)
@@ -218,7 +220,7 @@ func (b *keyValueWriter) Flush() error {
 		}
 		b.buffer = nil
 	}
-	if tw, ok := b.w.(Flusher); ok {
+	if tw, ok := b.w.(xio.Flusher); ok {
 		return tw.Flush()
 	}
 	return nil

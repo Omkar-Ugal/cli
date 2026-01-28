@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/lunixbochs/vtclean"
+
+	xio "unikraft.com/cli/internal/x/io"
 )
 
 type tableWriter struct {
@@ -29,7 +31,7 @@ type tableWriter struct {
 // flush the current table and pass through unmodified.
 // The first table line is the header row.
 // The second table line defines column alignments using markdown syntax (:---, :---:, ---:).
-func TableWriter(w io.Writer) WriteFlusher {
+func TableWriter(w io.Writer) xio.WriteFlusher {
 	return &tableWriter{w: w}
 }
 
@@ -239,7 +241,7 @@ func (t *tableWriter) Flush() error {
 	if err := t.flushTable(); err != nil {
 		return err
 	}
-	if tw, ok := t.w.(Flusher); ok {
+	if tw, ok := t.w.(xio.Flusher); ok {
 		return tw.Flush()
 	}
 	return nil

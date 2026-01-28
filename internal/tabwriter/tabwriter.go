@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
 	"unikraft.com/x/guesstermwidth"
+
+	xio "unikraft.com/cli/internal/x/io"
 )
 
 type tabWriter struct {
@@ -65,7 +67,7 @@ func WithPadding(padding int) TabWriterOpt {
 
 // TabWriter returns a Writer that formats tab-aligned columns.
 // Input should be formatted using tab characters between columns.
-func TabWriter(w io.Writer, opts ...TabWriterOpt) WriteFlusher {
+func TabWriter(w io.Writer, opts ...TabWriterOpt) xio.WriteFlusher {
 	tw := &tabWriter{
 		w:       w,
 		padding: 2,
@@ -236,7 +238,7 @@ func (t *tabWriter) Flush() error {
 	if err := t.flushRows(); err != nil {
 		return err
 	}
-	if tw, ok := t.w.(Flusher); ok {
+	if tw, ok := t.w.(xio.Flusher); ok {
 		return tw.Flush()
 	}
 	return nil
