@@ -89,9 +89,9 @@ jobs:
         if [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
           YTT_PRERELEASE=true
           YTT_DEB_EPOCH=1
-          YTT_DEB_PRERELEASE=$(echo "${TAG}" | awk -F'staging\\.' '{print $2}')
+          YTT_DEB_PRERELEASE=$(echo "${{ steps.versions.outputs.last-version }}" | awk -F'staging\\.' '{print $2}')
           NEXT_STABLE=$(make next-stable)
-          YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_STABLE}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
+          YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_STABLE#v}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
         else
           YTT_PRERELEASE=false
           YTT_DEB_EPOCH=5
@@ -127,13 +127,12 @@ jobs:
 
         DISTROS=()
         # Debian
-        DISTROS+=("bullseye")
-        DISTROS+=("bookworm")
-        DISTROS+=("trixie")
+        DISTROS+=("bullseye") # 11
+        DISTROS+=("bookworm") # 12
+        DISTROS+=("trixie")   # 13
         # Ubuntu
-        DISTROS+=("jammy")
-        DISTROS+=("lunar")
-        DISTROS+=("mantic")
+        DISTROS+=("jammy")  # 22.04
+        DISTROS+=("noble")  # 24.04
 
         for DISTRO in "${DISTROS[@]}"; do
           for DEB in dist/*.deb; do
