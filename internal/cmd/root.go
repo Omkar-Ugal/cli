@@ -40,7 +40,7 @@ type UnikraftCLI struct {
 
 	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information." env:"-"`
 
-	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions"`
+	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 
 	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
 	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`

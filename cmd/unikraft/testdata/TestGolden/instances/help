@@ -20,13 +20,13 @@ stdout:
 	  create
 	          Create a instance.
 	  logs
-	          Fetch and display instance logs
+	          Fetch and display instance logs.
 	  start
-	          Start one or more instances
+	          Start one or more instances.
 	  stop
-	          Stop one or more instances
+	          Stop one or more instances.
 	  restart
-	          Restart one or more instances
+	          Restart one or more instances.
 
 	Fields:
 	  metro
@@ -538,7 +538,7 @@ stdout:
 	Usage:
 	  unikraft instances logs <name> ... [flags]
 
-	Fetch and display instance logs
+	Fetch and display instance logs.
 
 	Arguments:
 	  <name> ...
@@ -589,7 +589,7 @@ stdout:
 	Usage:
 	  unikraft instances start <name> ... [flags]
 
-	Start one or more instances
+	Start one or more instances.
 
 	Arguments:
 	  <name> ...
@@ -634,7 +634,7 @@ stdout:
 	Usage:
 	  unikraft instances stop <name> ... [flags]
 
-	Stop one or more instances
+	Stop one or more instances.
 
 	Arguments:
 	  <name> ...
@@ -690,7 +690,7 @@ stdout:
 	Usage:
 	  unikraft instances restart <name> ... [flags]
 
-	Restart one or more instances
+	Restart one or more instances.
 
 	Arguments:
 	  <name> ...

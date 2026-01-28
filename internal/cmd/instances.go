@@ -41,10 +41,10 @@ type InstancesCmd struct {
 	cmd.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 	cmd.CreatableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 
-	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs"`
-	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances"`
-	Stop    InstancesStopCmd    `cmd:"" help:"Stop one or more instances"`
-	Restart InstancesRestartCmd `cmd:"" help:"Restart one or more instances"`
+	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs."`
+	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances."`
+	Stop    InstancesStopCmd    `cmd:"" help:"Stop one or more instances."`
+	Restart InstancesRestartCmd `cmd:"" help:"Restart one or more instances."`
 }
 
 type Instance struct {
