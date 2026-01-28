@@ -32,25 +32,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Global flags:
@@ -96,25 +98,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Flags:
@@ -168,25 +172,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Flags:
@@ -238,25 +244,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Flags:
@@ -318,25 +326,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Flags:
@@ -396,25 +406,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Flags:
@@ -482,25 +494,27 @@ stdout:
 	  metro
 	  name
 	  uuid
+	  tags
 	  state
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.soft-limit, service.hard-limit
+	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps
+	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
+	  at
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
-	  timing
-	  restart
-	  stop
+	  timing, timing.uptime, timing.boot-time, timing.net-time
+	  restart, restart.policy, restart.start-count, restart.restart-count
+	  stop, stop.reason, stop.exit-code, stop.code
 	  autostart
 	  replicas
-	  wait_timeout_ms
+	  wait-timeout
 	  features
 
 	Flags:
