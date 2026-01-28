@@ -38,11 +38,13 @@ const (
 	PrinterTypeRaw      PrinterType = "raw"
 	PrinterTypeQuiet    PrinterType = "quiet"
 	PrinterTypeTemplate PrinterType = "template"
+
+	PrintTypeDebug PrinterType = "debug"
 )
 
 func (pt PrinterType) Validate() error {
 	switch pt {
-	case PrinterTypeTable, PrinterTypeKeyValue, PrinterTypeJSON, PrinterTypeYAML, PrinterTypeRaw, PrinterTypeQuiet, PrinterTypeTemplate:
+	case PrinterTypeTable, PrinterTypeKeyValue, PrinterTypeJSON, PrinterTypeYAML, PrinterTypeRaw, PrinterTypeQuiet, PrinterTypeTemplate, PrintTypeDebug:
 		return nil
 	default:
 		return fmt.Errorf("unknown printer type: %s", pt)
@@ -105,6 +107,8 @@ func (p Printer) Print(out io.Writer, fieldSpecs []string, base resource.Resourc
 		return printQuiet(out, resources...)
 	case PrinterTypeTemplate:
 		return printTemplate(out, p.Value, resources...)
+	case PrintTypeDebug:
+		return printDebug(out, resources...)
 	default:
 		return fmt.Errorf("unknown printer type: %s", p.Type)
 	}
@@ -410,6 +414,24 @@ func printTemplate(out io.Writer, tmplStr string, resources ...resource.Resource
 	return tmpl.Execute(out, input)
 }
 
+func printDebug(out io.Writer, resources ...resource.Resource) error {
+	for _, res := range resources {
+		fields, err := res.Fields()
+		if err != nil {
+			return err
+		}
+		dt, err := json.MarshalIndent(fields, "", "  ")
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(out, string(dt))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func resourceFields(fields []resource.Field, header bool, verbosity resource.FieldVerbosity, fieldSpecs []string) ([]resource.Field, error) {
 	var base []resource.FieldPath
 	var include []resource.FieldPath
@@ -440,17 +462,17 @@ func resourceFields(fields []resource.Field, header bool, verbosity resource.Fie
 	var missing []resource.FieldPath
 
 	result, missing := resource.FilterFieldsByPath(fields, base, !header)
-	if base == nil {
-		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
-			if field.Verbosity < verbosity {
-				return resource.FilterExclude
-			}
+	result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
+		if field.Verbosity < verbosity {
+			return resource.FilterExclude
+		}
+		if base == nil { // only exclude empty fields if no base specified
 			if !header && field.IsEmpty() {
 				return resource.FilterExclude
 			}
-			return resource.FilterRecurse
-		})
-	}
+		}
+		return resource.FilterRecurse
+	})
 
 	if len(include) > 0 {
 		included, includeMissing := resource.FilterFieldsByPath(fields, include, !header)
