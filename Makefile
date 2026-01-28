@@ -122,7 +122,7 @@ last-version: ## Show the last version of the CLI.
 .PHONY: next-stable
 next-stable: PRERELEASE ?=
 next-stable: ## Show the next stable version of the CLI.
-	$(Q)$(SVU) next --v0 --tag.prefix "v" --tag.pattern "v[0-9]*.[0-9]*.[0-9]*" --prerelease "$(PRERELEASE)"
+	$(Q)$(SVU) next --v0 --tag.prefix "v" --tag.pattern "v[0-9]*.[0-9]*.[0-9]*" --prerelease "$(PRERELEASE)" --always
 
 .PHONY: next-staging
 next-staging: ## Show the next staging version of the CLI.
