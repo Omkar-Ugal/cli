@@ -10,7 +10,6 @@ import (
 	"io"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/charmbracelet/x/term"
 	"unikraft.com/x/guesstermwidth"
 
 	xio "unikraft.com/cli/internal/x/io"
@@ -52,7 +51,7 @@ func WithMaxWidth(width int) TabWriterOpt {
 
 func WithMaxScreenWidth() TabWriterOpt {
 	return func(t *tabWriter) {
-		if !isTTY(t.w) {
+		if !guesstermwidth.IsTTY(t.w) {
 			return
 		}
 		t.maxwidth = max(0, guesstermwidth.GuessTermWidth(t.w))
@@ -242,12 +241,4 @@ func (t *tabWriter) Flush() error {
 		return tw.Flush()
 	}
 	return nil
-}
-
-func isTTY(out io.Writer) bool {
-	fdWriter, ok := out.(interface{ Fd() uintptr })
-	if !ok {
-		return false
-	}
-	return term.IsTerminal(fdWriter.Fd())
 }
