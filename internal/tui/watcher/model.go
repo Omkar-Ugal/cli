@@ -17,6 +17,7 @@ import (
 )
 
 type watchModel struct {
+	underlying  io.Writer
 	render      func(io.Writer) error
 	output      string
 	lastRefresh time.Time
@@ -84,7 +85,7 @@ func (model watchModel) View() string {
 func (model watchModel) watchRenderCmd() tea.Cmd {
 	return func() tea.Msg {
 		var buffer bytes.Buffer
-		err := model.render(&buffer)
+		err := model.render(wrapFdWriter(&buffer, model.underlying))
 		return watchRenderMsg{output: buffer.String(), err: err}
 	}
 }
@@ -93,4 +94,20 @@ func (model watchModel) watchStatusTickCmd() tea.Cmd {
 	return tea.Tick(50*time.Millisecond, func(time.Time) tea.Msg {
 		return watchStatusMsg{}
 	})
+}
+
+func wrapFdWriter(w io.Writer, fdw io.Writer) io.Writer {
+	if fdw, ok := fdw.(interface{ Fd() uintptr }); ok {
+		return fdWriter{Writer: w, fd: fdw.Fd()}
+	}
+	return w
+}
+
+type fdWriter struct {
+	io.Writer
+	fd uintptr
+}
+
+func (w fdWriter) Fd() uintptr {
+	return w.fd
 }
