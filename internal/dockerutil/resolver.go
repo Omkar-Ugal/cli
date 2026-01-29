@@ -34,7 +34,14 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 				}
 				for _, metro := range profile.Metros {
 					if hostname == metro.Index() {
-						return profile.Organization, profile.Token, nil
+						username := profile.Organization
+						if username == "" {
+							// organization may not be set on old or manually created
+							// profiles - so fall back to decoding the username from the
+							// token itself
+							username, _, _ = decodeAuth(profile.Token)
+						}
+						return username, profile.Token, nil
 					}
 				}
 			}
