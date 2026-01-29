@@ -19,6 +19,10 @@ stdout:
 	          Allow insecure server connections when using SSL.
 	      --no-browser ($UNIKRAFT_NO_BROWSER)
 	          Do not open the browser automatically for login.
+	      --token ($UNIKRAFT_TOKEN)
+	          Path to a file containing the authentication token (or '-' for stdin).
+	      --organization ($UNIKRAFT_ORGANIZATION)
+	          Organization to associate the login with.
 
 	Global flags:
 	  -h, --help

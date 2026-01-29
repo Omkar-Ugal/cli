@@ -6,7 +6,10 @@
 package login
 
 import (
+	"cmp"
 	"context"
+	"os"
+	"strings"
 	"time"
 
 	jujuerrors "github.com/juju/errors"
@@ -27,10 +30,15 @@ type LoginCmd struct {
 	AllowInsecure bool   `name:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
 
 	NoBrowser bool `name:"no-browser" help:"Do not open the browser automatically for login."`
+
+	Token        *os.File `help:"Path to a file containing the authentication token (or '-' for stdin)."`
+	Organization string   `help:"Organization to associate the login with."`
 }
 
-func (cmd *LoginCmd) Run(cfg *config.Config) error {
-	ctx := cfg.Context
+func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
+	if cmd.Token != nil {
+		defer cmd.Token.Close()
+	}
 
 	profile, err := config.G(ctx).CurrentProfile()
 	if err != nil && jujuerrors.Is(err, config.ErrNoCurrentProfile) {
@@ -64,24 +72,36 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 		log.G(ctx).Info().
 			Msg("existing authentication token found, re-authenticating")
 	}
+	profile.Token = ""
+	profile.Organization = ""
 
-	resp, err := cmd.getAuth(ctx, profile)
-	if err != nil {
-		return jujuerrors.Annotate(err, "getting authentication token")
-	}
-	if resp.Status == string(controlplane.ResponseStatusERROR) {
-		return jujuerrors.Annotate(jujuerrors.New(resp.Message), "authentication failed")
-	}
-	if resp.Data == nil {
-		return jujuerrors.New("no data received from control plane, please try again")
-	}
-	if resp.Data.Token == nil {
-		return jujuerrors.New("no authentication token received from control plane, please try again")
-	}
+	if cmd.Token != nil {
+		log.G(ctx).Info().
+			Msg("reading authentication token from file")
 
-	profile.Token = *resp.Data.Token
-	profile.Organization = ptr.ZeroIfNil(resp.Data.OrganizationName)
-	profile.Metros = nil
+		dt, err := os.ReadFile(cmd.Token.Name())
+		if err != nil {
+			return jujuerrors.Annotate(err, "reading token file")
+		}
+		profile.Token = strings.TrimSpace(string(dt))
+	} else {
+		resp, err := cmd.getAuth(ctx, profile)
+		if err != nil {
+			return jujuerrors.Annotate(err, "getting authentication token")
+		}
+		if resp.Status == string(controlplane.ResponseStatusERROR) {
+			return jujuerrors.Annotate(jujuerrors.New(resp.Message), "authentication failed")
+		}
+		if resp.Data == nil {
+			return jujuerrors.New("no data received from control plane, please try again")
+		}
+		if resp.Data.Token == nil {
+			return jujuerrors.New("no authentication token received from control plane, please try again")
+		}
+		profile.Token = *resp.Data.Token
+		profile.Organization = ptr.ZeroIfNil(resp.Data.OrganizationName)
+	}
+	profile.Organization = cmp.Or(profile.Organization, cmd.Organization)
 
 	// Instantiate a new client to fetch the list of metros.
 	client := controlplane.NewClient(
@@ -101,8 +121,8 @@ func (cmd *LoginCmd) Run(cfg *config.Config) error {
 			Msg("could not list metros for profile: please add metros manually")
 	}
 
-	metros := ptr.ZeroIfNil(metroResp.Data)
-	for _, metro := range metros.Metros {
+	profile.Metros = nil
+	for _, metro := range ptr.ZeroIfNil(metroResp.Data).Metros {
 		profile.Metros = append(profile.Metros, config.Metro{
 			Name:     ptr.ZeroIfNil(metro.Name),
 			Endpoint: ptr.ZeroIfNil(metro.Endpoint),
