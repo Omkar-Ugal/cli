@@ -227,7 +227,7 @@ func TestListOutput(t *testing.T) {
 	})
 
 	t.Run("template", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeTemplate, Value: "{{range .}}{{.name}}-{{.id}}\n{{end}}"})
+		output := runList(t, Printer{Type: PrinterTypeTemplate, Value: "{{.name}}-{{.id}}"})
 		assert.Equal(t, "test1-id-test1\ntest2-id-test2\n", output)
 	})
 }
