@@ -135,6 +135,7 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 				// if we don't, then recursively include all subfields
 				if !strict && field.Elem != nil {
 					elem := *field.Elem
+					elem.Name = "*"
 					elem = mergeElem(elem)
 					elem = pruneFields(elem)
 					result.Subfields = append(result.Subfields, elem)

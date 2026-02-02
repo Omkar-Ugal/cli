@@ -235,6 +235,30 @@ func TestListOutput(t *testing.T) {
 	})
 }
 
+func TestTableNestedFieldSelection(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+	var out bytes.Buffer
+	cmd := &ResourceGetCmd[resourcet.TestResource]{
+		Name: []string{"test1"},
+		FormatOpts: FormatOpts{
+			Output: Printer{Type: PrinterTypeTable},
+			Field:  []string{"name", "authors"},
+		},
+	}
+	err = cmd.Run(ctx, testConfig(&out), sandbox)
+	require.NoError(t, err)
+
+	cleaned := vtclean.Clean(out.String(), false)
+	assert.Contains(t, cleaned, "Alice")
+	assert.Contains(t, cleaned, "alice@example.com")
+}
+
 func TestGet(t *testing.T) {
 	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
