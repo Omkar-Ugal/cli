@@ -142,13 +142,11 @@ func TestListOutput(t *testing.T) {
 	require.NoError(t, err)
 	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
-	runList := func(t *testing.T, printer Printer) string {
+	runList := func(t *testing.T, opts FormatOpts) string {
 		t.Helper()
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
-			FormatOpts: FormatOpts{
-				Output: printer,
-			},
+			FormatOpts: opts,
 		}
 		err = cmd.Run(ctx, testConfig(&out), sandbox)
 		require.NoError(t, err)
@@ -156,7 +154,7 @@ func TestListOutput(t *testing.T) {
 	}
 
 	t.Run("table", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeTable})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeTable}})
 		cleaned := vtclean.Clean(output, false)
 		assert.Contains(t, cleaned, "test1")
 		assert.Contains(t, cleaned, "test2")
@@ -164,7 +162,7 @@ func TestListOutput(t *testing.T) {
 	})
 
 	t.Run("kv", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeKeyValue})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeKeyValue}})
 		assert.Contains(t, output, "name:")
 		assert.Contains(t, output, "id:")
 		assert.Contains(t, output, "test1")
@@ -173,7 +171,7 @@ func TestListOutput(t *testing.T) {
 	})
 
 	t.Run("json", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeJSON})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeJSON}})
 		var resources []map[string]any
 		err := json.Unmarshal([]byte(output), &resources)
 		require.NoError(t, err)
@@ -190,7 +188,7 @@ func TestListOutput(t *testing.T) {
 	})
 
 	t.Run("yaml", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeYAML})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeYAML}})
 		var resources []map[string]any
 		err := yaml.Unmarshal([]byte(output), &resources)
 		require.NoError(t, err)
@@ -207,7 +205,7 @@ func TestListOutput(t *testing.T) {
 	})
 
 	t.Run("raw", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeRaw})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeRaw}})
 		var resources []resourcet.TestResource
 		err := json.Unmarshal([]byte(output), &resources)
 		require.NoError(t, err)
@@ -222,12 +220,17 @@ func TestListOutput(t *testing.T) {
 	})
 
 	t.Run("quiet", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeQuiet})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeQuiet}})
 		assert.Equal(t, "test1\ntest2\n", output)
 	})
 
+	t.Run("quiet field", func(t *testing.T) {
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeQuiet}, Field: []string{"id", "url"}})
+		assert.Equal(t, "id-test1 https://example.com\nid-test2 https://example.org\n", output)
+	})
+
 	t.Run("template", func(t *testing.T) {
-		output := runList(t, Printer{Type: PrinterTypeTemplate, Value: "{{.name}}-{{.id}}"})
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeTemplate, Value: "{{.name}}-{{.id}}"}})
 		assert.Equal(t, "test1-id-test1\ntest2-id-test2\n", output)
 	})
 }
