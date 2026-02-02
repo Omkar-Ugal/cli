@@ -75,16 +75,18 @@ func (k Key) String() string {
 	if k.Metro != "" {
 		s += k.Metro + MetroKeySeparator
 	}
-	if k.UUID != "" {
-		if requiresIDPrefix(k.UUID) {
-			s += KeyUUIDPrefix
-		}
-		s += k.UUID
-	} else if k.Name != "" {
+	// FIXME: ideally format using the same as we parsed, even if we have both
+	// this is a bit tricky, since we construct keys in a few places
+	if k.Name != "" {
 		if requiresNamePrefix(k.Name) {
 			s += KeyNamePrefix
 		}
 		s += k.Name
+	} else if k.UUID != "" {
+		if requiresIDPrefix(k.UUID) {
+			s += KeyUUIDPrefix
+		}
+		s += k.UUID
 	}
 	return s
 }
