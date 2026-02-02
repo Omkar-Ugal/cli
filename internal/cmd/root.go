@@ -38,7 +38,7 @@ import (
 type UnikraftCLI struct {
 	config.Config
 
-	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information." env:"-"`
+	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information."`
 
 	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 
@@ -237,7 +237,6 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 
 	parser, err := kong.New(cli,
 		kong.Name("unikraft"),
-		kong.DefaultEnvars("UNIKRAFT"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(helpOptions),
 		kong.Configuration(kongyaml.Loader, configFile),
