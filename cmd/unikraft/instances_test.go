@@ -115,6 +115,12 @@ var instancesTestCases = []testCase{
 			{args: []string{unikraftCmd, "instance", "start", "test-$UNIQ_INST"}},
 			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
 
+			{args: []string{unikraftCmd, "instance", "edit", "test-$UNIQ_INST", "--set", "state=stopped"}},
+			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+
+			{args: []string{unikraftCmd, "instance", "edit", "test-$UNIQ_INST", "--set", "state=running"}},
+			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+
 			// {args: []string{unikraftCmd, "instance", "restart", "test-$UNIQ_INST"}},
 			// {args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
 
