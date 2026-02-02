@@ -51,7 +51,9 @@ type RunCmd struct {
 
 	DryRun bool `help:"Show the create preview without executing."`
 
-	Follow bool `short:"f" help:"Follow instance logs after creation."`
+	Follow bool `help:"Follow instance logs after creation."`
+
+	cmd.FormatOpts
 }
 
 func (RunCmd) Examples() []kingkong.Example {
@@ -71,7 +73,7 @@ func (RunCmd) Examples() []kingkong.Example {
 		{
 			Description: "Deploy and tail logs from a new instance",
 			Commands: []string{
-				"unikraft run --metro=fra -f nginx:latest",
+				"unikraft run --metro=fra --follow nginx:latest",
 			},
 		},
 		{
@@ -171,8 +173,11 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	if len(created) == 0 {
 		return fmt.Errorf("no instances created")
 	}
-	for _, res := range created {
-		fmt.Fprintln(cfg.Stdout, res.Key())
+	err = c.Output.
+		WithDefault(cmd.PrinterTypeKeyValue).
+		Print(cfg.Stdout, c.Field, Instance{}, created...)
+	if err != nil {
+		return err
 	}
 
 	if c.Follow {
