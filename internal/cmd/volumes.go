@@ -246,9 +246,15 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 
 func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	volume := target.(Volume)
-	var reqs []platform.UpdateVolumesRequestItem
-	for key, field := range resource.IterFields(fields) {
-		reqs = append(reqs, Volume{}.getFieldRequests(volume.UUID, key, *field)...)
+	patches := patchRequests(fields, volumePatchSpec)
+	reqs := make([]platform.UpdateVolumesRequestItem, 0, len(patches))
+	for _, patch := range patches {
+		reqs = append(reqs, platform.UpdateVolumesRequestItem{
+			Uuid:  &volume.UUID,
+			Op:    platform.UpdateVolumesRequestItemOp(patch.Op),
+			Prop:  patch.Prop,
+			Value: platform.Ptr(patch.Value),
+		})
 	}
 
 	cl, err := multimetro.NewClient(ctx)
@@ -310,35 +316,12 @@ func (Volume) Examples() map[cmd.CmdType][]kingkong.Example {
 	}
 }
 
-func (Volume) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateVolumesRequestItem) {
-	if field.Edit == nil {
-		return reqs
-	}
-	if field.Edit.Set != nil {
-		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Edit.Set, platform.UpdateVolumesRequestItemOpSet))
-	}
-	if field.Edit.Add != nil {
-		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Edit.Add, platform.UpdateVolumesRequestItemOpAdd))
-	}
-	if field.Edit.Del != nil {
-		reqs = append(reqs, Volume{}.getPatchRequest(uuid, key, field.Edit.Del, platform.UpdateVolumesRequestItemOpDel))
-	}
-	return reqs
-}
-
-func (Volume) getPatchRequest(uuid string, key resource.FieldPath, value any, op platform.UpdateVolumesRequestItemOp) platform.UpdateVolumesRequestItem {
-	var prop platform.UpdateVolumesRequestItemProp
-	switch key.String() {
+func volumePatchSpec(path string, _ patchOp, value any) (platform.UpdateVolumesRequestItemProp, any) {
+	var zero platform.UpdateVolumesRequestItemProp
+	switch path {
 	case "size":
-		prop = platform.UpdateVolumesRequestItemPropSize_mb
-		value = int64(value.(types.SizeMebibytes))
+		return platform.UpdateVolumesRequestItemPropSize_mb, int64(value.(types.SizeMebibytes))
 	default:
-		return platform.UpdateVolumesRequestItem{}
-	}
-	return platform.UpdateVolumesRequestItem{
-		Uuid:  &uuid,
-		Op:    op,
-		Prop:  prop,
-		Value: platform.Ptr(value),
+		return zero, nil
 	}
 }
