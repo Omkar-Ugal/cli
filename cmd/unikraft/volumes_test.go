@@ -26,8 +26,15 @@ var volumesTestCases = []testCase{
 			{args: []string{unikraftCmd, "volume", "create", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
 			{args: []string{unikraftCmd, "volume", "list"}},
 			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
-			{args: []string{unikraftCmd, "volume", "edit", "test-$UNIQ_VOLUME", "--set", "size=20"}},
-			{args: []string{unikraftCmd, "volume", "list"}},
+			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+		},
+	},
+	{
+		name:   "volumes/edit",
+		online: true,
+		commands: []command{
+			{args: []string{unikraftCmd, "volume", "create", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
+			{args: []string{unikraftCmd, "volume", "edit", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "size=20"}},
 			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
 			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
 		},

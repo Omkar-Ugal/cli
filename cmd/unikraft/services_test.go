@@ -43,22 +43,41 @@ var servicesTestCases = []testCase{
 			{args: []string{unikraftCmd, "service", "list"}},
 			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
 
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_A", "--add", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_B", "--set", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
-
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_A", "--del", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "edit", "test-$UNIQ_SVC_B", "--del", "services=1000:2000/tls"}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
-
 			{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
 		},
-		cleaners: []cleaner{
-			{
-				// automatically generated certificate names
-				pattern: regexp.MustCompile(`\.unikraft\.example-[a-z0-9]{5,}`),
-				repl:    ".unikraft.example-xxxxx",
-			},
+		cleaners: serviceCleaners,
+	},
+	{
+		name:   "services/edit",
+		online: true,
+		commands: []command{
+			{args: []string{
+				unikraftCmd, "service", "create",
+				"--output", "quiet",
+				"--set", "name=test-$UNIQ_SVC",
+				"--set", "metro=" + defaultMetro,
+				"--set", "domains=fqdn=$UNIQ_DOMAIN.unikraft.example",
+				"--set", "services=443:8080/tls+http",
+			}},
+			{args: []string{
+				unikraftCmd, "service", "edit", "test-$UNIQ_SVC",
+				"--output", "quiet",
+				"--set", "limits.soft=2",
+				"--set", "limits.hard=10",
+				"--set", "domains=fqdn=$UNIQ_DOMAIN_EDIT.unikraft.example",
+				"--set", "services=1000:2000/tls",
+			}},
+			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC"}},
+			{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC"}},
 		},
+		cleaners: serviceCleaners,
+	},
+}
+
+var serviceCleaners = []cleaner{
+	{
+		// automatically generated certificate names
+		pattern: regexp.MustCompile(`\.unikraft\.example-[a-z0-9]{5,}`),
+		repl:    ".unikraft.example-xxxxx",
 	},
 }
