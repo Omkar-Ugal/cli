@@ -538,6 +538,10 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 			return err
 		}
 		updated = []resource.Resource{result}
+	} else {
+		log.G(ctx).Warn().
+			Str("resource", res.Key().String()).
+			Msg("no edits made")
 	}
 	return Diff(cfg.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
 }
