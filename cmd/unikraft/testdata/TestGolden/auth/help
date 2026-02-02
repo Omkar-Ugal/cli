@@ -89,8 +89,6 @@ stdout:
 	Commands:
 	  get, inspect, show
 	          Inspect a profile.
-	  wait
-	          Wait for profiles to match a filter.
 	  list, ls
 	          List profiles.
 	  use
@@ -230,60 +228,6 @@ stdout:
 	      --version
 	          Print version information.
 
-$ unikraft profile wait --help
-
-stdout:
-	Usage:
-	  unikraft profile wait --until=UNTIL <name> ... [flags]
-
-	Wait for profiles to match a filter.
-
-	Arguments:
-	  <name> ...
-	          Names of the profiles to wait for.
-
-	Fields:
-	  name
-	  active
-	  metros
-
-	Flags:
-	      --until, --filter ($UNIKRAFT_UNTIL)
-	          Filter expression to wait for (e.g. --until state==running).
-	      --interval ($UNIKRAFT_INTERVAL)
-	          Polling interval.
-	          [default: 2s]
-	      --timeout ($UNIKRAFT_TIMEOUT)
-	          Timeout before giving up.
-	          [default: 0]
-	  -f, --field ($UNIKRAFT_FIELD)
-	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
-	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
-
-	Global flags:
-	  -h, --help
-	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
-	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
-	          Enable or disable telemetry.
-	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
-	          Enable or disable emojis in the CLI output.
-	          [default: true]
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
-	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
-	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
-	          Set the current profile.
-	          [default: default]
-	      --version
-	          Print version information.
-
 $ unikraft profile use --help
 
 stdout:
@@ -330,8 +274,6 @@ stdout:
 	Commands:
 	  get, inspect, show
 	          Inspect a metro.
-	  wait
-	          Wait for metros to match a filter.
 	  list, ls
 	          List metros.
 
@@ -441,60 +383,6 @@ stdout:
 	          Filter output based on a field value (e.g. --filter state==running).
 	  -w, --watch ($UNIKRAFT_WATCH)
 	          Watch for changes and refresh output.
-	  -f, --field ($UNIKRAFT_FIELD)
-	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
-	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
-
-	Global flags:
-	  -h, --help
-	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
-	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
-	          Enable or disable telemetry.
-	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
-	          Enable or disable emojis in the CLI output.
-	          [default: true]
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
-	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
-	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
-	          Set the current profile.
-	          [default: default]
-	      --version
-	          Print version information.
-
-$ unikraft metro wait --help
-
-stdout:
-	Usage:
-	  unikraft metros wait --until=UNTIL <name> ... [flags]
-
-	Wait for metros to match a filter.
-
-	Arguments:
-	  <name> ...
-	          Names of the metros to wait for.
-
-	Fields:
-	  name
-	  country
-	  endpoint
-
-	Flags:
-	      --until, --filter ($UNIKRAFT_UNTIL)
-	          Filter expression to wait for (e.g. --until state==running).
-	      --interval ($UNIKRAFT_INTERVAL)
-	          Polling interval.
-	          [default: 2s]
-	      --timeout ($UNIKRAFT_TIMEOUT)
-	          Timeout before giving up.
-	          [default: 0]
 	  -f, --field ($UNIKRAFT_FIELD)
 	          Specify which fields to include in the output.
 	  -o, --output ($UNIKRAFT_OUTPUT)

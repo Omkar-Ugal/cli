@@ -40,7 +40,9 @@ func (cmd ResourceCmd[R]) Underlying() resource.Resource {
 }
 
 type GettableResourceCmd[R resource.GettableResource] struct {
-	Get  ResourceGetCmd[R]  `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+	Get ResourceGetCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+}
+type WaitableResourceCmd[R resource.GettableResource] struct {
 	Wait ResourceWaitCmd[R] `cmd:"" help:"Wait for ${names} to match a filter."`
 }
 type ListableResourceCmd[R resource.GettableListableResource] struct {

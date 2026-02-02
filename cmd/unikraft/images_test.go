@@ -14,7 +14,6 @@ var imagesTestCases = []testCase{
 			{args: []string{unikraftCmd, "image", "--help"}},
 			{args: []string{unikraftCmd, "image", "get", "--help"}},
 			{args: []string{unikraftCmd, "image", "list", "--help"}},
-			{args: []string{unikraftCmd, "image", "wait", "--help"}},
 			{args: []string{unikraftCmd, "image", "copy", "--help"}},
 		},
 	},

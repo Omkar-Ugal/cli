@@ -36,6 +36,7 @@ import (
 type InstancesCmd struct {
 	cmd.ResourceCmd[Instance]
 	cmd.GettableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
+	cmd.WaitableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 	cmd.ListableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 	cmd.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 	cmd.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
