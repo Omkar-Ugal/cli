@@ -441,6 +441,7 @@ func (Instance) getPatchRequest(uuid string, key resource.FieldPath, value any, 
 		prop = platform.UpdateInstancesRequestItemPropEnv
 	case "resources.memory":
 		prop = platform.UpdateInstancesRequestItemPropMemory_mb
+		value = int64(value.(types.SizeMebibytes))
 	case "resources.vcpus":
 		prop = platform.UpdateInstancesRequestItemPropVcpus
 	default:
