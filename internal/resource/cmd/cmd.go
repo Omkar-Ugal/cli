@@ -212,7 +212,7 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandb
 
 type ResourceWaitCmd[R resource.GettableResource] struct {
 	Name  []string `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to wait for."`
-	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none"`
+	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none" required:"" aliases:"filter"`
 
 	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
 	Timeout  time.Duration `long:"timeout" default:"0" help:"Timeout before giving up."`

@@ -234,7 +234,7 @@ $ unikraft profile wait --help
 
 stdout:
 	Usage:
-	  unikraft profile wait <name> ... [flags]
+	  unikraft profile wait --until=UNTIL <name> ... [flags]
 
 	Wait for profiles to match a filter.
 
@@ -248,7 +248,7 @@ stdout:
 	  metros
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.
@@ -473,7 +473,7 @@ $ unikraft metro wait --help
 
 stdout:
 	Usage:
-	  unikraft metros wait <name> ... [flags]
+	  unikraft metros wait --until=UNTIL <name> ... [flags]
 
 	Wait for metros to match a filter.
 
@@ -487,7 +487,7 @@ stdout:
 	  endpoint
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.

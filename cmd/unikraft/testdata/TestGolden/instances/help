@@ -232,7 +232,7 @@ $ unikraft instance wait --help
 
 stdout:
 	Usage:
-	  unikraft instances wait <name> ... [flags]
+	  unikraft instances wait --until=UNTIL <name> ... [flags]
 
 	Wait for instances to match a filter.
 
@@ -268,7 +268,7 @@ stdout:
 	  features
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.

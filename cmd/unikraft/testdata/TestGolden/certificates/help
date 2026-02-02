@@ -183,7 +183,7 @@ $ unikraft certificate wait --help
 
 stdout:
 	Usage:
-	  unikraft certificates wait <name> ... [flags]
+	  unikraft certificates wait --until=UNTIL <name> ... [flags]
 
 	Wait for certificates to match a filter.
 
@@ -206,7 +206,7 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.

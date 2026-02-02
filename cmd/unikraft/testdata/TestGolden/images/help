@@ -164,7 +164,7 @@ $ unikraft image wait --help
 
 stdout:
 	Usage:
-	  unikraft images wait <name> ... [flags]
+	  unikraft images wait --until=UNTIL <name> ... [flags]
 
 	Wait for images to match a filter.
 
@@ -179,7 +179,7 @@ stdout:
 	  config.exposed-ports, config.volumes
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.

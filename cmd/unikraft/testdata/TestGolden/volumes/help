@@ -182,7 +182,7 @@ $ unikraft volume wait --help
 
 stdout:
 	Usage:
-	  unikraft volumes wait <name> ... [flags]
+	  unikraft volumes wait --until=UNTIL <name> ... [flags]
 
 	Wait for volumes to match a filter.
 
@@ -204,7 +204,7 @@ stdout:
 	  by.*.read-only
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.

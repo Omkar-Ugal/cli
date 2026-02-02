@@ -182,7 +182,7 @@ $ unikraft service wait --help
 
 stdout:
 	Usage:
-	  unikraft services wait <name> ... [flags]
+	  unikraft services wait --until=UNTIL <name> ... [flags]
 
 	Wait for services to match a filter.
 
@@ -204,7 +204,7 @@ stdout:
 	  services, services.*
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter ($UNIKRAFT_UNTIL)
 	          Filter expression to wait for (e.g. --until state==running).
 	      --interval ($UNIKRAFT_INTERVAL)
 	          Polling interval.
