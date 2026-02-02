@@ -1,0 +1,161 @@
+$ unikraft --help --bad-flag
+
+stdout:
+	Usage:
+	  unikraft <command> [flags]
+
+	Version:
+	  dev (GOOS/GOARCH)
+
+	Commands:
+	  completion
+	          Outputs shell code for initialising tab completions.
+	  login
+	          Login to Unikraft Cloud.
+	  logout
+	          Logout from Unikraft Cloud.
+	  profile, profiles
+	          Manage Unikraft Cloud profiles.
+	  run
+	          Run an image as an instance.
+	  metros, metro
+	          Manage Unikraft Cloud metros.
+	  instances, instance, vm, vms
+	          Manage Unikraft Cloud instances.
+	  volumes, volume, vol, vols
+	          Manage Unikraft Cloud volumes.
+	  services, service, svc, svcs
+	          Manage Unikraft Cloud services.
+	  certificates, certificate, crt, crts, cert, certs
+	          Manage Unikraft Cloud certificates.
+	  images, image, img, imgs
+	          Manage Unikraft Cloud images.
+
+	Examples:
+	  # Login to Unikraft Cloud
+	  unikraft login
+
+	  # List instances across metros
+	  unikraft instances list
+
+	  # Deploy a new instance from an image
+	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
+	  policy=on nginx:latest
+
+	  # Switch to a different profile
+	  unikraft profile use my-other-profile
+
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+	Run "unikraft <command> --help" for more information on a command.
+
+stderr:
+	│  
+	│ error:
+	│   unknown flag --bad-flag
+	│   unikraft.com/cli/internal/cmd.NewRootCmd:148: parsing arguments
+	│  
+	exit status 1
+
+exit code: 1
+
+$ unikraft --help bad-arg
+
+stdout:
+	Usage:
+	  unikraft <command> [flags]
+
+	Version:
+	  dev (GOOS/GOARCH)
+
+	Commands:
+	  completion
+	          Outputs shell code for initialising tab completions.
+	  login
+	          Login to Unikraft Cloud.
+	  logout
+	          Logout from Unikraft Cloud.
+	  profile, profiles
+	          Manage Unikraft Cloud profiles.
+	  run
+	          Run an image as an instance.
+	  metros, metro
+	          Manage Unikraft Cloud metros.
+	  instances, instance, vm, vms
+	          Manage Unikraft Cloud instances.
+	  volumes, volume, vol, vols
+	          Manage Unikraft Cloud volumes.
+	  services, service, svc, svcs
+	          Manage Unikraft Cloud services.
+	  certificates, certificate, crt, crts, cert, certs
+	          Manage Unikraft Cloud certificates.
+	  images, image, img, imgs
+	          Manage Unikraft Cloud images.
+
+	Examples:
+	  # Login to Unikraft Cloud
+	  unikraft login
+
+	  # List instances across metros
+	  unikraft instances list
+
+	  # Deploy a new instance from an image
+	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
+	  policy=on nginx:latest
+
+	  # Switch to a different profile
+	  unikraft profile use my-other-profile
+
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Set the configuration file.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Enable or disable telemetry.
+	          [default: true]
+	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	          Enable or disable emojis in the CLI output.
+	          [default: true]
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	          [default: default]
+	      --version
+	          Print version information.
+
+	Run "unikraft <command> --help" for more information on a command.
+
+stderr:
+	│  
+	│ error:
+	│   unexpected argument bad-arg
+	│   unikraft.com/cli/internal/cmd.NewRootCmd:148: parsing arguments
+	│  
+	exit status 1
+
+exit code: 1

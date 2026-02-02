@@ -1,0 +1,15 @@
+$ unikraft --log-type=json invalid
+
+stderr:
+	{"level":"error","time":"YYYY-MM-DDTHH:MM:SSZ","message":"unexpected argument invalid"}
+	{"level":"error","time":"YYYY-MM-DDTHH:MM:SSZ","message":"unikraft.com/cli/internal/cmd.NewRootCmd:148: parsing arguments"}
+	exit status 1
+
+exit code: 1
+
+$ unikraft --log-level=fatal invalid
+
+stderr:
+	exit status 1
+
+exit code: 1
