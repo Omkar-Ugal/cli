@@ -30,6 +30,30 @@ var instancesTestCases = []testCase{
 		commands: []command{
 			{args: []string{unikraftCmd, "instance", "list"}},
 
+			// Create an nginx instance
+			{args: []string{
+				unikraftCmd, "instance", "create",
+				"--set", "name=test-$UNIQ_INST",
+				"--set", "metro=" + defaultMetro,
+				"--set", "image=nginx:latest",
+				"--set", "runtime.env=A=1,B=2,C=3",
+				"--set", "autostart=true",
+				"--set", "resources.memory=128",
+				"--set", "resources.vcpus=1",
+			}},
+
+			{args: []string{unikraftCmd, "instance", "list"}},
+			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+
+			{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			{args: []string{unikraftCmd, "instance", "list"}},
+		},
+		cleaners: instanceCleaners,
+	},
+	{
+		name:   "instances/connect",
+		online: true,
+		commands: []command{
 			// Create an nginx instance with a service
 			{args: []string{
 				unikraftCmd, "instance", "create",
@@ -43,17 +67,6 @@ var instancesTestCases = []testCase{
 				"--set", "service.services=443:8080/tls+http",
 				"--set", "service.domains=name=$UNIQ_DOMAIN",
 			}},
-
-			{args: []string{unikraftCmd, "instance", "list"}},
-			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
-
-			// {args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
-
-			{args: []string{unikraftCmd, "instance", "stop", "test-$UNIQ_INST"}},
-			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
-
-			{args: []string{unikraftCmd, "instance", "start", "test-$UNIQ_INST"}},
-			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
 			{
 				args: []string{
 					unikraftCmd, "instance", "inspect", "test-$UNIQ_INST",
@@ -61,7 +74,6 @@ var instancesTestCases = []testCase{
 				},
 				captureEnv: "FQDN",
 			},
-
 			{args: []string{
 				"curl",
 				"-k",
@@ -77,41 +89,100 @@ var instancesTestCases = []testCase{
 				"--max-time", "10",
 				"https://$FQDN",
 			}},
+			{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+		},
+		cleaners: instanceCleaners,
+	},
+	{
+		name:   "instances/start-stop",
+		online: true,
+		commands: []command{
+			// Create an nginx instance
+			{args: []string{
+				unikraftCmd, "instance", "create",
+				"--set", "name=test-$UNIQ_INST",
+				"--set", "metro=" + defaultMetro,
+				"--set", "image=nginx:latest",
+				"--set", "runtime.env=A=1,B=2,C=3",
+				"--set", "autostart=true",
+				"--set", "resources.memory=128",
+				"--set", "resources.vcpus=1",
+			}},
+
+			{args: []string{unikraftCmd, "instance", "stop", "test-$UNIQ_INST"}},
+			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+
+			{args: []string{unikraftCmd, "instance", "start", "test-$UNIQ_INST"}},
+			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+
+			// {args: []string{unikraftCmd, "instance", "restart", "test-$UNIQ_INST"}},
+			// {args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
 
 			{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
-			{args: []string{unikraftCmd, "instance", "list"}},
 		},
-		cleaners: []cleaner{
-			{
-				// auto-generated service names like "falling-sky-7cay704w"
-				pattern: regexp.MustCompile(`\b[a-z]+-[a-z]+-[a-z0-9]{8}\b`),
-				repl:    "<SERVICE_NAME>",
-			},
-			{
-				// auto-generated domain names like "foo.ukp-stable.apw.unikraft.internal"
-				pattern: regexp.MustCompile(`\b\.[a-z0-9.\-]+\.unikraft\.(app|internal)\b`),
-				repl:    ".unikraft.internal",
-			},
-			{
-				// IP addresses like "10.0.1.29"
-				pattern: regexp.MustCompile(`\b10\.\d+\.\d+\.\d+\b`),
-				repl:    "10.X.X.X",
-			},
-			{
-				// MAC addresses like "12:b0:0a:HH:MM:1d" (already partially cleaned)
-				pattern: regexp.MustCompile(`[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}`),
-				repl:    "aa:bb:cc:dd:ee:ff",
-			},
-			{
-				// states can be running/starting
-				pattern: regexp.MustCompile(`\bstate:(\s+)(running|starting)`),
-				repl:    "state:${1}running",
-			},
-			{
-				// states can be stopping/stoped
-				pattern: regexp.MustCompile(`\bstate:(\s+)(stopping|stopped)`),
-				repl:    "state:${1}stopped",
-			},
+		cleaners: instanceCleaners,
+	},
+	{
+		name:   "instances/edit",
+		online: true,
+		commands: []command{
+			{args: []string{
+				unikraftCmd, "instance", "create",
+				"--output", "quiet",
+				"--set", "name=test-$UNIQ_INST",
+				"--set", "metro=" + defaultMetro,
+				"--set", "image=nginx:latest",
+				"--set", "runtime.args=before,first",
+				"--set", "runtime.env=A=1,B=2",
+				"--set", "autostart=false",
+				"--set", "resources.memory=128",
+				"--set", "resources.vcpus=1",
+			}},
+			{args: []string{
+				unikraftCmd, "instance", "edit", "test-$UNIQ_INST",
+				"--output", "quiet",
+				"--set", "image=redis:latest",
+				"--set", "runtime.args=after,second",
+				"--set", "runtime.env=A=3,B=4",
+				"--set", "resources.memory=256",
+				// "--set", "resources.vcpus=2",
+			}},
+			{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+			{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
 		},
+		cleaners: instanceCleaners,
+	},
+}
+
+var instanceCleaners = []cleaner{
+	{
+		// auto-generated service names like "falling-sky-7cay704w"
+		pattern: regexp.MustCompile(`\b[a-z]+-[a-z]+-[a-z0-9]{8}\b`),
+		repl:    "<SERVICE_NAME>",
+	},
+	{
+		// auto-generated domain names like "foo.ukp-stable.apw.unikraft.internal"
+		pattern: regexp.MustCompile(`\b\.[a-z0-9.\-]+\.unikraft\.(app|internal)\b`),
+		repl:    ".unikraft.internal",
+	},
+	{
+		// IP addresses like "10.0.1.29"
+		pattern: regexp.MustCompile(`\b10\.\d+\.\d+\.\d+\b`),
+		repl:    "10.X.X.X",
+	},
+	{
+		// MAC addresses like "12:b0:0a:HH:MM:1d" (already partially cleaned)
+		pattern: regexp.MustCompile(`[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}`),
+		repl:    "aa:bb:cc:dd:ee:ff",
+	},
+	{
+		// states can be running/starting
+		pattern: regexp.MustCompile(`\bstate:(\s+)(running|starting)`),
+		repl:    "state:${1}running",
+	},
+	{
+		// states can be stopping/stoped
+		pattern: regexp.MustCompile(`\bstate:(\s+)(stopping|stopped)`),
+		repl:    "state:${1}stopped",
 	},
 }

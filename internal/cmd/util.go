@@ -38,3 +38,42 @@ loop:
 	}
 	return found, nil
 }
+
+type patchOp string
+
+const (
+	patchOpSet patchOp = "set"
+	patchOpAdd patchOp = "add"
+	patchOpDel patchOp = "del"
+)
+
+type patchReq[P ~string] struct {
+	Op    patchOp
+	Prop  P
+	Value any
+}
+
+func patchRequests[P ~string](fields []resource.Field, specFor func(path string, op patchOp, value any) (P, any)) []patchReq[P] {
+	var reqs []patchReq[P]
+	addReq := func(op patchOp, path string, value any) {
+		if value == nil {
+			return
+		}
+		prop, converted := specFor(path, op, value)
+		if converted == nil {
+			return
+		}
+		reqs = append(reqs, patchReq[P]{Op: op, Prop: prop, Value: converted})
+	}
+
+	for key, field := range resource.IterFields(fields) {
+		if field.Edit == nil {
+			continue
+		}
+		path := key.String()
+		addReq(patchOpSet, path, field.Edit.Set)
+		addReq(patchOpAdd, path, field.Edit.Add)
+		addReq(patchOpDel, path, field.Edit.Del)
+	}
+	return reqs
+}

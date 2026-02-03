@@ -190,7 +190,7 @@ func TestGolden(t *testing.T) {
 				output.WriteString(report.String())
 			}
 
-			golden.Assert(t, output.String(), t.Name())
+			golden.Assert(t, output.String(), t.Name(), "\n"+output.String())
 		})
 	}
 }

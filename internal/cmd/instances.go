@@ -381,9 +381,15 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 
 func (Instance) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	instance := target.(Instance)
-	var reqs []platform.UpdateInstancesRequestItem
-	for key, field := range resource.IterFields(fields) {
-		reqs = append(reqs, Instance{}.getFieldRequests(instance.UUID, key, *field)...)
+	patches := patchRequests(fields, instancePatchSpec)
+	reqs := make([]platform.UpdateInstancesRequestItem, 0, len(patches))
+	for _, patch := range patches {
+		reqs = append(reqs, platform.UpdateInstancesRequestItem{
+			Uuid:  &instance.UUID,
+			Op:    platform.UpdateInstancesRequestItemOp(patch.Op),
+			Prop:  patch.Prop,
+			Value: platform.Ptr(patch.Value),
+		})
 	}
 
 	g, err := multimetro.NewClient(ctx)
@@ -405,43 +411,24 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 	return results[0], nil
 }
 
-func (Instance) getFieldRequests(uuid string, path resource.FieldPath, field resource.Field) (reqs []platform.UpdateInstancesRequestItem) {
-	if field.Edit == nil {
-		return reqs
-	}
-	if field.Edit.Set != nil {
-		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Edit.Set, platform.UpdateInstancesRequestItemOpSet))
-	}
-	if field.Edit.Add != nil {
-		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Edit.Add, platform.UpdateInstancesRequestItemOpAdd))
-	}
-	if field.Edit.Del != nil {
-		reqs = append(reqs, Instance{}.getPatchRequest(uuid, path, field.Edit.Del, platform.UpdateInstancesRequestItemOpDel))
-	}
-	return reqs
-}
-
-func (Instance) getPatchRequest(uuid string, key resource.FieldPath, value any, op platform.UpdateInstancesRequestItemOp) platform.UpdateInstancesRequestItem {
-	var prop platform.UpdateInstancesRequestItemProp
-	switch key.String() {
+func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInstancesRequestItemProp, any) {
+	var zero platform.UpdateInstancesRequestItemProp
+	switch path {
 	case "image":
-		prop = platform.UpdateInstancesRequestItemPropImage
+		return platform.UpdateInstancesRequestItemPropImage, value.(string)
 	case "runtime.args":
-		prop = platform.UpdateInstancesRequestItemPropArgs
+		return platform.UpdateInstancesRequestItemPropArgs, value.([]string)
 	case "runtime.env":
-		prop = platform.UpdateInstancesRequestItemPropEnv
+		if op == patchOpDel {
+			return platform.UpdateInstancesRequestItemPropEnv, value.([]string)
+		}
+		return platform.UpdateInstancesRequestItemPropEnv, value.(map[string]string)
 	case "resources.memory":
-		prop = platform.UpdateInstancesRequestItemPropMemory_mb
+		return platform.UpdateInstancesRequestItemPropMemory_mb, int64(value.(types.SizeMebibytes))
 	case "resources.vcpus":
-		prop = platform.UpdateInstancesRequestItemPropVcpus
+		return platform.UpdateInstancesRequestItemPropVcpus, value.(int)
 	default:
-		return platform.UpdateInstancesRequestItem{}
-	}
-	return platform.UpdateInstancesRequestItem{
-		Uuid:  &uuid,
-		Op:    op,
-		Prop:  prop,
-		Value: platform.Ptr(value),
+		return zero, nil
 	}
 }
 

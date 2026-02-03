@@ -332,9 +332,15 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]reso
 
 func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	sg := target.(ServiceGroup)
-	var reqs []platform.UpdateServiceGroupsRequestItem
-	for key, field := range resource.IterFields(fields) {
-		reqs = append(reqs, ServiceGroup{}.getFieldRequests(sg.UUID, key, *field)...)
+	patches := patchRequests(fields, serviceGroupPatchSpec)
+	reqs := make([]platform.UpdateServiceGroupsRequestItem, 0, len(patches))
+	for _, patch := range patches {
+		reqs = append(reqs, platform.UpdateServiceGroupsRequestItem{
+			Uuid:  &sg.UUID,
+			Op:    platform.UpdateServiceGroupsRequestItemOp(patch.Op),
+			Prop:  patch.Prop,
+			Value: platform.Ptr(patch.Value),
+		})
 	}
 
 	g, err := multimetro.NewClient(ctx)
@@ -397,31 +403,14 @@ func (ServiceGroup) Examples() map[cmd.CmdType][]kingkong.Example {
 	}
 }
 
-func (ServiceGroup) getFieldRequests(uuid string, key resource.FieldPath, field resource.Field) (reqs []platform.UpdateServiceGroupsRequestItem) {
-	if field.Edit == nil {
-		return reqs
-	}
-	if field.Edit.Set != nil {
-		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Edit.Set, platform.UpdateServiceGroupsRequestItemOpSet))
-	}
-	if field.Edit.Add != nil {
-		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Edit.Add, platform.UpdateServiceGroupsRequestItemOpAdd))
-	}
-	if field.Edit.Del != nil {
-		reqs = append(reqs, ServiceGroup{}.getPatchRequest(uuid, key, field.Edit.Del, platform.UpdateServiceGroupsRequestItemOpDel))
-	}
-	return reqs
-}
-
-func (ServiceGroup) getPatchRequest(uuid string, key resource.FieldPath, value any, op platform.UpdateServiceGroupsRequestItemOp) platform.UpdateServiceGroupsRequestItem {
-	var prop platform.UpdateServiceGroupsRequestItemProp
-	switch key.String() {
+func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.UpdateServiceGroupsRequestItemProp, any) {
+	var zero platform.UpdateServiceGroupsRequestItemProp
+	switch path {
 	case "limits.soft":
-		prop = platform.UpdateServiceGroupsRequestItemPropSoft_limit
+		return platform.UpdateServiceGroupsRequestItemPropSoft_limit, value.(uint64)
 	case "limits.hard":
-		prop = platform.UpdateServiceGroupsRequestItemPropHard_limit
+		return platform.UpdateServiceGroupsRequestItemPropHard_limit, value.(uint64)
 	case "domains":
-		prop = platform.UpdateServiceGroupsRequestItemPropDomains
 		nvalue := []platform.CreateServiceGroupRequestDomain{}
 		for _, domain := range value.([]Domain) {
 			name := domain.Name
@@ -432,9 +421,8 @@ func (ServiceGroup) getPatchRequest(uuid string, key resource.FieldPath, value a
 				Name: name,
 			})
 		}
-		value = nvalue
+		return platform.UpdateServiceGroupsRequestItemPropDomains, nvalue
 	case "services":
-		prop = platform.UpdateServiceGroupsRequestItemPropServices
 		nvalue := []platform.Service{}
 		for _, svc := range value.([]*Service) {
 			nvalue = append(nvalue, platform.Service{
@@ -443,14 +431,8 @@ func (ServiceGroup) getPatchRequest(uuid string, key resource.FieldPath, value a
 				Handlers:        svc.Handlers,
 			})
 		}
-		value = nvalue
+		return platform.UpdateServiceGroupsRequestItemPropServices, nvalue
 	default:
-		return platform.UpdateServiceGroupsRequestItem{}
-	}
-	return platform.UpdateServiceGroupsRequestItem{
-		Uuid:  &uuid,
-		Op:    op,
-		Prop:  prop,
-		Value: platform.Ptr(value),
+		return zero, nil
 	}
 }
