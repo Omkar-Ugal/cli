@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
@@ -22,7 +23,6 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
-	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type ServicesCmd struct {
@@ -173,19 +173,19 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 }
 
 func (ServiceGroup) List(ctx context.Context) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := multimetro.DoAll(ctx, cl, func(ctx context.Context, mc *multimetro.MetroClient) ([]resource.Resource, error) {
+	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing service groups")
-		resp, err := mc.GetServiceGroups(ctx, nil, true)
+		resp, err := c.GetServiceGroups(ctx, nil, true)
 		if err != nil {
 			return nil, err
 		}
 		var results []resource.Resource
 		for _, serviceGroup := range resp.Data.ServiceGroups {
-			result, err := ServiceGroup{}.load(serviceGroup, &mc.Metro)
+			result, err := ServiceGroup{}.load(serviceGroup, &c.Metro)
 			if err != nil {
 				return nil, err
 			}
@@ -193,36 +193,31 @@ func (ServiceGroup) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		return results, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return xslices.Flatten(resources), nil
 }
 
 func (ServiceGroup) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	resources, err := multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(keys), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]resource.Resource, []multimetro.Key, error) {
+	return group.CollectRefsSlices(ctx, g, multimetro.ParseKeys(keys).Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]resource.Resource, group.Refs, error) {
 		log.G(ctx).Trace().Msg("getting service groups")
-		resp, err := mc.GetServiceGroups(ctx, keys.NamesOrUUIDs(), true)
+		resp, err := c.GetServiceGroups(ctx, refs.NameOrUUIDs(), true)
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
-		var found []multimetro.Key
+		var found []group.Ref
 		var results []resource.Resource
 		for _, serviceGroup := range resp.Data.ServiceGroups {
 			if serviceGroup.Status == nil || *serviceGroup.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
-			result, err := ServiceGroup{}.load(serviceGroup, &mc.Metro)
+			result, err := ServiceGroup{}.load(serviceGroup, &c.Metro)
 			if err != nil {
 				return nil, nil, err
 			}
-			found = append(found, multimetro.Key{
-				Metro: mc.Metro.Name,
+			found = append(found, group.Ref{
+				Metro: c.Metro.Name,
 				Name:  result.Name,
 				UUID:  result.UUID,
 			})
@@ -230,10 +225,6 @@ func (ServiceGroup) Get(ctx context.Context, keys []string) ([]resource.Resource
 		}
 		return results, found, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
 }
 
 func (ServiceGroup) load(serviceGroup platform.ServiceGroup, metro *config.Metro) (ServiceGroup, error) {
@@ -249,22 +240,21 @@ func (ServiceGroup) load(serviceGroup platform.ServiceGroup, metro *config.Metro
 }
 
 func (ServiceGroup) Delete(ctx context.Context, targets []resource.Resource) error {
-	keys := make([]multimetro.Key, len(targets))
+	keys := make(multimetro.Keys, len(targets))
 	for i, target := range targets {
 		sg := target.(ServiceGroup)
 		keys[i] = sg.key()
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting service groups")
-		_, err := mc.DeleteServiceGroups(ctx, keys.NamesOrUUIDs())
-		return nil, keys, err
+		_, err := c.DeleteServiceGroups(ctx, refs.NameOrUUIDs())
+		return refs, err
 	})
-	return err
 }
 
 func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
@@ -306,13 +296,13 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]reso
 		}
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (multimetro.Keys, error) {
+	keys, err := group.CollectMetro(ctx, g, metro, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("creating service group")
-		resp, err := mc.CreateServiceGroup(ctx, req)
+		resp, err := c.CreateServiceGroup(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +312,7 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]reso
 		created := make(multimetro.Keys, 0, len(resp.Data.ServiceGroups))
 		for _, group := range resp.Data.ServiceGroups {
 			key := multimetro.Key{
-				Metro: mc.Metro.Name,
+				Metro: c.Metro.Name,
 				UUID:  ptr.ZeroIfNil(group.Uuid),
 				Name:  ptr.ZeroIfNil(group.Name),
 			}
@@ -347,14 +337,14 @@ func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields [
 		reqs = append(reqs, ServiceGroup{}.getFieldRequests(sg.UUID, key, *field)...)
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	_, err = multimetro.DoKeyExact(ctx, cl, sg.key(), func(ctx context.Context, metroClient *multimetro.MetroClient) (struct{}, error) {
+	err = group.DoMetro(ctx, g, sg.key().Metro, func(ctx context.Context, metroClient multimetro.MetroClient) error {
 		log.G(ctx).Trace().Msg("updating service group")
 		_, err := metroClient.UpdateServiceGroups(ctx, reqs)
-		return struct{}{}, err
+		return err
 	})
 	if err != nil {
 		return nil, err

@@ -21,6 +21,7 @@ import (
 	"unikraft.com/cli/internal/types"
 	xmaps "unikraft.com/cli/internal/x/maps"
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
 )
 
@@ -183,15 +184,15 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 			}
 			keys = append(keys, instance.key())
 		}
-		cl, err := multimetro.NewClient(ctx)
+		eg, ctx := errgroup.WithContext(ctx)
+		g, err := multimetro.NewClient(ctx)
 		if err != nil {
 			return err
 		}
-		eg, ctx := errgroup.WithContext(ctx)
-		_, err = multimetro.DoKeys(ctx, cl, keys, func(_ context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
-			for _, key := range keys {
+		err = group.DoRefs(ctx, g, keys.Refs(), func(_ context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
+			for _, key := range refs {
 				eg.Go(func() error {
-					r, err := logs.InstanceLogs(ctx, mc).Reader(key.NameOrUUID(), 0, true)
+					r, err := logs.InstanceLogs(ctx, c).Reader(key.NameOrUUID(), 0, true)
 					if err != nil {
 						return err
 					}
@@ -199,7 +200,7 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 					return err
 				})
 			}
-			return nil, keys, nil
+			return refs, nil
 		})
 		if err != nil {
 			return err

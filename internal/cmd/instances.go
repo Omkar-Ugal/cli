@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/sync/errgroup"
 	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
@@ -30,7 +31,6 @@ import (
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
-	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type InstancesCmd struct {
@@ -269,19 +269,19 @@ func (i Instance) hyperlink() string {
 }
 
 func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := multimetro.DoAll(ctx, cl, func(ctx context.Context, mc *multimetro.MetroClient) ([]resource.Resource, error) {
+	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing instances")
-		resp, err := mc.GetInstances(ctx, nil, true)
+		resp, err := c.GetInstances(ctx, nil, true)
 		if err != nil {
 			return nil, err
 		}
 		var results []resource.Resource
 		for _, instance := range resp.Data.Instances {
-			result, err := Instance{}.load(ctx, instance, &mc.Metro)
+			result, err := Instance{}.load(ctx, instance, &c.Metro)
 			if err != nil {
 				return nil, err
 			}
@@ -289,35 +289,31 @@ func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		return results, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return xslices.Flatten(resources), nil
 }
 
 func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	resources, err := multimetro.DoKeys(ctx, cl, multimetro.ParseKeys(keys), func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]resource.Resource, []multimetro.Key, error) {
+	return group.CollectRefsSlices(ctx, g, multimetro.ParseKeys(keys).Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]resource.Resource, group.Refs, error) {
 		log.G(ctx).Trace().Msg("getting instances")
-		resp, err := mc.GetInstances(ctx, keys.NamesOrUUIDs(), true)
+		resp, err := c.GetInstances(ctx, refs.NameOrUUIDs(), true)
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
-		var found []multimetro.Key
+		var found []group.Ref
 		var results []resource.Resource
 		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
-			result, err := Instance{}.load(ctx, instance, &mc.Metro)
+			result, err := Instance{}.load(ctx, instance, &c.Metro)
 			if err != nil {
 				return nil, nil, err
 			}
-			found = append(found, multimetro.Key{
-				Metro: mc.Metro.Name,
+			found = append(found, group.Ref{
+				Metro: c.Metro.Name,
 				Name:  result.Name,
 				UUID:  result.UUID,
 			})
@@ -325,10 +321,6 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 		}
 		return results, found, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return resources, nil
 }
 
 func (Instance) load(ctx context.Context, instance platform.Instance, metro *config.Metro) (Instance, error) {
@@ -362,30 +354,29 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 		keys = append(keys, instance.key())
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, metroClient *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
+	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting instances")
-		instances, err := metroClient.DeleteInstances(ctx, keys.NamesOrUUIDs())
+		instances, err := c.DeleteInstances(ctx, refs.NameOrUUIDs())
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		var deleted []multimetro.Key
+		var deleted []group.Ref
 		for _, instance := range instances.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
-			deleted = append(deleted, multimetro.Key{
-				Metro: metroClient.Metro.Name,
+			deleted = append(deleted, group.Ref{
+				Metro: c.Metro.Name,
 				Name:  *instance.Name,
 				UUID:  *instance.Uuid,
 			})
 		}
-		return nil, deleted, nil
+		return deleted, nil
 	})
-	return err
 }
 
 func (Instance) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
@@ -395,14 +386,14 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 		reqs = append(reqs, Instance{}.getFieldRequests(instance.UUID, key, *field)...)
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	_, err = multimetro.DoKeyExact(ctx, cl, instance.key(), func(ctx context.Context, metroClient *multimetro.MetroClient) (struct{}, error) {
+	err = group.DoMetro(ctx, g, instance.key().Metro, func(ctx context.Context, c multimetro.MetroClient) error {
 		log.G(ctx).Trace().Msg("updating instance")
-		_, err := metroClient.UpdateInstances(ctx, reqs)
-		return struct{}{}, err
+		_, err := c.UpdateInstances(ctx, reqs)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -598,13 +589,13 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		}
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	keys, err := multimetro.DoMetro(ctx, cl, metro, func(ctx context.Context, mc *multimetro.MetroClient) (multimetro.Keys, error) {
+	keys, err := group.CollectMetro(ctx, g, metro, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("creating instance")
-		resp, err := mc.CreateInstance(ctx, req)
+		resp, err := c.CreateInstance(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -614,7 +605,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		created := make(multimetro.Keys, 0, len(resp.Data.Instances))
 		for _, instance := range resp.Data.Instances {
 			key := multimetro.Key{
-				Metro: mc.Metro.Name,
+				Metro: c.Metro.Name,
 				UUID:  ptr.ZeroIfNil(instance.Uuid),
 				Name:  ptr.ZeroIfNil(instance.Name),
 			}
@@ -722,16 +713,16 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error 
 		keys = append(keys, key)
 	}
 
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
 
 	eg, ctx := errgroup.WithContext(ctx)
-	_, err = multimetro.DoKeys(ctx, cl, keys, func(_ context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]struct{}, []multimetro.Key, error) {
-		for _, key := range keys {
+	err = group.DoRefs(ctx, g, keys.Refs(), func(_ context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
+		for _, key := range refs {
 			eg.Go(func() error {
-				r, err := logs.InstanceLogs(ctx, mc).Reader(key.NameOrUUID(), cmd.Tail, cmd.Follow)
+				r, err := logs.InstanceLogs(ctx, c).Reader(key.NameOrUUID(), cmd.Tail, cmd.Follow)
 				if err != nil {
 					return err
 				}
@@ -739,7 +730,7 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error 
 				return err
 			})
 		}
-		return nil, keys, nil
+		return refs, nil
 	})
 	if err != nil {
 		return err
@@ -776,16 +767,16 @@ func (c *InstancesStartCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	var targetKeys []multimetro.Key
+	var targetKeys multimetro.Keys
 	for _, res := range before {
 		targetKeys = append(targetKeys, res.(Instance).key())
 	}
 
-	started, err := startInstances(ctx, cl, targetKeys)
+	started, err := startInstances(ctx, g, targetKeys)
 	if err != nil {
 		return err
 	}
@@ -834,18 +825,18 @@ func (c *InstancesStopCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	var targetKeys []multimetro.Key
+	var targetKeys multimetro.Keys
 	for _, res := range before {
 		targetKeys = append(targetKeys, res.(Instance).key())
 	}
 	if len(targetKeys) == 0 {
 		targetKeys = keys
 	}
-	stopped, err := stopInstances(ctx, cl, targetKeys, c.StopOpts)
+	stopped, err := stopInstances(ctx, g, targetKeys, c.StopOpts)
 	if err != nil {
 		return err
 	}
@@ -888,20 +879,20 @@ func (c *InstancesRestartCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cl, err := multimetro.NewClient(ctx)
+	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
 	}
-	var targetKeys []multimetro.Key
+	var targetKeys multimetro.Keys
 	for _, res := range before {
 		targetKeys = append(targetKeys, res.(Instance).key())
 	}
 
-	stopped, err := stopInstances(ctx, cl, targetKeys, c.StopOpts)
+	stopped, err := stopInstances(ctx, g, targetKeys, c.StopOpts)
 	if err != nil {
 		return err
 	}
-	started, err := startInstances(ctx, cl, stopped)
+	started, err := startInstances(ctx, g, stopped)
 	if err != nil {
 		return err
 	}
@@ -933,25 +924,25 @@ func (args *StopOpts) toReq(nameOrUUID platform.NameOrUUID) platform.StopInstanc
 	return req
 }
 
-func startInstances(ctx context.Context, cl *multimetro.Client, keys multimetro.Keys) (multimetro.Keys, error) {
-	started, err := multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]multimetro.Key, []multimetro.Key, error) {
+func startInstances(ctx context.Context, g *group.Group[multimetro.MetroClient], keys multimetro.Keys) (multimetro.Keys, error) {
+	started, err := group.CollectRefsSlices(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]multimetro.Key, group.Refs, error) {
 		log.G(ctx).Trace().Msg("starting instances")
-		resp, err := mc.StartInstances(ctx, keys.NamesOrUUIDs())
+		resp, err := c.StartInstances(ctx, refs.NameOrUUIDs())
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
-		var started []multimetro.Key
+		var started multimetro.Keys
 		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			started = append(started, multimetro.Key{
-				Metro: mc.Metro.Name,
+				Metro: c.Metro.Name,
 				Name:  *instance.Name,
 				UUID:  *instance.Uuid,
 			})
 		}
-		return started, started, nil
+		return started, started.Refs(), nil
 	})
 	if err != nil {
 		return nil, err
@@ -959,29 +950,29 @@ func startInstances(ctx context.Context, cl *multimetro.Client, keys multimetro.
 	return multimetro.Keys(started), nil
 }
 
-func stopInstances(ctx context.Context, cl *multimetro.Client, keys multimetro.Keys, opts StopOpts) (multimetro.Keys, error) {
-	stopped, err := multimetro.DoKeys(ctx, cl, keys, func(ctx context.Context, mc *multimetro.MetroClient, keys multimetro.Keys) ([]multimetro.Key, []multimetro.Key, error) {
+func stopInstances(ctx context.Context, g *group.Group[multimetro.MetroClient], keys multimetro.Keys, opts StopOpts) (multimetro.Keys, error) {
+	stopped, err := group.CollectRefsSlices(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]multimetro.Key, group.Refs, error) {
 		log.G(ctx).Trace().Msg("stopping instances")
-		reqs := make([]platform.StopInstancesRequestItem, 0, len(keys))
-		for _, key := range keys {
+		reqs := make([]platform.StopInstancesRequestItem, 0, len(refs))
+		for _, key := range refs {
 			reqs = append(reqs, opts.toReq(key.NameOrUUID()))
 		}
-		resp, err := mc.StopInstances(ctx, reqs)
+		resp, err := c.StopInstances(ctx, reqs)
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
-		var stopped []multimetro.Key
+		var stopped multimetro.Keys
 		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			stopped = append(stopped, multimetro.Key{
-				Metro: mc.Metro.Name,
+				Metro: c.Metro.Name,
 				Name:  *instance.Name,
 				UUID:  *instance.Uuid,
 			})
 		}
-		return stopped, stopped, nil
+		return stopped, stopped.Refs(), nil
 	})
 	if err != nil {
 		return nil, err
