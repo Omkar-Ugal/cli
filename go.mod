@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/alecthomas/kong v1.13.0
+	github.com/alecthomas/kong v1.13.1-0.20260203032815-becd4f3a2c57
 	github.com/alecthomas/kong-yaml v0.2.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
