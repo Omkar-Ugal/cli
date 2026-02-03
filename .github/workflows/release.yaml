@@ -132,8 +132,11 @@ jobs:
         DISTROS+=("bookworm") # 12
         DISTROS+=("trixie")   # 13
         # Ubuntu
-        DISTROS+=("jammy")  # 22.04
-        DISTROS+=("noble")  # 24.04
+        DISTROS+=("jammy")     # 22.04
+        DISTROS+=("noble")     # 24.04
+        DISTROS+=("plucky")    # 25.05
+        DISTROS+=("questing")  # 25.10
+        DISTROS+=("resolute")  # 26.04 (preview)
 
         for DISTRO in "${DISTROS[@]}"; do
           for DEB in dist/*.deb; do
