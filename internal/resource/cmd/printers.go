@@ -408,20 +408,33 @@ func printRaw(out io.Writer, resources ...resource.Resource) error {
 }
 
 func printTemplate(out io.Writer, tmplStr string, resources ...resource.Resource) error {
-	input := make([]any, 0, len(resources))
+	tmpl, err := template.New("out").
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tmplStr)
+	if err != nil {
+		return err
+	}
+
 	for _, res := range resources {
 		fields, err := res.Fields()
 		if err != nil {
 			return err
 		}
-		input = append(input, resource.FieldsToMap(fields))
+		input := resource.FieldsToMap(fields)
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, input); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(out, buf.String()); err != nil {
+			return err
+		}
+		if !strings.HasSuffix(buf.String(), "\n") {
+			if _, err := io.WriteString(out, "\n"); err != nil {
+				return err
+			}
+		}
 	}
-
-	tmpl, err := template.New("out").Funcs(sprig.TxtFuncMap()).Parse(tmplStr)
-	if err != nil {
-		return err
-	}
-	return tmpl.Execute(out, input)
+	return nil
 }
 
 func printDebug(out io.Writer, resources ...resource.Resource) error {

@@ -57,7 +57,7 @@ var instancesTestCases = []testCase{
 			{
 				args: []string{
 					unikraftCmd, "instance", "inspect", "test-$UNIQ_INST",
-					"--output", "template=" + `{{ (index (index (index (index . 0) "service") "domains") 0).fqdn }}`,
+					"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
 				},
 				captureEnv: "FQDN",
 			},
