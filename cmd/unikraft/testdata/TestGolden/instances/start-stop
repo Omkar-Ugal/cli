@@ -105,6 +105,92 @@ stdout:
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
 
+$ unikraft instance edit test-$UNIQ_INST --set state=stopped
+
+stdout:
+	  metro:        test
+	  name:         test-<INST>
+	  uuid:         12345678-1234-1234-1234-123456789abc
+	- state:        running
+	+ state:        stopped
+	  image:        nginx
+	  runtime:
+	    env:
+	      A:        1
+	      B:        2
+	      C:        3
+	  resources:
+	    memory:     128MiB
+	    vcpus:      1
+	  networks:
+	  - uuid:       12345678-1234-1234-1234-123456789abc
+	    private-ip: 10.X.X.X
+	    mac:        aa:bb:cc:dd:ee:ff
+
+$ unikraft instance inspect test-$UNIQ_INST
+
+stdout:
+	metro:        test
+	name:         test-<INST>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        stopped
+	image:        nginx
+	runtime:
+	  env:
+	    A:        1
+	    B:        2
+	    C:        3
+	resources:
+	  memory:     128MiB
+	  vcpus:      1
+	networks:
+	- uuid:       12345678-1234-1234-1234-123456789abc
+	  private-ip: 10.X.X.X
+	  mac:        aa:bb:cc:dd:ee:ff
+
+$ unikraft instance edit test-$UNIQ_INST --set state=running
+
+stdout:
+	  metro:        test
+	  name:         test-<INST>
+	  uuid:         12345678-1234-1234-1234-123456789abc
+	- state:        stopped
+	+ state:        running
+	  image:        nginx
+	  runtime:
+	    env:
+	      A:        1
+	      B:        2
+	      C:        3
+	  resources:
+	    memory:     128MiB
+	    vcpus:      1
+	  networks:
+	  - uuid:       12345678-1234-1234-1234-123456789abc
+	    private-ip: 10.X.X.X
+	    mac:        aa:bb:cc:dd:ee:ff
+
+$ unikraft instance inspect test-$UNIQ_INST
+
+stdout:
+	metro:        test
+	name:         test-<INST>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        running
+	image:        nginx
+	runtime:
+	  env:
+	    A:        1
+	    B:        2
+	    C:        3
+	resources:
+	  memory:     128MiB
+	  vcpus:      1
+	networks:
+	- uuid:       12345678-1234-1234-1234-123456789abc
+	  private-ip: 10.X.X.X
+	  mac:        aa:bb:cc:dd:ee:ff
+
 $ unikraft instance delete test-$UNIQ_INST
 
 stdout:

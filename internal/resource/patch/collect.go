@@ -22,6 +22,15 @@ func collectValue(field resource.Field, into reflect.Type) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if v != nil {
+		valueType := reflect.TypeOf(v)
+		if valueType.AssignableTo(into) {
+			return v, nil
+		}
+		if valueType.ConvertibleTo(into) {
+			return reflect.ValueOf(v).Convert(into).Interface(), nil
+		}
+	}
 	target := reflect.New(into).Elem().Interface()
 
 	if err := resource.DecodeStruct(v, &target); err != nil {
@@ -71,10 +80,13 @@ func storeValue(field *resource.Field, base reflect.Value) error {
 	}
 
 	if field.Value != nil {
-		if !base.Type().AssignableTo(reflect.TypeOf(field.Value)) {
+		if base.Type().AssignableTo(reflect.TypeOf(field.Value)) {
+			field.Value = base.Interface()
+		} else if base.Type().ConvertibleTo(reflect.TypeOf(field.Value)) {
+			field.Value = base.Convert(reflect.TypeOf(field.Value)).Interface()
+		} else {
 			return fmt.Errorf("cannot assign value of type %s to field %s of type %T", value.Type().String(), field.Name, field.Value)
 		}
-		field.Value = base.Interface()
 	}
 
 	if field.Elem != nil {

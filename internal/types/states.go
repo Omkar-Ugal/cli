@@ -6,6 +6,8 @@
 package types
 
 import (
+	"fmt"
+
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/colors"
 )
@@ -16,6 +18,44 @@ type InstanceState platform.InstanceState
 
 func (state InstanceState) String() string {
 	return state.color()(string(state))
+}
+
+func (state InstanceState) IsRunning() bool {
+	switch platform.InstanceState(state) {
+	case platform.InstanceStateRunning,
+		platform.InstanceStateStarting,
+		platform.InstanceStateStandby:
+		return true
+	default:
+		return false
+	}
+}
+
+func (state InstanceState) validate() error {
+	switch platform.InstanceState(state) {
+	case platform.InstanceStateStopped:
+	case platform.InstanceStateStarting:
+	case platform.InstanceStateRunning:
+	case platform.InstanceStateDraining:
+	case platform.InstanceStateStopping:
+	case platform.InstanceStateStandby:
+	default:
+		return fmt.Errorf("unknown instance state: %q", string(state))
+	}
+	return nil
+}
+
+func (state *InstanceState) UnmarshalText(text []byte) error {
+	s := InstanceState(text)
+	if err := s.validate(); err != nil {
+		return err
+	}
+	*state = s
+	return nil
+}
+
+func (state InstanceState) MarshalText() ([]byte, error) {
+	return []byte(state), nil
 }
 
 func (state InstanceState) color() func(...string) string {
@@ -40,6 +80,34 @@ type VolumeState platform.VolumeState
 
 func (state VolumeState) String() string {
 	return state.color()(string(state))
+}
+
+func (state VolumeState) validate() error {
+	switch platform.VolumeState(state) {
+	case platform.VolumeStateUninitialized:
+	case platform.VolumeStateInitializing:
+	case platform.VolumeStateAvailable:
+	case platform.VolumeStateIdle:
+	case platform.VolumeStateMounted:
+	case platform.VolumeStateBusy:
+	case platform.VolumeStateError:
+	default:
+		return fmt.Errorf("unknown volume state: %q", string(state))
+	}
+	return nil
+}
+
+func (state *VolumeState) UnmarshalText(text []byte) error {
+	s := VolumeState(text)
+	if err := s.validate(); err != nil {
+		return err
+	}
+	*state = s
+	return nil
+}
+
+func (state VolumeState) MarshalText() ([]byte, error) {
+	return []byte(state), nil
 }
 
 func (state VolumeState) color() func(...string) string {
@@ -67,6 +135,30 @@ type CertificateState platform.CertificateState
 
 func (state CertificateState) String() string {
 	return state.color()(string(state))
+}
+
+func (state CertificateState) validate() error {
+	switch platform.CertificateState(state) {
+	case platform.CertificateStatePending:
+	case platform.CertificateStateValid:
+	case platform.CertificateStateError:
+	default:
+		return fmt.Errorf("unknown certificate state: %q", string(state))
+	}
+	return nil
+}
+
+func (state *CertificateState) UnmarshalText(text []byte) error {
+	s := CertificateState(text)
+	if err := s.validate(); err != nil {
+		return err
+	}
+	*state = s
+	return nil
+}
+
+func (state CertificateState) MarshalText() ([]byte, error) {
+	return []byte(state), nil
 }
 
 func (state CertificateState) color() func(...string) string {

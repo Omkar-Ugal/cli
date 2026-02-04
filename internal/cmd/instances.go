@@ -55,7 +55,7 @@ type Instance struct {
 
 	Tags []string `mirror:"instance.tags"`
 
-	State types.InstanceState `mirror:"instance.state" field:",short"`
+	State types.InstanceState `mirror:"instance.state" field:",short" edit:"set"`
 	Image string              `mirror:"instance.image" field:",short" create:"set,required" edit:"set"`
 
 	Runtime struct {
@@ -382,6 +382,14 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 
 func (Instance) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	instance := target.(Instance)
+
+	targetState := instance.State
+	if fields := resource.GetFieldByPath(fields, resource.FieldPath{"state"}); len(fields) > 0 {
+		field := fields[0]
+		targetState = field.Edit.Set.(types.InstanceState)
+		field.Edit = nil
+	}
+
 	patches := patchRequests(fields, instancePatchSpec)
 	reqs := make([]platform.UpdateInstancesRequestItem, 0, len(patches))
 	for _, patch := range patches {
@@ -397,13 +405,27 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 	if err != nil {
 		return nil, err
 	}
-	err = group.DoMetro(ctx, g, instance.key().Metro, func(ctx context.Context, c multimetro.MetroClient) error {
-		log.G(ctx).Trace().Msg("updating instance")
-		_, err := c.UpdateInstances(ctx, reqs)
-		return err
-	})
-	if err != nil {
-		return nil, err
+	if instance.State.IsRunning() && !targetState.IsRunning() {
+		_, err := stopInstances(ctx, g, multimetro.Keys{instance.key()}, StopOpts{DrainTimeout: -1})
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(reqs) > 0 {
+		err = group.DoMetro(ctx, g, instance.key().Metro, func(ctx context.Context, c multimetro.MetroClient) error {
+			log.G(ctx).Trace().Msg("updating instance")
+			_, err := c.UpdateInstances(ctx, reqs)
+			return err
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !instance.State.IsRunning() && targetState.IsRunning() {
+		_, err := startInstances(ctx, g, multimetro.Keys{instance.key()})
+		if err != nil {
+			return nil, err
+		}
 	}
 	results, err := Instance{}.Get(ctx, []string{instance.Key().String()})
 	if err != nil {
