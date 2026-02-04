@@ -38,7 +38,7 @@ import (
 type UnikraftCLI struct {
 	config.Config
 
-	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information." env:"-"`
+	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information."`
 
 	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 
@@ -48,11 +48,11 @@ type UnikraftCLI struct {
 	Run     RunCmd          `cmd:"" help:"Run an image as an instance."`
 
 	Metros       MetrosCmd       `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
-	Instances    InstancesCmd    `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances"`
-	Volumes      VolumesCmd      `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes"`
-	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services"`
-	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates"`
-	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images"`
+	Instances    InstancesCmd    `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms"`
+	Volumes      VolumesCmd      `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols"`
+	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs"`
+	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
+	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
 }
 
 func (cli UnikraftCLI) Examples() []kingkong.Example {
@@ -87,9 +87,10 @@ func (cli UnikraftCLI) Examples() []kingkong.Example {
 func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
 	cli := UnikraftCLI{
 		Config: config.Config{
-			Stdin:  stdin,
-			Stdout: stdout,
-			Stderr: stderr,
+			Context: ctx,
+			Stdin:   stdin,
+			Stdout:  stdout,
+			Stderr:  stderr,
 		},
 	}
 
@@ -114,47 +115,40 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	kctx, err := parser.Parse(args)
 
 	var parseErr *kong.ParseError
+	printHelp := false
 	if errors.As(err, &parseErr) {
+		// we couldn't parse everything, but still try and manually load these
+		// flags, since they're used for help + logging
+		for _, flag := range parseErr.Context.Flags() {
+			switch flag.Name {
+			case "help":
+				printHelp = flag.Set
+			case "log-type":
+				cli.LogType = parseErr.Context.FlagValue(flag).(log.Type)
+			case "log-level":
+				cli.LogLevel = parseErr.Context.FlagValue(flag).(log.Level)
+			}
+		}
+
 		// HACK: kong provides UsageOnError, but this shows help for *all* parse
 		// errors - we only want to show it only for parent commands.
 		// See https://github.com/alecthomas/kong/issues/33
 		if strings.HasPrefix(parseErr.Error(), "expected one of") {
-			_ = parseErr.Context.PrintUsage(false)
-			fmt.Fprintln(os.Stdout)
+			printHelp = true
 		}
 	}
 
 	if err != nil {
-		return nil, nil, nil, jujuerrors.Annotate(err, "parsing arguments")
+		cli.Context = ctxWithLogger(cli.Context, stderr, cli.LogType, cli.LogLevel)
+		cli.Context = config.WithConfig(cli.Context, &cli.Config)
+		if printHelp {
+			_ = parseErr.Context.PrintUsage(false)
+			fmt.Fprintln(os.Stdout)
+		}
+		return nil, &cli, nil, jujuerrors.Annotate(err, "parsing arguments")
 	}
 
-	cli.Context = ctx
-
-	var level log.Level
-	switch cli.LogLevel.String() {
-	case "trace":
-		level = log.TraceLevel
-	case "debug":
-		level = log.DebugLevel
-	case "info":
-		level = log.InfoLevel
-	case "warn":
-		level = log.WarnLevel
-	case "error":
-		level = log.ErrorLevel
-	case "fatal":
-		level = log.FatalLevel
-	case "panic":
-		level = log.PanicLevel
-	default:
-		level = log.InfoLevel
-	}
-	cli.Context = log.WithLogger(cli.Context, logfmt.New(stderr, cli.LogType, level))
-	cli.Context = ctrdlog.WithLogger(cli.Context, logrus.NewEntry(log.ToLogrus(
-		log.G(cli.Context),
-		log.WithLogrusLevelCap(logrus.DebugLevel),
-	)))
-
+	cli.Context = ctxWithLogger(cli.Context, stderr, cli.LogType, cli.LogLevel)
 	cli.Context = config.WithConfig(cli.Context, &cli.Config)
 	kctx.BindTo(cli.Context, (*context.Context)(nil))
 
@@ -191,6 +185,33 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 	return kctx, &cli, cleanup, nil
 }
 
+func ctxWithLogger(ctx context.Context, out io.Writer, type_ log.Type, level log.Level) context.Context {
+	switch level.String() {
+	case "trace":
+		level = log.TraceLevel
+	case "debug":
+		level = log.DebugLevel
+	case "info":
+		level = log.InfoLevel
+	case "warn":
+		level = log.WarnLevel
+	case "error":
+		level = log.ErrorLevel
+	case "fatal":
+		level = log.FatalLevel
+	case "panic":
+		level = log.PanicLevel
+	default:
+		level = log.InfoLevel
+	}
+	ctx = log.WithLogger(ctx, logfmt.New(out, type_, level))
+	ctx = ctrdlog.WithLogger(ctx, logrus.NewEntry(log.ToLogrus(
+		log.G(ctx),
+		log.WithLogrusLevelCap(logrus.DebugLevel),
+	)))
+	return ctx
+}
+
 func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 	helpOptions := kong.HelpOptions{
 		Compact:             true,
@@ -216,7 +237,6 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 
 	parser, err := kong.New(cli,
 		kong.Name("unikraft"),
-		kong.DefaultEnvars("UNIKRAFT"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(helpOptions),
 		kong.Configuration(kongyaml.Loader, configFile),

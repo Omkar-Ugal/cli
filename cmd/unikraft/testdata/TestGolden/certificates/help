@@ -35,12 +35,12 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config
 	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	      --[no-]telemetry
 	          Enable or disable telemetry.
 	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	      --[no-]emojis
 	          Enable or disable emojis in the CLI output.
 	          [default: true]
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
@@ -49,7 +49,7 @@ stdout:
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	      --profile
 	          Set the current profile.
 	          [default: default]
 	      --version
@@ -86,22 +86,22 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	  -w, --watch ($UNIKRAFT_WATCH)
+	  -w, --watch
 	          Watch for changes and refresh output.
-	  -f, --field ($UNIKRAFT_FIELD)
+	  -f, --field
 	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
+	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
 
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config
 	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	      --[no-]telemetry
 	          Enable or disable telemetry.
 	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	      --[no-]emojis
 	          Enable or disable emojis in the CLI output.
 	          [default: true]
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
@@ -110,7 +110,7 @@ stdout:
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	      --profile
 	          Set the current profile.
 	          [default: default]
 	      --version
@@ -147,24 +147,24 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	      --filter ($UNIKRAFT_FILTER)
+	      --filter
 	          Filter output based on a field value (e.g. --filter state==running).
-	  -w, --watch ($UNIKRAFT_WATCH)
+	  -w, --watch
 	          Watch for changes and refresh output.
-	  -f, --field ($UNIKRAFT_FIELD)
+	  -f, --field
 	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
+	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
 
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config
 	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	      --[no-]telemetry
 	          Enable or disable telemetry.
 	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	      --[no-]emojis
 	          Enable or disable emojis in the CLI output.
 	          [default: true]
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
@@ -173,7 +173,7 @@ stdout:
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	      --profile
 	          Set the current profile.
 	          [default: default]
 	      --version
@@ -183,7 +183,7 @@ $ unikraft certificate wait --help
 
 stdout:
 	Usage:
-	  unikraft certificates wait <name> ... [flags]
+	  unikraft certificates wait --until=UNTIL <name> ... [flags]
 
 	Wait for certificates to match a filter.
 
@@ -206,28 +206,28 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	      --until ($UNIKRAFT_UNTIL)
+	      --until, --filter
 	          Filter expression to wait for (e.g. --until state==running).
-	      --interval ($UNIKRAFT_INTERVAL)
+	      --interval
 	          Polling interval.
 	          [default: 2s]
-	      --timeout ($UNIKRAFT_TIMEOUT)
+	      --timeout
 	          Timeout before giving up.
 	          [default: 0]
-	  -f, --field ($UNIKRAFT_FIELD)
+	  -f, --field
 	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
+	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
 
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config
 	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	      --[no-]telemetry
 	          Enable or disable telemetry.
 	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	      --[no-]emojis
 	          Enable or disable emojis in the CLI output.
 	          [default: true]
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
@@ -236,7 +236,7 @@ stdout:
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	      --profile
 	          Set the current profile.
 	          [default: default]
 	      --version
@@ -278,28 +278,28 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	      --set ($UNIKRAFT_SET)
+	      --set
 	          Key-value pairs for creating the certificate.
-	      --set-file ($UNIKRAFT_SET_FILE)
+	      --set-file
 	          Files containing key-value pairs for creating the certificate.
-	  -e, --visual ($UNIKRAFT_VISUAL)
+	  -e, --visual
 	          Open an editor to set fields visually.
-	      --dry-run ($UNIKRAFT_DRY_RUN)
+	      --dry-run
 	          Print patches without applying them.
-	  -f, --field ($UNIKRAFT_FIELD)
+	  -f, --field
 	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
+	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
 
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config
 	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	      --[no-]telemetry
 	          Enable or disable telemetry.
 	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	      --[no-]emojis
 	          Enable or disable emojis in the CLI output.
 	          [default: true]
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
@@ -308,7 +308,7 @@ stdout:
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	      --profile
 	          Set the current profile.
 	          [default: default]
 	      --version
@@ -345,20 +345,20 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	  -f, --field ($UNIKRAFT_FIELD)
+	  -f, --field
 	          Specify which fields to include in the output.
-	  -o, --output ($UNIKRAFT_OUTPUT)
+	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
 
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config
 	          Set the configuration file.
-	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	      --[no-]telemetry
 	          Enable or disable telemetry.
 	          [default: true]
-	      --[no-]emojis ($UNIKRAFT_EMOJIS)
+	      --[no-]emojis
 	          Enable or disable emojis in the CLI output.
 	          [default: true]
 	      --log-level ($UNIKRAFT_LOG_LEVEL)
@@ -367,7 +367,7 @@ stdout:
 	      --log-type ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
 	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	      --profile
 	          Set the current profile.
 	          [default: default]
 	      --version

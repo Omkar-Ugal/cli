@@ -286,6 +286,11 @@ type cleaner struct {
 // so we get consistent golden files.
 var cleaners = []cleaner{
 	{
+		// datetimes like "2000-01-02T12:34:56+01:00" change between runs
+		pattern: regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|(\+\d{2}:\d{2}))?\b`),
+		repl:    "YYYY-MM-DDTHH:MM:SSZ",
+	},
+	{
 		// times like "12:34:56" or "12:34:56PM" change between runs
 		pattern: regexp.MustCompile(`\b\d\d?:\d\d:\d\d([AP]M)?\b`),
 		repl:    "HH:MM:SS",

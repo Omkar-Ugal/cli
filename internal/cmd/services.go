@@ -28,6 +28,7 @@ import (
 type ServicesCmd struct {
 	cmd.ResourceCmd[ServiceGroup]
 	cmd.GettableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
+	cmd.WaitableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
 	cmd.ListableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
 	cmd.DeletableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
 	cmd.EditableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`

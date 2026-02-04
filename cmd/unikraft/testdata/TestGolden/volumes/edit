@@ -1,12 +1,12 @@
 $ unikraft volume create --output quiet --set name=test-$UNIQ_VOLUME --set size=10 --set metro=test
 
 stdout:
-	test/12345678-1234-1234-1234-123456789abc
+	test/test-<VOLUME>
 
 $ unikraft volume edit test-$UNIQ_VOLUME --output quiet --set size=20
 
 stdout:
-	test/12345678-1234-1234-1234-123456789abc
+	test/test-<VOLUME>
 
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
@@ -21,4 +21,4 @@ stdout:
 $ unikraft volume delete test-$UNIQ_VOLUME
 
 stdout:
-	test/12345678-1234-1234-1234-123456789abc
+	test/test-<VOLUME>

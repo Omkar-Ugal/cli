@@ -35,8 +35,8 @@ type Config struct {
 	Emojis    bool   `group:"flag-global" name:"emojis" help:"Enable or disable emojis in the CLI output." default:"true" negatable:"" yaml:"emojis" json:"emojis"`
 
 	// Logging configuration.
-	LogLevel log.Level `group:"flag-global" name:"log-level" help:"Set the logging level." enum:"trace,debug,info,warn,error,fatal" placeholder:"level" default:"info" yaml:"-" json:"-"`
-	LogType  log.Type  `group:"flag-global" name:"log-type" help:"Set the log type." enum:"text,json" placeholder:"type" default:"text" yaml:"-" json:"-"`
+	LogLevel log.Level `group:"flag-global" name:"log-level" env:"UNIKRAFT_LOG_LEVEL" help:"Set the logging level." enum:"trace,debug,info,warn,error,fatal" placeholder:"level" default:"info" yaml:"-" json:"-"`
+	LogType  log.Type  `group:"flag-global" name:"log-type" env:"UNIKRAFT_LOG_TYPE" help:"Set the log type." enum:"text,json" placeholder:"type" default:"text" yaml:"-" json:"-"`
 
 	// Profile configuration.
 	Profile  string             `group:"flag-global" name:"profile" help:"Set the current profile." placeholder:"name" default:"default"`

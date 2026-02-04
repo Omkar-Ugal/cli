@@ -137,6 +137,7 @@ const (
 	FieldVerbosityHidden
 	FieldVerbosityLong
 	FieldVerbosityShort
+	FieldVerbosityNone // do not show anything
 )
 
 func (v FieldVerbosity) String() string {

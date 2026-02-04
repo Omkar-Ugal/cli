@@ -21,20 +21,20 @@ import (
 	"unikraft.com/cli/internal/resource"
 )
 
-func VisualEdit(ctx context.Context, cfg *config.Config, fields []resource.Field, patches []resource.Field) ([]resource.Field, error) {
-	return visualEdit(ctx, cfg, fields, patches, false)
+func VisualEdit(ctx context.Context, cfg *config.Config, res resource.Resource, fields []resource.Field, patches []resource.Field) ([]resource.Field, error) {
+	return visualEdit(ctx, cfg, res, fields, patches, false)
 }
 
-func VisualCreate(ctx context.Context, cfg *config.Config, fields []resource.Field, creates []resource.Field) ([]resource.Field, error) {
-	return visualEdit(ctx, cfg, fields, creates, true)
+func VisualCreate(ctx context.Context, cfg *config.Config, res resource.Resource, fields []resource.Field, creates []resource.Field) ([]resource.Field, error) {
+	return visualEdit(ctx, cfg, res, fields, creates, true)
 }
 
 // visualEdit opens an editor for the user to modify fields visually.
 //
 // It takes all the fields and already existing patched fields as input, and
 // returns all patched fields after editing.
-func visualEdit(ctx context.Context, cfg *config.Config, fields []resource.Field, patches []resource.Field, create bool) ([]resource.Field, error) {
-	data, err := saveFields(fields, patches, create)
+func visualEdit(ctx context.Context, cfg *config.Config, res resource.Resource, fields []resource.Field, patches []resource.Field, create bool) ([]resource.Field, error) {
+	data, err := saveFields(res, fields, patches, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize fields: %w", err)
 	}
@@ -82,7 +82,7 @@ func visualEdit(ctx context.Context, cfg *config.Config, fields []resource.Field
 	return fields, nil
 }
 
-func saveFields(fields []resource.Field, patches []resource.Field, create bool) ([]byte, error) {
+func saveFields(res resource.Resource, fields []resource.Field, patches []resource.Field, create bool) ([]byte, error) {
 	fields = resource.CloneFields(fields)
 
 	patchMap := make(map[string]resource.Field)
@@ -154,17 +154,7 @@ func saveFields(fields []resource.Field, patches []resource.Field, create bool) 
 		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
 	}
 
-	result = append(result, []byte("\n# Edit the fields above. Lines starting with '#' will be ignored.\n#")...)
-	result = append(result, []byte("\n# Original:\n")...)
-
-	rest, err := yaml.Marshal(resource.FieldsToMap(fields))
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
-	}
-	for line := range bytes.Lines(rest) {
-		result = append(result, []byte("#\t")...)
-		result = append(result, line...)
-	}
+	result = append(fmt.Appendf(nil, "# %s %s\n", res.Type().Name, res.Key()), result...)
 
 	return result, nil
 }

@@ -14,12 +14,10 @@ var authTestCases = []testCase{
 			{args: []string{unikraftCmd, "profile", "--help"}},
 			{args: []string{unikraftCmd, "profile", "get", "--help"}},
 			{args: []string{unikraftCmd, "profile", "list", "--help"}},
-			{args: []string{unikraftCmd, "profile", "wait", "--help"}},
 			{args: []string{unikraftCmd, "profile", "use", "--help"}},
 			{args: []string{unikraftCmd, "metro", "--help"}},
 			{args: []string{unikraftCmd, "metro", "get", "--help"}},
 			{args: []string{unikraftCmd, "metro", "list", "--help"}},
-			{args: []string{unikraftCmd, "metro", "wait", "--help"}},
 		},
 	},
 	{

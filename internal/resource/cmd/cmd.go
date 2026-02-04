@@ -40,7 +40,9 @@ func (cmd ResourceCmd[R]) Underlying() resource.Resource {
 }
 
 type GettableResourceCmd[R resource.GettableResource] struct {
-	Get  ResourceGetCmd[R]  `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+	Get ResourceGetCmd[R] `cmd:"" help:"Inspect a ${name}." aliases:"inspect,show"`
+}
+type WaitableResourceCmd[R resource.GettableResource] struct {
 	Wait ResourceWaitCmd[R] `cmd:"" help:"Wait for ${names} to match a filter."`
 }
 type ListableResourceCmd[R resource.GettableListableResource] struct {
@@ -212,7 +214,7 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, cfg *config.Config, sandb
 
 type ResourceWaitCmd[R resource.GettableResource] struct {
 	Name  []string `arg:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to wait for."`
-	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none"`
+	Until []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none" required:"" aliases:"filter"`
 
 	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
 	Timeout  time.Duration `long:"timeout" default:"0" help:"Timeout before giving up."`
@@ -520,7 +522,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 		return err
 	}
 	if cmd.Visual {
-		patched, err = patch.VisualEdit(ctx, cfg, fields, patched)
+		patched, err = patch.VisualEdit(ctx, cfg, res, fields, patched)
 		if err != nil {
 			return err
 		}
@@ -538,6 +540,10 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, cfg *config.Config, sand
 			return err
 		}
 		updated = []resource.Resource{result}
+	} else {
+		log.G(ctx).Warn().
+			Str("resource", res.Key().String()).
+			Msg("no edits made")
 	}
 	return Diff(cfg.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
 }
@@ -611,7 +617,7 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, cfg *config.Config, sa
 
 	if cmd.Visual {
 		// FIXME: should allow required fields
-		patched, err = patch.VisualCreate(ctx, cfg, fields, patched)
+		patched, err = patch.VisualCreate(ctx, cfg, empty, fields, patched)
 		if err != nil {
 			return err
 		}

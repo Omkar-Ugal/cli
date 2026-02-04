@@ -97,6 +97,9 @@ func getMethod(value reflect.Value, name string) reflect.Value {
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (context.Context, error) {
 	cli, opts, cleanup, err := cmd.NewRootCmd(ctx, args, stdin, stdout, stderr)
 	if err != nil {
+		if opts != nil && opts.Context != nil {
+			return opts.Context, err
+		}
 		return ctx, err
 	}
 

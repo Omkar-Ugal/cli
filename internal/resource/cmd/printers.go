@@ -132,7 +132,7 @@ func (p Printer) Print(out io.Writer, fieldSpecs []string, base resource.Resourc
 	case PrinterTypeRaw:
 		return printRaw(out, resources...)
 	case PrinterTypeQuiet:
-		return printQuiet(out, resources...)
+		return printQuiet(out, fieldSpecs, resources...)
 	case PrinterTypeTemplate:
 		return printTemplate(out, p.Value, resources...)
 	case PrintTypeDebug:
@@ -350,12 +350,40 @@ func headerName(path resource.FieldPath) string {
 	return ""
 }
 
-func printQuiet(out io.Writer, resources ...resource.Resource) error {
+func printQuiet(out io.Writer, specs []string, resources ...resource.Resource) error {
 	for _, res := range resources {
-		_, err := fmt.Fprintln(out, res.Key())
+		if specs == nil {
+			_, err := fmt.Fprintln(out, res.Key())
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		fields, err := res.Fields()
 		if err != nil {
 			return err
 		}
+		fields, err = resourceFields(fields, false, resource.FieldVerbosityNone, specs)
+		if err != nil {
+			return err
+		}
+		i := 0
+		for _, field := range resource.IterFields(fields) {
+			if field.HasChildren() && field.Value == nil {
+				continue
+			}
+			s, err := field.Render()
+			if err != nil {
+				return err
+			}
+			if i > 0 {
+				fmt.Fprint(out, " ")
+			}
+			fmt.Fprint(out, s)
+			i++
+		}
+		fmt.Fprintln(out)
 	}
 	return nil
 }
