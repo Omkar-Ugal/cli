@@ -124,17 +124,13 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 		}
 
 		targets := xmaps.OrderedKeys(s.Keys[name])
-		if len(targets) == 0 {
-			log.G(ctx).Debug().
-				Str("resource", name).
-				Msg("no resources to clean up in sandbox")
-			continue
-		}
-
 		log.G(ctx).Debug().
 			Str("resource", name).
 			Strs("targets", targets).
 			Msg("cleaning up resources in sandbox")
+		if len(targets) == 0 {
+			continue
+		}
 
 		resources, err := r.Get(ctx, targets)
 		if err != nil {
@@ -317,7 +313,14 @@ func (r sandboxedEditableResource) Edit(ctx context.Context, target Resource, fi
 	if r.sandbox.Missing(target) {
 		return nil, fmt.Errorf("resource %s is not in the sandbox", target.Key())
 	}
-	return r.EditableResource.Edit(ctx, target, fields)
+	resource, err := r.EditableResource.Edit(ctx, target, fields)
+	if err != nil {
+		return nil, err
+	}
+	if err := r.sandbox.Add(ctx, resource); err != nil {
+		return nil, err
+	}
+	return resource, nil
 }
 
 type sandboxedCreatableResource struct {
