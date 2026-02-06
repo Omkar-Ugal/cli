@@ -25,7 +25,7 @@ func WatchOutput(ctx context.Context, interval time.Duration, out io.Writer, ren
 
 func watchOutputPretty(ctx context.Context, interval time.Duration, out io.Writer, render func(io.Writer) error) error {
 	program := tea.NewProgram(
-		watchModel{render: render, interval: interval},
+		watchModel{underlying: out, render: render, interval: interval},
 		tea.WithOutput(out),
 		tea.WithContext(ctx),
 	)
