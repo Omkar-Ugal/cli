@@ -24,6 +24,7 @@ type Metro struct {
 	Name     string `field:",short" json:"name"`
 	Country  string `field:",short" json:"country"`
 	Endpoint string `field:",short" json:"endpoint"`
+	Insecure bool   `field:",long" json:"insecure"`
 }
 
 func (Metro) Type() resource.Type {
@@ -58,6 +59,7 @@ func (Metro) List(ctx context.Context) ([]resource.Resource, error) {
 			Name:     metro.Name,
 			Country:  metro.Country,
 			Endpoint: metro.Endpoint,
+			Insecure: metro.Insecure,
 		}
 		results = append(results, result)
 	}

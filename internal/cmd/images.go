@@ -360,7 +360,7 @@ func parseNormalizedNamed(key string) (reference.Named, error) {
 func parseNormalizedNamedMetro(metro *config.Metro, key string) (reference.Named, error) {
 	index := "index.unikraft.io"
 	if metro != nil {
-		index = metro.Index()
+		index = metro.Index().Host
 	}
 	return xreference.ParseNormalizedNamed(
 		key,
@@ -377,7 +377,7 @@ func imageRefToKey(metros []config.Metro, named reference.Named) multimetro.Key 
 		}
 	}
 	for _, metro := range metros {
-		if domain == metro.Index() {
+		if domain == metro.Index().Host {
 			return multimetro.Key{
 				Metro: metro.Name,
 				Name:  named.String(),

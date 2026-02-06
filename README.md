@@ -68,9 +68,10 @@ profiles:
     organization: <org-name>
     token: <api-token>
     metros:
-      - name: <metro-name> # e.g. fra
+      - name: <metro-name>         # e.g. fra
         endpoint: <metro-endpoint> # e.g. https://api.fra.unikraft.cloud
-        country: <metro-country> # e.g. de
+        country: <metro-country>   # e.g. de
+        insecure: false            # skip tls verification (avoid for production use)
 ```
 
 Then you'll be able to run commands against the platform. For example, to list

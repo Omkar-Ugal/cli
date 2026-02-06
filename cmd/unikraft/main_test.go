@@ -179,7 +179,7 @@ func TestGolden(t *testing.T) {
 							repl:    "https://api." + metro.Name + ".unikraft.internal/",
 						},
 						cleaner{
-							pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index())),
+							pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index().Host)),
 							repl:    "index." + metro.Name + ".unikraft.internal",
 						},
 					)
