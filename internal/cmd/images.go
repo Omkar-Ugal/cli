@@ -204,8 +204,7 @@ func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
 }
 
 func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	cfg := config.FromContextOrDefault(ctx)
-	profile, err := cfg.CurrentProfile()
+	profile, err := config.G(ctx).CurrentProfile()
 	if err != nil {
 		return nil, err
 	}
@@ -438,8 +437,7 @@ func (cmd ImagesCopyCmd) Run(ctx context.Context) error {
 }
 
 func storageOpts(ctx context.Context) ([]imagespec.StorageOpt, error) {
-	cfg := config.FromContextOrDefault(ctx)
-	profile, err := cfg.CurrentProfile()
+	profile, err := config.G(ctx).CurrentProfile()
 	if err != nil {
 		return nil, err
 	}

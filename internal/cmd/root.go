@@ -6,18 +6,17 @@
 package cmd
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/alecthomas/kong"
-	kongyaml "github.com/alecthomas/kong-yaml"
 	ctrdlog "github.com/containerd/log"
 	kongcompletion "github.com/jotaen/kong-completion"
 	jujuerrors "github.com/juju/errors"
@@ -36,7 +35,7 @@ import (
 )
 
 type UnikraftCLI struct {
-	config.Config
+	globalFlags
 
 	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information."`
 
@@ -84,22 +83,27 @@ func (cli UnikraftCLI) Examples() []kingkong.Example {
 	}
 }
 
-func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) (*kong.Context, *UnikraftCLI, func() error, error) {
-	cli := UnikraftCLI{
-		Config: config.Config{
-			Context: ctx,
-			Stdin:   stdin,
-			Stdout:  stdout,
-			Stderr:  stderr,
-		},
-	}
+type globalFlags struct {
+	Config string `group:"flag-global" name:"config" env:"UNIKRAFT_CONFIG" help:"Path to the configuration file." placeholder:"file"`
+
+	LogLevel log.Level `group:"flag-global" name:"log-level" env:"UNIKRAFT_LOG_LEVEL" help:"Set the logging level." enum:"trace,debug,info,warn,error,fatal" placeholder:"level" default:"info"`
+	LogType  log.Type  `group:"flag-global" name:"log-type" env:"UNIKRAFT_LOG_TYPE" help:"Set the log type." enum:"text,json" placeholder:"type" default:"text"`
+
+	Profile string `group:"flag-global" name:"profile" env:"UNIKRAFT_PROFILE" help:"Set the current profile." placeholder:"name"`
+}
+
+func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context.Context, *kong.Context, *UnikraftCLI, func() error, error) {
+	cli := UnikraftCLI{}
 
 	parser, err := NewParser(&cli)
 	if err != nil {
-		return nil, nil, nil, jujuerrors.Annotate(err, "creating parser")
+		// super unlikely, the config for the parser is all hardcoded, but we
+		// should still *somehow* try and log it
+		ctx = ctxWithLogger(ctx, stdio.Stderr, log.TextType, log.InfoLevel)
+		return ctx, nil, nil, nil, jujuerrors.Annotate(err, "internal error")
 	}
-	parser.Stdout = stdout
-	parser.Stderr = stderr
+	parser.Stdout = stdio.Stdout
+	parser.Stderr = stdio.Stderr
 
 	kongcompletion.Register(
 		parser,
@@ -129,6 +133,12 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 				cli.LogLevel = parseErr.Context.FlagValue(flag).(log.Level)
 			}
 		}
+		cli.LogType = cmp.Or(cli.LogType, log.TextType)
+		cli.LogLevel = cmp.Or(cli.LogLevel, log.InfoLevel)
+
+		if cli.LogType != log.TextType && cli.LogType != log.JSONType {
+			cli.LogType = log.TextType
+		}
 
 		// HACK: kong provides UsageOnError, but this shows help for *all* parse
 		// errors - we only want to show it only for parent commands.
@@ -137,29 +147,49 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 			printHelp = true
 		}
 	}
-
 	if err != nil {
-		cli.Context = ctxWithLogger(cli.Context, stderr, cli.LogType, cli.LogLevel)
-		cli.Context = config.WithConfig(cli.Context, &cli.Config)
+		ctx = ctxWithLogger(ctx, stdio.Stderr, cli.LogType, cli.LogLevel)
 		if printHelp {
 			_ = parseErr.Context.PrintUsage(false)
 			fmt.Fprintln(os.Stdout)
 		}
-		return nil, &cli, nil, jujuerrors.Annotate(err, "parsing arguments")
+		return ctx, nil, &cli, nil, jujuerrors.Annotate(err, "parsing arguments")
 	}
 
-	cli.Context = ctxWithLogger(cli.Context, stderr, cli.LogType, cli.LogLevel)
-	cli.Context = config.WithConfig(cli.Context, &cli.Config)
-	kctx.BindTo(cli.Context, (*context.Context)(nil))
+	kctx.Bind(stdio)
+
+	ctx = ctxWithLogger(ctx, stdio.Stderr, cli.LogType, cli.LogLevel)
+
+	configPath := cli.Config
+	if configPath == "" {
+		configPath, err = config.ConfigFilePath()
+		if err != nil {
+			return ctx, nil, nil, nil, jujuerrors.Annotate(err, "getting config file path")
+		}
+	}
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		return ctx, nil, nil, nil, jujuerrors.Annotate(err, "loading config")
+	}
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
+	if cli.globalFlags.Profile != "" {
+		cfg.OverrideCurrentProfile(cli.globalFlags.Profile)
+	}
+	ctx = config.WithConfig(ctx, cfg)
+	kctx.Bind(cfg)
+
+	kctx.BindTo(ctx, (*context.Context)(nil))
 
 	sandbox, err := resource.LoadSandboxFromEnv(SandboxedResources...)
 	if err != nil {
-		return nil, nil, nil, jujuerrors.Annotate(err, "loading sandbox from environment")
+		return ctx, nil, nil, nil, jujuerrors.Annotate(err, "loading sandbox from environment")
 	}
 	if sandbox != nil {
 		sandboxed := xmaps.OrderedKeys(sandbox.Keys)
 		slices.Sort(sandboxed)
-		log.G(cli.Context).Debug().
+		log.G(ctx).Debug().
 			Str("path", sandbox.Path).
 			Strs("resources", sandboxed).
 			Msg("loaded sandbox from environment")
@@ -173,7 +203,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		return nil
 	}
 
-	log.G(cli.Context).
+	log.G(ctx).
 		Debug().
 		Str("version", version.Version).
 		Str("arch", runtime.GOARCH).
@@ -182,7 +212,7 @@ func NewRootCmd(ctx context.Context, args []string, stdin io.Reader, stdout, std
 		Str("built", version.BuildTime).
 		Msg("unikraft CLI")
 
-	return kctx, &cli, cleanup, nil
+	return ctx, kctx, &cli, cleanup, nil
 }
 
 func ctxWithLogger(ctx context.Context, out io.Writer, type_ log.Type, level log.Level) context.Context {
@@ -204,7 +234,9 @@ func ctxWithLogger(ctx context.Context, out io.Writer, type_ log.Type, level log
 	default:
 		level = log.InfoLevel
 	}
+	ctx = logfmt.WithLogType(ctx, type_)
 	ctx = log.WithLogger(ctx, logfmt.New(out, type_, level))
+
 	ctx = ctrdlog.WithLogger(ctx, logrus.NewEntry(log.ToLogrus(
 		log.G(ctx),
 		log.WithLogrusLevelCap(logrus.DebugLevel),
@@ -223,23 +255,10 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 		Title: kingkong.Underline("Global flags") + ":",
 	}
 
-	// Replace the global logger getter with our own which leverages our own
-	// log formatter and configuration.
-	log.G = func(ctx context.Context) *log.Logger {
-		if v, ok := ctx.Value(log.ContextKey{}).(*log.Logger); ok {
-			return v
-		}
-
-		return logfmt.New(cli.Stderr, cli.LogType, cli.LogLevel)
-	}
-
-	configFile := filepath.Join(config.ConfigDir(), config.DefaultConfigFilename)
-
-	parser, err := kong.New(cli,
+	return kong.New(cli,
 		kong.Name("unikraft"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(helpOptions),
-		kong.Configuration(kongyaml.Loader, configFile),
 		kong.Help(kingkong.HelpPrinter(version.Version)),
 		kong.WithBeforeReset(func(value *kong.Path) error {
 			if value == nil || value.App == nil || value.App.Flags == nil {
@@ -268,7 +287,6 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 		}),
 		kong.NamedMapper("optional", xkong.Optional()),
 	)
-	return parser, err
 }
 
 var SandboxedResources = []resource.Resource{

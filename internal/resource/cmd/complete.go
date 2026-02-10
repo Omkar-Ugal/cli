@@ -7,7 +7,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -78,21 +77,29 @@ func previewConfig() (*config.Config, error) {
 	var cfg *config.Config
 	var err error
 	configPath, ok := lookupArg(a, "--config")
-	if ok {
-		cfg, err = config.LoadFrom(configPath)
-	} else {
-		cfg, err = config.LoadFrom(config.ConfigDir())
+	if !ok {
+		configPath, ok = os.LookupEnv("UNIKRAFT_CONFIG")
 	}
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, nil
+	if !ok {
+		configPath, err = config.ConfigFilePath()
+		if err != nil {
+			return nil, fmt.Errorf("getting config file path for completion: %w", err)
+		}
 	}
+	cfg, err = config.Load(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading config for completion: %w", err)
 	}
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
 
 	profile, ok := lookupArg(a, "--profile")
+	if !ok {
+		profile, ok = os.LookupEnv("UNIKRAFT_PROFILE")
+	}
 	if ok {
-		cfg.Profile = profile
+		cfg.OverrideCurrentProfile(profile)
 	}
 
 	return cfg, nil

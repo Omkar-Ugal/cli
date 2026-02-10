@@ -89,14 +89,16 @@ func TestGolden(t *testing.T) {
 
 			assert.NotEmpty(t, tc.commands, "no commands specified")
 
-			configdir := filepath.Join(t.TempDir(), "unikraft.d")
+			configPath := filepath.Join(t.TempDir(), "config.yaml")
 			cfg, profile := defaultCfg()
-			require.NoError(t, cfg.SaveTo(configdir))
+			cfg.Path = configPath
+			require.NoError(t, cfg.Save())
 
 			sandboxPath := filepath.Join(t.TempDir(), "sandbox.json")
 			t.Cleanup(func() {
-				cfg, err := config.LoadFrom(configdir)
+				cfg, err := config.Load(configPath)
 				require.NoError(t, err)
+				require.NotNil(t, cfg)
 				ctx := config.WithConfig(ctx, cfg)
 
 				sandbox, err := resource.LoadSandbox(sandboxPath, cmd.SandboxedResources...)
@@ -132,8 +134,8 @@ func TestGolden(t *testing.T) {
 					return strings.HasPrefix(s, "UNIKRAFT_")
 				})
 				cmd.Env = append(cmd.Env, "NO_COLOR=1") // color makes golden files harder to read
+				cmd.Env = append(cmd.Env, "UNIKRAFT_CONFIG="+configPath)
 				cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
-				cmd.Env = append(cmd.Env, config.UnikraftConfigDirEnv+"="+configdir)
 
 				err := cmd.Run()
 				if command.captureEnv != "" {
@@ -438,7 +440,7 @@ func defaultCfg() (*config.Config, *config.Profile) {
 		break
 	}
 	cfg := &config.Config{
-		Profile: profile.Name,
+		DefaultProfile: profile.Name,
 		Profiles: map[string]config.Profile{
 			profile.Name: *profile,
 		},

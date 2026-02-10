@@ -121,7 +121,7 @@ func (RunCmd) Examples() []kingkong.Example {
 	}
 }
 
-func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.Sandbox) error {
+func (c *RunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	if c.Image == "" {
 		return fmt.Errorf("image is required")
 	}
@@ -159,7 +159,7 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	}
 
 	if c.DryRun {
-		return cmd.PrintPatches(cfg.Stdout, fields, true)
+		return cmd.PrintPatches(stdio.Stdout, fields, true)
 	}
 
 	var creatable resource.CreatableResource = Instance{}
@@ -175,7 +175,7 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 	}
 	err = c.Output.
 		WithDefault(cmd.PrinterTypeKeyValue).
-		Print(cfg.Stdout, c.Field, Instance{}, created...)
+		Print(stdio.Stdout, c.Field, Instance{}, created...)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (c *RunCmd) Run(ctx context.Context, cfg *config.Config, sandbox *resource.
 					if err != nil {
 						return err
 					}
-					_, err = io.Copy(cfg.Stdout, r)
+					_, err = io.Copy(stdio.Stdout, r)
 					return err
 				})
 			}

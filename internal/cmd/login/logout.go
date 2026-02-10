@@ -6,6 +6,8 @@
 package login
 
 import (
+	"context"
+
 	jujuerrors "github.com/juju/errors"
 	"unikraft.com/x/log"
 
@@ -14,17 +16,15 @@ import (
 
 type LogoutCmd struct{}
 
-func (cmd *LogoutCmd) Run(cfg *config.Config) error {
-	ctx := cfg.Context
-
+func (cmd *LogoutCmd) Run(ctx context.Context, cfg *config.Config) error {
 	profile, err := cfg.CurrentProfile()
 	if err != nil {
 		return err
 	}
 
 	delete(cfg.Profiles, profile.Name)
-	if cfg.Profile == profile.Name {
-		cfg.Profile = ""
+	if cfg.DefaultProfile == profile.Name {
+		cfg.DefaultProfile = ""
 	}
 
 	if err := cfg.Save(); err != nil {

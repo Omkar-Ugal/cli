@@ -274,6 +274,10 @@ func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
+	profile, err := config.G(ctx).CurrentProfile()
+	if err != nil {
+		return nil, err
+	}
 	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing instances")
 		resp, err := c.GetInstances(ctx, nil, true)
@@ -282,7 +286,7 @@ func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		for _, instance := range resp.Data.Instances {
-			result, err := Instance{}.load(ctx, instance, &c.Metro)
+			result, err := Instance{}.load(instance, &c.Metro, profile)
 			if err != nil {
 				return nil, err
 			}
@@ -294,6 +298,10 @@ func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
 
 func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
 	g, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	profile, err := config.G(ctx).CurrentProfile()
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +317,7 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
-			result, err := Instance{}.load(ctx, instance, &c.Metro)
+			result, err := Instance{}.load(instance, &c.Metro, profile)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -324,7 +332,7 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 	})
 }
 
-func (Instance) load(ctx context.Context, instance platform.Instance, metro *config.Metro) (Instance, error) {
+func (Instance) load(instance platform.Instance, metro *config.Metro, profile *config.Profile) (Instance, error) {
 	result := Instance{
 		Instance: instance,
 		Metro:    metro,
@@ -336,12 +344,6 @@ func (Instance) load(ctx context.Context, instance platform.Instance, metro *con
 
 	if name, _, ok := strings.Cut(result.Image, "@"); ok {
 		result.Image = name
-	}
-
-	cfg := config.FromContextOrDefault(ctx)
-	profile, err := cfg.CurrentProfile()
-	if err != nil {
-		return Instance{}, err
 	}
 	result.organization = profile.Organization
 
@@ -706,7 +708,7 @@ func (cmd InstancesLogsCmd) Examples() []kingkong.Example {
 	}
 }
 
-func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error {
+func (cmd *InstancesLogsCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	// HACK: we resolve the keys early, so that we can assume that all the
 	// instances actually exist (this is a potential race condition, but it's
 	// acceptable for now)
@@ -736,7 +738,7 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, cfg *config.Config) error 
 				if err != nil {
 					return err
 				}
-				_, err = io.Copy(cfg.Stdout, r)
+				_, err = io.Copy(stdio.Stdout, r)
 				return err
 			})
 		}
@@ -769,9 +771,7 @@ func (cmd InstancesStartCmd) Examples() []kingkong.Example {
 	}
 }
 
-func (c *InstancesStartCmd) Run(ctx context.Context) error {
-	cfg := config.FromContextOrDefault(ctx)
-
+func (c *InstancesStartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(c.Name)
 	before, err := Instance{}.Get(ctx, keys.Strings())
 	if err != nil {
@@ -794,7 +794,7 @@ func (c *InstancesStartCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(cfg.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return cmd.Diff(stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type InstancesStopCmd struct {
@@ -827,9 +827,7 @@ func (cmd InstancesStopCmd) Examples() []kingkong.Example {
 	}
 }
 
-func (c *InstancesStopCmd) Run(ctx context.Context) error {
-	cfg := config.FromContextOrDefault(ctx)
-
+func (c *InstancesStopCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(c.Name)
 	before, err := Instance{}.Get(ctx, keys.Strings())
 	if err != nil {
@@ -854,7 +852,7 @@ func (c *InstancesStopCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(cfg.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return cmd.Diff(stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type InstancesRestartCmd struct {
@@ -881,9 +879,7 @@ func (cmd InstancesRestartCmd) Examples() []kingkong.Example {
 	}
 }
 
-func (c *InstancesRestartCmd) Run(ctx context.Context) error {
-	cfg := config.FromContextOrDefault(ctx)
-
+func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(c.Name)
 	before, err := Instance{}.Get(ctx, keys.Strings())
 	if err != nil {
@@ -910,7 +906,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(cfg.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return cmd.Diff(stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type StopOpts struct {
@@ -927,7 +923,6 @@ func (args *StopOpts) toReq(nameOrUUID platform.NameOrUUID) platform.StopInstanc
 		req.Force = &args.Force
 	}
 	if args.DrainTimeout >= 0 {
-		fmt.Println(int64(args.DrainTimeout))
 		timeout := uint64(args.DrainTimeout)
 		req.DrainTimeoutMs = &timeout
 	}

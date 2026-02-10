@@ -21,19 +21,19 @@ import (
 	"unikraft.com/cli/internal/resource"
 )
 
-func VisualEdit(ctx context.Context, cfg *config.Config, res resource.Resource, fields []resource.Field, patches []resource.Field) ([]resource.Field, error) {
-	return visualEdit(ctx, cfg, res, fields, patches, false)
+func VisualEdit(ctx context.Context, stdio config.Stdio, res resource.Resource, fields []resource.Field, patches []resource.Field) ([]resource.Field, error) {
+	return visualEdit(ctx, stdio, res, fields, patches, false)
 }
 
-func VisualCreate(ctx context.Context, cfg *config.Config, res resource.Resource, fields []resource.Field, creates []resource.Field) ([]resource.Field, error) {
-	return visualEdit(ctx, cfg, res, fields, creates, true)
+func VisualCreate(ctx context.Context, stdio config.Stdio, res resource.Resource, fields []resource.Field, creates []resource.Field) ([]resource.Field, error) {
+	return visualEdit(ctx, stdio, res, fields, creates, true)
 }
 
 // visualEdit opens an editor for the user to modify fields visually.
 //
 // It takes all the fields and already existing patched fields as input, and
 // returns all patched fields after editing.
-func visualEdit(ctx context.Context, cfg *config.Config, res resource.Resource, fields []resource.Field, patches []resource.Field, create bool) ([]resource.Field, error) {
+func visualEdit(ctx context.Context, stdio config.Stdio, res resource.Resource, fields []resource.Field, patches []resource.Field, create bool) ([]resource.Field, error) {
 	data, err := saveFields(res, fields, patches, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize fields: %w", err)
@@ -59,9 +59,9 @@ func visualEdit(ctx context.Context, cfg *config.Config, res resource.Resource, 
 	}
 
 	cmd := exec.CommandContext(ctx, editor, tmpfile.Name())
-	cmd.Stdin = cfg.Stdin
-	cmd.Stdout = cfg.Stdout
-	cmd.Stderr = cfg.Stderr
+	cmd.Stdin = stdio.Stdin
+	cmd.Stdout = stdio.Stdout
+	cmd.Stderr = stdio.Stderr
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("editor exited with error: %w", err)
 	}
