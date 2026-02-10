@@ -281,6 +281,7 @@ stdout:
 	  name
 	  country
 	  endpoint
+	  insecure
 
 	Global flags:
 	  -h, --help
@@ -325,6 +326,7 @@ stdout:
 	  name
 	  country
 	  endpoint
+	  insecure
 
 	Flags:
 	  -w, --watch
@@ -377,6 +379,7 @@ stdout:
 	  name
 	  country
 	  endpoint
+	  insecure
 
 	Flags:
 	      --filter

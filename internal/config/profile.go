@@ -60,23 +60,35 @@ type Profile struct {
 	Metros       []Metro     `hidden:"" embed:"" prefix:"metro." help:"Static list of metros." json:"metros,omitempty" yaml:"metros,omitempty"`
 }
 
+// Metro represents a metro configuration for a profile in the Unikraft CLI.
 type Metro struct {
 	Name     string `hidden:"" help:"Name of the metro." json:"name" yaml:"name"`
 	Endpoint string `hidden:"" help:"Endpoint for the metro." json:"endpoint" yaml:"endpoint"`
 	Country  string `hidden:"" help:"Country code for the metro." json:"country" yaml:"country"`
+	Insecure bool   `hidden:"" help:"Allow insecure connections to the metro." json:"insecure" yaml:"insecure"`
 }
 
-func (m Metro) Index() string {
+type Index struct {
+	// Host is the hostname of the index to connect to.
+	Host string
+	// HTTP indicates whether the index should be accessed over HTTP instead of HTTPS.
+	HTTP bool
+	// Insecure skips TLS verification when connecting to the index.
+	Insecure bool
+}
+
+func (m Metro) Index() Index {
 	u, err := url.Parse(m.Endpoint)
 	if err != nil {
-		return m.Endpoint
+		return Index{Host: m.Endpoint}
 	}
 	hostname := u.Hostname()
-	hostname, ok := strings.CutPrefix(hostname, "api.")
-	if !ok {
-		return m.Endpoint
+	hostname, _ = strings.CutPrefix(hostname, "api.")
+	return Index{
+		Host:     "index." + hostname,
+		HTTP:     u.Scheme == "http",
+		Insecure: m.Insecure,
 	}
-	return "index." + hostname
 }
 
 var _ fmt.Stringer = Profile{}

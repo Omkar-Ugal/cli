@@ -17,12 +17,38 @@ import (
 	dockerconfig "github.com/docker/cli/cli/config"
 
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/httpclient"
 	"unikraft.com/cli/internal/version"
 )
 
 func Resolver(profile *config.Profile) remotes.Resolver {
 	headers := http.Header{}
 	headers.Set("User-Agent", version.UserAgent())
+
+	var indexes []config.Index
+	if profile != nil {
+		indexes = make([]config.Index, len(profile.Metros))
+		for i, metro := range profile.Metros {
+			indexes[i] = metro.Index()
+		}
+	}
+
+	httpHost := func(host string) (bool, error) {
+		for _, index := range indexes {
+			if host == index.Host {
+				return index.HTTP, nil
+			}
+		}
+		return false, nil
+	}
+	insecureHost := func(host string) (bool, error) {
+		for _, index := range indexes {
+			if host == index.Host {
+				return index.Insecure, nil
+			}
+		}
+		return false, nil
+	}
 
 	dockerConfig := dockerconfig.LoadDefaultConfigFile(os.Stderr)
 	opts := []docker.RegistryOpt{
@@ -32,8 +58,8 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 				if hostname == "index.unikraft.io" {
 					return decodeAuth(profile.Token)
 				}
-				for _, metro := range profile.Metros {
-					if hostname == metro.Index() {
+				for _, index := range indexes {
+					if hostname == index.Host {
 						username := profile.Organization
 						if username == "" {
 							// organization may not be set on old or manually created
@@ -46,7 +72,7 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 				}
 			}
 
-			auth, err := dockerConfig.GetCredentialsStore(hostname).Get(hostname)
+			auth, err := dockerConfig.GetAuthConfig(hostname)
 			if err != nil {
 				return "", "", err
 			}
@@ -56,17 +82,19 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 			return auth.Username, auth.Password, nil
 		},
 		))),
+		docker.WithPlainHTTP(httpHost),
 	}
-	opts = append(opts, docker.WithPlainHTTP(docker.MatchAllHosts))
 
 	dro := docker.ResolverOptions{
 		Headers: headers,
 		Hosts: fallbackHost(
-			docker.ConfigureDefaultRegistries(opts...),
+			insecureHosts(docker.ConfigureDefaultRegistries(opts...), insecureHost),
 			docker.ConfigureDefaultRegistries(append(opts, docker.WithHostTranslator(func(s string) (string, error) {
-				for _, metro := range profile.Metros {
-					if s == metro.Index() {
-						return "index.unikraft.io", nil
+				if profile != nil {
+					for _, index := range indexes {
+						if s == index.Host {
+							return "index.unikraft.io", nil
+						}
 					}
 				}
 				return s, nil
@@ -111,5 +139,25 @@ func fallbackHost(registryHosts ...docker.RegistryHosts) docker.RegistryHosts {
 			allHosts = append(allHosts, hosts...)
 		}
 		return allHosts, nil
+	}
+}
+
+func insecureHosts(hosts docker.RegistryHosts, f func(string) (bool, error)) docker.RegistryHosts {
+	return func(hostname string) ([]docker.RegistryHost, error) {
+		hosts, err := hosts(hostname)
+		if err != nil {
+			return nil, err
+		}
+		for i, host := range hosts {
+			ok, err := f(host.Host)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				host.Client = httpclient.InsecureHTTPClient
+				hosts[i] = host
+			}
+		}
+		return hosts, nil
 	}
 }
