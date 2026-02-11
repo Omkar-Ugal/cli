@@ -20,13 +20,13 @@ var (
 func String() string {
 	return heredoc.Docf(`
 		Unikraft CLI
-		  version   : %s
-		  commit    : %s
-		  platform  : %s/%s
+		  version:    %s
+		  commit:     %s
+		  platform:   %s/%s
 		  build time: %s
 		  go version: %s
-		  docs      : https://unikraft.com/docs
-		  issues    : https://github.com/unikraft/cli/issues`,
+		  docs:       https://unikraft.com/docs
+		  issues:     https://github.com/unikraft/cli/issues`,
 		Version,
 		Commit,
 		runtime.GOOS,
