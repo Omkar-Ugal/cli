@@ -1,10 +1,10 @@
 $ unikraft image --help
 
 stdout:
+	Manage Unikraft Cloud images.
+
 	Usage:
 	  unikraft images <command> [flags]
-
-	Manage Unikraft Cloud images.
 
 	Commands:
 	  get, inspect, show
@@ -44,10 +44,10 @@ stdout:
 $ unikraft image get --help
 
 stdout:
+	Inspect a image.
+
 	Usage:
 	  unikraft images get <name> ... [flags]
-
-	Inspect a image.
 
 	Arguments:
 	  <name> ...
@@ -93,10 +93,10 @@ stdout:
 $ unikraft image list --help
 
 stdout:
+	List images.
+
 	Usage:
 	  unikraft images list [<name> ...] [flags]
-
-	List images.
 
 	Arguments:
 	  [<name> ...]
@@ -153,10 +153,10 @@ stdout:
 $ unikraft image copy --help
 
 stdout:
+	Copy images.
+
 	Usage:
 	  unikraft images copy <source> <dest>
-
-	Copy images.
 
 	Arguments:
 	  <source>

@@ -1,6 +1,11 @@
 $ unikraft --help --bad-flag
 
 stdout:
+	The Unikraft Command-Line Interface.
+	    _
+	  c'3'o  .-.  Docs:   https://unikraft.com/docs/cli
+	  (| |)_/     Issues: https://github.com/unikraft/cli/issues
+
 	Usage:
 	  unikraft <command> [flags]
 
@@ -77,6 +82,11 @@ exit code: 1
 $ unikraft --help bad-arg
 
 stdout:
+	The Unikraft Command-Line Interface.
+	    _
+	  c'3'o  .-.  Docs:   https://unikraft.com/docs/cli
+	  (| |)_/     Issues: https://github.com/unikraft/cli/issues
+
 	Usage:
 	  unikraft <command> [flags]
 

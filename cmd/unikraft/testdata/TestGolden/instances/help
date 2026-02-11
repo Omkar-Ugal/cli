@@ -1,10 +1,10 @@
 $ unikraft instance --help
 
 stdout:
+	Manage Unikraft Cloud instances.
+
 	Usage:
 	  unikraft instances <command> [flags]
-
-	Manage Unikraft Cloud instances.
 
 	Commands:
 	  get, inspect, show
@@ -76,10 +76,10 @@ stdout:
 $ unikraft instance get --help
 
 stdout:
+	Inspect a instance.
+
 	Usage:
 	  unikraft instances get <name> ... [flags]
-
-	Inspect a instance.
 
 	Arguments:
 	  <name> ...
@@ -145,10 +145,10 @@ stdout:
 $ unikraft instance list --help
 
 stdout:
+	List instances.
+
 	Usage:
 	  unikraft instances list [<name> ...] [flags]
-
-	List instances.
 
 	Arguments:
 	  [<name> ...]
@@ -218,10 +218,10 @@ stdout:
 $ unikraft instance wait --help
 
 stdout:
+	Wait for instances to match a filter.
+
 	Usage:
 	  unikraft instances wait --until=UNTIL <name> ... [flags]
-
-	Wait for instances to match a filter.
 
 	Arguments:
 	  <name> ...
@@ -289,10 +289,10 @@ stdout:
 $ unikraft instance create --help
 
 stdout:
+	Create a instance.
+
 	Usage:
 	  unikraft instances create [flags]
-
-	Create a instance.
 
 	Examples:
 	  # Create a new instance
@@ -364,10 +364,10 @@ stdout:
 $ unikraft instance edit --help
 
 stdout:
+	Edit a instance.
+
 	Usage:
 	  unikraft instances edit <name> [flags]
-
-	Edit a instance.
 
 	Arguments:
 	  <name>
@@ -441,10 +441,10 @@ stdout:
 $ unikraft instance delete --help
 
 stdout:
+	Remove a instance.
+
 	Usage:
 	  unikraft instances delete [<name> ...] [flags]
-
-	Remove a instance.
 
 	Arguments:
 	  [<name> ...]
@@ -514,10 +514,10 @@ stdout:
 $ unikraft instance logs --help
 
 stdout:
+	Fetch and display instance logs.
+
 	Usage:
 	  unikraft instances logs <name> ... [flags]
-
-	Fetch and display instance logs.
 
 	Arguments:
 	  <name> ...
@@ -561,10 +561,10 @@ stdout:
 $ unikraft instance start --help
 
 stdout:
+	Start one or more instances.
+
 	Usage:
 	  unikraft instances start <name> ... [flags]
-
-	Start one or more instances.
 
 	Arguments:
 	  <name> ...
@@ -602,10 +602,10 @@ stdout:
 $ unikraft instance stop --help
 
 stdout:
+	Stop one or more instances.
+
 	Usage:
 	  unikraft instances stop <name> ... [flags]
-
-	Stop one or more instances.
 
 	Arguments:
 	  <name> ...
@@ -654,10 +654,10 @@ stdout:
 $ unikraft instance restart --help
 
 stdout:
+	Restart one or more instances.
+
 	Usage:
 	  unikraft instances restart <name> ... [flags]
-
-	Restart one or more instances.
 
 	Arguments:
 	  <name> ...

@@ -1,10 +1,10 @@
 $ unikraft resource delete --help
 
 stdout:
+	Remove a resource.
+
 	Usage:
 	  unikraft resources delete [<name> ...] [flags]
-
-	Remove a resource.
 
 	Arguments:
 	  [<name> ...]

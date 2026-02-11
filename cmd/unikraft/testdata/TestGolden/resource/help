@@ -1,10 +1,10 @@
 $ unikraft resource --help
 
 stdout:
+	Manage any Unikraft Cloud resource.
+
 	Usage:
 	  unikraft resources <command> [flags]
-
-	Manage any Unikraft Cloud resource.
 
 	Commands:
 	  get, inspect, show

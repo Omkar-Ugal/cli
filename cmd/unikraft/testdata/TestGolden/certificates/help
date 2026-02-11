@@ -1,10 +1,10 @@
 $ unikraft certificate --help
 
 stdout:
+	Manage Unikraft Cloud certificates.
+
 	Usage:
 	  unikraft certificates <command> [flags]
-
-	Manage Unikraft Cloud certificates.
 
 	Commands:
 	  get, inspect, show
@@ -54,10 +54,10 @@ stdout:
 $ unikraft certificate get --help
 
 stdout:
+	Inspect a certificate.
+
 	Usage:
 	  unikraft certificates get <name> ... [flags]
-
-	Inspect a certificate.
 
 	Arguments:
 	  <name> ...
@@ -111,10 +111,10 @@ stdout:
 $ unikraft certificate list --help
 
 stdout:
+	List certificates.
+
 	Usage:
 	  unikraft certificates list [<name> ...] [flags]
-
-	List certificates.
 
 	Arguments:
 	  [<name> ...]
@@ -172,10 +172,10 @@ stdout:
 $ unikraft certificate wait --help
 
 stdout:
+	Wait for certificates to match a filter.
+
 	Usage:
 	  unikraft certificates wait --until=UNTIL <name> ... [flags]
-
-	Wait for certificates to match a filter.
 
 	Arguments:
 	  <name> ...
@@ -231,10 +231,10 @@ stdout:
 $ unikraft certificate create --help
 
 stdout:
+	Create a certificate.
+
 	Usage:
 	  unikraft certificates create [flags]
-
-	Create a certificate.
 
 	Examples:
 	  # Create a new certificate
@@ -297,10 +297,10 @@ stdout:
 $ unikraft certificate delete --help
 
 stdout:
+	Remove a certificate.
+
 	Usage:
 	  unikraft certificates delete [<name> ...] [flags]
-
-	Remove a certificate.
 
 	Arguments:
 	  [<name> ...]

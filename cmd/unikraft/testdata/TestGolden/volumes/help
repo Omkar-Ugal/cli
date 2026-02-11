@@ -1,10 +1,10 @@
 $ unikraft volume --help
 
 stdout:
+	Manage Unikraft Cloud volumes.
+
 	Usage:
 	  unikraft volumes <command> [flags]
-
-	Manage Unikraft Cloud volumes.
 
 	Commands:
 	  get, inspect, show
@@ -57,10 +57,10 @@ stdout:
 $ unikraft volume get --help
 
 stdout:
+	Inspect a volume.
+
 	Usage:
 	  unikraft volumes get <name> ... [flags]
-
-	Inspect a volume.
 
 	Arguments:
 	  <name> ...
@@ -113,10 +113,10 @@ stdout:
 $ unikraft volume list --help
 
 stdout:
+	List volumes.
+
 	Usage:
 	  unikraft volumes list [<name> ...] [flags]
-
-	List volumes.
 
 	Arguments:
 	  [<name> ...]
@@ -173,10 +173,10 @@ stdout:
 $ unikraft volume wait --help
 
 stdout:
+	Wait for volumes to match a filter.
+
 	Usage:
 	  unikraft volumes wait --until=UNTIL <name> ... [flags]
-
-	Wait for volumes to match a filter.
 
 	Arguments:
 	  <name> ...
@@ -231,10 +231,10 @@ stdout:
 $ unikraft volume create --help
 
 stdout:
+	Create a volume.
+
 	Usage:
 	  unikraft volumes create [flags]
-
-	Create a volume.
 
 	Examples:
 	  # Create a new volume
@@ -290,10 +290,10 @@ stdout:
 $ unikraft volume clone --help
 
 stdout:
+	Clone a volume.
+
 	Usage:
 	  unikraft volumes clone <source> [flags]
-
-	Clone a volume.
 
 	Arguments:
 	  <source>
@@ -333,10 +333,10 @@ stdout:
 $ unikraft volume edit --help
 
 stdout:
+	Edit a volume.
+
 	Usage:
 	  unikraft volumes edit <name> [flags]
-
-	Edit a volume.
 
 	Arguments:
 	  <name>
@@ -397,10 +397,10 @@ stdout:
 $ unikraft volume delete --help
 
 stdout:
+	Remove a volume.
+
 	Usage:
 	  unikraft volumes delete [<name> ...] [flags]
-
-	Remove a volume.
 
 	Arguments:
 	  [<name> ...]
