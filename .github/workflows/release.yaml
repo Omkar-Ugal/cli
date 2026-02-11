@@ -147,3 +147,26 @@ jobs:
               --body-file "${DEB}"
           done
         done
+
+    - name: Publish to RPM repository
+      shell: bash
+      run: |
+        for RPM in dist/*.rpm; do
+          wget "https://pkg.unikraft.com/rpm/cli-rpm" \
+            --http-user "api" \
+            --http-password "${{ secrets.PKG_TOKEN }}" \
+            --method PUT \
+            --body-file "${RPM}"
+        done
+
+    - name: Publish to APK repository
+      shell: bash
+      run: |
+        for APK in dist/*.apk; do
+          wget "https://pkg.unikraft.com/apk/cli-apk" \
+            --http-user "api" \
+            --http-password "${{ secrets.PKG_TOKEN }}" \
+            --method PUT \
+            --body-file "${APK}"
+        done
+
