@@ -9,12 +9,13 @@ package prettydiff
 
 import (
 	"bytes"
+	"image/color"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"unikraft.com/x/colors"
 )
 
 // Render takes a slice of diffs and returns a pretty-printed string
@@ -25,7 +26,7 @@ import (
 func Render(diffs []diffmatchpatch.Diff) string {
 	lines := splitLines(diffs)
 
-	color := lipgloss.ColorProfile() != termenv.Ascii
+	color := termenv.ColorProfile() != termenv.Ascii
 
 	var buff bytes.Buffer
 	lines = groupLines(lines)
@@ -162,16 +163,6 @@ func lineText(lineDiffs []diffmatchpatch.Diff) string {
 	return buff.String()
 }
 
-// ANSI color codes for backgrounds
-// FIXME: replace with unikraft.com/x/colors
-var (
-	resetStyle      = ansi.NewStyle(ansi.AttrDefaultBackgroundColor)
-	lineRemoveStyle = ansi.NewStyle(ansi.AttrRedBackgroundColor)
-	lineAddStyle    = ansi.NewStyle(ansi.AttrGreenBackgroundColor)
-	wordRemoveStyle = ansi.NewStyle(ansi.AttrBrightRedBackgroundColor)
-	wordAddStyle    = ansi.NewStyle(ansi.AttrBrightGreenBackgroundColor)
-)
-
 func (line line) render(buff *bytes.Buffer, color bool) {
 	switch line.op {
 	case diffmatchpatch.DiffEqual:
@@ -195,10 +186,7 @@ func (line line) render(buff *bytes.Buffer, color bool) {
 			}
 		}
 		if color {
-			// EraseLineRight means the whole line (till the right edge of the
-			// terminal) is colored but also this then looks super weird if/when the
-			// terminal is resized later - leaving out for now
-			// buff.WriteString(ansi.EraseLineRight)
+			buff.WriteString(ansi.EraseLineRight)
 			buff.WriteString(resetStyle.String())
 		}
 		buff.WriteString("\n")
@@ -217,9 +205,62 @@ func (line line) render(buff *bytes.Buffer, color bool) {
 			}
 		}
 		if color {
-			// buff.WriteString(ansi.EraseLineRight)
+			buff.WriteString(ansi.EraseLineRight)
 			buff.WriteString(resetStyle.String())
 		}
 		buff.WriteString("\n")
 	}
+}
+
+// ANSI color codes for backgrounds
+var (
+	// combined
+	lineRemoveColor = adaptiveColor{Light: colors.Rose200, Dark: colors.Rose900}
+	wordRemoveColor = adaptiveColor{Light: colors.Rose300, Dark: colors.Rose700}
+	lineAddColor    = adaptiveColor{Light: colors.Emerald200, Dark: colors.Emerald900}
+	wordAddColor    = adaptiveColor{Light: colors.Emerald300, Dark: colors.Emerald700}
+
+	// use ansi styles explicitly, since lipgloss styles don't nest nicely (they
+	// emit resets) and we might have input with existing ANSI codes that we
+	// don't want to reset.
+	resetStyle      = ansi.NewStyle(ansi.AttrDefaultBackgroundColor)
+	lineRemoveStyle = ansi.NewStyle().BackgroundColor(profileColor(lineRemoveColor))
+	lineAddStyle    = ansi.NewStyle().BackgroundColor(profileColor(lineAddColor))
+	wordRemoveStyle = ansi.NewStyle().BackgroundColor(profileColor(wordRemoveColor))
+	wordAddStyle    = ansi.NewStyle().BackgroundColor(profileColor(wordAddColor))
+)
+
+// profileColor converts a color to the current terminal's color profile.
+// This allows a reasonable fallback for terminals that don't support true
+// color.
+func profileColor(c ansi.Color) ansi.Color {
+	converted := termenv.ColorProfile().FromColor(c)
+	switch v := converted.(type) {
+	case nil:
+		return nil
+	case termenv.NoColor:
+		return nil
+	case termenv.ANSIColor:
+		return ansi.BasicColor(v)
+	case termenv.ANSI256Color:
+		return ansi.IndexedColor(v)
+	case termenv.RGBColor:
+		return ansi.HexColor(v)
+	default:
+		return nil
+	}
+}
+
+// adaptiveColor is similar to lipgloss.AdaptiveColor but allows directly
+// consuming color.Colors instead of hex strings
+type adaptiveColor struct {
+	Light color.Color
+	Dark  color.Color
+}
+
+func (ac adaptiveColor) RGBA() (r, g, b, a uint32) {
+	if termenv.HasDarkBackground() {
+		return ac.Dark.RGBA()
+	}
+	return ac.Light.RGBA()
 }
