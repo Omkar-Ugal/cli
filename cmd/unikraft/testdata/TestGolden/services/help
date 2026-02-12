@@ -243,9 +243,9 @@ stdout:
 
 	Flags:
 	      --set
-	          Key-value pairs for creating the service.
+	          Key-value pairs to set on the service.
 	      --set-file
-	          Files containing key-value pairs for creating the service.
+	          Files containing key-value pairs to set on the service.
 	  -e, --visual
 	          Open an editor to set fields visually.
 	      --dry-run
@@ -302,15 +302,15 @@ stdout:
 
 	Flags:
 	      --set
-	          Key-value pairs to update the service with.
+	          Key-value pairs to set on the service.
+	      --set-file
+	          Files containing key-value pairs to set on the service.
 	      --add
 	          Key-value pairs to add to the service.
-	      --del
-	          Keys to delete from the service.
-	      --set-file
-	          Files containing key-value pairs to update the service with.
 	      --add-file
 	          Files containing key-value pairs to add to the service.
+	      --del
+	          Keys to delete from the service.
 	      --del-file
 	          Files containing keys to delete from the service.
 	  -e, --visual

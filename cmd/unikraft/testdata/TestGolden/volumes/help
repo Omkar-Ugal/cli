@@ -242,9 +242,9 @@ stdout:
 
 	Flags:
 	      --set
-	          Key-value pairs for creating the volume.
+	          Key-value pairs to set on the volume.
 	      --set-file
-	          Files containing key-value pairs for creating the volume.
+	          Files containing key-value pairs to set on the volume.
 	  -e, --visual
 	          Open an editor to set fields visually.
 	      --dry-run
@@ -301,15 +301,15 @@ stdout:
 
 	Flags:
 	      --set
-	          Key-value pairs to update the volume with.
+	          Key-value pairs to set on the volume.
+	      --set-file
+	          Files containing key-value pairs to set on the volume.
 	      --add
 	          Key-value pairs to add to the volume.
-	      --del
-	          Keys to delete from the volume.
-	      --set-file
-	          Files containing key-value pairs to update the volume with.
 	      --add-file
 	          Files containing key-value pairs to add to the volume.
+	      --del
+	          Keys to delete from the volume.
 	      --del-file
 	          Files containing keys to delete from the volume.
 	  -e, --visual
