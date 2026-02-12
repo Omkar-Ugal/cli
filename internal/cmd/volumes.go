@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"unikraft.com/cloud/sdk/platform"
@@ -21,6 +22,8 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/resource/patch"
+	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
 )
 
@@ -32,6 +35,130 @@ type VolumesCmd struct {
 	cmd.DeletableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
 	cmd.EditableResourceCmd[Volume]  `set:"name=volume" set:"names=volumes"`
 	cmd.CreatableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
+
+	Clone VolumesCloneCmd `cmd:"" help:"Clone a volume." set:"name=volume"`
+}
+
+type VolumesCloneCmd struct {
+	Source string `arg:"" completion-predictor:"resource-key-volume" help:"Name or UUID of the volume to clone."`
+
+	cmd.SetArgs
+
+	cmd.FormatOpts
+}
+
+func (VolumesCloneCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Clone a volume with a new name",
+			Commands:    []string{"unikraft volume clone demo-volume --set name=demo-volume-clone"},
+		},
+	}
+}
+
+func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	spec := patch.PatchSpec{
+		Set: make(map[string][]string),
+	}
+	if err := c.Apply(&spec); err != nil {
+		return err
+	}
+	req := platform.CloneVolumeByUUIDRequestBody{}
+	var unknownFields []string
+	for key, values := range spec.Set {
+		switch key {
+		case "name":
+			name, err := value.Parse[string](values)
+			if err != nil {
+				return err
+			}
+			if name != "" {
+				req.VolName = ptr.ToPtr(name)
+			}
+		case "tags":
+			tags, err := value.Parse[[]string](values)
+			if err != nil {
+				return err
+			}
+			req.Tags = tags
+		default:
+			unknownFields = append(unknownFields, key)
+		}
+	}
+	if len(unknownFields) > 0 {
+		slices.Sort(unknownFields)
+		return fmt.Errorf("unknown fields: %v", unknownFields)
+	}
+
+	gettable := sandbox.WrapGettable(Volume{})
+	resources, err := gettable.Get(ctx, []string{c.Source})
+	if err != nil {
+		return err
+	}
+	if len(resources) == 0 {
+		return fmt.Errorf("volume not found: %s", c.Source)
+	}
+	if len(resources) > 1 {
+		var keys []string
+		for _, res := range resources {
+			keys = append(keys, res.Key().String())
+		}
+		return fmt.Errorf("ambiguous volume: %s (found %v)", c.Source, keys)
+	}
+
+	volume, ok := resources[0].(Volume)
+	if !ok {
+		return fmt.Errorf("unexpected resource type %T", resources[0])
+	}
+	if volume.UUID == "" {
+		return fmt.Errorf("volume %q is missing a UUID", volume.Name)
+	}
+	if volume.Metro == nil {
+		return fmt.Errorf("volume %q has no metro information", volume.Name)
+	}
+
+	g, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	keys, err := group.CollectMetro(ctx, g, volume.Metro.Name, func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
+		log.G(ctx).Trace().Msg("cloning volume")
+		resp, err := client.CloneVolumeByUUID(ctx, volume.UUID, req)
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Data.Volumes) == 0 {
+			return nil, fmt.Errorf("no volumes cloned")
+		}
+		created := make(multimetro.Keys, 0, len(resp.Data.Volumes))
+		for _, vol := range resp.Data.Volumes {
+			created = append(created, multimetro.Key{
+				Metro: client.Metro.Name,
+				UUID:  ptr.ZeroIfNil(vol.Uuid),
+				Name:  ptr.ZeroIfNil(vol.Name),
+			})
+		}
+		return created, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	results, err := Volume{}.Get(ctx, keys.Strings())
+	if err != nil {
+		return err
+	}
+	if sandbox != nil {
+		for _, res := range results {
+			if err := sandbox.Add(ctx, res); err != nil {
+				return err
+			}
+		}
+	}
+
+	return c.Output.
+		WithDefault(cmd.PrinterTypeKeyValue).
+		Print(stdio.Stdout, c.Field, Volume{}, results...)
 }
 
 type Volume struct {

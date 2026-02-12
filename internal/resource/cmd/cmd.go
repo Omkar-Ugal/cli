@@ -520,7 +520,7 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		Create: true,
 		Set:    make(map[string][]string),
 	}
-	if err := cmd.SetArgs.Apply(&spec); err != nil {
+	if err := cmd.Apply(&spec); err != nil {
 		return spec, err
 	}
 	return spec, nil

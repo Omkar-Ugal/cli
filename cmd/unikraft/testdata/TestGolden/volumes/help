@@ -19,6 +19,8 @@ stdout:
 	          Edit a volume.
 	  create
 	          Create a volume.
+	  clone
+	          Clone a volume.
 
 	Fields:
 	  metro
@@ -249,6 +251,48 @@ stdout:
 	          Open an editor to set fields visually.
 	      --dry-run
 	          Print patches without applying them.
+	  -f, --field
+	          Specify which fields to include in the output.
+	  -o, --output
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Path to the configuration file.
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	      --version
+	          Print version information.
+
+$ unikraft volume clone --help
+
+stdout:
+	Usage:
+	  unikraft volumes clone <source> [flags]
+
+	Clone a volume.
+
+	Arguments:
+	  <source>
+	          Name or UUID of the volume to clone.
+
+	Examples:
+	  # Clone a volume with a new name
+	  unikraft volume clone demo-volume --set name=demo-volume-clone
+
+	Flags:
+	      --set
+	          Key-value pairs to set on the volume.
+	      --set-file
+	          Files containing key-value pairs to set on the volume.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
