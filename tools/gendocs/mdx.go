@@ -25,12 +25,12 @@ import (
 	"unikraft.com/x/log"
 )
 
-// DocsCmd generates markdown documentation for the CLI.
-type DocsCmd struct {
+// MdxCmd generates markdown documentation for the CLI.
+type MdxCmd struct {
 	Outdir string `arg:"" required:"" help:"Output directory for generated documentation."`
 }
 
-func (c *DocsCmd) Run(ctx context.Context) error {
+func (c *MdxCmd) Run(ctx context.Context) error {
 	lipgloss.SetColorProfile(termenv.Ascii)
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {

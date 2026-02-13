@@ -71,17 +71,17 @@ tasks:
     desc: Generate man page documentation.
     silent: true
     cmd: |
-      {{.go_bin}} run {{.workdir}}/tools/gencli man --compress {{.workdir}}/docs/man
+      {{.go_bin}} run {{.workdir}}/tools/gendocs man --compress {{.workdir}}/dist/docs/man
     generates:
-    - "{{.workdir}}/docs/man/**/*"
+    - "{{.workdir}}/dist/docs/man/**/*"
 
   docs:mdx:
     desc: Generate markdown documentation.
     silent: true
     cmd: |
-      {{.go_bin}} run {{.workdir}}/tools/gencli docs {{.workdir}}/docs/mdx
+      {{.go_bin}} run {{.workdir}}/tools/gendocs mdx {{.workdir}}/dist/docs/mdx
     generates:
-    - "{{.workdir}}/docs/mdx/**/*"
+    - "{{.workdir}}/dist/docs/mdx/**/*"
 
   goreleaser.yaml:
     desc: Generate the GoReleaser configuration file.
