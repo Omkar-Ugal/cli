@@ -62,16 +62,16 @@ jobs:
       id: versions
       run: |
         {
-          echo "next-stable=$(make --no-print-directory next-stable)"
-          echo "next-staging=$(make --no-print-directory next-staging)"
-          echo "last-version=$(make --no-print-directory last-version)"
-          echo "last-stable=$(make --no-print-directory last-stable)"
+          echo "next-stable=$(make --no-print-directory next-stable 2>/dev/null)"
+          echo "next-staging=$(make --no-print-directory next-staging 2>/dev/null)"
+          echo "last-version=$(make --no-print-directory last-version 2>/dev/null)"
+          echo "last-stable=$(make --no-print-directory last-stable 2>/dev/null)"
         } >> "$GITHUB_OUTPUT"
 
         if [[ "${{ github.ref }}" == "refs/heads/stable" ]]; then
-          echo "next-version=$(make --no-print-directory next-stable)" >> "$GITHUB_OUTPUT"
+          echo "next-version=$(make --no-print-directory next-stable 2>/dev/null)" >> "$GITHUB_OUTPUT"
         else
-          echo "next-version=$(make --no-print-directory next-staging)" >> "$GITHUB_OUTPUT"
+          echo "next-version=$(make --no-print-directory next-staging 2>/dev/null)" >> "$GITHUB_OUTPUT"
         fi
 
     - name: Tag next version
