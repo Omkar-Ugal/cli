@@ -14,6 +14,7 @@ var volumesTestCases = []testCase{
 			{args: []string{unikraftCmd, "volume", "list", "--help"}},
 			{args: []string{unikraftCmd, "volume", "wait", "--help"}},
 			{args: []string{unikraftCmd, "volume", "create", "--help"}},
+			{args: []string{unikraftCmd, "volume", "clone", "--help"}},
 			{args: []string{unikraftCmd, "volume", "edit", "--help"}},
 			{args: []string{unikraftCmd, "volume", "delete", "--help"}},
 		},
@@ -37,6 +38,16 @@ var volumesTestCases = []testCase{
 			{args: []string{unikraftCmd, "volume", "edit", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "size=20"}},
 			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
 			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+		},
+	},
+	{
+		name:   "volumes/clone",
+		online: true,
+		commands: []command{
+			{args: []string{unikraftCmd, "volume", "create", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
+			{args: []string{unikraftCmd, "volume", "clone", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME_CLONE"}},
+			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME", "test-$UNIQ_VOLUME_CLONE"}},
+			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME", "test-$UNIQ_VOLUME_CLONE"}},
 		},
 	},
 }

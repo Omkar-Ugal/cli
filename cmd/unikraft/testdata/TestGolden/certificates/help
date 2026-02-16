@@ -251,9 +251,9 @@ stdout:
 
 	Flags:
 	      --set
-	          Key-value pairs for creating the certificate.
+	          Key-value pairs to set on the certificate.
 	      --set-file
-	          Files containing key-value pairs for creating the certificate.
+	          Files containing key-value pairs to set on the certificate.
 	  -e, --visual
 	          Open an editor to set fields visually.
 	      --dry-run

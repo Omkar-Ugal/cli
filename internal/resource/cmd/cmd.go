@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -380,13 +379,9 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 type ResourceEditCmd[R resource.EditableResource] struct {
 	Name string `arg:"" completion-predictor:"resource-key-${name}" help:"Name of the ${name} to edit."`
 
-	Set []map[string]string `help:"Key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
-	Add []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
-	Del []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
-
-	SetFile []map[string]string `help:"Files containing key-value pairs to update the ${name} with." sep:"none" mapsep:"none"`
-	AddFile []map[string]string `help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
-	DelFile []map[string]string `help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
+	SetArgs
+	AddArgs
+	DelArgs
 
 	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
@@ -412,62 +407,14 @@ func (cmd *ResourceEditCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		Add: make(map[string][]string),
 		Del: make(map[string][]string),
 	}
-	for _, m := range cmd.Set {
-		for k, v := range m {
-			spec.Set[k] = append(spec.Set[k], v)
-		}
+	if err := cmd.SetArgs.Apply(&spec); err != nil {
+		return spec, err
 	}
-	for _, m := range cmd.Add {
-		for k, v := range m {
-			spec.Add[k] = append(spec.Add[k], v)
-		}
+	if err := cmd.AddArgs.Apply(&spec); err != nil {
+		return spec, err
 	}
-	for _, m := range cmd.Del {
-		for k, v := range m {
-			spec.Del[k] = append(spec.Del[k], v)
-		}
-	}
-	for _, m := range cmd.SetFile {
-		for k, path := range m {
-			f, err := os.Open(path)
-			if err != nil {
-				return spec, fmt.Errorf("failed to open set file for key %s: %w", k, err)
-			}
-			defer f.Close()
-			data, err := io.ReadAll(f)
-			if err != nil {
-				return spec, fmt.Errorf("failed to read set file for key %s: %w", k, err)
-			}
-			spec.Set[k] = append(spec.Set[k], strings.TrimSpace(string(data)))
-		}
-	}
-	for _, m := range cmd.AddFile {
-		for k, path := range m {
-			f, err := os.Open(path)
-			if err != nil {
-				return spec, fmt.Errorf("failed to open add file for key %s: %w", k, err)
-			}
-			defer f.Close()
-			data, err := io.ReadAll(f)
-			if err != nil {
-				return spec, fmt.Errorf("failed to read add file for key %s: %w", k, err)
-			}
-			spec.Add[k] = append(spec.Add[k], strings.TrimSpace(string(data)))
-		}
-	}
-	for _, m := range cmd.DelFile {
-		for k, path := range m {
-			f, err := os.Open(path)
-			if err != nil {
-				return spec, fmt.Errorf("failed to open del file for key %s: %w", k, err)
-			}
-			defer f.Close()
-			data, err := io.ReadAll(f)
-			if err != nil {
-				return spec, fmt.Errorf("failed to read del file for key %s: %w", k, err)
-			}
-			spec.Del[k] = append(spec.Del[k], strings.TrimSpace(string(data)))
-		}
+	if err := cmd.DelArgs.Apply(&spec); err != nil {
+		return spec, err
 	}
 	return spec, nil
 }
@@ -496,7 +443,6 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	}
 	res := resources[0]
 
-	// Check for duplicate field paths across Set/Add/Del
 	allFields := make(map[string]int)
 	for k := range spec.Set {
 		allFields[k]++
@@ -549,9 +495,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 }
 
 type ResourceCreateCmd[R resource.CreatableResource] struct {
-	Set []map[string]string `help:"Key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
-
-	SetFile []map[string]string `help:"Files containing key-value pairs for creating the ${name}." sep:"none" mapsep:"none"`
+	SetArgs
 
 	Visual bool `short:"e" help:"Open an editor to set fields visually."`
 	DryRun bool `help:"Print patches without applying them."`
@@ -576,24 +520,8 @@ func (cmd *ResourceCreateCmd[R]) toPatchSpec() (patch.PatchSpec, error) {
 		Create: true,
 		Set:    make(map[string][]string),
 	}
-	for _, m := range cmd.Set {
-		for k, v := range m {
-			spec.Set[k] = append(spec.Set[k], v)
-		}
-	}
-	for _, m := range cmd.SetFile {
-		for k, path := range m {
-			f, err := os.Open(path)
-			if err != nil {
-				return spec, fmt.Errorf("failed to open set file for key %s: %w", k, err)
-			}
-			defer f.Close()
-			data, err := io.ReadAll(f)
-			if err != nil {
-				return spec, fmt.Errorf("failed to read set file for key %s: %w", k, err)
-			}
-			spec.Set[k] = append(spec.Set[k], strings.TrimSpace(string(data)))
-		}
+	if err := cmd.Apply(&spec); err != nil {
+		return spec, err
 	}
 	return spec, nil
 }
