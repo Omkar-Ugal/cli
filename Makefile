@@ -12,7 +12,7 @@ Q             ?= @
 GO            ?= go
 
 ifeq ($(shell command -v task >/dev/null 2>&1 && echo yes),)
-TASK          ?= $(GO) run -v github.com/go-task/task/v3/cmd/task@v3.44.1 --yes
+TASK          ?= $(GO) run -v github.com/go-task/task/v3/cmd/task@v3.48.0 --yes
 else
 TASK          ?= task --yes
 endif
