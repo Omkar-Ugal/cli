@@ -31,8 +31,6 @@ jobs:
   docs:
     # runs-on: ubuntu-latest
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
-    env:
-      TASK_X_REMOTE_TASKFILES: 1
     steps:
     - name: Checkout
       uses: actions/checkout@v6
@@ -67,14 +65,14 @@ jobs:
     - name: Build docs
       shell: bash
       run: |
-        task --yes docs
+        make docs
 
     - name: Upload docs artifacts to GitHub
       uses: actions/upload-artifact@v6
       if: github.event_name == 'push'
       with:
         name: unikraft-docs-${{ github.event.pull_request.number || github.sha }}
-        path: ./dist/docs
+        path: ./dist/docs/mdx
         if-no-files-found: error
         retention-days: 7
         overwrite: true
@@ -84,7 +82,7 @@ jobs:
       if: github.event_name == 'push'
       with:
         name: unikraft-man-${{ github.sha }}
-        path: ./dist/man
+        path: ./dist/docs/man
         if-no-files-found: error
         retention-days: 7
         overwrite: true
