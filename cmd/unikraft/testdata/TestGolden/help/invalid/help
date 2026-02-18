@@ -74,8 +74,7 @@ stderr:
 	│  
 	│ error:
 	│   parsing arguments: unknown flag --bad-flag
-	│  
-	exit status 1
+	│
 
 exit code: 1
 
@@ -155,7 +154,6 @@ stderr:
 	│  
 	│ error:
 	│   parsing arguments: unexpected argument bad-arg
-	│  
-	exit status 1
+	│
 
 exit code: 1

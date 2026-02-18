@@ -4,7 +4,6 @@ stderr:
 	│  
 	│ error:
 	│   parsing arguments: unexpected argument invalid
-	│  
-	exit status 1
+	│
 
 exit code: 1
