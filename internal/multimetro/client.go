@@ -44,13 +44,8 @@ func NewClient(ctx context.Context) (*group.Group[MetroClient], error) {
 
 	group := group.New[MetroClient]()
 	for _, metro := range metros {
-		httpClient := httpclient.DefaultHTTPClient
-		if metro.Insecure {
-			httpClient = httpclient.InsecureHTTPClient
-		}
-
 		client := platform.NewClient(
-			platform.WithHTTPClient(httpClient),
+			platform.WithHTTPClient(httpclient.GetClient(metro.Insecure)),
 			platform.WithToken(profile.Token),
 			platform.WithDefaultMetro(metro.Endpoint),
 		)

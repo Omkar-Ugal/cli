@@ -15,6 +15,14 @@ import (
 	"unikraft.com/cli/internal/version"
 )
 
+// GetClient returns an HTTP client based on the provided insecure flag.
+func GetClient(insecure bool) *http.Client {
+	if insecure {
+		return InsecureHTTPClient
+	}
+	return DefaultHTTPClient
+}
+
 // DefaultHTTPClient is the default HTTP client used by the Unikraft CLI.  It
 // sets a custom User-Agent header and uses the environment's proxy settings,
 // which allows for easy debugging.
