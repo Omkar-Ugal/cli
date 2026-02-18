@@ -237,6 +237,10 @@ func (report *report) String() string {
 }
 
 func (report *report) cleanOutput(s string) string {
+	// Normalize CRLF so vtclean doesn't collapse log lines.
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+
 	// remove ANSI escape sequences
 	s = vtclean.Clean(s, false)
 	s = strings.TrimRightFunc(s, unicode.IsSpace)
