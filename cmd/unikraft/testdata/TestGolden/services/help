@@ -19,6 +19,8 @@ stdout:
 	          Edit a service.
 	  create
 	          Create a service.
+	  purge
+	          Remove all services.
 
 	Fields:
 	  metro

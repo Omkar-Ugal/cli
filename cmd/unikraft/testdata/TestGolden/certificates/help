@@ -17,6 +17,8 @@ stdout:
 	          Remove a certificate.
 	  create
 	          Create a certificate.
+	  purge
+	          Remove all certificates.
 
 	Fields:
 	  metro

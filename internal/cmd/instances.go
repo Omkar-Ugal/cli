@@ -41,6 +41,7 @@ type InstancesCmd struct {
 	cmd.DeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 	cmd.EditableResourceCmd[Instance]  `set:"name=instance" set:"names=instances"`
 	cmd.CreatableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
+	cmd.PurgeableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
 
 	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs."`
 	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances."`

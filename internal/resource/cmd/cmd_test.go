@@ -958,6 +958,14 @@ func testStdio(out io.Writer) config.Stdio {
 	}
 }
 
+func testStdioWithInput(out io.Writer, in io.Reader) config.Stdio {
+	return config.Stdio{
+		Stdin:  in,
+		Stdout: out,
+		Stderr: out,
+	}
+}
+
 func TestValueCallback(t *testing.T) {
 	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
@@ -1061,5 +1069,139 @@ func TestValueCallback(t *testing.T) {
 		assert.NotContains(t, output, "res2")
 		// Callbacks should be invoked to evaluate the filter
 		assert.Equal(t, 2, resourcet.CallbackInvocations, "callbacks should be invoked to evaluate filter")
+	})
+}
+
+func TestPurge(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	t.Run("with_confirmation", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		var out bytes.Buffer
+		in := strings.NewReader("YES\n")
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{}
+		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
+		require.NoError(t, err)
+
+		// All resources should be deleted
+		assert.Empty(t, resourcet.TestStore)
+
+		output := out.String()
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("with_force", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		var out bytes.Buffer
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+			Force: true,
+		}
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// All resources should be deleted
+		assert.Empty(t, resourcet.TestStore)
+	})
+
+	t.Run("cancelled", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		var out bytes.Buffer
+		in := strings.NewReader("no\n")
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{}
+		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cancelled")
+
+		// Resources should not be deleted
+		assert.Len(t, resourcet.TestStore, 2)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		resourcet.TestStore = map[string]resourcet.TestResource{}
+
+		var out bytes.Buffer
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+			Force: true,
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("filter", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		// Change state of test1 to "running" so we can filter
+		res := resourcet.TestStore["test1"]
+		res.State = "running"
+		resourcet.TestStore["test1"] = res
+
+		var out bytes.Buffer
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+			Filter: []string{"state==running"},
+			Force:  true,
+		}
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// Only test1 should be deleted (matches filter)
+		assert.NotContains(t, resourcet.TestStore, "test1")
+		// test2 should still exist (doesn't match filter)
+		assert.Contains(t, resourcet.TestStore, "test2")
+	})
+
+	t.Run("filter_no_match", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		var out bytes.Buffer
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+			Filter: []string{"state==nonexistent"},
+			Force:  true,
+		}
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// No resources should be deleted (no matches)
+		assert.Len(t, resourcet.TestStore, 2)
+	})
+
+	t.Run("filter_with_confirmation", func(t *testing.T) {
+		cloned, err := copystructure.Copy(baseTestStore)
+		require.NoError(t, err)
+		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+
+		// Change state of test1 to "running" so we can filter
+		res := resourcet.TestStore["test1"]
+		res.State = "running"
+		resourcet.TestStore["test1"] = res
+
+		var out bytes.Buffer
+		in := strings.NewReader("YES\n")
+		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+			Filter: []string{"state==running"},
+		}
+		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
+		require.NoError(t, err)
+
+		// Only test1 should be deleted
+		assert.NotContains(t, resourcet.TestStore, "test1")
+		assert.Contains(t, resourcet.TestStore, "test2")
 	})
 }

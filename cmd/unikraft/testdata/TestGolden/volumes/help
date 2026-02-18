@@ -19,6 +19,8 @@ stdout:
 	          Edit a volume.
 	  create
 	          Create a volume.
+	  purge
+	          Remove all volumes.
 	  clone
 	          Clone a volume.
 

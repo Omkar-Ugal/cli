@@ -35,6 +35,7 @@ type VolumesCmd struct {
 	cmd.DeletableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
 	cmd.EditableResourceCmd[Volume]  `set:"name=volume" set:"names=volumes"`
 	cmd.CreatableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
+	cmd.PurgeableResourceCmd[Volume] `set:"name=volume" set:"names=volumes"`
 
 	Clone VolumesCloneCmd `cmd:"" help:"Clone a volume." set:"name=volume"`
 }

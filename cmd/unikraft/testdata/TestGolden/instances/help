@@ -19,6 +19,8 @@ stdout:
 	          Edit a instance.
 	  create
 	          Create a instance.
+	  purge
+	          Remove all instances.
 	  logs
 	          Fetch and display instance logs.
 	  start

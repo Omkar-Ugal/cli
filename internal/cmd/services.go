@@ -33,6 +33,7 @@ type ServicesCmd struct {
 	cmd.DeletableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
 	cmd.EditableResourceCmd[ServiceGroup]  `set:"name=service" set:"names=services"`
 	cmd.CreatableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
+	cmd.PurgeableResourceCmd[ServiceGroup] `set:"name=service" set:"names=services"`
 }
 
 type ServiceGroup struct {

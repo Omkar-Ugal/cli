@@ -31,6 +31,7 @@ type CertificatesCmd struct {
 	cmd.ListableResourceCmd[Certificate]  `set:"name=certificate" set:"names=certificates"`
 	cmd.DeletableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
 	cmd.CreatableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
+	cmd.PurgeableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
 }
 
 type Certificate struct {

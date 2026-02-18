@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"cmp"
 	"context"
@@ -56,6 +57,12 @@ type EditableResourceCmd[R resource.EditableResource] struct {
 }
 type CreatableResourceCmd[R resource.CreatableResource] struct {
 	Create ResourceCreateCmd[R] `cmd:"" help:"Create a ${name}."`
+}
+type PurgeableResourceCmd[R interface {
+	resource.ListableResource
+	resource.DeletableResource
+}] struct {
+	Purge ResourcePurgeCmd[R] `cmd:"" help:"Remove all ${names}."`
 }
 
 func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -576,4 +583,103 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 	return cmd.Output.
 		WithDefault(PrinterTypeKeyValue).
 		Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
+}
+
+type ResourcePurgeCmd[R interface {
+	resource.ListableResource
+	resource.DeletableResource
+}] struct {
+	Filter []string `help:"Filter resources to purge (e.g. --filter state==running)." sep:"none"`
+	Force  bool     `help:"Do not prompt for confirmation before deleting."`
+
+	FormatOpts
+}
+
+func (cmd ResourcePurgeCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourcePurgeCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypePurge]
+	}
+	return nil
+}
+
+func (cmd *ResourcePurgeCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	var empty R
+
+	filter, err := filters.ParseAll(cmd.Filter...)
+	if err != nil {
+		return err
+	}
+
+	r := sandbox.WrapListable(empty)
+	resources, err := r.List(ctx)
+	if err != nil {
+		return err
+	}
+
+	if filter != nil {
+		resources, err = filterResources(resources, filter)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(resources) == 0 {
+		log.G(ctx).Info().Msg("no resources to purge")
+		return nil
+	}
+
+	log.G(ctx).Warn().
+		Int("count", len(resources)).
+		Msg("resources will be deleted")
+
+	err = cmd.Output.
+		WithDefault(PrinterTypeTable).
+		Print(stdio.Stdout, cmd.Field, empty, resources...)
+	if err != nil {
+		return err
+	}
+
+	if !cmd.Force {
+		fmt.Fprintf(stdio.Stdout, "\nType \"YES\" (in capitals) to confirm deletion: ")
+
+		inputCh := make(chan string, 1)
+		errCh := make(chan error, 1)
+		go func() {
+			reader := bufio.NewReader(stdio.Stdin)
+			response, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
+				errCh <- fmt.Errorf("failed to read confirmation: %w", err)
+				return
+			}
+			inputCh <- strings.TrimSpace(response)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case err := <-errCh:
+			return err
+		case response := <-inputCh:
+			if response != "YES" {
+				return fmt.Errorf("deletion cancelled")
+			}
+		}
+	}
+
+	dr := sandbox.WrapDeletable(empty)
+	err = dr.Delete(ctx, resources)
+	if err != nil {
+		return err
+	}
+
+	log.G(ctx).Info().
+		Int("count", len(resources)).
+		Msg("resources deleted")
+
+	return nil
 }
