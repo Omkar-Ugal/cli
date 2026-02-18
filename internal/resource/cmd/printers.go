@@ -253,18 +253,20 @@ func printTable(out io.Writer, fieldSpecs []string, base resource.Resource, reso
 
 	headerPaths, headerFields := xslices.Collect2(resource.IterFields(headers))
 
+	firstCol := true
 	for i, header := range headerFields {
 		if header.HasChildren() && header.Value == nil {
 			continue
 		}
 		path := headerPaths[i]
 
-		if i > 0 {
+		if !firstCol {
 			_, err := fmt.Fprint(out, "\t")
 			if err != nil {
 				return err
 			}
 		}
+		firstCol = false
 		name := strings.ToUpper(headerName(path))
 		_, err := fmt.Fprintf(out, "%s", lipgloss.NewStyle().SetString(name).Bold(true).String())
 		if err != nil {
@@ -282,18 +284,20 @@ func printTable(out io.Writer, fieldSpecs []string, base resource.Resource, reso
 			return err
 		}
 
+		firstCol := true
 		for i, header := range headerFields {
 			if header.HasChildren() && header.Value == nil {
 				continue
 			}
 			path := headerPaths[i]
 
-			if i > 0 {
+			if !firstCol {
 				_, err = fmt.Fprint(out, "\t")
 				if err != nil {
 					return err
 				}
 			}
+			firstCol = false
 
 			fields := resource.GetFieldByPath(fields, path)
 			fieldIdx := -1
