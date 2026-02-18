@@ -8,22 +8,23 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
-	"sync"
 
 	"golang.org/x/sync/errgroup"
 
 	"unikraft.com/cli/internal/resource"
-	resourcecmd "unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/resource/cmd"
+	xslices "unikraft.com/cli/internal/x/slices"
 )
 
 type AnyResourceCmd struct {
-	resourcecmd.ResourceCmd[AnyResource]
-	resourcecmd.GettableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
-	resourcecmd.ListableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
-	resourcecmd.EditableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
-	resourcecmd.CreatableResourceCmd[AnyResource]     `set:"name=resource" set:"names=resources"`
-	resourcecmd.BulkDeletableResourceCmd[AnyResource] `set:"name=resource" set:"names=resources"`
+	cmd.ResourceCmd[AnyResource]
+	cmd.GettableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
+	cmd.ListableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
+	cmd.EditableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
+	cmd.CreatableResourceCmd[AnyResource]     `set:"name=resource" set:"names=resources"`
+	cmd.BulkDeletableResourceCmd[AnyResource] `set:"name=resource" set:"names=resources"`
 }
 
 var resourceBackends = []resource.Resource{
@@ -33,13 +34,27 @@ var resourceBackends = []resource.Resource{
 	Certificate{},
 }
 
+func backendIndexByType(typ string) int {
+	return slices.IndexFunc(resourceBackends, func(backend resource.Resource) bool {
+		return backend.Type().Name == typ
+	})
+}
+
 func backendByType(typ string) (resource.Resource, bool) {
-	for _, backend := range resourceBackends {
-		if backend.Type().Name == typ {
-			return backend, true
-		}
+	idx := backendIndexByType(typ)
+	if idx < 0 {
+		return nil, false
 	}
-	return nil, false
+	return resourceBackends[idx], true
+}
+
+func wrapAnyResource(res resource.Resource) AnyResource {
+	typ := res.Type().Name
+	return AnyResource{
+		Type_:      typ,
+		Key_:       typ + ":" + res.Key().String(),
+		underlying: res,
+	}
 }
 
 // AnyResource is a special resource that multiplexes to different backend
@@ -135,7 +150,9 @@ func (a AnyResource) Get(ctx context.Context, keys []string) ([]resource.Resourc
 		return nil, fmt.Errorf("no keys provided")
 	}
 
-	requests := make(map[string][]string)
+	// Group keys by backend index so we can run per-backend Get calls in
+	// parallel while keeping output ordering stable according to resourceBackends.
+	keysByBackend := make([][]string, len(resourceBackends))
 	for _, key := range keys {
 		var k anyResourceKey
 		if err := k.UnmarshalText([]byte(key)); err != nil {
@@ -145,50 +162,40 @@ func (a AnyResource) Get(ctx context.Context, keys []string) ([]resource.Resourc
 			return nil, fmt.Errorf("resource key %q must include resource type prefix", key)
 		}
 
-		backend, ok := backendByType(k.typ)
-		if !ok {
+		idx := backendIndexByType(k.typ)
+		if idx < 0 {
 			return nil, fmt.Errorf("unknown resource type: %s", k.typ)
 		}
+		backend := resourceBackends[idx]
 		if _, ok := backend.(resource.GettableResource); !ok {
 			return nil, fmt.Errorf("resource type %s does not support Get", k.typ)
 		}
-		requests[k.typ] = append(requests[k.typ], k.key)
+
+		keysByBackend[idx] = append(keysByBackend[idx], k.key)
 	}
 
-	var (
-		results []resource.Resource
-		mu      sync.Mutex
-	)
+	perBackend := make([][]resource.Resource, len(resourceBackends))
 
 	eg, ctx := errgroup.WithContext(ctx)
-
-	for typ, keyList := range requests {
+	for i, keyList := range keysByBackend {
 		if len(keyList) == 0 {
 			continue
 		}
-		backend, ok := backendByType(typ)
-		if !ok {
-			return nil, fmt.Errorf("unknown resource type: %s", typ)
-		}
-		gettable := backend.(resource.GettableResource)
-		typ := typ
+		backend := resourceBackends[i].(resource.GettableResource)
+		typ := backend.Type().Name
+		i := i
 		keyList := keyList
 		eg.Go(func() error {
-			resources, err := gettable.Get(ctx, keyList)
+			resources, err := backend.Get(ctx, keyList)
 			if err != nil {
 				return fmt.Errorf("failed to get %s resources: %w", typ, err)
 			}
 
-			mu.Lock()
-			defer mu.Unlock()
+			wrapped := make([]resource.Resource, 0, len(resources))
 			for _, res := range resources {
-				key := res.Key().String()
-				results = append(results, AnyResource{
-					Type_:      res.Type().Name,
-					Key_:       res.Type().Name + ":" + key,
-					underlying: res,
-				})
+				wrapped = append(wrapped, wrapAnyResource(res))
 			}
+			perBackend[i] = wrapped
 			return nil
 		})
 	}
@@ -197,33 +204,34 @@ func (a AnyResource) Get(ctx context.Context, keys []string) ([]resource.Resourc
 		return nil, err
 	}
 
-	return results, nil
+	return xslices.Flatten(perBackend), nil
 }
 
 func (a AnyResource) List(ctx context.Context) ([]resource.Resource, error) {
-	var results []resource.Resource
-
-	for _, backend := range resourceBackends {
+	perBackend := make([][]resource.Resource, len(resourceBackends))
+	eg, ctx := errgroup.WithContext(ctx)
+	for i, backend := range resourceBackends {
 		listable, ok := backend.(resource.ListableResource)
 		if !ok {
 			continue
 		}
-
-		resources, err := listable.List(ctx)
-		if err != nil {
-			continue
-		}
-
-		for _, res := range resources {
-			results = append(results, AnyResource{
-				Type_:      res.Type().Name,
-				Key_:       res.Type().Name + ":" + res.Key().String(),
-				underlying: res,
-			})
-		}
+		eg.Go(func() error {
+			resources, err := listable.List(ctx)
+			if err != nil {
+				return err
+			}
+			wrapped := make([]resource.Resource, 0, len(resources))
+			for _, res := range resources {
+				wrapped = append(wrapped, wrapAnyResource(res))
+			}
+			perBackend[i] = wrapped
+			return nil
+		})
 	}
-
-	return results, nil
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+	return xslices.Flatten(perBackend), nil
 }
 
 func (a AnyResource) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
@@ -251,27 +259,15 @@ func (a AnyResource) Edit(ctx context.Context, target resource.Resource, fields 
 		return nil, fmt.Errorf("failed to edit %s resource: %w", typ, err)
 	}
 
-	return AnyResource{
-		Type_:      result.Type().Name,
-		Key_:       result.Type().Name + ":" + result.Key().String(),
-		underlying: result,
-	}, nil
+	return wrapAnyResource(result), nil
 }
 
 func (a AnyResource) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
-	var typ string
-	for _, field := range fields {
-		if field.Name == "type" {
-			if s, ok := field.Value.(string); ok {
-				typ = s
-			}
-			break
-		}
+	typeFields := resource.GetFieldByPath(fields, []string{"type"})
+	if len(typeFields) == 0 {
+		return nil, fmt.Errorf("type field is required")
 	}
-
-	if typ == "" {
-		return nil, fmt.Errorf("resource type must be specified in fields")
-	}
+	typ := typeFields[0].Value.(string)
 
 	backend, ok := backendByType(typ)
 	if !ok {
@@ -288,31 +284,24 @@ func (a AnyResource) Create(ctx context.Context, fields []resource.Field) ([]res
 		return nil, fmt.Errorf("failed to create %s resource: %w", typ, err)
 	}
 
-	var wrapped []resource.Resource
+	wrapped := make([]resource.Resource, 0, len(results))
 	for _, res := range results {
-		wrapped = append(wrapped, AnyResource{
-			Type_:      res.Type().Name,
-			Key_:       res.Type().Name + ":" + res.Key().String(),
-			underlying: res,
-		})
+		wrapped = append(wrapped, wrapAnyResource(res))
 	}
 
 	return wrapped, nil
 }
 
 func (a AnyResource) underlyingFields(fields []resource.Field) []resource.Field {
-	filtered := make([]resource.Field, 0, len(fields))
-	for _, field := range fields {
-		if field.Name == "type" || field.Name == "key" {
-			continue
-		}
-		filtered = append(filtered, field)
-	}
+	filtered := slices.Clone(fields)
+	filtered = slices.DeleteFunc(filtered, func(field resource.Field) bool {
+		return field.Name == "type" || field.Name == "key"
+	})
 	return filtered
 }
 
 func (a AnyResource) Delete(ctx context.Context, targets []resource.Resource) error {
-	targetsByType := make(map[string][]resource.Resource)
+	targetsByBackend := make([][]resource.Resource, len(resourceBackends))
 	for _, target := range targets {
 		anyRes, ok := target.(AnyResource)
 		if !ok {
@@ -323,19 +312,27 @@ func (a AnyResource) Delete(ctx context.Context, targets []resource.Resource) er
 		}
 
 		typ := anyRes.underlying.Type().Name
-		targetsByType[typ] = append(targetsByType[typ], anyRes.underlying)
-	}
-
-	for typ, typeTargets := range targetsByType {
-		backend, ok := backendByType(typ)
-		if !ok {
+		idx := backendIndexByType(typ)
+		if idx < 0 {
 			return fmt.Errorf("unknown resource type: %s", typ)
 		}
-
-		deletable, ok := backend.(resource.DeletableResource)
-		if !ok {
+		backend := resourceBackends[idx]
+		if _, ok := backend.(resource.DeletableResource); !ok {
 			return fmt.Errorf("resource type %s does not support Delete", typ)
 		}
+		targetsByBackend[idx] = append(targetsByBackend[idx], anyRes.underlying)
+	}
+
+	// Delete in backend order.
+	// HACK: This is intentionally NOT parallelized because backend order matters
+	// (e.g. dependencies between resource types).
+	for i, typeTargets := range targetsByBackend {
+		if len(typeTargets) == 0 {
+			continue
+		}
+		backend := resourceBackends[i]
+		typ := backend.Type().Name
+		deletable := backend.(resource.DeletableResource)
 
 		if err := deletable.Delete(ctx, typeTargets); err != nil {
 			return fmt.Errorf("failed to delete %s resources: %w", typ, err)

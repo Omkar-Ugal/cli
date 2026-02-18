@@ -304,10 +304,10 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 }
 
 var SandboxedResources = []resource.Resource{
-	Certificate{},
 	Instance{},
-	ServiceGroup{},
 	Volume{},
+	ServiceGroup{},
+	Certificate{},
 }
 
 type staticKey string
