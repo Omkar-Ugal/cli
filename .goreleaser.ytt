@@ -139,6 +139,8 @@ nfpms:
   homepage: https://unikraft.com
   formats:
   - deb
+  - rpm
+  - apk
   epoch: #@ getattr(data.values, "DEB_EPOCH", "1")
   prerelease: #@ getattr(data.values, "DEB_PRERELEASE", "")
   version_metadata: #@ getattr(data.values, "DEB_METADATA", "")
