@@ -19,12 +19,11 @@ import (
 
 type AnyResourceCmd struct {
 	resourcecmd.ResourceCmd[AnyResource]
-	resourcecmd.GettableResourceCmd[AnyResource]  `set:"name=resource" set:"names=resources"`
-	resourcecmd.ListableResourceCmd[AnyResource]  `set:"name=resource" set:"names=resources"`
-	resourcecmd.EditableResourceCmd[AnyResource]  `set:"name=resource" set:"names=resources"`
-	resourcecmd.CreatableResourceCmd[AnyResource] `set:"name=resource" set:"names=resources"`
-	resourcecmd.DeletableResourceCmd[AnyResource] `set:"name=resource" set:"names=resources"`
-	resourcecmd.PurgeableResourceCmd[AnyResource] `set:"name=resource" set:"names=resources"`
+	resourcecmd.GettableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
+	resourcecmd.ListableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
+	resourcecmd.EditableResourceCmd[AnyResource]      `set:"name=resource" set:"names=resources"`
+	resourcecmd.CreatableResourceCmd[AnyResource]     `set:"name=resource" set:"names=resources"`
+	resourcecmd.BulkDeletableResourceCmd[AnyResource] `set:"name=resource" set:"names=resources"`
 }
 
 var resourceBackends = []resource.Resource{

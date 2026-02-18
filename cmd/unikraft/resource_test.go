@@ -12,9 +12,9 @@ var resourceTestCases = []testCase{
 		},
 	},
 	{
-		name: "resource/purge/help",
+		name: "resource/delete/help",
 		commands: []command{
-			{args: []string{unikraftCmd, "resource", "purge", "--help"}},
+			{args: []string{unikraftCmd, "resource", "delete", "--help"}},
 		},
 	},
 	{
@@ -27,7 +27,7 @@ var resourceTestCases = []testCase{
 			{args: []string{unikraftCmd, "resource", "edit", "volume:" + defaultMetro + "/test-$UNIQ_VOLUME", "--set", "size=20"}},
 			{args: []string{unikraftCmd, "resource", "get", "volume:" + defaultMetro + "/test-$UNIQ_VOLUME"}},
 			{args: []string{unikraftCmd, "volume", "get", "test-$UNIQ_VOLUME"}},
-			{args: []string{unikraftCmd, "resource", "purge", "--force"}},
+			{args: []string{unikraftCmd, "resource", "delete", "--all", "--force"}},
 			{args: []string{unikraftCmd, "volume", "ls"}},
 		},
 	},

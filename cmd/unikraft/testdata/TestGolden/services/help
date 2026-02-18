@@ -19,8 +19,6 @@ stdout:
 	          Edit a service.
 	  create
 	          Create a service.
-	  purge
-	          Remove all services.
 
 	Fields:
 	  metro
@@ -362,12 +360,12 @@ $ unikraft service delete --help
 
 stdout:
 	Usage:
-	  unikraft services delete <name> ... [flags]
+	  unikraft services delete [<name> ...] [flags]
 
 	Remove a service.
 
 	Arguments:
-	  <name> ...
+	  [<name> ...]
 	          Names of the services to remove.
 
 	Examples:
@@ -388,6 +386,12 @@ stdout:
 	  services, services.*
 
 	Flags:
+	      --all
+	          Remove all services. Prompts for confirmation.
+	      --filter
+	          Filter services to remove (e.g. --filter state==running). Prompts for confirmation.
+	      --force
+	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output

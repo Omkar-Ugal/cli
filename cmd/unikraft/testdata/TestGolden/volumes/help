@@ -19,8 +19,6 @@ stdout:
 	          Edit a volume.
 	  create
 	          Create a volume.
-	  purge
-	          Remove all volumes.
 	  clone
 	          Clone a volume.
 
@@ -408,12 +406,12 @@ $ unikraft volume delete --help
 
 stdout:
 	Usage:
-	  unikraft volumes delete <name> ... [flags]
+	  unikraft volumes delete [<name> ...] [flags]
 
 	Remove a volume.
 
 	Arguments:
-	  <name> ...
+	  [<name> ...]
 	          Names of the volumes to remove.
 
 	Examples:
@@ -434,6 +432,12 @@ stdout:
 	  by.*.read-only
 
 	Flags:
+	      --all
+	          Remove all volumes. Prompts for confirmation.
+	      --filter
+	          Filter volumes to remove (e.g. --filter state==running). Prompts for confirmation.
+	      --force
+	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output

@@ -17,8 +17,6 @@ stdout:
 	          Create a resource.
 	  delete, rm, remove
 	          Remove a resource.
-	  purge
-	          Remove all resources.
 
 	Fields:
 	  type

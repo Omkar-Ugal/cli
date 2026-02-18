@@ -26,12 +26,11 @@ import (
 
 type CertificatesCmd struct {
 	cmd.ResourceCmd[Certificate]
-	cmd.GettableResourceCmd[Certificate]  `set:"name=certificate" set:"names=certificates"`
-	cmd.WaitableResourceCmd[Certificate]  `set:"name=certificate" set:"names=certificates"`
-	cmd.ListableResourceCmd[Certificate]  `set:"name=certificate" set:"names=certificates"`
-	cmd.DeletableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
-	cmd.CreatableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
-	cmd.PurgeableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
+	cmd.GettableResourceCmd[Certificate]      `set:"name=certificate" set:"names=certificates"`
+	cmd.WaitableResourceCmd[Certificate]      `set:"name=certificate" set:"names=certificates"`
+	cmd.ListableResourceCmd[Certificate]      `set:"name=certificate" set:"names=certificates"`
+	cmd.BulkDeletableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
+	cmd.CreatableResourceCmd[Certificate]     `set:"name=certificate" set:"names=certificates"`
 }
 
 type Certificate struct {

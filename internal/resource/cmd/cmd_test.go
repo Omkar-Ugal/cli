@@ -900,6 +900,13 @@ func TestRemoveOutput(t *testing.T) {
 	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
 
+	t.Run("no_args", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceRemoveCmd[resourcet.TestResource]{}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.Error(t, err)
+	})
+
 	runRemove := func(t *testing.T, printer Printer) string {
 		t.Helper()
 		cloned, err := copystructure.Copy(baseTestStore)
@@ -1072,18 +1079,20 @@ func TestValueCallback(t *testing.T) {
 	})
 }
 
-func TestPurge(t *testing.T) {
+func TestDeleteBulk(t *testing.T) {
 	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
 
-	t.Run("with_confirmation", func(t *testing.T) {
+	t.Run("all_with_confirmation", func(t *testing.T) {
 		cloned, err := copystructure.Copy(baseTestStore)
 		require.NoError(t, err)
 		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 		var out bytes.Buffer
 		in := strings.NewReader("YES\n")
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{}
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
+			All: true,
+		}
 		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
 		require.NoError(t, err)
 
@@ -1095,13 +1104,14 @@ func TestPurge(t *testing.T) {
 		assert.Contains(t, output, "test2")
 	})
 
-	t.Run("with_force", func(t *testing.T) {
+	t.Run("all_with_force", func(t *testing.T) {
 		cloned, err := copystructure.Copy(baseTestStore)
 		require.NoError(t, err)
 		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 		var out bytes.Buffer
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
+			All:   true,
 			Force: true,
 		}
 		err = cmd.Run(ctx, testStdio(&out), sandbox)
@@ -1111,14 +1121,16 @@ func TestPurge(t *testing.T) {
 		assert.Empty(t, resourcet.TestStore)
 	})
 
-	t.Run("cancelled", func(t *testing.T) {
+	t.Run("all_cancelled", func(t *testing.T) {
 		cloned, err := copystructure.Copy(baseTestStore)
 		require.NoError(t, err)
 		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 		var out bytes.Buffer
 		in := strings.NewReader("no\n")
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{}
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
+			All: true,
+		}
 		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cancelled")
@@ -1131,7 +1143,8 @@ func TestPurge(t *testing.T) {
 		resourcet.TestStore = map[string]resourcet.TestResource{}
 
 		var out bytes.Buffer
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
+			All:   true,
 			Force: true,
 		}
 		err := cmd.Run(ctx, testStdio(&out), sandbox)
@@ -1141,7 +1154,7 @@ func TestPurge(t *testing.T) {
 		assert.NotContains(t, output, "test1")
 	})
 
-	t.Run("filter", func(t *testing.T) {
+	t.Run("filter_with_force", func(t *testing.T) {
 		cloned, err := copystructure.Copy(baseTestStore)
 		require.NoError(t, err)
 		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
@@ -1152,7 +1165,7 @@ func TestPurge(t *testing.T) {
 		resourcet.TestStore["test1"] = res
 
 		var out bytes.Buffer
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			Filter: []string{"state==running"},
 			Force:  true,
 		}
@@ -1171,7 +1184,7 @@ func TestPurge(t *testing.T) {
 		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 		var out bytes.Buffer
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			Filter: []string{"state==nonexistent"},
 			Force:  true,
 		}
@@ -1194,7 +1207,7 @@ func TestPurge(t *testing.T) {
 
 		var out bytes.Buffer
 		in := strings.NewReader("YES\n")
-		cmd := &ResourcePurgeCmd[resourcet.TestResource]{
+		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			Filter: []string{"state==running"},
 		}
 		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)

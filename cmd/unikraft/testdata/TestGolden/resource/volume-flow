@@ -63,15 +63,7 @@ stdout:
 	size:       20MiB
 	persistent: true
 
-$ unikraft resource purge --force
-
-stdout:
-	TYPE    KEY
-	volume  volume:test/test-<VOLUME>
-
-stderr:
-	│ resources will be deleted count=1
-	│ resources deleted count=1
+$ unikraft resource delete --all --force
 
 $ unikraft volume ls
 
