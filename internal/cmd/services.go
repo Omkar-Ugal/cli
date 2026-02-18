@@ -131,7 +131,7 @@ func (ServiceGroup) Type() resource.Type {
 
 func (s ServiceGroup) key() multimetro.Key {
 	return multimetro.Key{
-		Metro: s.Metro.Name,
+		Metro: s.MetroName,
 		Name:  s.Name,
 		UUID:  s.UUID,
 	}

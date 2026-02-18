@@ -216,7 +216,7 @@ func (Instance) Type() resource.Type {
 
 func (i Instance) key() multimetro.Key {
 	return multimetro.Key{
-		Metro: i.Metro.Name,
+		Metro: i.MetroName,
 		Name:  i.Name,
 		UUID:  i.UUID,
 	}

@@ -200,7 +200,7 @@ func (Volume) Type() resource.Type {
 
 func (i Volume) key() multimetro.Key {
 	return multimetro.Key{
-		Metro: i.Metro.Name,
+		Metro: i.MetroName,
 		Name:  i.Name,
 		UUID:  i.UUID,
 	}
