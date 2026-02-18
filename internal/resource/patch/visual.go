@@ -154,7 +154,11 @@ func saveFields(res resource.Resource, fields []resource.Field, patches []resour
 		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
 	}
 
-	result = append(fmt.Appendf(nil, "# %s %s\n", res.Type().Name, res.Key()), result...)
+	line := fmt.Sprintf("# %s", res.Type().Name)
+	if key := res.Key().String(); key != "" {
+		line = line + " " + key
+	}
+	result = append([]byte(line+"\n"), result...)
 
 	return result, nil
 }

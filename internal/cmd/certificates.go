@@ -69,7 +69,7 @@ func (Certificate) Type() resource.Type {
 
 func (c Certificate) key() multimetro.Key {
 	return multimetro.Key{
-		Metro: c.Metro.Name,
+		Metro: c.MetroName,
 		Name:  c.Name,
 		UUID:  c.UUID,
 	}
