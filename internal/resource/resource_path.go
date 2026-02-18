@@ -37,6 +37,20 @@ func (fp FieldPath) Matches(spec FieldPath) bool {
 	return true
 }
 
+// MatchesParent is like Matches, but also matches when spec refers to a parent
+// path of fp (i.e. spec can be shorter than fp).
+func (fp FieldPath) MatchesParent(spec FieldPath) bool {
+	if len(fp) < len(spec) {
+		return false
+	}
+	for i := range spec {
+		if spec[i] != "*" && fp[i] != spec[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (fp FieldPath) MatchesString(s string) bool {
 	return fp.Matches(ParseFieldPath(s))
 }

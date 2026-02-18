@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	"unikraft.com/cli/internal/resource/value"
+	"unikraft.com/x/colors"
 )
 
 type Type struct {
@@ -69,6 +70,9 @@ type Field struct {
 	Name string `json:"name"`
 	// Value contains the value of the field
 	Value any `json:"value,omitempty"`
+	// ValueCallback computes the field value lazily. When resolved via
+	// ResolveCallbacks, the result is stored in Value and the callback is cleared.
+	ValueCallback func(ctx context.Context) (any, error) `json:"-"`
 
 	// Subfields allow defining nested structures
 	Subfields []Field `json:"subfields,omitempty"`
@@ -94,6 +98,9 @@ func (f Field) HasChildren() bool {
 func (f Field) IsEmpty() bool {
 	if f.Value != nil {
 		return reflect.ValueOf(f.Value).IsZero()
+	}
+	if f.ValueCallback != nil {
+		return false // has a potential value
 	}
 	if f.Elem != nil {
 		return len(f.Subfields) == 0
@@ -126,6 +133,9 @@ type Patch struct {
 }
 
 func (f Field) Render() (string, error) {
+	if f.Value == nil && f.ValueCallback != nil {
+		return colors.InfoFg("<lazy>"), nil
+	}
 	return value.Format(f.Value)
 }
 

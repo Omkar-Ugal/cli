@@ -6,9 +6,12 @@
 package resource
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"slices"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // CloneField creates a deep copy of the given Field.
@@ -249,3 +252,54 @@ const (
 	FilterRecurse
 	FilterPrune
 )
+
+// ResolveFields resolves ValueCallbacks for fields matching the given paths.
+// Results are stored directly into Field.Value, and the callback is cleared.
+func ResolveFields(ctx context.Context, fields []Field, targets []FieldPath) error {
+	if len(targets) == 0 {
+		return nil
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	for path, field := range IterFields(fields) {
+		if field.ValueCallback == nil {
+			continue
+		}
+
+		if !slices.ContainsFunc(targets, func(target FieldPath) bool {
+			return path.MatchesParent(target)
+		}) {
+			continue
+		}
+
+		eg.Go(func() error {
+			val, err := field.ValueCallback(ctx)
+			if err != nil {
+				return fmt.Errorf("resolving %s: %w", path, err)
+			}
+			field.Value = val
+			field.ValueCallback = nil
+			return nil
+		})
+	}
+	return eg.Wait()
+}
+
+func ResolveAllFields(ctx context.Context, fields []Field) error {
+	eg, ctx := errgroup.WithContext(ctx)
+	for path, field := range IterFields(fields) {
+		if field.ValueCallback == nil {
+			continue
+		}
+		eg.Go(func() error {
+			val, err := field.ValueCallback(ctx)
+			if err != nil {
+				return fmt.Errorf("resolving %s: %w", path, err)
+			}
+			field.Value = val
+			field.ValueCallback = nil
+			return nil
+		})
+	}
+	return eg.Wait()
+}

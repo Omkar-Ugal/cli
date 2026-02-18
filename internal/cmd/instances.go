@@ -794,7 +794,7 @@ func (c *InstancesStartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type InstancesStopCmd struct {
@@ -852,7 +852,7 @@ func (c *InstancesStopCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type InstancesRestartCmd struct {
@@ -906,7 +906,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 	if err != nil {
 		return err
 	}
-	return cmd.Diff(stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
 }
 
 type StopOpts struct {

@@ -957,3 +957,109 @@ func testStdio(out io.Writer) config.Stdio {
 		Stderr: out,
 	}
 }
+
+func TestValueCallback(t *testing.T) {
+	ctx := context.Background()
+	sandbox := &resource.Sandbox{}
+
+	// Reset state - use TestStore with TestResource
+	resourcet.TestStore = map[string]resourcet.TestResource{
+		"res1": {ID: "1", Name: "res1", State: "running"},
+		"res2": {ID: "2", Name: "res2", State: "stopped"},
+	}
+	resourcet.CallbackInvocations = 0
+
+	t.Run("list_without_lazy_field", func(t *testing.T) {
+		resourcet.CallbackInvocations = 0
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "running")
+		assert.NotContains(t, output, "computed-")
+		// Callback should not be invoked when lazy field is not requested
+		assert.Equal(t, 0, resourcet.CallbackInvocations, "callbacks should not be invoked when lazy field not selected")
+	})
+
+	t.Run("list_with_lazy_field", func(t *testing.T) {
+		resourcet.CallbackInvocations = 0
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{
+				Field: []string{"+lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "computed-res1")
+		assert.Contains(t, output, "res2")
+		assert.Contains(t, output, "computed-res2")
+		// Callback should be invoked once per resource
+		assert.Equal(t, 2, resourcet.CallbackInvocations, "callbacks should be invoked for each resource")
+	})
+
+	t.Run("get_with_lazy_field", func(t *testing.T) {
+		resourcet.CallbackInvocations = 0
+
+		var out bytes.Buffer
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
+			Name: []string{"res1"},
+			FormatOpts: FormatOpts{
+				Field: []string{"+lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "computed-res1")
+		assert.Equal(t, 1, resourcet.CallbackInvocations, "callback should be invoked once")
+	})
+
+	t.Run("quiet_output_with_lazy_field", func(t *testing.T) {
+		resourcet.CallbackInvocations = 0
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+				Field:  []string{"name", "lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "res1 computed-res1")
+		assert.Contains(t, output, "res2 computed-res2")
+		assert.Equal(t, 2, resourcet.CallbackInvocations)
+	})
+
+	t.Run("filter_on_lazy_field_without_selecting_it", func(t *testing.T) {
+		resourcet.CallbackInvocations = 0
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			// Filter on lazy field, but don't select it for output
+			Filter: []string{"lazy==computed-res1"},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		// Should only show res1 (filtered by lazy field)
+		assert.Contains(t, output, "res1")
+		assert.NotContains(t, output, "res2")
+		// Callbacks should be invoked to evaluate the filter
+		assert.Equal(t, 2, resourcet.CallbackInvocations, "callbacks should be invoked to evaluate filter")
+	})
+}

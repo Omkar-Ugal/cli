@@ -175,7 +175,7 @@ func (c *RunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.
 	}
 	err = c.Output.
 		WithDefault(cmd.PrinterTypeKeyValue).
-		Print(stdio.Stdout, c.Field, Instance{}, created...)
+		Print(ctx, stdio.Stdout, c.Field, Instance{}, created...)
 	if err != nil {
 		return err
 	}

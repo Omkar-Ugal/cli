@@ -23,6 +23,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
 	"unikraft.com/cli/internal/tui/watcher"
+	xfilters "unikraft.com/cli/internal/x/filters"
 )
 
 type ResourceCmdInterface interface {
@@ -64,7 +65,7 @@ func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	if err != nil {
 		panic(err)
 	}
-	fields, err = resourceFields(fields, true, resource.FieldVerbosityInvisible, nil)
+	fields, err = selectResourceFields(fields, true, resource.FieldVerbosityInvisible, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -155,13 +156,13 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 		if err != nil {
 			return err
 		}
-		resources, err = filterResources(resources, filter)
+		resources, err = filterResources(ctx, resources, filter)
 		if err != nil {
 			return err
 		}
 		return cmd.Output.
 			WithDefault(PrinterTypeTable).
-			Print(out, cmd.Field, empty, resources...)
+			Print(ctx, out, cmd.Field, empty, resources...)
 	}
 
 	if cmd.Watch != nil {
@@ -201,7 +202,7 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandb
 		}
 		return cmd.Output.
 			WithDefault(PrinterTypeKeyValue).
-			Print(out, cmd.Field, empty, resources...)
+			Print(ctx, out, cmd.Field, empty, resources...)
 	}
 
 	if cmd.Watch != nil {
@@ -262,7 +263,7 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 			return err
 		}
 
-		filtered, err := filterResources(resources, filter)
+		filtered, err := filterResources(ctx, resources, filter)
 		if err != nil {
 			return err
 		}
@@ -273,7 +274,7 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 
 			return cmd.Output.
 				WithDefault(PrinterTypeKeyValue).
-				Print(stdio.Stdout, cmd.Field, empty, resources...)
+				Print(ctx, stdio.Stdout, cmd.Field, empty, filtered...)
 		}
 		log.G(ctx).Debug().
 			Strs("resources", cmd.Name).
@@ -311,27 +312,38 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	}
 }
 
-func filterResources(resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
+func filterResources(ctx context.Context, resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
+	// Extract field paths from the filter to determine which callbacks need resolution
+	filterKeys := xfilters.Keys(filter)
+	paths := make([]resource.FieldPath, len(filterKeys))
+	for i, key := range filterKeys {
+		paths[i] = resource.FieldPath(key)
+	}
+
+	// Filter resources, resolving callbacks as needed for filter fields
 	for _, res := range resources {
+		fields, err := res.Fields()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
+		}
+		// Resolve callbacks for fields referenced by the filter
+		fields, err = resolveFields(ctx, fields, paths)
+		if err != nil {
+			return nil, err
+		}
+
 		if filter.Match(filters.AdapterFunc(func(key []string) (string, bool) {
-			fields, err := res.Fields()
-			if err != nil {
-				if rerr == nil {
-					rerr = fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
-				}
+			matched := resource.GetFieldByPath(fields, key)
+			if matched == nil {
 				return "", false
 			}
-			fields = resource.GetFieldByPath(fields, key)
-			if fields == nil {
-				return "", false
-			}
-			if len(fields) != 1 {
+			if len(matched) != 1 {
 				// 0 fields = no exact match
 				// >1 fields = ambiguous match
 				return "", false
 			}
 			// HACK: vtclean to remove any escape sequences from rendered output
-			out, _ := fields[0].Render()
+			out, _ := matched[0].Render()
 			return vtclean.Clean(out, false), true
 		})) {
 			filtered = append(filtered, res)
@@ -373,7 +385,7 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 
 	return cmd.Output.
 		WithDefault(PrinterTypeQuiet).
-		Print(stdio.Stdout, cmd.Field, empty, resources...)
+		Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
 }
 
 type ResourceEditCmd[R resource.EditableResource] struct {
@@ -491,7 +503,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 			Str("resource", res.Key().String()).
 			Msg("no edits made")
 	}
-	return Diff(stdio.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
+	return Diff(ctx, stdio.Stdout, cmd.FormatOpts, empty, []resource.Resource{res}, updated)
 }
 
 type ResourceCreateCmd[R resource.CreatableResource] struct {
@@ -563,5 +575,5 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 	}
 	return cmd.Output.
 		WithDefault(PrinterTypeKeyValue).
-		Print(stdio.Stdout, cmd.Field, empty, resources...)
+		Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
 }

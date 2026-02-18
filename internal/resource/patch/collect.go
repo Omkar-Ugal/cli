@@ -43,6 +43,11 @@ func collectValueRaw(field resource.Field) (any, error) {
 	if field.Value != nil {
 		return field.Value, nil
 	}
+	// Callback fields without resolved values - return nil gracefully.
+	// These fields are typically not editable anyway.
+	if field.ValueCallback != nil {
+		return nil, nil
+	}
 	if field.Elem != nil {
 		sl := make([]any, 0, len(field.Subfields))
 		for _, subfield := range field.Subfields {
