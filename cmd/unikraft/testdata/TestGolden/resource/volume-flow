@@ -1,0 +1,79 @@
+$ unikraft resource create --set type=volume --set name=test-$UNIQ_VOLUME --set size=10 --set metro=test
+
+stdout:
+	type:       volume
+	key:        volume:test/test-<VOLUME>
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       10MiB
+	persistent: true
+
+$ unikraft resource get volume:test/test-$UNIQ_VOLUME
+
+stdout:
+	type:       volume
+	key:        volume:test/test-<VOLUME>
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       10MiB
+	persistent: true
+
+$ unikraft resource list
+
+stdout:
+	TYPE    KEY
+	volume  volume:test/test-<VOLUME>
+
+$ unikraft resource edit volume:test/test-$UNIQ_VOLUME --set size=20
+
+stdout:
+	  type:       volume
+	  key:        volume:test/test-<VOLUME>
+	  metro:      test
+	  name:       test-<VOLUME>
+	  uuid:       12345678-1234-1234-1234-123456789abc
+	  state:      available
+	- size:       10MiB
+	+ size:       20MiB
+	  persistent: true
+
+$ unikraft resource get volume:test/test-$UNIQ_VOLUME
+
+stdout:
+	type:       volume
+	key:        volume:test/test-<VOLUME>
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       20MiB
+	persistent: true
+
+$ unikraft volume get test-$UNIQ_VOLUME
+
+stdout:
+	metro:      test
+	name:       test-<VOLUME>
+	uuid:       12345678-1234-1234-1234-123456789abc
+	state:      available
+	size:       20MiB
+	persistent: true
+
+$ unikraft resource purge --force
+
+stdout:
+	TYPE    KEY
+	volume  volume:test/test-<VOLUME>
+
+stderr:
+	│ resources will be deleted count=1
+	│ resources deleted count=1
+
+$ unikraft volume ls
+
+stdout:
+	METRO  NAME  STATE  SIZE

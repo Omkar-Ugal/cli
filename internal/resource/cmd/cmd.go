@@ -553,7 +553,15 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 
 	var empty R
 	r := sandbox.WrapCreatable(empty)
-	fields, err := r.Fields()
+	fieldsResource := resource.Resource(empty)
+	if typed, ok := any(empty).(interface {
+		WithType(string) resource.Resource
+	}); ok {
+		if values := spec.Set["type"]; len(values) > 0 {
+			fieldsResource = typed.WithType(values[0])
+		}
+	}
+	fields, err := fieldsResource.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}

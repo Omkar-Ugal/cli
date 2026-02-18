@@ -1,0 +1,40 @@
+$ unikraft resource purge --help
+
+stdout:
+	Usage:
+	  unikraft resources purge [flags]
+
+	Remove all resources.
+
+	Fields:
+	  type
+	  key
+
+	Flags:
+	      --filter
+	          Filter resources to purge (e.g. --filter state==running).
+	      --force
+	          Do not prompt for confirmation before deleting.
+	  -f, --field
+	          Specify which fields to include in the output.
+	  -o, --output
+	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config ($UNIKRAFT_CONFIG)
+	          Path to the configuration file.
+	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choice: trace,debug,info,warn,error,fatal]
+	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choice: text,json]
+	      --profile ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Toggle anonymous usage analytics.
+	          [default: true]
+	      --version
+	          Print version information.
