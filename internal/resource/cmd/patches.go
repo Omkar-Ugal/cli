@@ -15,8 +15,8 @@ import (
 )
 
 type SetArgs struct {
-	Set     []map[string]string `help:"Key-value pairs to set on the ${name}." sep:"none" mapsep:"none"`
-	SetFile []map[string]string `help:"Files containing key-value pairs to set on the ${name}." sep:"none" mapsep:"none"`
+	Set     []map[string]string `collapse:"patch-set" help:"Key-value pairs to set on the ${name}." sep:"none" mapsep:"none"`
+	SetFile []map[string]string `collapse:"patch-set" help:"Files containing key-value pairs to set on the ${name}." sep:"none" mapsep:"none"`
 }
 
 func (args SetArgs) Apply(spec *patch.PatchSpec) error {
@@ -28,8 +28,8 @@ func (args SetArgs) Apply(spec *patch.PatchSpec) error {
 }
 
 type AddArgs struct {
-	Add     []map[string]string `help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
-	AddFile []map[string]string `help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
+	Add     []map[string]string `collapse:"patch-add" help:"Key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
+	AddFile []map[string]string `collapse:"patch-add" help:"Files containing key-value pairs to add to the ${name}." sep:"none" mapsep:"none"`
 }
 
 func (args AddArgs) Apply(spec *patch.PatchSpec) error {
@@ -41,8 +41,8 @@ func (args AddArgs) Apply(spec *patch.PatchSpec) error {
 }
 
 type DelArgs struct {
-	Del     []map[string]string `help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
-	DelFile []map[string]string `help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
+	Del     []map[string]string `collapse:"patch-del" help:"Keys to delete from the ${name}." sep:"none" mapsep:"none"`
+	DelFile []map[string]string `collapse:"patch-del" help:"Files containing keys to delete from the ${name}." sep:"none" mapsep:"none"`
 }
 
 func (args DelArgs) Apply(spec *patch.PatchSpec) error {
