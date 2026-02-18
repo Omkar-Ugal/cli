@@ -544,7 +544,7 @@ func buildUnikraftBinary(t *testing.T) string {
 	}
 	binaryPath := filepath.Join(binaryDir, binaryName)
 
-	cmd := exec.CommandContext(t.Context(), "go", "build", "-o", binaryPath, ".")
+	cmd := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-o", binaryPath, ".")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
