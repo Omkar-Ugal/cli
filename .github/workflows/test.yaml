@@ -62,7 +62,8 @@ jobs:
         if: ${{ github.event_name == 'push' || !github.event.pull_request.head.repo.fork }}
         shell: bash
         run: |
+          mkdir -p ~/.config/unikraft
+          echo "${UNIKRAFT_CONFIG}" > ~/.config/unikraft/config.yaml
           task --yes integration
         env:
-          UKC_TOKEN: ${{ secrets.UKC_TOKEN }}
-          UKC_METRO: ${{ vars.UKC_METRO }}
+          UNIKRAFT_CONFIG: ${{ secrets.UNIKRAFT_CONFIG }}
