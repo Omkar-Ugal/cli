@@ -51,6 +51,7 @@ type testCase struct {
 	commands []command
 	online   bool
 	cleaners []cleaner
+	context  map[string]string
 }
 
 type command struct {
@@ -78,6 +79,7 @@ func TestGolden(t *testing.T) {
 		{name: "certificates", cases: certificatesTestCases},
 		{name: "images", cases: imagesTestCases},
 		{name: "resources", cases: resourceTestCases},
+		{name: "build", cases: buildTestCases},
 	}
 
 	t.Parallel()
@@ -132,6 +134,12 @@ func runTestCase(t *testing.T, tc testCase, cfg *integration.Config, unikraftPat
 	})
 
 	dir := t.TempDir()
+	for name, contents := range tc.context {
+		require.NotEmpty(t, name, "context filename cannot be empty")
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
 
 	expander := &expander{}
 	output := strings.Builder{}

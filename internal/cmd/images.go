@@ -23,7 +23,7 @@ import (
 	imagespec "unikraft.com/x/image-spec"
 
 	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/dockerutil"
+	"unikraft.com/cli/internal/images"
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
@@ -96,36 +96,46 @@ func (i Image) Fields() ([]resource.Field, error) {
 }
 
 func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	opts, err := storageOpts(ctx)
+	access, err := images.Accessor(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	resources := make([]resource.Resource, 0, len(keys))
 	for _, key := range keys {
-		img, err := imagespec.Load(ctx, key, opts...)
+		src, err := imagespec.GuessURI(key)
+		if err != nil {
+			return nil, fmt.Errorf("parsing image reference %q: %w", key, err)
+		}
+		imgs, err := access.LoadAll(ctx, src, platforms.All)
 		if err != nil {
 			return nil, err
 		}
-		defer img.Close()
+		defer func() {
+			for _, img := range imgs {
+				img.Close()
+			}
+		}()
 
-		config := img.Image
-		resource := Image{
-			Ref: types.ImageRef[reference.Named]{
-				Reference: img.Name,
-			},
-			Digest: img.Descriptor.Digest,
-			Image:  *img,
-			Config: ImageConfig{
-				Entrypoint:   config.Config.Entrypoint,
-				Cmd:          config.Config.Cmd,
-				Env:          config.Config.Env,
-				Platform:     platforms.Format(config.Platform),
-				ExposedPorts: xmaps.OrderedKeys(config.Config.ExposedPorts),
-				Volumes:      xmaps.OrderedKeys(config.Config.Volumes),
-			},
+		for _, img := range imgs {
+			config := img.Image
+			resource := Image{
+				Ref: types.ImageRef[reference.Named]{
+					Reference: img.Name,
+				},
+				Digest: img.Descriptor.Digest,
+				Image:  *img,
+				Config: ImageConfig{
+					Entrypoint:   config.Config.Entrypoint,
+					Cmd:          config.Config.Cmd,
+					Env:          config.Config.Env,
+					Platform:     platforms.Format(config.Platform),
+					ExposedPorts: xmaps.OrderedKeys(config.Config.ExposedPorts),
+					Volumes:      xmaps.OrderedKeys(config.Config.Volumes),
+				},
+			}
+			resources = append(resources, &resource)
 		}
-		resources = append(resources, &resource)
 	}
 	return resources, nil
 }
@@ -232,7 +242,7 @@ func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, 
 
 	multimetroKeys := make(multimetro.Keys, 0, len(keys))
 	for _, key := range keys {
-		named, err := parseNormalizedNamed(key)
+		named, err := images.ParseNormalizedNamed(key)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse image key %q: %w", key, err)
 		}
@@ -270,7 +280,7 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro) ([]ImageEntry,
 	if image.Digest == nil {
 		return nil, fmt.Errorf("image has no digest")
 	}
-	base, err := parseNormalizedNamedMetro(metro, *image.Digest)
+	base, err := images.ParseNormalizedNamedMetro(metro, *image.Digest)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image ref %q: %w", *image.Digest, err)
 	}
@@ -371,25 +381,9 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro) ([]ImageEntry,
 	return results, nil
 }
 
-func parseNormalizedNamed(key string) (reference.Named, error) {
-	return parseNormalizedNamedMetro(nil, key)
-}
-
-func parseNormalizedNamedMetro(metro *config.Metro, key string) (reference.Named, error) {
-	index := "index.unikraft.io"
-	if metro != nil {
-		index = metro.Index().Host
-	}
-	return xreference.ParseNormalizedNamed(
-		key,
-		xreference.WithDefaultDomain(index),
-		xreference.WithDefaultPrefix("official"),
-	)
-}
-
 func imageRefToKey(metros []config.Metro, named reference.Named) multimetro.Key {
 	domain := reference.Domain(named)
-	if domain == "index.unikraft.io/" {
+	if domain == images.DefaultRegistry {
 		return multimetro.Key{
 			Name: named.String(),
 		}
@@ -436,33 +430,34 @@ func (cmd ImagesCopyCmd) Examples() []kingkong.Example {
 }
 
 func (cmd ImagesCopyCmd) Run(ctx context.Context) error {
-	opts, err := storageOpts(ctx)
+	access, err := images.Accessor(ctx)
 	if err != nil {
-		return fmt.Errorf("getting storage options: %w", err)
+		return err
 	}
 
-	img, err := imagespec.Load(ctx, cmd.Source, opts...)
+	src, err := imagespec.GuessURI(cmd.Source)
+	if err != nil {
+		return fmt.Errorf("parsing source image reference: %w", err)
+	}
+	dest, err := imagespec.GuessURI(cmd.Dest)
+	if err != nil {
+		return fmt.Errorf("parsing destination image reference: %w", err)
+	}
+
+	imgs, err := access.LoadAll(ctx, src, platforms.All)
 	if err != nil {
 		return fmt.Errorf("loading image from source: %w", err)
 	}
-	defer img.Close()
+	defer func() {
+		for _, img := range imgs {
+			img.Close()
+		}
+	}()
 
-	err = imagespec.Save(ctx, cmd.Dest, img, opts...)
+	err = access.Save(ctx, dest, imgs...)
 	if err != nil {
 		return fmt.Errorf("saving image to destination: %w", err)
 	}
 
 	return nil
-}
-
-func storageOpts(ctx context.Context) ([]imagespec.StorageOpt, error) {
-	profile, err := config.G(ctx).CurrentProfile()
-	if err != nil {
-		return nil, err
-	}
-
-	return []imagespec.StorageOpt{
-		imagespec.WithResolver(dockerutil.Resolver(profile)),
-		imagespec.WithReferenceParser(parseNormalizedNamed),
-	}, nil
 }

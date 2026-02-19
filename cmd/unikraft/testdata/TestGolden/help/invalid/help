@@ -23,6 +23,8 @@ stdout:
 	          Manage Unikraft Cloud profiles.
 	  run
 	          Run an image as an instance.
+	  build
+	          Build a Unikraft project into a container image.
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance, vm, vms
@@ -103,6 +105,8 @@ stdout:
 	          Manage Unikraft Cloud profiles.
 	  run
 	          Run an image as an instance.
+	  build
+	          Build a Unikraft project into a container image.
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance, vm, vms

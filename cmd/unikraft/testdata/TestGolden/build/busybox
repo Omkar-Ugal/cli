@@ -1,0 +1,47 @@
+$ unikraft build . --output index.ukp-stable.apw.unikraft.internal/jedevc/busybox-e2e:$UNIQ_IMAGE
+
+stderr:
+	│ found buildkit addr=<docker> version=v0.0.0+unknown
+
+$ unikraft run --name test-$UNIQ_INST --metro test --output quiet jedevc/busybox-e2e:$UNIQ_IMAGE
+
+stdout:
+	test/test-<INST>
+
+$ unikraft instance wait --until state==stopped --timeout 10s test-$UNIQ_INST
+
+stdout:
+	metro:        test
+	name:         test-<INST>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        stopped
+	image:        jedevc/busybox-e2e
+	resources:
+	  memory:     128MiB
+	  vcpus:      1
+	networks:
+	- uuid:       12345678-1234-1234-1234-123456789abc
+	  private-ip: 10.X.X.X
+	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
+
+$ unikraft instance logs test-$UNIQ_INST
+
+stdout:
+	test/test-<INST> ┏ == BEGIN /etc/unikraft-e2e ==
+	test/test-<INST> │ unikraft-e2e
+	test/test-<INST> │ == END /etc/unikraft-e2e ==
+	test/test-<INST> │ == BEGIN ls /etc/unikraft-e2e ==
+	test/test-<INST> │ /etc/unikraft-e2e
+	test/test-<INST> │ == END ls /etc/unikraft-e2e ==
+	test/test-<INST> │ == BEGIN status ==
+	test/test-<INST> │ UNIKRAFT_E2E_OK
+	test/test-<INST> │ == END status ==
+	test/test-<INST> │ Application exit with 0x0
+	test/test-<INST> │ [    0.000000] reboot: Restarting system
+
+$ unikraft instance delete test-$UNIQ_INST
+
+stdout:
+	test/test-<INST>
