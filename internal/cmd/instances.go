@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -789,9 +790,9 @@ func (cmd InstancesStartCmd) Examples() []kingkong.Example {
 
 func (c *InstancesStartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(c.Name)
-	before, err := Instance{}.Get(ctx, keys.Strings())
-	if err != nil {
-		return err
+	before, opErr := Instance{}.Get(ctx, keys.Strings())
+	if opErr != nil && len(before) == 0 {
+		return opErr
 	}
 	g, err := multimetro.NewClient(ctx)
 	if err != nil {
@@ -801,16 +802,37 @@ func (c *InstancesStartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	for _, res := range before {
 		targetKeys = append(targetKeys, res.(Instance).key())
 	}
+	if len(targetKeys) == 0 {
+		targetKeys = keys
+	}
 
-	started, err := startInstances(ctx, g, targetKeys)
-	if err != nil {
-		return err
+	started, startErr := startInstances(ctx, g, targetKeys)
+	opErr = errors.Join(opErr, startErr)
+	if len(started) == 0 {
+		return opErr
 	}
-	updated, err := Instance{}.Get(ctx, started.Strings())
-	if err != nil {
-		return err
+
+	updated, getErr := Instance{}.Get(ctx, started.Strings())
+	opErr = errors.Join(opErr, getErr)
+	if getErr != nil && len(updated) == 0 {
+		return opErr
 	}
-	return cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+
+	keySet := make(map[string]struct{}, len(started))
+	for _, k := range started {
+		keySet[k.String()] = struct{}{}
+	}
+	before = slices.DeleteFunc(slices.Clone(before), func(r resource.Resource) bool {
+		_, ok := keySet[r.Key().String()]
+		return !ok
+	})
+	updated = slices.DeleteFunc(slices.Clone(updated), func(r resource.Resource) bool {
+		_, ok := keySet[r.Key().String()]
+		return !ok
+	})
+
+	diffErr := cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return errors.Join(opErr, diffErr)
 }
 
 type InstancesStopCmd struct {
@@ -845,9 +867,9 @@ func (cmd InstancesStopCmd) Examples() []kingkong.Example {
 
 func (c *InstancesStopCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(c.Name)
-	before, err := Instance{}.Get(ctx, keys.Strings())
-	if err != nil {
-		return err
+	before, opErr := Instance{}.Get(ctx, keys.Strings())
+	if opErr != nil && len(before) == 0 {
+		return opErr
 	}
 	g, err := multimetro.NewClient(ctx)
 	if err != nil {
@@ -860,15 +882,33 @@ func (c *InstancesStopCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	if len(targetKeys) == 0 {
 		targetKeys = keys
 	}
-	stopped, err := stopInstances(ctx, g, targetKeys, c.StopOpts)
-	if err != nil {
-		return err
+	stopped, stopErr := stopInstances(ctx, g, targetKeys, c.StopOpts)
+	opErr = errors.Join(opErr, stopErr)
+	if len(stopped) == 0 {
+		return opErr
 	}
-	updated, err := Instance{}.Get(ctx, stopped.Strings())
-	if err != nil {
-		return err
+
+	updated, getErr := Instance{}.Get(ctx, stopped.Strings())
+	opErr = errors.Join(opErr, getErr)
+	if getErr != nil && len(updated) == 0 {
+		return opErr
 	}
-	return cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+
+	keySet := make(map[string]struct{}, len(stopped))
+	for _, k := range stopped {
+		keySet[k.String()] = struct{}{}
+	}
+	before = slices.DeleteFunc(slices.Clone(before), func(r resource.Resource) bool {
+		_, ok := keySet[r.Key().String()]
+		return !ok
+	})
+	updated = slices.DeleteFunc(slices.Clone(updated), func(r resource.Resource) bool {
+		_, ok := keySet[r.Key().String()]
+		return !ok
+	})
+
+	diffErr := cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return errors.Join(opErr, diffErr)
 }
 
 type InstancesRestartCmd struct {
@@ -897,9 +937,9 @@ func (cmd InstancesRestartCmd) Examples() []kingkong.Example {
 
 func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(c.Name)
-	before, err := Instance{}.Get(ctx, keys.Strings())
-	if err != nil {
-		return err
+	before, opErr := Instance{}.Get(ctx, keys.Strings())
+	if opErr != nil && len(before) == 0 {
+		return opErr
 	}
 	g, err := multimetro.NewClient(ctx)
 	if err != nil {
@@ -910,19 +950,39 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 		targetKeys = append(targetKeys, res.(Instance).key())
 	}
 
-	stopped, err := stopInstances(ctx, g, targetKeys, c.StopOpts)
-	if err != nil {
-		return err
+	stopped, stopErr := stopInstances(ctx, g, targetKeys, c.StopOpts)
+	opErr = errors.Join(opErr, stopErr)
+	if len(stopped) == 0 {
+		return opErr
 	}
-	started, err := startInstances(ctx, g, stopped)
-	if err != nil {
-		return err
+
+	started, startErr := startInstances(ctx, g, stopped)
+	opErr = errors.Join(opErr, startErr)
+	if len(started) == 0 {
+		return opErr
 	}
-	updated, err := Instance{}.Get(ctx, started.Strings())
-	if err != nil {
-		return err
+
+	updated, getErr := Instance{}.Get(ctx, started.Strings())
+	opErr = errors.Join(opErr, getErr)
+	if getErr != nil && len(updated) == 0 {
+		return opErr
 	}
-	return cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+
+	keySet := make(map[string]struct{}, len(started))
+	for _, k := range started {
+		keySet[k.String()] = struct{}{}
+	}
+	before = slices.DeleteFunc(slices.Clone(before), func(r resource.Resource) bool {
+		_, ok := keySet[r.Key().String()]
+		return !ok
+	})
+	updated = slices.DeleteFunc(slices.Clone(updated), func(r resource.Resource) bool {
+		_, ok := keySet[r.Key().String()]
+		return !ok
+	})
+
+	diffErr := cmd.Diff(ctx, stdio.Stdout, c.FormatOpts, Instance{}, before, updated)
+	return errors.Join(opErr, diffErr)
 }
 
 type StopOpts struct {
@@ -965,10 +1025,7 @@ func startInstances(ctx context.Context, g *group.Group[multimetro.MetroClient],
 		}
 		return started, started.Refs(), nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return multimetro.Keys(started), nil
+	return multimetro.Keys(started), err
 }
 
 func stopInstances(ctx context.Context, g *group.Group[multimetro.MetroClient], keys multimetro.Keys, opts StopOpts) (multimetro.Keys, error) {
@@ -995,8 +1052,5 @@ func stopInstances(ctx context.Context, g *group.Group[multimetro.MetroClient], 
 		}
 		return stopped, stopped.Refs(), nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return multimetro.Keys(stopped), nil
+	return multimetro.Keys(stopped), err
 }

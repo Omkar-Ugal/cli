@@ -47,7 +47,20 @@ type TestAuthor struct {
 	Email string
 }
 
+type Hooks struct {
+	List   func(context.Context, func(context.Context) ([]resource.Resource, error)) ([]resource.Resource, error)
+	Get    func(context.Context, []string, func(context.Context, []string) ([]resource.Resource, error)) ([]resource.Resource, error)
+	Create func(context.Context, []resource.Field, func(context.Context, []resource.Field) ([]resource.Resource, error)) ([]resource.Resource, error)
+	Delete func(context.Context, []resource.Resource, func(context.Context, []resource.Resource) error) error
+}
+
 var TestStore = map[string]TestResource{}
+
+// TestHooks allows tests to override TestResource operations.
+//
+// This is intentionally package-level and mutable to keep tests lightweight;
+// tests should reset it via t.Cleanup.
+var TestHooks Hooks
 
 func (TestResource) Type() resource.Type {
 	return resource.Type{
@@ -184,57 +197,75 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 }
 
 func (TestResource) List(ctx context.Context) ([]resource.Resource, error) {
-	var resources []resource.Resource
-	for _, t := range TestStore {
-		resources = append(resources, t)
+	original := func(context.Context) ([]resource.Resource, error) {
+		var resources []resource.Resource
+		for _, t := range TestStore {
+			resources = append(resources, t)
+		}
+		// Sort by ID for deterministic output
+		slices.SortFunc(resources, func(a, b resource.Resource) int {
+			return strings.Compare(a.(TestResource).ID, b.(TestResource).ID)
+		})
+		return resources, nil
 	}
-	// Sort by ID for deterministic output
-	slices.SortFunc(resources, func(a, b resource.Resource) int {
-		return strings.Compare(a.(TestResource).ID, b.(TestResource).ID)
-	})
-	return resources, nil
+	if TestHooks.List != nil {
+		return TestHooks.List(ctx, original)
+	}
+	return original(ctx)
 }
 
 func (TestResource) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	// Build a map for lookup
-	resourceMap := make(map[string]TestResource)
-	for _, key := range keys {
-		if t, ok := TestStore[key]; ok {
-			resourceMap[key] = t
+	original := func(_ context.Context, keys []string) ([]resource.Resource, error) {
+		// Build a map for lookup
+		resourceMap := make(map[string]TestResource)
+		for _, key := range keys {
+			if t, ok := TestStore[key]; ok {
+				resourceMap[key] = t
+			}
 		}
-	}
 
-	// Return resources in the order of keys provided
-	var resources []resource.Resource
-	for _, key := range keys {
-		if t, ok := resourceMap[key]; ok {
-			resources = append(resources, t)
+		// Return resources in the order of keys provided
+		var resources []resource.Resource
+		for _, key := range keys {
+			if t, ok := resourceMap[key]; ok {
+				resources = append(resources, t)
+			}
 		}
+		return resources, nil
 	}
-	return resources, nil
+	if TestHooks.Get != nil {
+		return TestHooks.Get(ctx, keys, original)
+	}
+	return original(ctx, keys)
 }
 
 func (TestResource) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
-	t := TestResource{
-		Settings: TestSettings{},
-	}
-
-	for key, field := range resource.IterFields(fields) {
-		if field.Create == nil || field.Create.Set == nil {
-			continue
+	original := func(_ context.Context, fields []resource.Field) ([]resource.Resource, error) {
+		t := TestResource{
+			Settings: TestSettings{},
 		}
-		switch key.String() {
-		case "name":
-			t.Name = field.Create.Set.(string)
-		case "settings.x":
-			t.Settings.X = field.Create.Set.(int)
-		case "settings.y":
-			t.Settings.Y = field.Create.Set.(string)
-		}
-	}
 
-	TestStore[t.Name] = t
-	return []resource.Resource{t}, nil
+		for key, field := range resource.IterFields(fields) {
+			if field.Create == nil || field.Create.Set == nil {
+				continue
+			}
+			switch key.String() {
+			case "name":
+				t.Name = field.Create.Set.(string)
+			case "settings.x":
+				t.Settings.X = field.Create.Set.(int)
+			case "settings.y":
+				t.Settings.Y = field.Create.Set.(string)
+			}
+		}
+
+		TestStore[t.Name] = t
+		return []resource.Resource{t}, nil
+	}
+	if TestHooks.Create != nil {
+		return TestHooks.Create(ctx, fields, original)
+	}
+	return original(ctx, fields)
 }
 
 func (TestResource) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
@@ -257,9 +288,15 @@ func (TestResource) Edit(ctx context.Context, target resource.Resource, fields [
 }
 
 func (TestResource) Delete(ctx context.Context, targets []resource.Resource) error {
-	for _, target := range targets {
-		t := target.(TestResource)
-		delete(TestStore, t.Name)
+	original := func(_ context.Context, targets []resource.Resource) error {
+		for _, target := range targets {
+			t := target.(TestResource)
+			delete(TestStore, t.Name)
+		}
+		return nil
 	}
-	return nil
+	if TestHooks.Delete != nil {
+		return TestHooks.Delete(ctx, targets, original)
+	}
+	return original(ctx, targets)
 }

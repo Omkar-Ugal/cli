@@ -1,6 +1,6 @@
 module unikraft.com/cli
 
-go 1.25.5
+go 1.25.7
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
@@ -22,7 +22,6 @@ require (
 	github.com/jotaen/kong-completion v0.0.12
 	github.com/juju/errors v1.0.0
 	github.com/lunixbochs/vtclean v1.0.0
-	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/muesli/termenv v0.16.0
 	github.com/opencontainers/go-digest v1.0.0
@@ -40,11 +39,12 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.0.0-20260213101218-8c7266d6d782
+	unikraft.com/cloud/sdk v0.0.0-20260220160550-c3fd5262f0e2
 	unikraft.com/x/colors v0.0.0-20260116231133-1da0081544af
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/guesstermwidth v0.0.0-20260205230841-e14b7e4a7c4c
 	unikraft.com/x/image-spec v0.0.0-20260126171022-af62c17fcdf7
+	unikraft.com/x/joinerrgroup v0.0.0-20260220150535-dbc51abe4158
 	unikraft.com/x/kingkong v0.0.0-20260302231330-f7c922e470df
 	unikraft.com/x/log v0.0.0-20260126171022-af62c17fcdf7
 	unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af
@@ -94,6 +94,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/buildkit v0.26.3 // indirect
 	github.com/moby/locker v1.0.1 // indirect

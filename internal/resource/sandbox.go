@@ -272,15 +272,18 @@ type sandboxedGettableResource struct {
 }
 
 func (r sandboxedGettableResource) Get(ctx context.Context, keys []string) ([]Resource, error) {
-	resources, err := r.GettableResource.Get(ctx, keys)
-	if err != nil {
-		return nil, err
+	resources, opErr := r.GettableResource.Get(ctx, keys)
+	if opErr != nil && len(resources) == 0 {
+		return nil, opErr
 	}
 	resources = slices.DeleteFunc(resources, r.sandbox.Missing)
 	if len(resources) == 0 {
+		if opErr != nil {
+			return nil, opErr
+		}
 		return nil, fmt.Errorf("no resources found in the sandbox")
 	}
-	return resources, nil
+	return resources, opErr
 }
 
 type sanboxedListableResource struct {
@@ -289,12 +292,12 @@ type sanboxedListableResource struct {
 }
 
 func (r sanboxedListableResource) List(ctx context.Context) ([]Resource, error) {
-	resources, err := r.ListableResource.List(ctx)
-	if err != nil {
-		return nil, err
+	resources, opErr := r.ListableResource.List(ctx)
+	if opErr != nil && len(resources) == 0 {
+		return nil, opErr
 	}
 	resources = slices.DeleteFunc(resources, r.sandbox.Missing)
-	return resources, nil
+	return resources, opErr
 }
 
 type sandboxedEditableResource struct {
@@ -336,16 +339,16 @@ func (r sandboxedCreatableResource) Get(ctx context.Context, keys []string) ([]R
 }
 
 func (r sandboxedCreatableResource) Create(ctx context.Context, fields []Field) ([]Resource, error) {
-	resources, err := r.CreatableResource.Create(ctx, fields)
-	if err != nil {
-		return nil, err
+	resources, opErr := r.CreatableResource.Create(ctx, fields)
+	if opErr != nil && len(resources) == 0 {
+		return nil, opErr
 	}
 	for _, res := range resources {
 		if err := r.sandbox.Add(ctx, res); err != nil {
 			return nil, err
 		}
 	}
-	return resources, nil
+	return resources, opErr
 }
 
 type sandboxedDeletableResource struct {

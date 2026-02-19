@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -25,6 +27,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	resourcet "unikraft.com/cli/internal/resource/testing"
 	xkong "unikraft.com/cli/internal/x/kong"
+	"unikraft.com/cloud/sdk/platform/group"
 )
 
 var baseTestStore = map[string]resourcet.TestResource{
@@ -473,6 +476,213 @@ func TestListOutput(t *testing.T) {
 	t.Run("template", func(t *testing.T) {
 		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeTemplate, Value: "{{.name}}-{{.id}}"}})
 		assert.Equal(t, "test1-id-test1\ntest2-id-test2\n", output)
+	})
+}
+
+func TestPartialResultsPrintedBeforeError(t *testing.T) {
+	ctx := context.Background()
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+	t.Cleanup(func() {
+		resourcet.TestHooks = resourcet.Hooks{}
+		resourcet.TestStore = map[string]resourcet.TestResource{}
+	})
+
+	t.Run("list", func(t *testing.T) {
+		resourcet.TestHooks = resourcet.Hooks{
+			List: func(ctx context.Context, next func(context.Context) ([]resource.Resource, error)) ([]resource.Resource, error) {
+				resources, _ := next(ctx)
+				return resources, errors.New("list failed")
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		assert.Contains(t, out.String(), "test1")
+		assert.Contains(t, out.String(), "test2")
+	})
+
+	t.Run("get", func(t *testing.T) {
+		resourcet.TestHooks = resourcet.Hooks{
+			Get: func(ctx context.Context, keys []string, next func(context.Context, []string) ([]resource.Resource, error)) ([]resource.Resource, error) {
+				resources, _ := next(ctx, keys)
+				return resources, errors.New("get failed")
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
+			Name:       []string{"test1", "missing"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		assert.Contains(t, out.String(), "test1")
+		assert.NotContains(t, out.String(), "missing")
+	})
+
+	t.Run("create", func(t *testing.T) {
+		resourcet.TestHooks = resourcet.Hooks{
+			Create: func(ctx context.Context, fields []resource.Field, next func(context.Context, []resource.Field) ([]resource.Resource, error)) ([]resource.Resource, error) {
+				resources, _ := next(ctx, fields)
+				return resources, errors.New("create failed")
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceCreateCmd[resourcet.TestResource]{
+			SetArgs:    SetArgs{Set: []map[string]string{{"name": "created"}}},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		assert.Contains(t, out.String(), "created")
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		resourcet.TestStore["ok"] = resourcet.TestResource{Name: "ok", ID: "id-ok"}
+		resourcet.TestStore["fail"] = resourcet.TestResource{Name: "fail", ID: "id-fail"}
+		resourcet.TestHooks = resourcet.Hooks{
+			Delete: func(ctx context.Context, targets []resource.Resource, _ func(context.Context, []resource.Resource) error) error {
+				_ = targets
+				return group.ErrRefNotFound{Refs: group.Refs{{Name: "fail"}}}
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceRemoveCmd[resourcet.TestResource]{
+			Name:       []string{"ok", "fail"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		output := out.String()
+		assert.Contains(t, output, "ok")
+		assert.NotContains(t, output, "fail")
+	})
+}
+
+func TestPartialResultsOrderWhenCallerPrintsError(t *testing.T) {
+	ctx := context.Background()
+
+	cloned, err := copystructure.Copy(baseTestStore)
+	require.NoError(t, err)
+	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+	t.Cleanup(func() {
+		resourcet.TestHooks = resourcet.Hooks{}
+		resourcet.TestStore = map[string]resourcet.TestResource{}
+	})
+
+	t.Run("list/table", func(t *testing.T) {
+		resourcet.TestHooks = resourcet.Hooks{
+			List: func(ctx context.Context, next func(context.Context) ([]resource.Resource, error)) ([]resource.Resource, error) {
+				resources, _ := next(ctx)
+				return resources, errors.New("list failed")
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeTable}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxOK := strings.Index(output, "test1")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxOK)
+		require.NotEqual(t, -1, idxErr)
+		assert.Less(t, idxOK, idxErr)
+	})
+
+	t.Run("get/kv", func(t *testing.T) {
+		resourcet.TestHooks = resourcet.Hooks{
+			Get: func(ctx context.Context, keys []string, next func(context.Context, []string) ([]resource.Resource, error)) ([]resource.Resource, error) {
+				resources, _ := next(ctx, keys)
+				return resources, errors.New("get failed")
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
+			Name:       []string{"test1", "missing"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeKeyValue}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxName := strings.Index(output, "name:")
+		idxOK := strings.Index(output, "test1")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxName)
+		require.NotEqual(t, -1, idxOK)
+		require.NotEqual(t, -1, idxErr)
+		assert.Less(t, idxName, idxErr)
+		assert.Less(t, idxOK, idxErr)
+	})
+
+	t.Run("delete/quiet", func(t *testing.T) {
+		resourcet.TestStore["ok"] = resourcet.TestResource{Name: "ok", ID: "id-ok"}
+		resourcet.TestStore["fail"] = resourcet.TestResource{Name: "fail", ID: "id-fail"}
+		resourcet.TestHooks = resourcet.Hooks{
+			Delete: func(ctx context.Context, targets []resource.Resource, _ func(context.Context, []resource.Resource) error) error {
+				_ = targets
+				return group.ErrRefNotFound{Refs: group.Refs{{Name: "fail"}}}
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceRemoveCmd[resourcet.TestResource]{
+			Name:       []string{"ok", "fail"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxOK := strings.Index(output, "ok")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxOK)
+		require.NotEqual(t, -1, idxErr)
+		success := output[:idxErr]
+		assert.Contains(t, success, "ok")
+		assert.NotContains(t, success, "fail")
+		assert.Less(t, idxOK, idxErr)
+	})
+
+	t.Run("create/kv", func(t *testing.T) {
+		resourcet.TestHooks = resourcet.Hooks{
+			Create: func(ctx context.Context, fields []resource.Field, next func(context.Context, []resource.Field) ([]resource.Resource, error)) ([]resource.Resource, error) {
+				resources, _ := next(ctx, fields)
+				return resources, errors.New("create failed")
+			},
+		}
+
+		var out bytes.Buffer
+		cmd := &ResourceCreateCmd[resourcet.TestResource]{
+			SetArgs:    SetArgs{Set: []map[string]string{{"name": "created"}}},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeKeyValue}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxName := strings.Index(output, "name:")
+		idxCreated := strings.Index(output, "created")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxName)
+		require.NotEqual(t, -1, idxCreated)
+		require.NotEqual(t, -1, idxErr)
+		assert.Less(t, idxName, idxErr)
+		assert.Less(t, idxCreated, idxErr)
 	})
 }
 
@@ -1317,6 +1527,28 @@ func TestValueCallback(t *testing.T) {
 		assert.NotContains(t, output, "res2")
 		// Callbacks should be invoked to evaluate the filter
 		assert.Equal(t, 2, resourcet.CallbackInvocations, "callbacks should be invoked to evaluate filter")
+	})
+
+	t.Run("list_filter_sort_select_lazy_once", func(t *testing.T) {
+		resourcet.CallbackInvocations = 0
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"lazy==computed-res1"},
+			Sort:   xkong.GreedyStrings{"lazy"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+				Field:  xkong.GreedyStrings{"name", "lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "computed-res1")
+		assert.NotContains(t, output, "res2")
+		assert.Equal(t, 2, resourcet.CallbackInvocations, "callback should be invoked once per resource")
 	})
 }
 
