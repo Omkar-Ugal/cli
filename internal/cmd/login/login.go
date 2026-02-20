@@ -49,11 +49,11 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		}
 
 		profile = &config.Profile{
-			Type:         config.ProfileTypeCloud,
-			Name:         cfg.CurrentProfileName(),
-			ControlPlane: cmd.ControlPlane,
+			Type: config.ProfileTypeCloud,
+			Name: cfg.CurrentProfileName(),
 		}
 	}
+	profile.ControlPlane = cmp.Or(cmd.ControlPlane, profile.ControlPlane, controlplane.DefaultEndpoint)
 
 	if cmd.Check {
 		if profile.Token != "" {
@@ -99,31 +99,21 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 	}
 	profile.Organization = cmp.Or(profile.Organization, cmd.Organization)
 
-	// Instantiate a new client to fetch the list of metros.
-	client := controlplane.NewClient(
-		controlplane.WithDefaultEndpoint(profile.ControlPlane),
-		controlplane.WithToken(profile.Token),
-	)
-
-	metroResp, err := client.ListMetros(ctx)
-	if err != nil {
+	newMetros, err := cmd.getMetros(ctx, profile)
+	if err != nil || len(newMetros) == 0 {
 		log.G(ctx).
 			Warn().
 			Err(err).
 			Msg("could not list metros for profile: please add metros manually")
-	} else if metroResp.Data == nil {
-		log.G(ctx).
-			Warn().
-			Msg("could not list metros for profile: please add metros manually")
 	}
-
-	profile.Metros = nil
-	for _, metro := range ptr.ZeroIfNil(metroResp.Data).Metros {
-		profile.Metros = append(profile.Metros, config.Metro{
-			Name:     ptr.ZeroIfNil(metro.Name),
-			Endpoint: ptr.ZeroIfNil(metro.Endpoint),
-			Country:  ptr.ZeroIfNil(metro.Country),
-		})
+	existingMetros := make(map[string]struct{}, len(profile.Metros))
+	for _, metro := range profile.Metros {
+		existingMetros[metro.Name] = struct{}{}
+	}
+	for _, metro := range newMetros {
+		if _, ok := existingMetros[metro.Name]; !ok {
+			profile.Metros = append(profile.Metros, metro)
+		}
 	}
 
 	cfg.DefaultProfile = profile.Name
@@ -141,26 +131,46 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 	return nil
 }
 
-func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.Response[controlplane.CheckAuthorizationResponseData], error) {
-	server := profile.ControlPlane
-	if len(cmd.ControlPlane) > 0 {
-		// Override the control plane if one is provided via the command line.
-		server = cmd.ControlPlane
-	} else if len(server) == 0 {
-		// If no control plane is set, use the default control plane.
-		server = controlplane.DefaultEndpoint
-	}
-
+func (cmd *LoginCmd) getMetros(ctx context.Context, profile *config.Profile) ([]config.Metro, error) {
 	copts := []controlplane.ClientOption{
-		controlplane.WithDefaultEndpoint(server),
+		controlplane.WithDefaultEndpoint(profile.ControlPlane),
+		controlplane.WithToken(profile.Token),
 	}
-
 	if cmd.AllowInsecure {
 		copts = append(copts, controlplane.WithHTTPClient(httpclient.InsecureHTTPClient))
 	} else {
 		copts = append(copts, controlplane.WithHTTPClient(httpclient.DefaultHTTPClient))
 	}
+	client := controlplane.NewClient(copts...)
 
+	metroResp, err := client.ListMetros(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if metroResp == nil || metroResp.Data == nil {
+		return nil, nil
+	}
+
+	var metros []config.Metro
+	for _, metro := range metroResp.Data.Metros {
+		metros = append(metros, config.Metro{
+			Name:     ptr.ZeroIfNil(metro.Name),
+			Endpoint: ptr.ZeroIfNil(metro.Endpoint),
+			Country:  ptr.ZeroIfNil(metro.Country),
+		})
+	}
+	return metros, nil
+}
+
+func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.Response[controlplane.CheckAuthorizationResponseData], error) {
+	copts := []controlplane.ClientOption{
+		controlplane.WithDefaultEndpoint(profile.ControlPlane),
+	}
+	if cmd.AllowInsecure {
+		copts = append(copts, controlplane.WithHTTPClient(httpclient.InsecureHTTPClient))
+	} else {
+		copts = append(copts, controlplane.WithHTTPClient(httpclient.DefaultHTTPClient))
+	}
 	client := controlplane.NewClient(copts...)
 
 	req, err := getFingerprint()
