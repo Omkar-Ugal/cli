@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/sync/errgroup"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
@@ -27,6 +26,7 @@ import (
 	"unikraft.com/cli/internal/logs"
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
+	"unikraft.com/cli/internal/muxreader"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
@@ -736,24 +736,29 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, stdio config.Stdio) error 
 		return err
 	}
 
-	eg, ctx := errgroup.WithContext(ctx)
+	mux := muxreader.New()
+	defer mux.Close()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	err = group.DoRefs(ctx, g, keys.Refs(), func(_ context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
-		for _, key := range refs {
-			eg.Go(func() error {
-				r, err := logs.InstanceLogs(ctx, c).Reader(key.NameOrUUID(), cmd.Tail, cmd.Follow)
-				if err != nil {
-					return err
-				}
-				_, err = io.Copy(stdio.Stdout, r)
-				return err
-			})
+		for _, ref := range refs {
+			key := multimetro.Key(ref)
+			r, err := logs.InstanceLogs(ctx, c).Reader(ref.NameOrUUID(), cmd.Tail, cmd.Follow)
+			if err != nil {
+				return nil, err
+			}
+			mux.With(key.String(), r)
 		}
 		return refs, nil
 	})
 	if err != nil {
 		return err
 	}
-	err = eg.Wait()
+	mux.Seal()
+
+	_, err = io.Copy(stdio.Stdout, mux)
 	if cmd.Follow && errors.Is(err, context.Canceled) {
 		return nil
 	}
