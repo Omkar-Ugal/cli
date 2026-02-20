@@ -140,11 +140,9 @@ jobs:
 
         for DISTRO in "${DISTROS[@]}"; do
           for DEB in dist/*.deb; do
-            wget "https://pkg.unikraft.com/debian/cli-apt/upload/${DISTRO}/${COMPONENT}" \
-              --http-user "api" \
-              --http-password "${{ secrets.PKG_TOKEN }}" \
-              --method POST \
-              --body-file "${DEB}"
+            curl "https://pkg.unikraft.com/debian/cli-apt/upload/${DISTRO}/${COMPONENT}" \
+              --user "api:${{ secrets.PKG_TOKEN }}" \
+              --upload-file "${DEB}"
           done
         done
 
@@ -152,21 +150,17 @@ jobs:
       shell: bash
       run: |
         for RPM in dist/*.rpm; do
-          wget "https://pkg.unikraft.com/rpm/cli-rpm" \
-            --http-user "api" \
-            --http-password "${{ secrets.PKG_TOKEN }}" \
-            --method POST \
-            --body-file "${RPM}"
+          curl "https://pkg.unikraft.com/rpm/cli-rpm" \
+            --user "api:${{ secrets.PKG_TOKEN }}" \
+            --upload-file "${RPM}"
         done
 
     - name: Publish to APK repository
       shell: bash
       run: |
         for APK in dist/*.apk; do
-          wget "https://pkg.unikraft.com/apk/cli-apk" \
-            --http-user "api" \
-            --http-password "${{ secrets.PKG_TOKEN }}" \
-            --method POST \
-            --body-file "${APK}"
+          curl "https://pkg.unikraft.com/apk/cli-apk" \
+            --user "api:${{ secrets.PKG_TOKEN }}" \
+            --upload-file "${APK}"
         done
 
