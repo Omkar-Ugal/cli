@@ -91,20 +91,23 @@ func TestGolden(t *testing.T) {
 
 			configPath := filepath.Join(t.TempDir(), "config.yaml")
 			cfg, profile := defaultCfg()
-			cfg.Path = configPath
-			require.NoError(t, cfg.Save())
+			if cfg != nil {
+				cfg.Path = configPath
+				require.NoError(t, cfg.Save())
+			}
 
 			sandboxPath := filepath.Join(t.TempDir(), "sandbox.json")
 			t.Cleanup(func() {
 				cfg, err := config.Load(configPath)
-				require.NoError(t, err)
-				require.NotNil(t, cfg)
-				ctx := config.WithConfig(ctx, cfg)
+				ctx := ctx
+				if cfg != nil {
+					require.NoError(t, err)
+					ctx = config.WithConfig(ctx, cfg)
+				}
 
 				sandbox, err := resource.LoadSandbox(sandboxPath, cmd.SandboxedResources...)
 				require.NoError(t, err)
 				require.NotNil(t, sandbox)
-
 				require.NoError(t, sandbox.Teardown(context.WithoutCancel(ctx)))
 			})
 
@@ -173,18 +176,20 @@ func TestGolden(t *testing.T) {
 
 				report.cleaners = append(report.cleaners, tc.cleaners...)
 				report.cleaners = append(report.cleaners, expander.cleaners()...)
-				for _, metro := range profile.Metros {
-					report.cleaners = append(
-						report.cleaners,
-						cleaner{
-							pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Endpoint)),
-							repl:    "https://api." + metro.Name + ".unikraft.internal/",
-						},
-						cleaner{
-							pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index().Host)),
-							repl:    "index." + metro.Name + ".unikraft.internal",
-						},
-					)
+				if profile != nil {
+					for _, metro := range profile.Metros {
+						report.cleaners = append(
+							report.cleaners,
+							cleaner{
+								pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Endpoint)),
+								repl:    "https://api." + metro.Name + ".unikraft.internal/",
+							},
+							cleaner{
+								pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index().Host)),
+								repl:    "index." + metro.Name + ".unikraft.internal",
+							},
+						)
+					}
 				}
 				if i != 0 {
 					output.WriteString("\n")
@@ -426,6 +431,9 @@ func (e *expander) cleaners() []cleaner {
 }
 
 func defaultCfg() (*config.Config, *config.Profile) {
+	if testToken == "" {
+		return nil, nil
+	}
 	profile := &config.Profile{
 		Type:  config.ProfileTypeCloud,
 		Name:  "default",
