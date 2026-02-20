@@ -13,6 +13,8 @@ import (
 
 	jujuerrors "github.com/juju/errors"
 	"sigs.k8s.io/yaml"
+
+	"unikraft.com/cli/internal/yamlmerge"
 )
 
 // Config represents the global configuration for the Unikraft CLI.
@@ -48,9 +50,9 @@ func (c *Config) Save() error {
 		return jujuerrors.New("config file path is not set")
 	}
 
-	dt, err := yaml.Marshal(c)
+	updated, err := mergeConfig(c)
 	if err != nil {
-		return jujuerrors.Annotate(err, "marshalling config to yaml")
+		return err
 	}
 
 	if err := os.MkdirAll(filepath.Dir(c.Path), 0o755); err != nil {
@@ -61,7 +63,7 @@ func (c *Config) Save() error {
 		return jujuerrors.Annotate(err, "opening config file")
 	}
 
-	if _, err := f.Write(dt); err != nil {
+	if _, err := f.Write(updated); err != nil {
 		f.Close()
 		return jujuerrors.Annotate(err, "writing config file")
 	}
@@ -105,4 +107,21 @@ func Load(path string) (*Config, error) {
 
 	c.Path = path
 	return &c, nil
+}
+
+func mergeConfig(c *Config) ([]byte, error) {
+	desired, err := yaml.Marshal(c)
+	if err != nil {
+		return nil, jujuerrors.Annotate(err, "marshalling config to yaml")
+	}
+
+	existing, err := os.ReadFile(c.Path)
+	if errors.Is(err, os.ErrNotExist) {
+		return desired, nil
+	}
+	if err != nil {
+		return nil, jujuerrors.Annotate(err, "reading config file")
+	}
+
+	return yamlmerge.MergeYAML(existing, desired)
 }
