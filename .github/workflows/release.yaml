@@ -155,7 +155,7 @@ jobs:
           wget "https://pkg.unikraft.com/rpm/cli-rpm" \
             --http-user "api" \
             --http-password "${{ secrets.PKG_TOKEN }}" \
-            --method PUT \
+            --method POST \
             --body-file "${RPM}"
         done
 
@@ -166,7 +166,7 @@ jobs:
           wget "https://pkg.unikraft.com/apk/cli-apk" \
             --http-user "api" \
             --http-password "${{ secrets.PKG_TOKEN }}" \
-            --method PUT \
+            --method POST \
             --body-file "${APK}"
         done
 
