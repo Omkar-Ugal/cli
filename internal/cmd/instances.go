@@ -121,8 +121,7 @@ type Instance struct {
 
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
-
-	organization string
+	Profile  *config.Profile   `field:"-" json:"profile"`
 }
 
 type InstanceVolume struct {
@@ -262,11 +261,18 @@ func (i Instance) Fields() ([]resource.Field, error) {
 }
 
 func (i Instance) hyperlink() string {
-	if i.organization == "" || i.Name == "" {
+	if i.Profile == nil || i.Profile.ControlPlane == "" {
 		return ""
 	}
-	metro := i.Metro.Name
-	return fmt.Sprintf("https://console.unikraft.cloud/org/%s/instances/%s/%s", i.organization, metro, i.Name)
+	if i.Name == "" || i.Profile.Organization == "" {
+		return ""
+	}
+	return fmt.Sprintf(
+		"https://console.unikraft.cloud/org/%s/instances/%s/%s",
+		i.Profile.Organization,
+		i.MetroName,
+		i.Name,
+	)
 }
 
 func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
@@ -336,6 +342,7 @@ func (Instance) load(instance platform.Instance, metro *config.Metro, profile *c
 	result := Instance{
 		Instance: instance,
 		Metro:    metro,
+		Profile:  profile,
 	}
 	err := mirror.Mirror(result, &result)
 	if err != nil {
@@ -345,7 +352,6 @@ func (Instance) load(instance platform.Instance, metro *config.Metro, profile *c
 	if name, _, ok := strings.Cut(result.Image, "@"); ok {
 		result.Image = name
 	}
-	result.organization = profile.Organization
 
 	return result, nil
 }
