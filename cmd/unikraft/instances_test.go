@@ -64,6 +64,25 @@ func instancesTestCases(t *testing.T, cfg *integration.Config) []testCase {
 			cleaners: instanceCleaners,
 		},
 		{
+			name:   "create-oom",
+			online: true,
+			commands: []command{
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=true",
+					"--set", "resources.memory=16Mib",
+					"--set", "resources.vcpus=1",
+				}},
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			},
+			cleaners: instanceCleaners,
+		},
+		{
 			name:   "connect",
 			online: true,
 			commands: []command{

@@ -25,6 +25,9 @@ stdout:
 	  mac:        aa:bb:cc:dd:ee:ff
 	timestamps:
 	  created:    RELATIVE_TIME
+	stop:
+	  reason:     app exit
+	  exit-code:  0
 
 $ unikraft instance logs test-$UNIQ_INST
 

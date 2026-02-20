@@ -48,7 +48,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
@@ -109,7 +109,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
@@ -178,7 +178,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
@@ -247,7 +247,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
@@ -324,7 +324,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
@@ -397,7 +397,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
@@ -474,7 +474,7 @@ stdout:
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.exit-code, stop.code
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
