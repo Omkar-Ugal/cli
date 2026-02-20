@@ -21,9 +21,13 @@ type TestResource struct {
 	URL       string
 	Hidden    string
 	Invisible string
+	Lazy      string // Computed via callback when requested
 	Settings  TestSettings
 	Authors   []TestAuthor
 }
+
+// CallbackInvocations tracks how many times callbacks were invoked.
+var CallbackInvocations int
 
 var (
 	_ resource.Resource          = (*TestResource)(nil)
@@ -100,6 +104,15 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 			Name:      "invisible",
 			Value:     t.Invisible,
 			Verbosity: resource.FieldVerbosityInvisible,
+		},
+		{
+			Name:      "lazy",
+			Value:     t.Lazy,
+			Verbosity: resource.FieldVerbosityHidden,
+			ValueCallback: func(ctx context.Context) (any, error) {
+				CallbackInvocations++
+				return "computed-" + t.Name, nil
+			},
 		},
 		{
 			Name:      "settings",

@@ -158,7 +158,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 
 	return c.Output.
 		WithDefault(cmd.PrinterTypeKeyValue).
-		Print(stdio.Stdout, c.Field, Volume{}, results...)
+		Print(ctx, stdio.Stdout, c.Field, Volume{}, results...)
 }
 
 type Volume struct {

@@ -240,6 +240,7 @@ stdout:
 	  country
 	  endpoint
 	  insecure
+	  status, status.ip, status.ping, status.online
 
 	Global flags:
 	  -h, --help
@@ -278,6 +279,7 @@ stdout:
 	  country
 	  endpoint
 	  insecure
+	  status, status.ip, status.ping, status.online
 
 	Flags:
 	  -w, --watch
@@ -319,11 +321,15 @@ stdout:
 	  # List all metros
 	  unikraft metro list
 
+	  # List metros with connection status
+	  unikraft metro list -f +status
+
 	Fields:
 	  name
 	  country
 	  endpoint
 	  insecure
+	  status, status.ip, status.ping, status.online
 
 	Flags:
 	      --filter

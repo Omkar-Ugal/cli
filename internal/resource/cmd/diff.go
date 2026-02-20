@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"strings"
 
@@ -20,17 +21,17 @@ import (
 
 // Diff produces a pretty diff between two sets of resources, writing the
 // output to the provided writer.
-func Diff(out io.Writer, format FormatOpts, empty resource.Resource, before []resource.Resource, after []resource.Resource) error {
+func Diff(ctx context.Context, out io.Writer, format FormatOpts, empty resource.Resource, before []resource.Resource, after []resource.Resource) error {
 	before, after = diffOrder(before, after)
 
 	switch format.Output.Type {
 	case "", PrinterTypeKeyValue:
 		start := &bytes.Buffer{}
-		if err := printKV(start, format.Field, before...); err != nil {
+		if err := printKV(ctx, start, format.Field, before...); err != nil {
 			return err
 		}
 		end := &bytes.Buffer{}
-		if err := printKV(end, format.Field, after...); err != nil {
+		if err := printKV(ctx, end, format.Field, after...); err != nil {
 			return err
 		}
 
@@ -56,11 +57,11 @@ func Diff(out io.Writer, format FormatOpts, empty resource.Resource, before []re
 
 	case PrinterTypeTable:
 		start := &bytes.Buffer{}
-		if err := printTable(start, format.Field, empty, before...); err != nil {
+		if err := printTable(ctx, start, format.Field, empty, before...); err != nil {
 			return err
 		}
 		end := &bytes.Buffer{}
-		if err := printTable(end, format.Field, empty, after...); err != nil {
+		if err := printTable(ctx, end, format.Field, empty, after...); err != nil {
 			return err
 		}
 
@@ -82,7 +83,7 @@ func Diff(out io.Writer, format FormatOpts, empty resource.Resource, before []re
 		return nil
 
 	default:
-		return format.Output.Print(out, format.Field, nil, after...)
+		return format.Output.Print(ctx, out, format.Field, nil, after...)
 	}
 }
 
