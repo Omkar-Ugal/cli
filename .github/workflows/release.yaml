@@ -109,7 +109,7 @@ jobs:
         make goreleaser-yaml
 
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v6
+      uses: goreleaser/goreleaser-action@v7
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GORELEASER_PREVIOUS_TAG: ${{ github.ref == 'refs/heads/stable' && steps.versions.outputs.last-stable || steps.versions.outputs.last-version }}
