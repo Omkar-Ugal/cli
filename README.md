@@ -1,123 +1,297 @@
 # Unikraft CLI
 
-> [!WARNING]
->
-> Under construction! :construction_worker:
+The official command-line interface for [Unikraft Cloud](https://unikraft.cloud) — deploy and manage unikernels globally in milliseconds.
 
-This repository contains the code for a work-in-progress, internal tool for
-managing the [Unikraft Cloud Platform](https://unikraft.com/). Eventually, this will replace [kraft](https://github.com/unikraft/kraftkit).
+## Features
 
-> [!TIP]
->
-> Internal preview docs are available at <https://cli-preview.ukp-stable.apw.unikraft.internal/docs/cli-new/unikraft>.
-> See <https://github.com/unikraft-cloud/www/pull/497> for more info.
+- **Deploy Instantly** — Run unikernel images as serverless instances with `unikraft run`
+- **Global Infrastructure** — Deploy across multiple metros with automatic multi-region support
+- **Resource Management** — Full CRUD operations for instances, volumes, services, certificates, and images
+- **Scale-to-Zero** — Built-in support for scale-to-zero policies to optimize costs
+- **Multiple Output Formats** — Machine-readable JSON or human-friendly text output
+- **Profile Management** — Switch between multiple accounts and configurations
+- **Shell Completions** — Tab completion for Bash, Zsh, Fish, and PowerShell
 
-## Setup
+## Installation
 
-To clone the repository, run:
+<details>
+<summary><strong>Debian/Ubuntu</strong></summary>
+```
+# Update and install dependencies
+sudo apt update
+sudo apt install ca-certificates curl
 
-```bash
+# Download and add the GPG key
+sudo install -d -m 0755 /etc/apt/keyrings
+
+sudo curl -fsSL \
+  -o /etc/apt/keyrings/unikraft-cli.gpg \
+  https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
+
+sudo tee /etc/apt/sources.list.d/unikraft-cli.sources <<EOF
+Types: deb
+URIs: https://pkg.unikraft.com/debian/cli-apt/
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
+</code></pre>
+</details>
+
+### From Source
+
+Requires [Go](https://golang.org/dl/) 1.25 or later and [Task](https://taskfile.dev/).
+
+```sh
+# Clone the repository
 git clone https://github.com/unikraft/cli.git
 cd cli
+
+# Build the CLI
+make cli
+
+# The binary is available at dist/unikraft
+./dist/unikraft --version
 ```
 
-This repo uses `task` (from <https://taskfile.dev/>) to manage builds and other tasks.
-To install `task`, follow the [installation guide](https://taskfile.dev/docs/installation).
+## Quick Start
 
-You'll also need to enable `task`'s [Remote Taskfiles](https://taskfile.dev/docs/experiments/remote-taskfiles) feature:
+### 1. Login to Unikraft Cloud
 
-```bash
-export TASK_X_REMOTE_TASKFILES=1
-```
-
-## Building
-
-To build the `unikraft` CLI, ensure you have Go installed, then run:
-
-```bash
-task cli
-```
-
-This will build the `unikraft` binary, and place it in the `dist/` directory.
-You should add this directory to your `PATH` environment variable to use it.
-
-For example:
-
-```bash
-export PATH=$PATH:$PWD/dist
-```
-
-## Usage
-
-To use the `unikraft` CLI, you'll first need to login:
-
-```bash
+```sh
 unikraft login
 ```
 
-Alternatively, you can manually create a profile:
+This opens your browser for authentication. Alternatively, provide a token file:
 
-```yaml
-# Linux: ~/.config/unikraft/config.yaml
-# MacOS: ~/Library/Application\ Support/unikraft/config.yaml
-profile: default
-profiles:
-  default:
-    type: cloud
-    name: default
-    organization: <org-name>
-    token: <api-token>
-    metros:
-      - name: <metro-name>         # e.g. fra
-        endpoint: <metro-endpoint> # e.g. https://api.fra.unikraft.cloud
-        country: <metro-country>   # e.g. de
-        insecure: false            # skip tls verification (avoid for production use)
+```sh
+unikraft login --token /path/to/token
 ```
 
-Then you'll be able to run commands against the platform. For example, to list
-all available metros:
+### 2. Deploy Your First Instance
 
-```bash
-unikraft metro list
+```sh
+unikraft run --metro=fra -p 443:8080/http+tls nginx:latest
 ```
 
-To see all available commands, run:
+This deploys an NGINX instance in Frankfurt with HTTPS enabled.
 
-```bash
-unikraft --help
+### 3. List Your Instances
+
+```sh
+unikraft instances list
 ```
 
-### Auto-completion
+### 4. View Instance Logs
 
-To see instructions to enable auto-completion for your shell, run:
-
-```bash
-unikraft completion
+```sh
+unikraft instances logs my-instance
 ```
 
-## Documentation
+## Commands
 
-To build the documentation, run:
+| Command        | Description                                                                    |
+| -------------- | ------------------------------------------------------------------------------ |
+| `login`        | Login to Unikraft Cloud                                                        |
+| `logout`       | Logout from Unikraft Cloud                                                     |
+| `profile`      | Manage profiles (list, get, use)                                               |
+| `run`          | Run an image as an instance                                                    |
+| `instances`    | Manage instances (list, get, create, edit, delete, logs, start, stop, restart) |
+| `volumes`      | Manage persistent volumes (list, get, create, edit, delete, clone)             |
+| `services`     | Manage service groups (list, get, create, edit, delete)                        |
+| `certificates` | Manage TLS certificates (list, get, create, delete)                            |
+| `images`       | Manage images (list, get, copy)                                                |
+| `metros`       | List available metro locations                                                 |
+| `completion`   | Generate shell completion scripts                                              |
 
-```bash
-task docs
+### Examples
+
+**Deploy with environment variables:**
+```sh
+unikraft run --metro=sfo -e KEY=VALUE -e DEBUG=true my-app:latest
 ```
 
-This builds:
+**Deploy with an attached volume:**
+```sh
+unikraft run --metro=was -v my-volume:/data my-app:latest
+```
 
-- Markdown documentation in `dist/docs/`
-- Man pages in `dist/man/`
+**Deploy with custom resources:**
+```sh
+unikraft run --metro=dal -m 512MiB --vcpus 2 my-app:latest
+```
+
+**Deploy with scale-to-zero:**
+```sh
+unikraft run --metro=sin --scale-to-zero policy=on,cooldown-time=300 my-app:latest
+```
+
+**Create an instance with multiple service ports:**
+```sh
+unikraft run --metro=fra -p 443:8080/http+tls -p 80:443/http+redirect nginx:latest
+```
+
+**Edit an existing instance:**
+```sh
+unikraft instances edit my-instance --set image=nginx:1.27
+```
+
+**Clone a volume:**
+```sh
+unikraft volumes clone my-volume --set name=my-volume-backup
+```
+
+## Configuration
+
+The CLI stores configuration in `~/.config/unikraft/config.yaml` (or the path specified by `UNIKRAFT_CONFIG`).
+
+### Environment Variables
+
+| Variable             | Description                                                        |
+| -------------------- | ------------------------------------------------------------------ |
+| `UNIKRAFT_CONFIG`    | Path to the configuration file                                     |
+| `UNIKRAFT_PROFILE`   | Override the current profile                                       |
+| `UNIKRAFT_LOG_LEVEL` | Set log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) |
+| `UNIKRAFT_LOG_TYPE`  | Set output format (`text`, `json`)                                 |
+| `UNIKRAFT_TELEMETRY` | Enable/disable anonymous telemetry (`true`, `false`)               |
+
+### Profiles
+
+Manage multiple accounts or configurations with profiles:
+
+```sh
+# List profiles
+unikraft profile list
+
+# Switch profile
+unikraft profile use staging
+
+# Use a profile for a single command
+unikraft --profile=staging instances list
+```
+
+## Output Formats
+
+The CLI supports multiple output formats via the `-o` flag:
+
+```sh
+# Default table output
+unikraft instances list
+
+# JSON output
+unikraft instances list -o json
+
+# Show specific fields
+unikraft instances get my-instance --fields name,state,image
+
+# Include verbose/detailed fields
+unikraft instances get my-instance -v
+```
 
 ## Development
 
-Building the CLI for development is exactly the same as above.
+### Prerequisites
 
-We use a variety of tools to ensure code quality:
+- Go 1.25+
+- Git
+- GNU Make which transparently wraps [Task](https://taskfile.dev/)
 
-- `task lint` - runs golangci-lint
-- `task test` - runs unit tests
-- `task integration` - runs integration tests
-  - `task integration-update` - updates the integration test golden files
+### Build
 
-These are also run as part of the CI process, however, you can run them locally
-to ensure your changes pass before pushing.
+```sh
+make cli
+```
+
+The binary is placed in `dist/unikraft`.
+
+### Test
+
+```sh
+# Run unit tests
+make test
+
+# Run linter
+make lint
+
+# Run integration tests (requires setup)
+make integration
+
+# Update integration test golden files
+make integration-update
+```
+
+### Documentation
+
+```sh
+# Generate all docs
+make docs
+
+# Generate man pages only
+make docs:man
+
+# Generate markdown docs only
+make docs:mdx
+```
+
+Output is placed in `dist/docs/`.
+
+## Architecture
+
+The CLI follows a resource-oriented architecture:
+
+- **Commands** (`internal/cmd/`) — Kong-based command definitions with subcommand routing
+- **Resources** (`internal/resource/`) — Unified interface for API objects with field introspection
+- **Multi-Metro** (`internal/multimetro/`) — Client abstraction for global infrastructure operations
+- **Configuration** (`internal/config/`) — Profile and credential management
+- **Telemetry** (`internal/telemetry/`) — Anonymous usage analytics (opt-out via `--no-telemetry`)
+
+### Key Dependencies
+
+- [Kong](https://github.com/alecthomas/kong) — CLI parsing and command wiring
+- [Bubble Tea](https://github.com/charmbracelet/bubbletea) — Terminal UI components
+- [Unikraft Cloud SDK](https://unikraft.com/cloud/sdk) — API client library
+
+## Shell Completion
+
+Generate completion scripts for your shell:
+
+```sh
+# Bash
+unikraft completion bash > /etc/bash_completion.d/unikraft
+
+# Zsh
+unikraft completion zsh > "${fpath[1]}/_unikraft"
+
+# Fish
+unikraft completion fish > ~/.config/fish/completions/unikraft.fish
+
+# PowerShell
+unikraft completion powershell > unikraft.ps1
+```
+
+## Telemetry
+
+The CLI collects anonymous usage analytics to improve the product.
+No personally identifiable information is collected.
+To opt out:
+
+```sh
+# Disable for a single command
+unikraft --no-telemetry instances list
+
+# Disable permanently
+export UNIKRAFT_TELEMETRY=false
+
+# Or
+export DO_NOT_TRACK=1
+```
+
+## License
+
+BSD-3-Clause. See [LICENSE.md](LICENSE.md) for details.
+Copyright (c) 2026, Unikraft GmbH and The Unikraft CLI Authors.
+
+## Links
+
+- [Unikraft Cloud Documentation](https://unikraft.com/docs)
+- [Report Issues](https://github.com/unikraft/cli/issues)
+- [Unikraft Website](https://unikraft.com)
