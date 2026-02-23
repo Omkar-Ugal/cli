@@ -92,7 +92,7 @@ jobs:
           YTT_DEB_PRERELEASE=$(echo "${{ steps.versions.outputs.next-version }}" | awk -F'staging\\.' '{print $2}')
           NEXT_VERSION="${{ steps.versions.outputs.next-version }}"
           NEXT_VERSION="${NEXT_VERSION%%-*}"
-          YTT_DEB_PRERELEASE_VERSION="${YTT_DEB_EPOCH}:${NEXT_VERSION#v}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
+          YTT_DEB_PRERELEASE_VERSION="${NEXT_VERSION#v}~${YTT_DEB_PRERELEASE}+${YTT_DEB_METADATA}"
         else
           YTT_PRERELEASE=false
           YTT_DEB_EPOCH=5

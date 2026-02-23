@@ -1,5 +1,9 @@
 # Unikraft CLI
 
+> [!NOTE]
+>
+> This is the new **Unikraft CLI** which will eventually supersede `kraft cloud`.  It is still in **early development** and subject to change before the v1.0.0 release.  [Feedback appreciated](https://unikraft.link/devsurvey)!
+
 The official command-line interface for [Unikraft Cloud](https://unikraft.cloud) — deploy and manage unikernels globally in milliseconds.
 
 ## Features
@@ -16,7 +20,8 @@ The official command-line interface for [Unikraft Cloud](https://unikraft.cloud)
 
 <details>
 <summary><strong>Debian/Ubuntu</strong></summary>
-```
+
+```bash
 # Update and install dependencies
 sudo apt update
 sudo apt install ca-certificates curl
@@ -34,12 +39,38 @@ URIs: https://pkg.unikraft.com/debian/cli-apt/
 Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
 Components: stable
 Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
-</code></pre>
+EOF
+
+# Update and install the CLI
+sudo apt update
+sudo apt install unikraft-cli
+```
 </details>
 
-### From Source
+<details>
+<summary><strong>Fedora/RHEL/Rocky/Alma</strong></summary>
 
-Requires [Go](https://golang.org/dl/) 1.25 or later and [Task](https://taskfile.dev/).
+```sh
+# Add the Unikraft CLI repository
+sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
+[cli-rpm]
+name=cli-rpm
+baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
+gpgcheck=0
+enabled=1
+EOF
+
+# Install the CLI at the specific pre-release version
+yum install unikraft-cli
+```
+</details>
+
+<details>
+<summary><strong>From Source</strong></summary>
+
+* Requires [Go](https://golang.org/dl/) 1.25 or later;
+* Git;
+* GNU Make or [Task](https://taskfile.dev/).
 
 ```sh
 # Clone the repository
@@ -52,10 +83,11 @@ make cli
 # The binary is available at dist/unikraft
 ./dist/unikraft --version
 ```
+</details>
 
 ## Quick Start
 
-### 1. Login to Unikraft Cloud
+### 1. Login to [Unikraft Cloud](https://console.unikraft.cloud/auth/signin)
 
 ```sh
 unikraft login

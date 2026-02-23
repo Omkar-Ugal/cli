@@ -50,6 +50,10 @@ release:
     ## Installation
     ### Debian/Ubuntu
     ```bash
+    # Update and install dependencies
+    sudo apt update
+    sudo apt install ca-certificates curl
+
     # Download and add the GPG key
     sudo install -d -m 0755 /etc/apt/keyrings
 
@@ -57,14 +61,31 @@ release:
       -o /etc/apt/keyrings/unikraft-cli.gpg \
       https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
 
-    echo "deb [signed-by=/etc/apt/keyrings/unikraft-cli.gpg] \
-      https://pkg.unikraft.com/debian/cli-apt/ $(. /etc/os-release && echo "${VERSION_CODENAME}") stable staging" \
-      | sudo tee /etc/apt/sources.list.d/unikraft-cli.list > /dev/null
+    sudo tee /etc/apt/sources.list.d/unikraft-cli.sources <<EOF
+    Types: deb
+    URIs: https://pkg.unikraft.com/debian/cli-apt/
+    Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+    Components: staging
+    Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
+    EOF
 
     # Update and install
     sudo apt-get update
-    sudo apt-get install unikraft-cli=(@= "{}".format(getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
+    sudo apt-get install unikraft-cli=(@= "{}:{}".format(getattr(data.values, "DEB_EPOCH", "1"), getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
     ```
+    ### Fedora/RHEL/Rocky/Alma
+    ```
+    # Add the Unikraft CLI repository
+    sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
+    [cli-rpm]
+    name=cli-rpm
+    baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
+    gpgcheck=0
+    enabled=1
+    EOF
+
+    # Install the CLI
+    yum install unikraft-cli
   #@ else:
   #@yaml/text-templated-strings
   header: |
@@ -76,6 +97,10 @@ release:
     ## Installation
     ### Debian/Ubuntu
     ```bash
+    # Update and install dependencies
+    sudo apt update
+    sudo apt install ca-certificates curl
+
     # Download and add the GPG key
     sudo install -d -m 0755 /etc/apt/keyrings
 
@@ -83,13 +108,31 @@ release:
       -o /etc/apt/keyrings/unikraft-cli.gpg \
       https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
 
-    echo "deb [signed-by=/etc/apt/keyrings/unikraft-cli.gpg] \
-      https://pkg.unikraft.com/debian/cli-apt/ $(. /etc/os-release && echo "${VERSION_CODENAME}") stable staging" \
-      | sudo tee /etc/apt/sources.list.d/unikraft-cli.list > /dev/null
+    sudo tee /etc/apt/sources.list.d/unikraft-cli.sources <<EOF
+    Types: deb
+    URIs: https://pkg.unikraft.com/debian/cli-apt/
+    Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+    Components: stable
+    Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
+    EOF
 
     # Update and install
     sudo apt-get update
     sudo apt-get install unikraft-cli
+    ```
+    ### Fedora/RHEL/Rocky/Alma
+    ```
+    # Add the Unikraft CLI repository
+    sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
+    [cli-rpm]
+    name=cli-rpm
+    baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
+    gpgcheck=0
+    enabled=1
+    EOF
+
+    # Install the CLI at the specific pre-release version
+    yum install unikraft-cli-(@= "{}".format(getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
     ```
   #@ end
 
