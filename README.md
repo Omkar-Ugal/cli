@@ -1,5 +1,9 @@
 # Unikraft CLI
 
+> [!NOTE]
+>
+> This is the new **Unikraft CLI** which will eventually supersede `kraft cloud`.  It is still in **early development** and subject to change before the v1.0.0 release.  [Feedback appreciated](https://unikraft.link/devsurvey)!
+
 The official command-line interface for [Unikraft Cloud](https://unikraft.cloud) — deploy and manage unikernels globally in milliseconds.
 
 ## Features
