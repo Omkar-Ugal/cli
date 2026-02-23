@@ -176,7 +176,14 @@ func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context
 		return ctx, nil, nil, nil, jujuerrors.Annotate(err, "loading config")
 	}
 	if cfg == nil {
-		cfg = &config.Config{}
+		// This is the first time the configuration is being loaded (potentially a
+		// fresh install), so we should set the path to the default location.  This
+		// ensures that when the user eventually saves the configuration, it will be
+		// saved to the expected location, even if they didn't explicitly specify
+		// it.
+		cfg = &config.Config{
+			Path: configPath,
+		}
 	}
 	if cli.globalFlags.Profile != "" {
 		cfg.OverrideCurrentProfile(cli.globalFlags.Profile)
