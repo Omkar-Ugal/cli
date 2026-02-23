@@ -52,6 +52,8 @@ type UnikraftCLI struct {
 	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs"`
 	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
 	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
+
+	SendAnalytics SendAnalyticsCmd `cmd:"" help:"Send analytics payload (used internally for detached analytics)." name:"_send_analytics" hidden:""`
 }
 
 func (cli UnikraftCLI) Examples() []kingkong.Example {
@@ -90,6 +92,8 @@ type globalFlags struct {
 	LogType  log.Type  `group:"flag-global" name:"log-type" env:"UNIKRAFT_LOG_TYPE" help:"Set the log type." enum:"text,json" placeholder:"type" default:"text"`
 
 	Profile string `group:"flag-global" name:"profile" env:"UNIKRAFT_PROFILE" help:"Set the current profile." placeholder:"name"`
+
+	Telemetry bool `group:"flag-global" name:"telemetry" env:"UNIKRAFT_TELEMETRY" help:"Toggle anonymous usage analytics." default:"true" negatable:""`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context.Context, *kong.Context, *UnikraftCLI, func() error, error) {

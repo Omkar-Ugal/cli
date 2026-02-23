@@ -21,11 +21,15 @@ import (
 	"unikraft.com/cli/internal/cmd"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/logfmt"
+	"unikraft.com/cli/internal/telemetry"
 	"unikraft.com/x/colors"
 	"unikraft.com/x/log"
 )
 
 func main() {
+	// Recover from panics and report crashes before re-panicking
+	defer telemetry.RecoverAndReport()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
@@ -47,7 +51,17 @@ func main() {
 		err = ctx.Err()
 	}
 
+	// Track command completion for telemetry
+	cmdPath, ok := telemetry.CommandFromContext(ctx)
+	if ok && (err == nil || errors.Is(err, context.Canceled)) {
+		telemetry.TrackCommandSuccess(cmdPath)
+	}
+
 	if err != nil && !errors.Is(err, context.Canceled) {
+		if ok {
+			telemetry.TrackCommandError(cmdPath, err)
+		}
+
 		if logfmt.LogType(ctx) == log.TextType {
 			log.G(ctx).Error().Msg(" ")
 			log.G(ctx).Error().Msg(colors.ErrorFg("error:"))
@@ -86,6 +100,21 @@ func logErr(ctx context.Context, msg string) {
 	}
 }
 
+// buildCommandPath constructs a space-separated command path from kong context.
+// e.g., "instances list" or "run"
+func buildCommandPath(kctx *kong.Context) string {
+	var parts []string
+	for _, path := range kctx.Path {
+		if path.Command != nil {
+			parts = append(parts, path.Command.Name)
+		}
+	}
+	if len(parts) == 0 {
+		return "unikraft"
+	}
+	return strings.Join(parts, " ")
+}
+
 func getMethod(value reflect.Value, name string) reflect.Value {
 	method := value.MethodByName(name)
 	if !method.IsValid() {
@@ -100,6 +129,47 @@ func run(ctx context.Context, args []string, stdio config.Stdio) (context.Contex
 	ctx, cli, opts, cleanup, err := cmd.NewRootCmd(ctx, args, stdio)
 	if err != nil {
 		return ctx, err
+	}
+
+	// Build command path early for telemetry decisions (e.g., "instances list")
+	cmdPath := buildCommandPath(cli)
+
+	// Prevent recursive analytics: when the "send analytics" subcommand runs, it
+	// should not trigger another analytics event, which would spawn another
+	// "send analytics" subprocess, creating infinite recursion.
+	isSendAnalytics := cmdPath == "_send_analytics"
+
+	// Initialize analytics if telemetry is enabled.
+	//
+	// These are anonymous usage analytics, and no personally identifiable
+	// information is collected.  This information is used to help us understand
+	// how the CLI is being used and to improve it over time.  We may collect
+	// information such as which commands are used, how often they are used, and
+	// any errors that occur.  This data is aggregated and analyzed to identify
+	// trends and areas for improvement.
+	//
+	// Unikraft is committed to user privacy and data protection; visit[0] for
+	// more information.
+	//
+	// [0]: https://unikraft.com/company/legal/privacy
+
+	// If the DO_NOT_TRACK environment variable is set, regardless of value, we
+	// should not initialize telemetry at all.  This is a pretty common convention
+	// for respecting user privacy preferences, and allows users to easily opt out
+	// of telemetry without needing to understand specific environment variables
+	// for our CLI.
+	_, doNotTrack := os.LookupEnv("DO_NOT_TRACK")
+	if !doNotTrack && opts.Telemetry && !isSendAnalytics {
+		if err := telemetry.Init(); err != nil {
+			log.G(ctx).
+				Debug().
+				Err(err).
+				Msg("failed to initialize analytics, telemetry is disabled")
+		} else {
+			log.G(ctx).
+				Debug().
+				Msg("collecting anonymous usage analytics, set `UNIKRAFT_TELEMETRY=false` to disable")
+		}
 	}
 
 	node := cli.Selected()
@@ -119,6 +189,11 @@ func run(ctx context.Context, args []string, stdio config.Stdio) (context.Contex
 		if node == nil {
 			return ctx, fmt.Errorf("no command selected")
 		}
+	}
+
+	if !doNotTrack && opts.Telemetry && !isSendAnalytics {
+		telemetry.TrackCommandStart(cmdPath)
+		ctx = telemetry.WithCommand(ctx, cmdPath)
 	}
 
 	err = cli.RunNode(node, &opts.Config)
