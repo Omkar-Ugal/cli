@@ -87,7 +87,7 @@ make cli
 
 ## Quick Start
 
-### 1. Login to Unikraft Cloud
+### 1. Login to [Unikraft Cloud](https://console.unikraft.cloud/auth/signin)
 
 ```sh
 unikraft login
