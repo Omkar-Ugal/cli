@@ -1,7 +1,7 @@
 $ unikraft login --check
 
 stderr:
-	│ existing authentication token found
+	│ existing authentication token found organization=
 
 $ unikraft profile list
 

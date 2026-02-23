@@ -8,6 +8,7 @@ package login
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -41,36 +42,28 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		defer cmd.Token.Close()
 	}
 
-	profile, err := cfg.CurrentProfile()
-	if err != nil {
-		var notFound config.ErrProfileNotFound
-		if !jujuerrors.Is(err, config.ErrNotSetup) && !jujuerrors.As(err, &notFound) {
-			return jujuerrors.Annotate(err, "getting current profile")
-		}
-
-		profile = &config.Profile{
-			Type: config.ProfileTypeCloud,
-			Name: cfg.CurrentProfileName(),
-		}
+	// Create a temporary profile for authentication
+	tempProfile := &config.Profile{
+		Type:         config.ProfileTypeCloud,
+		ControlPlane: cmp.Or(cmd.ControlPlane, controlplane.DefaultEndpoint),
 	}
-	profile.ControlPlane = cmp.Or(cmd.ControlPlane, profile.ControlPlane, controlplane.DefaultEndpoint)
 
 	if cmd.Check {
+		profile, err := cfg.CurrentProfile()
+		if err != nil {
+			return jujuerrors.Errorf("no existing authentication token found")
+		}
 		if profile.Token != "" {
 			log.G(ctx).Info().
+				Str("organization", profile.Organization).
 				Msg("existing authentication token found")
 			return nil
 		}
 		return jujuerrors.Errorf("no existing authentication token found")
 	}
 
-	if profile.Token != "" {
-		log.G(ctx).Info().
-			Msg("existing authentication token found, re-authenticating")
-	}
-	profile.Token = ""
-	profile.Organization = ""
-
+	// Get the token either from file or via browser authentication
+	var token, organization string
 	if cmd.Token != nil {
 		log.G(ctx).Info().
 			Msg("reading authentication token from file")
@@ -79,9 +72,10 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		if err != nil {
 			return jujuerrors.Annotate(err, "reading token file")
 		}
-		profile.Token = strings.TrimSpace(string(dt))
+		token = strings.TrimSpace(string(dt))
+		organization = cmd.Organization
 	} else {
-		resp, err := cmd.getAuth(ctx, profile)
+		resp, err := cmd.getAuth(ctx, tempProfile)
 		if err != nil {
 			return jujuerrors.Annotate(err, "getting authentication token")
 		}
@@ -94,11 +88,32 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		if resp.Data.Token == nil {
 			return jujuerrors.New("no authentication token received from control plane, please try again")
 		}
-		profile.Token = *resp.Data.Token
-		profile.Organization = ptr.ZeroIfNil(resp.Data.OrganizationName)
+		token = *resp.Data.Token
+		organization = cmp.Or(ptr.ZeroIfNil(resp.Data.OrganizationName), cmd.Organization)
 	}
-	profile.Organization = cmp.Or(profile.Organization, cmd.Organization)
 
+	if organization == "" {
+		return jujuerrors.New("no organization provided or received from control plane")
+	}
+
+	// Log the organization we're logging into
+	log.G(ctx).Info().
+		Str("organization", organization).
+		Msg("authenticated")
+
+	// Determine the controlplane to use for this login
+	loginControlPlane := cmp.Or(cmd.ControlPlane, controlplane.DefaultEndpoint)
+
+	// Find or create profile based on organization and controlplane
+	profile, err := cmd.findOrCreateProfile(cfg, organization, loginControlPlane)
+	if err != nil {
+		return jujuerrors.Annotate(err, "finding or creating profile")
+	}
+	profile.Token = token
+	profile.Organization = organization
+	profile.ControlPlane = loginControlPlane
+
+	// Fetch and merge metros
 	newMetros, err := cmd.getMetros(ctx, profile)
 	if err != nil || len(newMetros) == 0 {
 		log.G(ctx).
@@ -116,6 +131,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		}
 	}
 
+	// Save the profile
 	cfg.DefaultProfile = profile.Name
 	if cfg.Profiles == nil {
 		cfg.Profiles = make(map[string]config.Profile)
@@ -127,8 +143,69 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 	}
 
 	log.G(ctx).Info().
+		Str("profile", profile.Name).
 		Msg("login successful")
 	return nil
+}
+
+// findOrCreateProfile looks for an existing profile with the given
+// organization and controlplane.  If found, it returns that profile for
+// merging.  Otherwise, it creates a new profile using the organization name
+// (with a suffix if needed to disambiguate controlplanes).  Returns an error
+// if a profile with the same name already exists but for a different
+// organization.
+func (cmd *LoginCmd) findOrCreateProfile(cfg *config.Config, organization, loginControlPlane string) (*config.Profile, error) {
+	// Search existing profiles for one with matching organization and controlplane
+	for name, profile := range cfg.Profiles {
+		if profile.Organization == organization && profile.ControlPlane == loginControlPlane {
+			p := profile // copy to avoid returning pointer to loop variable
+			p.Name = name
+			return &p, nil
+		}
+	}
+
+	// Check if a profile with the organization name already exists
+	if existing, ok := cfg.Profiles[organization]; ok {
+		if existing.Organization != organization && existing.Organization != "" {
+			// Profile exists for a different organization - error
+			return nil, jujuerrors.Errorf(
+				"profile %q already exists for organization %q; "+
+					"cannot overwrite with organization %q",
+				organization, existing.Organization, organization,
+			)
+		}
+		if existing.Organization == "" {
+			// Profile exists but has no organization set - merge into it
+			p := existing // copy to avoid returning pointer to map value
+			p.Name = organization
+			return &p, nil
+		}
+		// Profile exists for same org but different controlplane - create with unique name
+		profileName := cmd.generateUniqueProfileName(cfg, organization)
+		return &config.Profile{
+			Type: config.ProfileTypeCloud,
+			Name: profileName,
+		}, nil
+	}
+
+	// No existing profile found, create a new one with organization as the name
+	return &config.Profile{
+		Type: config.ProfileTypeCloud,
+		Name: organization,
+	}, nil
+}
+
+// generateUniqueProfileName creates a unique profile name by appending a
+// numeric suffix to the organization name.
+func (cmd *LoginCmd) generateUniqueProfileName(cfg *config.Config, organization string) string {
+	suffix := 2
+	for {
+		name := fmt.Sprintf("%s-%d", organization, suffix)
+		if _, exists := cfg.Profiles[name]; !exists {
+			return name
+		}
+		suffix++
+	}
 }
 
 func (cmd *LoginCmd) getMetros(ctx context.Context, profile *config.Profile) ([]config.Metro, error) {
