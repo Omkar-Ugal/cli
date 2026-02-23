@@ -61,9 +61,13 @@ release:
       -o /etc/apt/keyrings/unikraft-cli.gpg \
       https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
 
-    echo "deb [signed-by=/etc/apt/keyrings/unikraft-cli.gpg] \
-      https://pkg.unikraft.com/debian/cli-apt/ $(. /etc/os-release && echo "${VERSION_CODENAME}") stable staging" \
-      | sudo tee /etc/apt/sources.list.d/unikraft-cli.list > /dev/null
+    sudo tee /etc/apt/sources.list.d/unikraft-cli.sources <<EOF
+    Types: deb
+    URIs: https://pkg.unikraft.com/debian/cli-apt/
+    Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+    Components: staging
+    Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
+    EOF
 
     # Update and install
     sudo apt-get update
@@ -91,9 +95,13 @@ release:
       -o /etc/apt/keyrings/unikraft-cli.gpg \
       https://pkg.unikraft.com/debian/cli-apt/keys/cli-apt.gpg
 
-    echo "deb [signed-by=/etc/apt/keyrings/unikraft-cli.gpg] \
-      https://pkg.unikraft.com/debian/cli-apt/ $(. /etc/os-release && echo "${VERSION_CODENAME}") stable staging" \
-      | sudo tee /etc/apt/sources.list.d/unikraft-cli.list > /dev/null
+    sudo tee /etc/apt/sources.list.d/unikraft-cli.sources <<EOF
+    Types: deb
+    URIs: https://pkg.unikraft.com/debian/cli-apt/
+    Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+    Components: stable
+    Signed-By: /etc/apt/keyrings/unikraft-cli.gpg
+    EOF
 
     # Update and install
     sudo apt-get update
