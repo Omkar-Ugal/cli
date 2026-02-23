@@ -85,7 +85,8 @@ release:
     EOF
 
     # Install the CLI
-    yum install unikraft-cli
+    yum install unikraft-cli-(@= "{}".format(getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
+    ```
   #@ else:
   #@yaml/text-templated-strings
   header: |
@@ -132,7 +133,7 @@ release:
     EOF
 
     # Install the CLI at the specific pre-release version
-    yum install unikraft-cli-(@= "{}".format(getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
+    yum install unikraft-cli
     ```
   #@ end
 
