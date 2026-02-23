@@ -50,6 +50,10 @@ release:
     ## Installation
     ### Debian/Ubuntu
     ```bash
+    # Update and install dependencies
+    sudo apt update
+    sudo apt install ca-certificates curl
+
     # Download and add the GPG key
     sudo install -d -m 0755 /etc/apt/keyrings
 
@@ -76,6 +80,10 @@ release:
     ## Installation
     ### Debian/Ubuntu
     ```bash
+    # Update and install dependencies
+    sudo apt update
+    sudo apt install ca-certificates curl
+
     # Download and add the GPG key
     sudo install -d -m 0755 /etc/apt/keyrings
 
