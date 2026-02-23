@@ -73,6 +73,19 @@ release:
     sudo apt-get update
     sudo apt-get install unikraft-cli=(@= "{}:{}".format(getattr(data.values, "DEB_EPOCH", "1"), getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
     ```
+    ### Fedora/RHEL/Rocky/Alma
+    ```
+    # Add the Unikraft CLI repository
+    sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
+    [cli-rpm]
+    name=cli-rpm
+    baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
+    gpgcheck=0
+    enabled=1
+    EOF
+
+    # Install the CLI
+    yum install unikraft-cli
   #@ else:
   #@yaml/text-templated-strings
   header: |
@@ -106,6 +119,20 @@ release:
     # Update and install
     sudo apt-get update
     sudo apt-get install unikraft-cli
+    ```
+    ### Fedora/RHEL/Rocky/Alma
+    ```
+    # Add the Unikraft CLI repository
+    sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
+    [cli-rpm]
+    name=cli-rpm
+    baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
+    gpgcheck=0
+    enabled=1
+    EOF
+
+    # Install the CLI at the specific pre-release version
+    yum install unikraft-cli-(@= "{}".format(getattr(data.values, "DEB_PRERELEASE_VERSION", "")) @)
     ```
   #@ end
 
