@@ -53,8 +53,8 @@ sudo apt install unikraft-cli
 ```sh
 # Add the Unikraft CLI repository
 sudo tee /etc/yum.repos.d/unikraft-cli-rpm.repo <<EOF
-[cli-rpm]
-name=cli-rpm
+[unikraft]
+name=unikraft
 baseurl=https://pkg.unikraft.com/rpm/cli-rpm/
 gpgcheck=0
 enabled=1
