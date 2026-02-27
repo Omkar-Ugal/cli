@@ -116,7 +116,7 @@ tasks:
     cmds:
     - |
       PRERELEASE="${PRERELEASE:-}"
-      {{.svu_bin}} next --v0 --tag.prefix "v" --tag.pattern "v[0-9]*.[0-9]*.[0-9]*" --prerelease "$PRERELEASE"
+      {{.svu_bin}} next --always --v0 --tag.prefix "v" --tag.pattern "v[0-9]*.[0-9]*.[0-9]*" --prerelease "$PRERELEASE"
 
   next-staging:
     desc: Show the next staging version of the CLI.
