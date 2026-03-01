@@ -127,9 +127,10 @@ type FormatOpts struct {
 }
 
 type ResourceListCmd[R resource.GettableListableResource] struct {
-	Name   []string       `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
-	Filter []string       `help:"Filter output based on a field value (e.g. --filter state==running)." sep:"none"`
-	Watch  *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
+	Name   []string            `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to list."`
+	Filter []string            `help:"Filter output based on a field value (e.g. --filter state==running)." sep:"none"`
+	Watch  *time.Duration      `short:"w" help:"Watch for changes and refresh output." type:"optional"`
+	Sort   xkong.GreedyStrings `help:"Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending."`
 
 	FormatOpts
 
@@ -162,6 +163,12 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 
 	ctx = resource.WithFilter(ctx, filter)
 
+	// Parse sort configuration
+	sortSpecs, err := parseSortSpecs(cmd.Sort...)
+	if err != nil {
+		return err
+	}
+
 	var empty R
 	render := func(out io.Writer) error {
 		var resources []resource.Resource
@@ -179,6 +186,12 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 		resources, err = filterResources(ctx, resources, filter)
 		if err != nil {
 			return err
+		}
+		if len(sortSpecs) > 0 {
+			resources, err = sortResources(ctx, resources, sortSpecs)
+			if err != nil {
+				return err
+			}
 		}
 		return cmd.Output.
 			WithDefault(PrinterTypeTable).
