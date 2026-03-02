@@ -120,6 +120,11 @@ type ResourceListCmd[R resource.GettableListableResource] struct {
 	Watch  *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
 
 	FormatOpts
+
+	// DefaultFilter is applied when listing.
+	// HACK: not perfect, but lets other commands extend this one easily without
+	// needing weirder runtime introspection
+	DefaultFilter filters.Filter `kong:"-"`
 }
 
 func (cmd ResourceListCmd[R]) HelpSections() []kingkong.HelpSection {
@@ -139,10 +144,13 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	if err != nil {
 		return err
 	}
+	if cmd.DefaultFilter != nil {
+		filter = filters.All{cmd.DefaultFilter, filter}
+	}
+
 	ctx = resource.WithFilter(ctx, filter)
 
 	var empty R
-
 	render := func(out io.Writer) error {
 		var resources []resource.Resource
 		var err error

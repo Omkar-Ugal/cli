@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/containerd/platforms"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
@@ -34,10 +35,25 @@ import (
 
 type ImagesCmd struct {
 	cmd.ResourceCmd[ImageEntry]
-	cmd.GettableResourceCmd[Image]      `set:"name=image" set:"names=images"`
-	cmd.ListableResourceCmd[ImageEntry] `set:"name=image" set:"names=images"`
+	cmd.GettableResourceCmd[Image] `set:"name=image" set:"names=images"`
+
+	List ImagesListCmd `cmd:"" set:"name=image" set:"names=images" help:"List images." aliases:"ls"`
 
 	Copy ImagesCopyCmd `cmd:"" help:"Copy images."`
+}
+
+// ImagesListCmd extends the generic ResourceListCmd with a --dangling flag
+// to show dangling images that are hidden by default.
+type ImagesListCmd struct {
+	cmd.ResourceListCmd[ImageEntry]
+	Dangling bool `help:"Include dangling images with no tags."`
+}
+
+func (c *ImagesListCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	if !c.Dangling {
+		c.DefaultFilter, _ = filters.Parse("dangling==false")
+	}
+	return c.ResourceListCmd.Run(ctx, stdio, sandbox)
 }
 
 type Image struct {
@@ -191,7 +207,7 @@ func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		for _, image := range resp.Data.Images {
-			result, err := ImageEntry{}.load(image, &c.Metro, false)
+			result, err := ImageEntry{}.load(image, &c.Metro)
 			if err != nil {
 				return nil, err
 			}
@@ -232,7 +248,7 @@ func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, 
 		var found []group.Ref
 		var results []resource.Resource
 		for _, image := range resp.Data.Images {
-			result, err := ImageEntry{}.load(image, &c.Metro, true)
+			result, err := ImageEntry{}.load(image, &c.Metro)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -250,7 +266,7 @@ func (ImageEntry) Get(ctx context.Context, keys []string) ([]resource.Resource, 
 	})
 }
 
-func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling bool) ([]ImageEntry, error) {
+func (ImageEntry) load(image platform.Image, metro *config.Metro) ([]ImageEntry, error) {
 	if image.Digest == nil {
 		return nil, fmt.Errorf("image has no digest")
 	}
@@ -264,7 +280,7 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling 
 	}
 	base = reference.TrimNamed(base)
 
-	if len(image.Tags) == 0 && allowDangling {
+	if len(image.Tags) == 0 {
 		// Allow for dangling images (images with no tags)
 		ref, err := reference.WithTag(base, "latest")
 		if err != nil {
