@@ -14,7 +14,7 @@ import (
 )
 
 func filterMetrosFromContext(ctx context.Context, metros []config.Metro) []config.Metro {
-	spec := resource.FilterFromContext(ctx, metros)
+	spec := resource.FilterFromContext(ctx)
 	return filterMetros(metros, spec)
 }
 
