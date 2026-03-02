@@ -45,7 +45,8 @@ tasks:
     cmds:
       - task: go:lint
 
-  test:
+  unit:
+    aliases: [test]
     desc: Run unit tests.
     silent: true
     cmds:
