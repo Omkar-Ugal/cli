@@ -53,6 +53,8 @@ type UnikraftCLI struct {
 	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
 	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
 
+	Resources AnyResourceCmd `cmd:"" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources"`
+
 	SendAnalytics SendAnalyticsCmd `cmd:"" help:"Send analytics payload (used internally for detached analytics)." name:"_send_analytics" hidden:""`
 }
 
@@ -118,6 +120,7 @@ func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context
 		kongcompletion.WithPredictor("resource-key-service", cmd.PredictResourceKey[ServiceGroup](ctx)),
 		kongcompletion.WithPredictor("resource-key-certificate", cmd.PredictResourceKey[Certificate](ctx)),
 		kongcompletion.WithPredictor("resource-key-image", cmd.PredictResourceKey[ImageEntry](ctx)),
+		kongcompletion.WithPredictor("resource-key-resource", cmd.PredictResourceKey[AnyResource](ctx)),
 	)
 
 	kctx, err := parser.Parse(args)
@@ -301,10 +304,10 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 }
 
 var SandboxedResources = []resource.Resource{
-	Certificate{},
 	Instance{},
-	ServiceGroup{},
 	Volume{},
+	ServiceGroup{},
+	Certificate{},
 }
 
 type staticKey string

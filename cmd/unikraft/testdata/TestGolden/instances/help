@@ -454,12 +454,12 @@ $ unikraft instance delete --help
 
 stdout:
 	Usage:
-	  unikraft instances delete <name> ... [flags]
+	  unikraft instances delete [<name> ...] [flags]
 
 	Remove a instance.
 
 	Arguments:
-	  <name> ...
+	  [<name> ...]
 	          Names of the instances to remove.
 
 	Examples:
@@ -494,6 +494,12 @@ stdout:
 	  features
 
 	Flags:
+	      --all
+	          Remove all instances. Prompts for confirmation.
+	      --filter
+	          Filter instances to remove (e.g. --filter state==running). Prompts for confirmation.
+	      --force
+	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output

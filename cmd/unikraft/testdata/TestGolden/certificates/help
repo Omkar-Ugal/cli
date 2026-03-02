@@ -298,12 +298,12 @@ $ unikraft certificate delete --help
 
 stdout:
 	Usage:
-	  unikraft certificates delete <name> ... [flags]
+	  unikraft certificates delete [<name> ...] [flags]
 
 	Remove a certificate.
 
 	Arguments:
-	  <name> ...
+	  [<name> ...]
 	          Names of the certificates to remove.
 
 	Examples:
@@ -325,6 +325,12 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
+	      --all
+	          Remove all certificates. Prompts for confirmation.
+	      --filter
+	          Filter certificates to remove (e.g. --filter state==running). Prompts for confirmation.
+	      --force
+	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output

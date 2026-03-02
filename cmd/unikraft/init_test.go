@@ -34,4 +34,5 @@ func init() {
 	testCases = append(testCases, servicesTestCases...)
 	testCases = append(testCases, certificatesTestCases...)
 	testCases = append(testCases, imagesTestCases...)
+	testCases = append(testCases, resourceTestCases...)
 }

@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"cmp"
 	"context"
@@ -50,6 +51,18 @@ type ListableResourceCmd[R resource.GettableListableResource] struct {
 }
 type DeletableResourceCmd[R resource.DeletableResource] struct {
 	Delete ResourceRemoveCmd[R] `cmd:"" help:"Remove a ${name}." aliases:"rm,remove"`
+}
+
+// BulkDeletableResourceCmd exposes a `delete` command which supports deleting
+// resources by name as well as bulk deletion via `--all` and `--filter`.
+//
+// We keep this separate from DeletableResourceCmd so that resources which are
+// deletable but not listable can still embed delete-by-name behavior.
+type BulkDeletableResourceCmd[R interface {
+	resource.DeletableResource
+	resource.ListableResource
+}] struct {
+	Delete ResourceBulkRemoveCmd[R] `cmd:"" help:"Remove a ${name}." aliases:"rm,remove"`
 }
 type EditableResourceCmd[R resource.EditableResource] struct {
 	Edit ResourceEditCmd[R] `cmd:"" help:"Edit a ${name}."`
@@ -388,6 +401,124 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 		Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
 }
 
+type ResourceBulkRemoveCmd[R interface {
+	resource.DeletableResource
+	resource.ListableResource
+}] struct {
+	Name []string `arg:"" optional:"" completion-predictor:"resource-key-${name}" help:"Names of the ${names} to remove."`
+
+	All    bool     `xor:"select" help:"Remove all ${names}. Prompts for confirmation."`
+	Filter []string `xor:"select" help:"Filter ${names} to remove (e.g. --filter state==running). Prompts for confirmation." sep:"none"`
+	Force  bool     `help:"Do not prompt for confirmation when using --all or --filter."`
+
+	FormatOpts
+}
+
+func (cmd ResourceBulkRemoveCmd[R]) HelpSections() []kingkong.HelpSection {
+	return ResourceCmd[R]{}.HelpSections()
+}
+
+func (cmd ResourceBulkRemoveCmd[R]) Examples() []kingkong.Example {
+	var r R
+	if ep, ok := any(r).(ExampledResource); ok {
+		return ep.Examples()[CmdTypeDelete]
+	}
+	return nil
+}
+
+func (cmd *ResourceBulkRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	var empty R
+	var resources []resource.Resource
+	if cmd.All || len(cmd.Filter) > 0 {
+		if len(cmd.Name) > 0 {
+			// would be nice if xor groups could enforce this
+			return fmt.Errorf("cannot specify names when using --all or --filter")
+		}
+
+		filter, err := filters.ParseAll(cmd.Filter...)
+		if err != nil {
+			return err
+		}
+
+		r := sandbox.WrapListable(empty)
+		resources, err = r.List(ctx)
+		if err != nil {
+			return err
+		}
+
+		if filter != nil {
+			resources, err = filterResources(ctx, resources, filter)
+			if err != nil {
+				return err
+			}
+		}
+
+		if !cmd.Force && len(resources) > 0 {
+			log.G(ctx).Warn().
+				Int("count", len(resources)).
+				Msg("resources will be deleted")
+
+			err = cmd.Output.
+				WithDefault(PrinterTypeTable).
+				Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintf(stdio.Stdout, "\nType \"yes\" to confirm deletion: ")
+
+			inputCh := make(chan string, 1)
+			errCh := make(chan error, 1)
+			go func() {
+				reader := bufio.NewReader(stdio.Stdin)
+				response, err := reader.ReadString('\n')
+				if err != nil && err != io.EOF {
+					errCh <- fmt.Errorf("failed to read confirmation: %w", err)
+					return
+				}
+				inputCh <- strings.TrimSpace(response)
+			}()
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case err := <-errCh:
+				return err
+			case response := <-inputCh:
+				switch strings.ToLower(response) {
+				case "y", "yes":
+				default:
+					return fmt.Errorf("deletion cancelled")
+				}
+			}
+		}
+
+		dr := sandbox.WrapDeletable(empty)
+		err = dr.Delete(ctx, resources)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else if len(cmd.Name) > 0 {
+		r := sandbox.WrapDeletable(empty)
+		var err error
+		resources, err = r.Get(ctx, cmd.Name)
+		if err != nil {
+			return err
+		}
+
+		err = r.Delete(ctx, resources)
+		if err != nil {
+			return err
+		}
+		return cmd.Output.
+			WithDefault(PrinterTypeQuiet).
+			Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
+	} else {
+		return fmt.Errorf("no resources specified for deletion")
+	}
+}
+
 type ResourceEditCmd[R resource.EditableResource] struct {
 	Name string `arg:"" completion-predictor:"resource-key-${name}" help:"Name of the ${name} to edit."`
 
@@ -546,7 +677,15 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 
 	var empty R
 	r := sandbox.WrapCreatable(empty)
-	fields, err := r.Fields()
+	fieldsResource := resource.Resource(empty)
+	if typed, ok := any(empty).(interface {
+		WithType(string) resource.Resource
+	}); ok {
+		if values := spec.Set["type"]; len(values) > 0 {
+			fieldsResource = typed.WithType(values[0])
+		}
+	}
+	fields, err := fieldsResource.Fields()
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}
