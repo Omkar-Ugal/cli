@@ -9,8 +9,6 @@ import (
 	"context"
 
 	"github.com/containerd/containerd/v2/pkg/filters"
-
-	"unikraft.com/cli/internal/config"
 )
 
 type contextKeyFilters struct{}
@@ -19,7 +17,7 @@ func WithFilter(ctx context.Context, spec filters.Filter) context.Context {
 	return context.WithValue(ctx, contextKeyFilters{}, spec)
 }
 
-func FilterFromContext(ctx context.Context, metros []config.Metro) filters.Filter {
+func FilterFromContext(ctx context.Context) filters.Filter {
 	spec, ok := ctx.Value(contextKeyFilters{}).(filters.Filter)
 	if ok {
 		return spec

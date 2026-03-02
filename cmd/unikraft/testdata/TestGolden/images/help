@@ -126,6 +126,8 @@ stdout:
 	          Specify which fields to include in the output.
 	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+	      --dangling
+	          Include dangling images with no tags.
 
 	Global flags:
 	  -h, --help
