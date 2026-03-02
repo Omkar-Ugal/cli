@@ -258,9 +258,9 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling 
 	if err != nil {
 		return nil, fmt.Errorf("could not parse image ref %q: %w", *image.Digest, err)
 	}
-	baseDigested, ok := base.(reference.Digested)
-	if !ok {
-		return nil, fmt.Errorf("image ref %q is not digested", *image.Digest)
+	var baseDigest digest.Digest
+	if baseDigested, ok := base.(reference.Digested); ok {
+		baseDigest = baseDigested.Digest()
 	}
 	base = reference.TrimNamed(base)
 
@@ -270,16 +270,19 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling 
 		if err != nil {
 			return nil, fmt.Errorf("could not create dangling image tag: %w", err)
 		}
-		canonical, err := reference.WithDigest(ref, baseDigested.Digest())
-		if err != nil {
-			return nil, fmt.Errorf("could not create dangling image canonical reference: %w", err)
+		var canonical reference.Canonical
+		if baseDigest != "" {
+			canonical, err = reference.WithDigest(ref, baseDigest)
+			if err != nil {
+				return nil, fmt.Errorf("could not create dangling image canonical reference: %w", err)
+			}
 		}
 
 		result := ImageEntry{
 			Image:     image,
 			Metro:     metro,
 			Canonical: canonical,
-			Digest:    baseDigested.Digest(),
+			Digest:    baseDigest,
 			Dangling:  true,
 		}
 		err = mirror.Mirror(result, &result)
@@ -320,7 +323,7 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling 
 
 	results := make([]ImageEntry, 0, len(image.Tags))
 	for _, tag := range tagged {
-		canonical, err := reference.WithDigest(tag, baseDigested.Digest())
+		canonical, err := reference.WithDigest(tag, baseDigest)
 		if err != nil {
 			return nil, fmt.Errorf("could not create dangling image canonical reference: %w", err)
 		}
@@ -329,7 +332,7 @@ func (ImageEntry) load(image platform.Image, metro *config.Metro, allowDangling 
 			Image:     image,
 			Metro:     metro,
 			Canonical: canonical,
-			Digest:    baseDigested.Digest(),
+			Digest:    baseDigest,
 		}
 		err = mirror.Mirror(result, &result)
 		if err != nil {
