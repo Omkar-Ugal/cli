@@ -99,6 +99,25 @@ This opens your browser for authentication. Alternatively, provide a token file:
 unikraft login --token /path/to/token
 ```
 
+Or, if you need to directly specify a metro endpoint, you can manually create a
+profile:
+
+```yaml
+# Linux: ~/.config/unikraft/config.yaml
+# MacOS: ~/Library/Application\ Support/unikraft/config.yaml
+profile: default
+profiles:
+  default:
+    type: cloud
+    organization: <org-name>
+    token: <api-token>
+    metros:
+      - name: <metro-name>         # e.g. fra
+        endpoint: <metro-endpoint> # e.g. https://api.fra.unikraft.cloud
+        country: <metro-country>   # e.g. de
+        insecure: false            # skip tls verification (avoid for production use)
+```
+
 ### 2. Deploy Your First Instance
 
 ```sh
