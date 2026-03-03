@@ -11,11 +11,10 @@ import (
 	"slices"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
-
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	xslices "unikraft.com/cli/internal/x/slices"
+	"unikraft.com/x/joinerrgroup"
 )
 
 type AnyResourceCmd struct {
@@ -176,7 +175,7 @@ func (a AnyResource) Get(ctx context.Context, keys []string) ([]resource.Resourc
 
 	perBackend := make([][]resource.Resource, len(resourceBackends))
 
-	eg, ctx := errgroup.WithContext(ctx)
+	eg := joinerrgroup.Group{}
 	for i, keyList := range keysByBackend {
 		if len(keyList) == 0 {
 			continue
@@ -209,7 +208,7 @@ func (a AnyResource) Get(ctx context.Context, keys []string) ([]resource.Resourc
 
 func (a AnyResource) List(ctx context.Context) ([]resource.Resource, error) {
 	perBackend := make([][]resource.Resource, len(resourceBackends))
-	eg, ctx := errgroup.WithContext(ctx)
+	eg := joinerrgroup.Group{}
 	for i, backend := range resourceBackends {
 		listable, ok := backend.(resource.ListableResource)
 		if !ok {

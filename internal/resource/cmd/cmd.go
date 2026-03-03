@@ -164,10 +164,8 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	if cmd.DefaultFilter != nil {
 		filter = filters.All{cmd.DefaultFilter, filter}
 	}
-
 	ctx = resource.WithFilter(ctx, filter)
 
-	// Parse sort configuration
 	sortSpecs, err := parseSortSpecs(cmd.Sort...)
 	if err != nil {
 		return err
@@ -188,18 +186,11 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 			return opErr
 		}
 
-		resolved, err := resolveResources(ctx, resources, filter, sortSpecs, cmd.Field)
-		if err != nil {
-			return errors.Join(opErr, err)
-		}
-		resources = resolved
-
-		filtered, filterErr := filterResources(ctx, resources, filter)
+		resources, filterErr := filterResources(ctx, resources, filter)
 		if filterErr != nil {
 			opErr = errors.Join(opErr, filterErr)
 		}
 
-		resources = filtered
 		if len(sortSpecs) > 0 {
 			resources, err = sortResources(ctx, resources, sortSpecs)
 			if err != nil {
@@ -368,42 +359,39 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 }
 
 func filterResources(ctx context.Context, resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
+	if filter == nil {
+		return resources, nil
+	}
+
 	// Extract field paths needed by the filter
 	filterKeys := xfilters.Keys(filter)
+	if len(filterKeys) == 0 {
+		return resources, nil
+	}
 	filterPaths := make([]resource.FieldPath, len(filterKeys))
 	for i, key := range filterKeys {
 		filterPaths[i] = resource.FieldPath(key)
 	}
 
-	for _, res := range resources {
+	resolved, err := resolveResources(ctx, resources, filterPaths)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, res := range resolved {
+		fields, _ := res.Fields()
 		if filter.Match(filters.AdapterFunc(func(key []string) (string, bool) {
-			fields, err := res.Fields()
-			if err != nil {
-				if rerr == nil {
-					rerr = fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
-				}
+			matched := resource.GetFieldByPath(fields, key)
+			if matched == nil {
 				return "", false
 			}
-
-			// Resolve callbacks for filter keys before rendering
-			if err := resource.ResolveFields(ctx, fields, filterPaths); err != nil {
-				if rerr == nil {
-					rerr = fmt.Errorf("failed to resolve fields for resource %s: %w", res.Key(), err)
-				}
-				return "", false
-			}
-
-			fields = resource.GetFieldByPath(fields, key)
-			if fields == nil {
-				return "", false
-			}
-			if len(fields) != 1 {
+			if len(matched) != 1 {
 				// 0 fields = no exact match
 				// >1 fields = ambiguous match
 				return "", false
 			}
 			// HACK: vtclean to remove any escape sequences from rendered output
-			out, _ := fields[0].Render()
+			out, _ := matched[0].Render()
 			return vtclean.Clean(out, false), true
 		})) {
 			filtered = append(filtered, res)
@@ -520,6 +508,7 @@ func (cmd *ResourceBulkRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio
 			if err != nil {
 				return err
 			}
+			resources = unwrapResources(resources)
 		}
 
 		if !cmd.Force && len(resources) > 0 {

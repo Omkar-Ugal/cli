@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
 	"unikraft.com/cli/internal/resource"
 )
 
@@ -98,39 +97,28 @@ func sortResources(ctx context.Context, resources []resource.Resource, specs []S
 		values []any
 	}
 
-	items := make([]resourceWithValues, len(resources))
+	resolved, err := resolveResources(ctx, resources, paths)
+	if err != nil {
+		return nil, err
+	}
 
-	g, ctx := errgroup.WithContext(ctx)
-	for i, res := range resources {
+	items := make([]resourceWithValues, len(resolved))
+	for i, res := range resolved {
 		items[i].res = res
 		items[i].values = make([]any, len(specs))
-		g.Go(func() error {
-			fields, err := res.Fields()
-			if err != nil {
-				return fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
-			}
 
-			// Resolve callbacks for all sort fields
-			fields, err = resolveFields(ctx, fields, paths)
-			if err != nil {
-				return err
-			}
+		fields, err := res.Fields()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
+		}
 
-			for j, spec := range specs {
-				matched := resource.GetFieldByPath(fields, spec.Path)
-				if len(matched) == 0 {
-					return fmt.Errorf("sort field %s not found for resource %s", spec.Path, res.Key())
-				}
-				if len(matched) > 1 {
-					return fmt.Errorf("sort field %s is ambiguous for resource %s (matched %d fields)", spec.Path, res.Key(), len(matched))
-				}
-				items[i].values[j] = matched[0].Value
+		for j, spec := range specs {
+			value, err := fieldValueByPath(fields, spec.Path, res.Key())
+			if err != nil {
+				return nil, err
 			}
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return nil, err
+			items[i].values[j] = value
+		}
 	}
 
 	// Sort by the extracted field values using type-aware comparison
@@ -154,4 +142,15 @@ func sortResources(ctx context.Context, resources []resource.Resource, specs []S
 		sorted[i] = item.res
 	}
 	return sorted, nil
+}
+
+func fieldValueByPath(fields []resource.Field, path resource.FieldPath, key resource.Key) (any, error) {
+	matched := resource.GetFieldByPath(fields, path)
+	if len(matched) == 0 {
+		return nil, fmt.Errorf("sort field %s not found for resource %s", path, key)
+	}
+	if len(matched) > 1 {
+		return nil, fmt.Errorf("sort field %s is ambiguous for resource %s (matched %d fields)", path, key, len(matched))
+	}
+	return matched[0].Value, nil
 }

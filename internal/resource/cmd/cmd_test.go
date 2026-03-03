@@ -1503,8 +1503,46 @@ func TestValueCallback(t *testing.T) {
 		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked to evaluate filter")
 	})
 
+	t.Run("filter_and_select_lazy_field", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			// Filter on lazy field AND select it for output
+			Filter: []string{"lazy==computed-res1"},
+			FormatOpts: FormatOpts{
+				Field: xkong.GreedyStrings{"+lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		// Should only show res1 (filtered by lazy field)
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "computed-res1")
+		assert.NotContains(t, output, "res2")
+		// Callback should only be invoked once per resource, not twice
+		// (once for filtering, once for display would be wrong)
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked once per resource, not twice")
+	})
+
 	t.Run("list_filter_sort_select_lazy_once", func(t *testing.T) {
-		resourcet.CallbackInvocations = 0
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
@@ -1522,7 +1560,7 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "res1")
 		assert.Contains(t, output, "computed-res1")
 		assert.NotContains(t, output, "res2")
-		assert.Equal(t, 2, resourcet.CallbackInvocations, "callback should be invoked once per resource")
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callback should be invoked once per resource")
 	})
 }
 

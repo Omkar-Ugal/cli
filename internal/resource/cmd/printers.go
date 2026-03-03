@@ -154,8 +154,7 @@ func printKV(ctx context.Context, out io.Writer, specs []string, resources ...re
 		if err != nil {
 			return nil, err
 		}
-		fields, err = resolveAllFields(ctx, fields)
-		if err != nil {
+		if err := resource.ResolveAllFields(ctx, fields); err != nil {
 			return nil, err
 		}
 		return resource.DedupeFields(fields), nil
@@ -294,8 +293,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 		if err != nil {
 			return nil, err
 		}
-		fields, err = resolveFields(ctx, fields, headerPaths)
-		if err != nil {
+		if err := resource.ResolveFields(ctx, fields, headerPaths); err != nil {
 			return nil, err
 		}
 		return fields, nil
@@ -395,8 +393,7 @@ func printQuiet(ctx context.Context, out io.Writer, specs []string, resources ..
 		if err != nil {
 			return nil, err
 		}
-		fields, err = resolveAllFields(ctx, fields)
-		if err != nil {
+		if err := resource.ResolveAllFields(ctx, fields); err != nil {
 			return nil, err
 		}
 		return fields, nil
@@ -432,8 +429,7 @@ func printJSON(ctx context.Context, out io.Writer, resources ...resource.Resourc
 		if err != nil {
 			return nil, err
 		}
-		fields, err = resolveAllFields(ctx, fields)
-		if err != nil {
+		if err := resource.ResolveAllFields(ctx, fields); err != nil {
 			return nil, err
 		}
 		return fields, nil
@@ -460,8 +456,7 @@ func printYAML(ctx context.Context, out io.Writer, resources ...resource.Resourc
 		if err != nil {
 			return nil, err
 		}
-		fields, err = resolveAllFields(ctx, fields)
-		if err != nil {
+		if err := resource.ResolveAllFields(ctx, fields); err != nil {
 			return nil, err
 		}
 		return fields, nil
@@ -508,8 +503,7 @@ func printTemplate(ctx context.Context, out io.Writer, tmplStr string, resources
 		if err != nil {
 			return err
 		}
-		fields, err = resolveAllFields(ctx, fields)
-		if err != nil {
+		if err := resource.ResolveAllFields(ctx, fields); err != nil {
 			return err
 		}
 		input := resource.FieldsToMap(fields)
@@ -615,24 +609,6 @@ func selectResourceFields(fields []resource.Field, header bool, verbosity resour
 	}
 
 	return result, nil
-}
-
-// resolveFields clones the input fields and resolves callbacks for the specified paths.
-func resolveFields(ctx context.Context, fields []resource.Field, paths []resource.FieldPath) ([]resource.Field, error) {
-	cloned := resource.CloneFields(fields)
-	if err := resource.ResolveFields(ctx, cloned, paths); err != nil {
-		return nil, err
-	}
-	return cloned, nil
-}
-
-// resolveAllFields clones the input fields and resolves all callbacks.
-func resolveAllFields(ctx context.Context, fields []resource.Field) ([]resource.Field, error) {
-	cloned := resource.CloneFields(fields)
-	if err := resource.ResolveAllFields(ctx, cloned); err != nil {
-		return nil, err
-	}
-	return cloned, nil
 }
 
 func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
