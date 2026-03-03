@@ -262,10 +262,8 @@ stdout:
 	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	      --set
+	      --set, --set-file
 	          Key-value pairs to set on the certificate.
-	      --set-file
-	          Files containing key-value pairs to set on the certificate.
 	  -e, --visual
 	          Open an editor to set fields visually.
 	      --dry-run

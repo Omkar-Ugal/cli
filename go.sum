@@ -376,8 +376,8 @@ unikraft.com/x/guesstermwidth v0.0.0-20260205230841-e14b7e4a7c4c h1:DWRWh/lMGdra
 unikraft.com/x/guesstermwidth v0.0.0-20260205230841-e14b7e4a7c4c/go.mod h1:q3EH6bLqLAJ1PqZgHlCJPpvvP6scnjJJspBMyGQtMt4=
 unikraft.com/x/image-spec v0.0.0-20260126171022-af62c17fcdf7 h1:J1Z1wZoh6yBAG9Y2UQa0q2XJAf1FHT+/pr9ly0kw/DI=
 unikraft.com/x/image-spec v0.0.0-20260126171022-af62c17fcdf7/go.mod h1:l0+tgd72OA6DzrX+V7z9XYjd80PrMJMCPnXNTODBjrc=
-unikraft.com/x/kingkong v0.0.0-20260203003720-5a31ab15ba4e h1:3Rhyq83l8uAuwDOfyt//a3cdU5XlznaphKu2UDKgDBY=
-unikraft.com/x/kingkong v0.0.0-20260203003720-5a31ab15ba4e/go.mod h1:qADEVxmns2gEIJwMHGj/bV2/beKl5L1mlYOGv48W7ig=
+unikraft.com/x/kingkong v0.0.0-20260302231330-f7c922e470df h1:/UaybFYvISCsndFji2VvmGsrAU171LNJXjVJ0xEY4Iw=
+unikraft.com/x/kingkong v0.0.0-20260302231330-f7c922e470df/go.mod h1:4vNdwNNYbVwsCOj3BIcpfl+FynXJZHkQ3YyehWp2o8U=
 unikraft.com/x/log v0.0.0-20260126171022-af62c17fcdf7 h1:kFOE7rmK33PiJ2GbWFd3v0WrE8DeAaQsPjrUQ+15CIU=
 unikraft.com/x/log v0.0.0-20260126171022-af62c17fcdf7/go.mod h1:f/+5628rnWTnRaRrCDD9mOMf7OV5QmkGIgARlTu4XGE=
 unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af h1:qEEtHdfIKn1p4OGrekAxbPe+Kbd1Gi1g5S3iJgTRcWM=

@@ -254,10 +254,8 @@ stdout:
 	  services, services.*
 
 	Flags:
-	      --set
+	      --set, --set-file
 	          Key-value pairs to set on the service.
-	      --set-file
-	          Files containing key-value pairs to set on the service.
 	  -e, --visual
 	          Open an editor to set fields visually.
 	      --dry-run
@@ -316,18 +314,12 @@ stdout:
 	  services, services.*
 
 	Flags:
-	      --set
+	      --set, --set-file
 	          Key-value pairs to set on the service.
-	      --set-file
-	          Files containing key-value pairs to set on the service.
-	      --add
+	      --add, --add-file
 	          Key-value pairs to add to the service.
-	      --add-file
-	          Files containing key-value pairs to add to the service.
-	      --del
+	      --del, --del-file
 	          Keys to delete from the service.
-	      --del-file
-	          Files containing keys to delete from the service.
 	  -e, --visual
 	          Open an editor to modify fields visually.
 	      --dry-run
