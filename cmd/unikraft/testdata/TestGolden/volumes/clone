@@ -17,6 +17,8 @@ stdout:
 	state:      available
 	size:       10MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 	metro:      test
 	name:       test-<VOLUME_CLONE>
@@ -24,6 +26,8 @@ stdout:
 	state:      available
 	size:       10MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 $ unikraft volume delete test-$UNIQ_VOLUME test-$UNIQ_VOLUME_CLONE
 

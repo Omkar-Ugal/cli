@@ -30,7 +30,7 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Global flags:
 	  -h, --help
@@ -79,7 +79,7 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	  -w, --watch
@@ -136,7 +136,7 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --filter
@@ -191,7 +191,7 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --until, --filter
@@ -259,7 +259,7 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --set
@@ -322,7 +322,7 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created-at, timestamps.not-before, timestamps.not-after
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	  -f, --field

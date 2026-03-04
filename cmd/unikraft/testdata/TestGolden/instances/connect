@@ -23,6 +23,8 @@ stdout:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
 
 $ FQDN=$(unikraft instance inspect test-$UNIQ_INST --output 'template={{ (index .service.domains 0).fqdn }}')
 

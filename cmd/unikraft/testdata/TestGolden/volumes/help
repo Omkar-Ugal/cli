@@ -30,7 +30,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -78,7 +78,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -134,7 +134,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -188,7 +188,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -249,7 +249,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -356,7 +356,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only
@@ -426,7 +426,7 @@ stdout:
 	  state
 	  size
 	  persistent
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
 	  mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
 	  by.*.read-only

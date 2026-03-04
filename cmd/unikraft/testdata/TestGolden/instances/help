@@ -43,8 +43,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
@@ -105,8 +104,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
@@ -175,8 +173,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
@@ -243,8 +240,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
@@ -321,8 +317,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
@@ -397,8 +392,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
@@ -481,8 +475,7 @@ stdout:
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
 	  service.services, service.services.*, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
-	  timestamps, timestamps.created-at, timestamps.started-at, timestamps.stopped-
-	  at
+	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
 	  zero.stateful, scale-to-zero.cooldown-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time

@@ -313,6 +313,11 @@ var cleaners = []cleaner{
 		repl:    "YYYY-MM-DD",
 	},
 	{
+		// relative times like "just now", "2 hours ago", or "in 5 minutes" change between runs
+		pattern: regexp.MustCompile(`\bjust now\b|\b(?:in\s+)?\d+\s+(?:minute|minutes|hour|hours|day|days|week|weeks|month|months|year|years)(?:\s+ago)?\b`),
+		repl:    "RELATIVE_TIME",
+	},
+	{
 		// runtime versions like "go1.25.4" change between go releases
 		pattern: wordCleaner(runtime.Version()),
 		repl:    "goX.Y.Z",

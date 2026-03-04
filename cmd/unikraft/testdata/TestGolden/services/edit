@@ -18,6 +18,8 @@ stdout:
 	limits:
 	  soft:        2
 	  hard:        10
+	timestamps:
+	  created:     RELATIVE_TIME
 	domains:
 	- fqdn:        <DOMAIN_EDIT>.unikraft.example
 	  certificate:
