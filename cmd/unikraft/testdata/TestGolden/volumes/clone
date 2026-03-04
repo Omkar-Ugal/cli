@@ -32,5 +32,5 @@ stdout:
 $ unikraft volume delete test-$UNIQ_VOLUME test-$UNIQ_VOLUME_CLONE
 
 stdout:
-	test/test-<VOLUME>
-	test/test-<VOLUME_CLONE>
+	test-<VOLUME>
+	test-<VOLUME_CLONE>

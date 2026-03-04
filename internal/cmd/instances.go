@@ -122,6 +122,8 @@ type Instance struct {
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
 	Profile  *config.Profile   `field:"-" json:"profile"`
+
+	key multimetro.Key
 }
 
 type InstanceVolume struct {
@@ -213,16 +215,8 @@ func (Instance) Type() resource.Type {
 	}
 }
 
-func (i Instance) key() multimetro.Key {
-	return multimetro.Key{
-		Metro: i.MetroName,
-		Name:  i.Name,
-		UUID:  i.UUID,
-	}
-}
-
 func (i Instance) Key() resource.Key {
-	return i.key()
+	return i.key
 }
 
 func (i Instance) Raw() any {
@@ -292,7 +286,7 @@ func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		for _, instance := range resp.Data.Instances {
-			result, err := Instance{}.load(instance, &c.Metro, profile)
+			result, err := Instance{}.load(nil, instance, &c.Metro, profile)
 			if err != nil {
 				return nil, err
 			}
@@ -319,11 +313,11 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 		}
 		var found []group.Ref
 		var results []resource.Resource
-		for _, instance := range resp.Data.Instances {
+		for i, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSUCCESS {
 				continue
 			}
-			result, err := Instance{}.load(instance, &c.Metro, profile)
+			result, err := Instance{}.load(&refs[i], instance, &c.Metro, profile)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -338,11 +332,24 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 	})
 }
 
-func (Instance) load(instance platform.Instance, metro *config.Metro, profile *config.Profile) (Instance, error) {
+func (Instance) load(ref *group.Ref, instance platform.Instance, metro *config.Metro, profile *config.Profile) (Instance, error) {
+	if ref == nil {
+		ref = &group.Ref{
+			Metro: metro.Name,
+			Name:  ptr.ZeroIfNil(instance.Name),
+			UUID:  ptr.ZeroIfNil(instance.Uuid),
+		}
+	} else {
+		ref.Metro = cmp.Or(ref.Metro, metro.Name)
+		ref.Name = cmp.Or(ref.Name, ptr.ZeroIfNil(instance.Name))
+		ref.UUID = cmp.Or(ref.UUID, ptr.ZeroIfNil(instance.Uuid))
+	}
+
 	result := Instance{
 		Instance: instance,
 		Metro:    metro,
 		Profile:  profile,
+		key:      multimetro.Key(*ref),
 	}
 	err := mirror.Mirror(result, &result)
 	if err != nil {
@@ -360,7 +367,7 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 	keys := make(multimetro.Keys, 0, len(targets))
 	for _, target := range targets {
 		instance := target.(Instance)
-		keys = append(keys, instance.key())
+		keys = append(keys, instance.key)
 	}
 
 	g, err := multimetro.NewClient(ctx)
@@ -414,13 +421,13 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 		return nil, err
 	}
 	if instance.State.IsRunning() && !targetState.IsRunning() {
-		_, err := stopInstances(ctx, g, multimetro.Keys{instance.key()}, StopOpts{DrainTimeout: -1})
+		_, err := stopInstances(ctx, g, multimetro.Keys{instance.key}, StopOpts{DrainTimeout: -1})
 		if err != nil {
 			return nil, err
 		}
 	}
 	if len(reqs) > 0 {
-		err = group.DoMetro(ctx, g, instance.key().Metro, func(ctx context.Context, c multimetro.MetroClient) error {
+		err = group.DoMetro(ctx, g, instance.key.Metro, func(ctx context.Context, c multimetro.MetroClient) error {
 			log.G(ctx).Trace().Msg("updating instance")
 			_, err := c.UpdateInstances(ctx, reqs)
 			return err
@@ -430,7 +437,7 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 		}
 	}
 	if !instance.State.IsRunning() && targetState.IsRunning() {
-		_, err := startInstances(ctx, g, multimetro.Keys{instance.key()})
+		_, err := startInstances(ctx, g, multimetro.Keys{instance.key})
 		if err != nil {
 			return nil, err
 		}
@@ -730,7 +737,7 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, stdio config.Stdio) error 
 	}
 	keys := make(multimetro.Keys, 0, len(instances))
 	for _, instance := range instances {
-		key := instance.(Instance).key()
+		key := instance.(Instance).key
 		if key.Metro == "" {
 			return fmt.Errorf("key %q not fully resolved", key)
 		}
@@ -800,7 +807,7 @@ func (c *InstancesStartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	}
 	var targetKeys multimetro.Keys
 	for _, res := range before {
-		targetKeys = append(targetKeys, res.(Instance).key())
+		targetKeys = append(targetKeys, res.(Instance).key)
 	}
 	if len(targetKeys) == 0 {
 		targetKeys = keys
@@ -877,7 +884,7 @@ func (c *InstancesStopCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	}
 	var targetKeys multimetro.Keys
 	for _, res := range before {
-		targetKeys = append(targetKeys, res.(Instance).key())
+		targetKeys = append(targetKeys, res.(Instance).key)
 	}
 	if len(targetKeys) == 0 {
 		targetKeys = keys
@@ -947,7 +954,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 	}
 	var targetKeys multimetro.Keys
 	for _, res := range before {
-		targetKeys = append(targetKeys, res.(Instance).key())
+		targetKeys = append(targetKeys, res.(Instance).key)
 	}
 
 	stopped, stopErr := stopInstances(ctx, g, targetKeys, c.StopOpts)

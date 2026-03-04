@@ -37,4 +37,4 @@ stdout:
 $ unikraft instance delete test-$UNIQ_INST
 
 stdout:
-	test/test-<INST>
+	test-<INST>

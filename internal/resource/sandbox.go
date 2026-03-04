@@ -157,7 +157,7 @@ func (s *Sandbox) Add(ctx context.Context, r Resource) error {
 	if _, ok := s.Keys[r.Type().Name]; !ok {
 		return nil
 	}
-	s.Keys[r.Type().Name][r.Key().String()] = struct{}{}
+	s.Keys[r.Type().Name][r.Key().Canonical()] = struct{}{}
 
 	fields, err := r.Fields()
 	if err != nil {
@@ -198,7 +198,7 @@ func (s *Sandbox) Remove(r Resource) {
 	if _, ok := s.Keys[r.Type().Name]; !ok {
 		return
 	}
-	delete(s.Keys[r.Type().Name], r.Key().String())
+	delete(s.Keys[r.Type().Name], r.Key().Canonical())
 }
 
 func (s *Sandbox) Has(r Resource) bool {
@@ -208,7 +208,7 @@ func (s *Sandbox) Has(r Resource) bool {
 	if _, ok := s.Keys[r.Type().Name]; !ok {
 		return true
 	}
-	_, ok := s.Keys[r.Type().Name][r.Key().String()]
+	_, ok := s.Keys[r.Type().Name][r.Key().Canonical()]
 	return ok
 }
 

@@ -94,5 +94,5 @@ stdout:
 $ unikraft service delete test-$UNIQ_SVC_A test-$UNIQ_SVC_B
 
 stdout:
-	test/test-<SVC_A>
-	test/test-<SVC_B>
+	test-<SVC_A>
+	test-<SVC_B>

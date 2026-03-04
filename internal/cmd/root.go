@@ -320,3 +320,7 @@ type staticKey string
 func (s staticKey) String() string {
 	return string(s)
 }
+
+func (s staticKey) Canonical() string {
+	return string(s)
+}

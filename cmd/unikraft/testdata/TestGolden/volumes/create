@@ -36,4 +36,4 @@ stdout:
 $ unikraft volume delete test-$UNIQ_VOLUME
 
 stdout:
-	test/test-<VOLUME>
+	test-<VOLUME>
