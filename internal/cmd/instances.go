@@ -87,9 +87,9 @@ type Instance struct {
 	} `mirror:"instance.network_interfaces"`
 
 	Timestamps struct {
-		CreatedAt types.RelativeTime `mirror:"instance.created_at" field:",short"`
-		StartedAt types.RelativeTime `mirror:"instance.started_at"`
-		StoppedAt types.RelativeTime `mirror:"instance.stopped_at"`
+		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
+		Started types.RelativeTime `mirror:"instance.started_at"`
+		Stopped types.RelativeTime `mirror:"instance.stopped_at"`
 	}
 
 	ScaleToZero InstanceScaleToZero `field:",embed" mirror:"instance.scale_to_zero"`

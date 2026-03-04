@@ -50,7 +50,7 @@ type Certificate struct {
 	State types.CertificateState `mirror:"certificate.state" field:",short"`
 
 	Timestamps struct {
-		CreatedAt types.RelativeTime `mirror:"certificate.created_at"`
+		Created   types.RelativeTime `mirror:"certificate.created_at" field:",short"`
 		NotBefore types.RelativeTime `mirror:"certificate.not_before" field:",long"`
 		NotAfter  types.RelativeTime `mirror:"certificate.not_after" field:",short"`
 	}

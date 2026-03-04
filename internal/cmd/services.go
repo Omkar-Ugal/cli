@@ -49,7 +49,7 @@ type ServiceGroup struct {
 	}
 
 	Timestamps struct {
-		CreatedAt types.RelativeTime `mirror:"service_group.created_at" field:",short"`
+		Created types.RelativeTime `mirror:"service_group.created_at" field:",short"`
 	}
 
 	Domains []Domain `mirror:"service_group.domains" field:",embed" create:"set" edit:"set,add,del"`
