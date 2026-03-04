@@ -10,8 +10,10 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,11 +23,13 @@ import (
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
 	"unikraft.com/cli/internal/tui/watcher"
 	xfilters "unikraft.com/cli/internal/x/filters"
 	xkong "unikraft.com/cli/internal/x/kong"
+	"unikraft.com/cloud/sdk/platform/group"
 )
 
 type ResourceCmdInterface interface {
@@ -160,10 +164,8 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	if cmd.DefaultFilter != nil {
 		filter = filters.All{cmd.DefaultFilter, filter}
 	}
-
 	ctx = resource.WithFilter(ctx, filter)
 
-	// Parse sort configuration
 	sortSpecs, err := parseSortSpecs(cmd.Sort...)
 	if err != nil {
 		return err
@@ -172,30 +174,37 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	var empty R
 	render := func(out io.Writer) error {
 		var resources []resource.Resource
-		var err error
+		var opErr error
 		if len(cmd.Name) > 0 {
 			r := sandbox.WrapGettable(empty)
-			resources, err = r.Get(ctx, cmd.Name)
+			resources, opErr = r.Get(ctx, cmd.Name)
 		} else {
 			r := sandbox.WrapListable(empty)
-			resources, err = r.List(ctx)
+			resources, opErr = r.List(ctx)
 		}
-		if err != nil {
-			return err
+		if opErr != nil && len(resources) == 0 {
+			return opErr
 		}
-		resources, err = filterResources(ctx, resources, filter)
-		if err != nil {
-			return err
+
+		resources, filterErr := filterResources(ctx, resources, filter)
+		if filterErr != nil {
+			opErr = errors.Join(opErr, filterErr)
 		}
+
 		if len(sortSpecs) > 0 {
 			resources, err = sortResources(ctx, resources, sortSpecs)
 			if err != nil {
-				return err
+				return errors.Join(opErr, err)
 			}
 		}
-		return cmd.Output.
+
+		printErr := cmd.Output.
 			WithDefault(PrinterTypeTable).
-			Print(ctx, out, []string(cmd.Field), empty, resources...)
+			Print(ctx, out, cmd.Field, empty, resources...)
+		if printErr != nil {
+			return errors.Join(opErr, printErr)
+		}
+		return opErr
 	}
 
 	if cmd.Watch != nil {
@@ -229,13 +238,17 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandb
 	r := sandbox.WrapGettable(empty)
 
 	render := func(out io.Writer) error {
-		resources, err := r.Get(ctx, cmd.Name)
-		if err != nil {
-			return err
+		resources, opErr := r.Get(ctx, cmd.Name)
+		if opErr != nil && len(resources) == 0 {
+			return opErr
 		}
-		return cmd.Output.
+		printErr := cmd.Output.
 			WithDefault(PrinterTypeKeyValue).
-			Print(ctx, out, []string(cmd.Field), empty, resources...)
+			Print(ctx, out, cmd.Field, empty, resources...)
+		if printErr != nil {
+			return errors.Join(opErr, printErr)
+		}
+		return opErr
 	}
 
 	if cmd.Watch != nil {
@@ -346,25 +359,27 @@ func (cmd *ResourceWaitCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 }
 
 func filterResources(ctx context.Context, resources []resource.Resource, filter filters.Filter) (filtered []resource.Resource, rerr error) {
-	// Extract field paths from the filter to determine which callbacks need resolution
-	filterKeys := xfilters.Keys(filter)
-	paths := make([]resource.FieldPath, len(filterKeys))
-	for i, key := range filterKeys {
-		paths[i] = resource.FieldPath(key)
+	if filter == nil {
+		return resources, nil
 	}
 
-	// Filter resources, resolving callbacks as needed for filter fields
-	for _, res := range resources {
-		fields, err := res.Fields()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get fields for resource %s: %w", res.Key(), err)
-		}
-		// Resolve callbacks for fields referenced by the filter
-		fields, err = resolveFields(ctx, fields, paths)
-		if err != nil {
-			return nil, err
-		}
+	// Extract field paths needed by the filter
+	filterKeys := xfilters.Keys(filter)
+	if len(filterKeys) == 0 {
+		return resources, nil
+	}
+	filterPaths := make([]resource.FieldPath, len(filterKeys))
+	for i, key := range filterKeys {
+		filterPaths[i] = resource.FieldPath(key)
+	}
 
+	resolved, err := resolveResources(ctx, resources, filterPaths)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, res := range resolved {
+		fields, _ := res.Fields()
 		if filter.Match(filters.AdapterFunc(func(key []string) (string, bool) {
 			matched := resource.GetFieldByPath(fields, key)
 			if matched == nil {
@@ -406,19 +421,41 @@ func (cmd ResourceRemoveCmd[R]) Examples() []kingkong.Example {
 func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	var empty R
 	r := sandbox.WrapDeletable(empty)
-	resources, err := r.Get(ctx, cmd.Name)
-	if err != nil {
-		return err
+	resources, getErr := r.Get(ctx, cmd.Name)
+	if getErr != nil && len(resources) == 0 {
+		return getErr
 	}
 
-	err = r.Delete(ctx, resources)
-	if err != nil {
-		return err
+	deleteErr := error(nil)
+	if len(resources) > 0 {
+		deleteErr = r.Delete(ctx, resources)
 	}
 
-	return cmd.Output.
+	toPrint := resources
+	if deleteErr != nil {
+		var notFound group.ErrRefNotFound
+		if errors.As(deleteErr, &notFound) {
+			missing := make(map[string]struct{}, len(notFound.Refs))
+			for _, ref := range notFound.Refs {
+				missing[multimetro.Key(ref).String()] = struct{}{}
+			}
+			toPrint = slices.DeleteFunc(slices.Clone(resources), func(r resource.Resource) bool {
+				_, ok := missing[r.Key().String()]
+				return ok
+			})
+		} else {
+			// Unknown error shape: avoid claiming success.
+			toPrint = nil
+		}
+	}
+
+	printErr := cmd.Output.
 		WithDefault(PrinterTypeQuiet).
-		Print(ctx, stdio.Stdout, []string(cmd.Field), empty, resources...)
+		Print(ctx, stdio.Stdout, cmd.Field, empty, toPrint...)
+	if printErr != nil {
+		return errors.Join(getErr, deleteErr, printErr)
+	}
+	return errors.Join(getErr, deleteErr)
 }
 
 type ResourceBulkRemoveCmd[R interface {
@@ -471,6 +508,7 @@ func (cmd *ResourceBulkRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio
 			if err != nil {
 				return err
 			}
+			resources = unwrapResources(resources)
 		}
 
 		if !cmd.Force && len(resources) > 0 {
@@ -728,11 +766,15 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 		return PrintPatches(stdio.Stdout, fields, true)
 	}
 
-	resources, err := r.Create(ctx, fields)
-	if err != nil {
-		return err
+	resources, opErr := r.Create(ctx, fields)
+	if opErr != nil && len(resources) == 0 {
+		return opErr
 	}
-	return cmd.Output.
+	printErr := cmd.Output.
 		WithDefault(PrinterTypeKeyValue).
-		Print(ctx, stdio.Stdout, []string(cmd.Field), empty, resources...)
+		Print(ctx, stdio.Stdout, cmd.Field, empty, resources...)
+	if printErr != nil {
+		return errors.Join(opErr, printErr)
+	}
+	return opErr
 }

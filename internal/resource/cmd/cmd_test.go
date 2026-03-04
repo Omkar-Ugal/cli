@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -16,7 +18,6 @@ import (
 	"time"
 
 	"github.com/lunixbochs/vtclean"
-	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
@@ -25,10 +26,13 @@ import (
 	"unikraft.com/cli/internal/resource"
 	resourcet "unikraft.com/cli/internal/resource/testing"
 	xkong "unikraft.com/cli/internal/x/kong"
+	"unikraft.com/cloud/sdk/platform/group"
 )
 
-var baseTestStore = map[string]resourcet.TestResource{
-	"test1": {
+// setupTestEnv creates a TestEnv with standard test data.
+func setupTestEnv() *resourcet.TestEnv {
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
 		ID:        "id-test1",
 		Name:      "test1",
 		State:     "pending",
@@ -43,8 +47,8 @@ var baseTestStore = map[string]resourcet.TestResource{
 			{Name: "Alice", Email: "alice@example.com"},
 			{Name: "Bob", Email: "bob@example.com"},
 		},
-	},
-	"test2": {
+	})
+	env.Add(resourcet.TestResource{
 		ID:        "id-test2",
 		Name:      "test2",
 		State:     "pending",
@@ -59,24 +63,24 @@ var baseTestStore = map[string]resourcet.TestResource{
 			{Name: "Charlie", Email: "charlie@example.com"},
 			{Name: "Dana", Email: "dana@example.com"},
 		},
-	},
+	})
+	return env
 }
 
 func TestList(t *testing.T) {
-	ctx := context.Background()
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
 
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-	var empty resourcet.TestResource
+	empty := env.NewResource()
 	resources, err := empty.List(ctx)
 	require.NoError(t, err)
 	assert.Len(t, resources, 2)
 
 	var listOut bytes.Buffer
-	listCmd := &ResourceListCmd[resourcet.TestResource]{}
+	listCmd := &ResourceListCmd[resourcet.TestResource]{
+		Name: nil,
+	}
 	err = listCmd.Run(ctx, testStdio(&listOut), sandbox)
 	require.NoError(t, err)
 
@@ -376,12 +380,9 @@ func TestParseSortSpecs(t *testing.T) {
 }
 
 func TestListOutput(t *testing.T) {
-	ctx := context.Background()
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 	runList := func(t *testing.T, opts FormatOpts) string {
 		t.Helper()
@@ -389,7 +390,7 @@ func TestListOutput(t *testing.T) {
 		cmd := &ResourceListCmd[resourcet.TestResource]{
 			FormatOpts: opts,
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -476,13 +477,197 @@ func TestListOutput(t *testing.T) {
 	})
 }
 
-func TestTableNestedFieldSelection(t *testing.T) {
-	ctx := context.Background()
-	sandbox := &resource.Sandbox{}
+func TestPartialResultsPrintedBeforeError(t *testing.T) {
+	t.Run("list", func(t *testing.T) {
+		env := setupTestEnv()
+		env.Hooks.List = func(ctx context.Context, next func(context.Context) ([]resource.Resource, error)) ([]resource.Resource, error) {
+			resources, _ := next(ctx)
+			return resources, errors.New("list failed")
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		assert.Contains(t, out.String(), "test1")
+		assert.Contains(t, out.String(), "test2")
+	})
+
+	t.Run("get", func(t *testing.T) {
+		env := setupTestEnv()
+		env.Hooks.Get = func(ctx context.Context, keys []string, next func(context.Context, []string) ([]resource.Resource, error)) ([]resource.Resource, error) {
+			resources, _ := next(ctx, keys)
+			return resources, errors.New("get failed")
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
+			Name:       []string{"test1", "missing"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		assert.Contains(t, out.String(), "test1")
+		assert.NotContains(t, out.String(), "missing")
+	})
+
+	t.Run("create", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Hooks.Create = func(ctx context.Context, fields []resource.Field, next func(context.Context, []resource.Field) ([]resource.Resource, error)) ([]resource.Resource, error) {
+			resources, _ := next(ctx, fields)
+			return resources, errors.New("create failed")
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceCreateCmd[resourcet.TestResource]{
+			SetArgs:    SetArgs{Set: []map[string]string{{"name": "created"}}},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		assert.Contains(t, out.String(), "created")
+	})
+
+	t.Run("delete", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{Name: "ok", ID: "id-ok"})
+		env.Add(resourcet.TestResource{Name: "fail", ID: "id-fail"})
+		env.Hooks.Delete = func(ctx context.Context, targets []resource.Resource, _ func(context.Context, []resource.Resource) error) error {
+			_ = targets
+			return group.ErrRefNotFound{Refs: group.Refs{{Name: "fail"}}}
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceRemoveCmd[resourcet.TestResource]{
+			Name:       []string{"ok", "fail"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		output := out.String()
+		assert.Contains(t, output, "ok")
+		assert.NotContains(t, output, "fail")
+	})
+}
+
+func TestPartialResultsOrderWhenCallerPrintsError(t *testing.T) {
+	t.Run("list/table", func(t *testing.T) {
+		env := setupTestEnv()
+		env.Hooks.List = func(ctx context.Context, next func(context.Context) ([]resource.Resource, error)) ([]resource.Resource, error) {
+			resources, _ := next(ctx)
+			return resources, errors.New("list failed")
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeTable}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxOK := strings.Index(output, "test1")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxOK)
+		require.NotEqual(t, -1, idxErr)
+		assert.Less(t, idxOK, idxErr)
+	})
+
+	t.Run("get/kv", func(t *testing.T) {
+		env := setupTestEnv()
+		env.Hooks.Get = func(ctx context.Context, keys []string, next func(context.Context, []string) ([]resource.Resource, error)) ([]resource.Resource, error) {
+			resources, _ := next(ctx, keys)
+			return resources, errors.New("get failed")
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceGetCmd[resourcet.TestResource]{
+			Name:       []string{"test1", "missing"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeKeyValue}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxName := strings.Index(output, "name:")
+		idxOK := strings.Index(output, "test1")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxName)
+		require.NotEqual(t, -1, idxOK)
+		require.NotEqual(t, -1, idxErr)
+		assert.Less(t, idxName, idxErr)
+		assert.Less(t, idxOK, idxErr)
+	})
+
+	t.Run("delete/quiet", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{Name: "ok", ID: "id-ok"})
+		env.Add(resourcet.TestResource{Name: "fail", ID: "id-fail"})
+		env.Hooks.Delete = func(ctx context.Context, targets []resource.Resource, _ func(context.Context, []resource.Resource) error) error {
+			_ = targets
+			return group.ErrRefNotFound{Refs: group.Refs{{Name: "fail"}}}
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceRemoveCmd[resourcet.TestResource]{
+			Name:       []string{"ok", "fail"},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeQuiet}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxOK := strings.Index(output, "ok")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxOK)
+		require.NotEqual(t, -1, idxErr)
+		success := output[:idxErr]
+		assert.Contains(t, success, "ok")
+		assert.NotContains(t, success, "fail")
+		assert.Less(t, idxOK, idxErr)
+	})
+
+	t.Run("create/kv", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Hooks.Create = func(ctx context.Context, fields []resource.Field, next func(context.Context, []resource.Field) ([]resource.Resource, error)) ([]resource.Resource, error) {
+			resources, _ := next(ctx, fields)
+			return resources, errors.New("create failed")
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceCreateCmd[resourcet.TestResource]{
+			SetArgs:    SetArgs{Set: []map[string]string{{"name": "created"}}},
+			FormatOpts: FormatOpts{Output: Printer{Type: PrinterTypeKeyValue}},
+		}
+		err := cmd.Run(ctx, testStdio(&out), nil)
+		require.Error(t, err)
+		fmt.Fprintf(&out, "error: %v\n", err)
+		output := out.String()
+		idxName := strings.Index(output, "name:")
+		idxCreated := strings.Index(output, "created")
+		idxErr := strings.Index(output, "error:")
+		require.NotEqual(t, -1, idxName)
+		require.NotEqual(t, -1, idxCreated)
+		require.NotEqual(t, -1, idxErr)
+		assert.Less(t, idxName, idxErr)
+		assert.Less(t, idxCreated, idxErr)
+	})
+}
+
+func TestTableNestedFieldSelection(t *testing.T) {
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
 
 	var out bytes.Buffer
 	cmd := &ResourceGetCmd[resourcet.TestResource]{
@@ -492,7 +677,7 @@ func TestTableNestedFieldSelection(t *testing.T) {
 			Field:  xkong.GreedyStrings{"name", "authors"},
 		},
 	}
-	err = cmd.Run(ctx, testStdio(&out), sandbox)
+	err := cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
 	cleaned := vtclean.Clean(out.String(), false)
@@ -501,14 +686,11 @@ func TestTableNestedFieldSelection(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	ctx := context.Background()
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
 
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-	var empty resourcet.TestResource
+	empty := env.NewResource()
 	resources, err := empty.Get(ctx, []string{"test1"})
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
@@ -588,12 +770,9 @@ func TestGet(t *testing.T) {
 }
 
 func TestFieldVerbosity(t *testing.T) {
-	ctx := context.Background()
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 	runList := func(t *testing.T, fields []string) string {
 		t.Helper()
@@ -661,12 +840,9 @@ func TestFieldVerbosity(t *testing.T) {
 }
 
 func TestGetOutput(t *testing.T) {
-	ctx := context.Background()
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
 
 	runInspect := func(t *testing.T, printer Printer) string {
 		t.Helper()
@@ -677,7 +853,7 @@ func TestGetOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -691,21 +867,21 @@ func TestGetOutput(t *testing.T) {
 }
 
 func TestWait(t *testing.T) {
-	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
 
 	t.Run("already_matching", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-		resourceOne := resourcet.TestStore["test1"]
-		resourceOne.State = "ready"
-		resourcet.TestStore["test1"] = resourceOne
-
-		resourceTwo := resourcet.TestStore["test2"]
-		resourceTwo.State = "ready"
-		resourcet.TestStore["test2"] = resourceTwo
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{
+			ID:    "id-test1",
+			Name:  "test1",
+			State: "ready",
+		})
+		env.Add(resourcet.TestResource{
+			ID:    "id-test2",
+			Name:  "test2",
+			State: "ready",
+		})
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		cmd := &ResourceWaitCmd[resourcet.TestResource]{
 			Name:     []string{"test1", "test2"},
@@ -713,14 +889,13 @@ func TestWait(t *testing.T) {
 			Timeout:  time.Second,
 			Interval: 10 * time.Millisecond,
 		}
-		err = cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
+		err := cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
 		require.NoError(t, err)
 	})
 
 	t.Run("timeout", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		cmd := &ResourceWaitCmd[resourcet.TestResource]{
 			Name:     []string{"test1", "test2"},
@@ -728,24 +903,26 @@ func TestWait(t *testing.T) {
 			Timeout:  1 * time.Second,
 			Interval: 10 * time.Millisecond,
 		}
-		err = cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
+		err := cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
 		require.Error(t, err)
 		assert.ErrorIs(t, err, context.DeadlineExceeded)
 	})
 }
 
 func TestWaitOutput(t *testing.T) {
-	ctx := context.Background()
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:    "id-test1",
+		Name:  "test1",
+		State: "ready",
+	})
+	env.Add(resourcet.TestResource{
+		ID:    "id-test2",
+		Name:  "test2",
+		State: "ready",
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-
-	cloned, err := copystructure.Copy(baseTestStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-	for key, res := range resourcet.TestStore {
-		res.State = "ready"
-		resourcet.TestStore[key] = res
-	}
 
 	runWait := func(t *testing.T, printer Printer) string {
 		t.Helper()
@@ -758,7 +935,7 @@ func TestWaitOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -772,11 +949,10 @@ func TestWaitOutput(t *testing.T) {
 }
 
 func TestCreate(t *testing.T) {
-	ctx := context.Background()
+	env := resourcet.NewTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 
-	resourcet.TestStore = map[string]resourcet.TestResource{}
-
-	var empty resourcet.TestResource
+	empty := env.NewResource()
 	templateFields, err := empty.Fields()
 	require.NoError(t, err)
 
@@ -802,13 +978,13 @@ func TestCreate(t *testing.T) {
 	assert.Equal(t, "test-new", created.Name)
 	assert.Equal(t, 100, created.Settings.X)
 	assert.Equal(t, "created", created.Settings.Y)
-	assert.Contains(t, resourcet.TestStore, "test-new")
+	assert.Contains(t, env.Store, "test-new")
 }
 
 func TestCreateOutput(t *testing.T) {
-	ctx := context.Background()
+	env := resourcet.NewTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-	resourcet.TestStore = map[string]resourcet.TestResource{}
 
 	runCreate := func(t *testing.T, printer Printer) string {
 		t.Helper()
@@ -839,9 +1015,9 @@ func TestCreateOutput(t *testing.T) {
 }
 
 func TestCreateDryRun(t *testing.T) {
-	ctx := context.Background()
+	env := resourcet.NewTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-	resourcet.TestStore = map[string]resourcet.TestResource{}
 
 	var out bytes.Buffer
 	cmd := &ResourceCreateCmd[resourcet.TestResource]{
@@ -857,7 +1033,7 @@ func TestCreateDryRun(t *testing.T) {
 	err := cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
-	assert.NotContains(t, resourcet.TestStore, "test-dry")
+	assert.NotContains(t, env.Store, "test-dry")
 
 	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
 	require.Len(t, lines, 3)
@@ -897,9 +1073,9 @@ func TestCreatePatchSpecFileArgs(t *testing.T) {
 }
 
 func TestCreateSetFile(t *testing.T) {
-	ctx := context.Background()
+	env := resourcet.NewTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 	sandbox := &resource.Sandbox{}
-	resourcet.TestStore = map[string]resourcet.TestResource{}
 
 	nameFile := tempFile(t, " test-file ")
 	setFile := tempFile(t, " 101 \n")
@@ -919,31 +1095,26 @@ func TestCreateSetFile(t *testing.T) {
 	err := cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
-	created, ok := resourcet.TestStore["test-file"]
+	created, ok := env.Store["test-file"]
 	require.True(t, ok)
 	assert.Equal(t, 101, created.Settings.X)
 	assert.Equal(t, "created", created.Settings.Y)
 }
 
 func TestEdit(t *testing.T) {
-	ctx := context.Background()
-
-	editStore := map[string]resourcet.TestResource{
-		"test-edit": {
-			ID:   "id-edit",
-			Name: "test-edit",
-			URL:  "https://example.com",
-			Settings: resourcet.TestSettings{
-				X: 10,
-				Y: "original",
-			},
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:   "id-edit",
+		Name: "test-edit",
+		URL:  "https://example.com",
+		Settings: resourcet.TestSettings{
+			X: 10,
+			Y: "original",
 		},
-	}
-	cloned, err := copystructure.Copy(editStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 
-	var empty resourcet.TestResource
+	empty := env.NewResource()
 	resources, err := empty.Get(ctx, []string{"test-edit"})
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
@@ -973,29 +1144,24 @@ func TestEdit(t *testing.T) {
 	assert.Equal(t, 999, edited.Settings.X)
 	assert.Equal(t, "modified", edited.Settings.Y)
 
-	stored := resourcet.TestStore["test-edit"]
+	stored := env.Store["test-edit"]
 	assert.Equal(t, 999, stored.Settings.X)
 	assert.Equal(t, "modified", stored.Settings.Y)
 }
 
 func TestEditOutput(t *testing.T) {
-	ctx := context.Background()
-	sandbox := &resource.Sandbox{}
-
-	editStore := map[string]resourcet.TestResource{
-		"test-edit": {
-			ID:   "id-edit",
-			Name: "test-edit",
-			URL:  "https://example.com",
-			Settings: resourcet.TestSettings{
-				X: 10,
-				Y: "original",
-			},
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:   "id-edit",
+		Name: "test-edit",
+		URL:  "https://example.com",
+		Settings: resourcet.TestSettings{
+			X: 10,
+			Y: "original",
 		},
-	}
-	cloned, err := copystructure.Copy(editStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
 
 	runEdit := func(t *testing.T, printer Printer) string {
 		t.Helper()
@@ -1025,23 +1191,18 @@ func TestEditOutput(t *testing.T) {
 }
 
 func TestEditDryRun(t *testing.T) {
-	ctx := context.Background()
-	sandbox := &resource.Sandbox{}
-
-	editStore := map[string]resourcet.TestResource{
-		"test-edit": {
-			ID:   "id-edit",
-			Name: "test-edit",
-			URL:  "https://example.com",
-			Settings: resourcet.TestSettings{
-				X: 10,
-				Y: "original",
-			},
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:   "id-edit",
+		Name: "test-edit",
+		URL:  "https://example.com",
+		Settings: resourcet.TestSettings{
+			X: 10,
+			Y: "original",
 		},
-	}
-	cloned, err := copystructure.Copy(editStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
 
 	var out bytes.Buffer
 	cmd := &ResourceEditCmd[resourcet.TestResource]{
@@ -1054,10 +1215,10 @@ func TestEditDryRun(t *testing.T) {
 			},
 		},
 	}
-	err = cmd.Run(ctx, testStdio(&out), sandbox)
+	err := cmd.Run(ctx, testStdio(&out), sandbox)
 	require.NoError(t, err)
 
-	stored := resourcet.TestStore["test-edit"]
+	stored := env.Store["test-edit"]
 	assert.Equal(t, 10, stored.Settings.X)
 	assert.Equal(t, "original", stored.Settings.Y)
 
@@ -1103,25 +1264,20 @@ func TestEditPatchSpecFileArgs(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	ctx := context.Background()
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:   "id-delete",
+		Name: "test-delete",
+		URL:  "https://example.com",
+	})
+	env.Add(resourcet.TestResource{
+		ID:   "id-keep",
+		Name: "test-keep",
+		URL:  "https://example.org",
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
 
-	deleteStore := map[string]resourcet.TestResource{
-		"test-delete": {
-			ID:   "id-delete",
-			Name: "test-delete",
-			URL:  "https://example.com",
-		},
-		"test-keep": {
-			ID:   "id-keep",
-			Name: "test-keep",
-			URL:  "https://example.org",
-		},
-	}
-	cloned, err := copystructure.Copy(deleteStore)
-	require.NoError(t, err)
-	resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-	var empty resourcet.TestResource
+	empty := env.NewResource()
 	resources, err := empty.Get(ctx, []string{"test-delete"})
 	require.NoError(t, err)
 	require.Len(t, resources, 1)
@@ -1129,8 +1285,8 @@ func TestDelete(t *testing.T) {
 	err = empty.Delete(ctx, resources)
 	require.NoError(t, err)
 
-	assert.NotContains(t, resourcet.TestStore, "test-delete")
-	assert.Contains(t, resourcet.TestStore, "test-keep")
+	assert.NotContains(t, env.Store, "test-delete")
+	assert.Contains(t, env.Store, "test-keep")
 
 	resources, err = empty.Get(ctx, []string{"test-delete"})
 	require.NoError(t, err)
@@ -1138,10 +1294,12 @@ func TestDelete(t *testing.T) {
 }
 
 func TestRemoveOutput(t *testing.T) {
-	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
 
 	t.Run("no_args", func(t *testing.T) {
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
 		var out bytes.Buffer
 		cmd := &ResourceRemoveCmd[resourcet.TestResource]{}
 		err := cmd.Run(ctx, testStdio(&out), sandbox)
@@ -1150,9 +1308,8 @@ func TestRemoveOutput(t *testing.T) {
 
 	runRemove := func(t *testing.T, printer Printer) string {
 		t.Helper()
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceRemoveCmd[resourcet.TestResource]{
@@ -1161,7 +1318,7 @@ func TestRemoveOutput(t *testing.T) {
 				Output: printer,
 			},
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 		return out.String()
 	}
@@ -1215,18 +1372,17 @@ func testStdioWithInput(out io.Writer, in io.Reader) config.Stdio {
 }
 
 func TestValueCallback(t *testing.T) {
-	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
 
-	// Reset state - use TestStore with TestResource
-	resourcet.TestStore = map[string]resourcet.TestResource{
-		"res1": {ID: "1", Name: "res1", State: "running"},
-		"res2": {ID: "2", Name: "res2", State: "stopped"},
-	}
-	resourcet.CallbackInvocations = 0
-
 	t.Run("list_without_lazy_field", func(t *testing.T) {
-		resourcet.CallbackInvocations = 0
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{}
@@ -1238,11 +1394,18 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "running")
 		assert.NotContains(t, output, "computed-")
 		// Callback should not be invoked when lazy field is not requested
-		assert.Equal(t, 0, resourcet.CallbackInvocations, "callbacks should not be invoked when lazy field not selected")
+		assert.Empty(t, resolved, "callbacks should not be invoked when lazy field not selected")
 	})
 
 	t.Run("list_with_lazy_field", func(t *testing.T) {
-		resourcet.CallbackInvocations = 0
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
@@ -1259,11 +1422,18 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "res2")
 		assert.Contains(t, output, "computed-res2")
 		// Callback should be invoked once per resource
-		assert.Equal(t, 2, resourcet.CallbackInvocations, "callbacks should be invoked for each resource")
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked for each resource")
 	})
 
 	t.Run("get_with_lazy_field", func(t *testing.T) {
-		resourcet.CallbackInvocations = 0
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceGetCmd[resourcet.TestResource]{
@@ -1278,11 +1448,18 @@ func TestValueCallback(t *testing.T) {
 		output := out.String()
 		assert.Contains(t, output, "res1")
 		assert.Contains(t, output, "computed-res1")
-		assert.Equal(t, 1, resourcet.CallbackInvocations, "callback should be invoked once")
+		assert.ElementsMatch(t, []string{"res1"}, resolved, "callback should be invoked once for requested resource")
 	})
 
 	t.Run("quiet_output_with_lazy_field", func(t *testing.T) {
-		resourcet.CallbackInvocations = 0
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
@@ -1297,11 +1474,18 @@ func TestValueCallback(t *testing.T) {
 		output := out.String()
 		assert.Contains(t, output, "res1 computed-res1")
 		assert.Contains(t, output, "res2 computed-res2")
-		assert.Equal(t, 2, resourcet.CallbackInvocations)
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved)
 	})
 
 	t.Run("filter_on_lazy_field_without_selecting_it", func(t *testing.T) {
-		resourcet.CallbackInvocations = 0
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
@@ -1315,30 +1499,88 @@ func TestValueCallback(t *testing.T) {
 		// Should only show res1 (filtered by lazy field)
 		assert.Contains(t, output, "res1")
 		assert.NotContains(t, output, "res2")
-		// Callbacks should be invoked to evaluate the filter
-		assert.Equal(t, 2, resourcet.CallbackInvocations, "callbacks should be invoked to evaluate filter")
+		// Callbacks should be invoked to evaluate the filter for all resources
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked to evaluate filter")
+	})
+
+	t.Run("filter_and_select_lazy_field", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			// Filter on lazy field AND select it for output
+			Filter: []string{"lazy==computed-res1"},
+			FormatOpts: FormatOpts{
+				Field: xkong.GreedyStrings{"+lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		// Should only show res1 (filtered by lazy field)
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "computed-res1")
+		assert.NotContains(t, output, "res2")
+		// Callback should only be invoked once per resource, not twice
+		// (once for filtering, once for display would be wrong)
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked once per resource, not twice")
+	})
+
+	t.Run("list_filter_sort_select_lazy_once", func(t *testing.T) {
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
+		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolved []string
+		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolved = append(resolved, resourceName)
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"lazy==computed-res1"},
+			Sort:   xkong.GreedyStrings{"lazy"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+				Field:  xkong.GreedyStrings{"name", "lazy"},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "res1")
+		assert.Contains(t, output, "computed-res1")
+		assert.NotContains(t, output, "res2")
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callback should be invoked once per resource")
 	})
 }
 
 func TestDeleteBulk(t *testing.T) {
-	ctx := context.Background()
 	sandbox := &resource.Sandbox{}
 
 	t.Run("all_with_confirmation", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		in := strings.NewReader("YES\n")
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			All: true,
 		}
-		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
+		err := cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
 		require.NoError(t, err)
 
 		// All resources should be deleted
-		assert.Empty(t, resourcet.TestStore)
+		assert.Empty(t, env.Store)
 
 		output := out.String()
 		assert.Contains(t, output, "test1")
@@ -1346,42 +1588,41 @@ func TestDeleteBulk(t *testing.T) {
 	})
 
 	t.Run("all_with_force", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			All:   true,
 			Force: true,
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		// All resources should be deleted
-		assert.Empty(t, resourcet.TestStore)
+		assert.Empty(t, env.Store)
 	})
 
 	t.Run("all_cancelled", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		in := strings.NewReader("no\n")
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			All: true,
 		}
-		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
+		err := cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "cancelled")
 
 		// Resources should not be deleted
-		assert.Len(t, resourcet.TestStore, 2)
+		assert.Len(t, env.Store, 2)
 	})
 
 	t.Run("empty", func(t *testing.T) {
-		resourcet.TestStore = map[string]resourcet.TestResource{}
+		env := resourcet.NewTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
@@ -1396,66 +1637,65 @@ func TestDeleteBulk(t *testing.T) {
 	})
 
 	t.Run("filter_with_force", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-		// Change state of test1 to "running" so we can filter
-		res := resourcet.TestStore["test1"]
-		res.State = "running"
-		resourcet.TestStore["test1"] = res
+		env := setupTestEnv()
+		env.Store["test1"] = resourcet.TestResource{
+			ID:    env.Store["test1"].ID,
+			Name:  env.Store["test1"].Name,
+			State: "running",
+			URL:   env.Store["test1"].URL,
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			Filter: []string{"state==running"},
 			Force:  true,
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		// Only test1 should be deleted (matches filter)
-		assert.NotContains(t, resourcet.TestStore, "test1")
+		assert.NotContains(t, env.Store, "test1")
 		// test2 should still exist (doesn't match filter)
-		assert.Contains(t, resourcet.TestStore, "test2")
+		assert.Contains(t, env.Store, "test2")
 	})
 
 	t.Run("filter_no_match", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
+		env := setupTestEnv()
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			Filter: []string{"state==nonexistent"},
 			Force:  true,
 		}
-		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
 		// No resources should be deleted (no matches)
-		assert.Len(t, resourcet.TestStore, 2)
+		assert.Len(t, env.Store, 2)
 	})
 
 	t.Run("filter_with_confirmation", func(t *testing.T) {
-		cloned, err := copystructure.Copy(baseTestStore)
-		require.NoError(t, err)
-		resourcet.TestStore = cloned.(map[string]resourcet.TestResource)
-
-		// Change state of test1 to "running" so we can filter
-		res := resourcet.TestStore["test1"]
-		res.State = "running"
-		resourcet.TestStore["test1"] = res
+		env := setupTestEnv()
+		env.Store["test1"] = resourcet.TestResource{
+			ID:    env.Store["test1"].ID,
+			Name:  env.Store["test1"].Name,
+			State: "running",
+			URL:   env.Store["test1"].URL,
+		}
+		ctx := resourcet.WithTestEnv(context.Background(), env)
 
 		var out bytes.Buffer
 		in := strings.NewReader("YES\n")
 		cmd := &ResourceBulkRemoveCmd[resourcet.TestResource]{
 			Filter: []string{"state==running"},
 		}
-		err = cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
+		err := cmd.Run(ctx, testStdioWithInput(&out, in), sandbox)
 		require.NoError(t, err)
 
 		// Only test1 should be deleted
-		assert.NotContains(t, resourcet.TestStore, "test1")
-		assert.Contains(t, resourcet.TestStore, "test2")
+		assert.NotContains(t, env.Store, "test1")
+		assert.Contains(t, env.Store, "test2")
 	})
 }

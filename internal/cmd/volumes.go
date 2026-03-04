@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 
@@ -120,7 +121,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if err != nil {
 		return err
 	}
-	keys, err := group.CollectMetro(ctx, g, volume.Metro.Name, func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
+	keys, opErr := group.CollectMetro(ctx, g, volume.Metro.Name, func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("cloning volume")
 		resp, err := client.CloneVolumeByUUID(ctx, volume.UUID, req)
 		if err != nil {
@@ -139,13 +140,13 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		}
 		return created, nil
 	})
-	if err != nil {
-		return err
+	if opErr != nil && len(keys) == 0 {
+		return opErr
 	}
 
-	results, err := Volume{}.Get(ctx, keys.Strings())
-	if err != nil {
-		return err
+	results, getErr := Volume{}.Get(ctx, keys.Strings())
+	if getErr != nil && len(results) == 0 {
+		return errors.Join(opErr, getErr)
 	}
 	if sandbox != nil {
 		for _, res := range results {
@@ -155,9 +156,13 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		}
 	}
 
-	return c.Output.
+	printErr := c.Output.
 		WithDefault(cmd.PrinterTypeKeyValue).
 		Print(ctx, stdio.Stdout, c.Field, Volume{}, results...)
+	if printErr != nil {
+		return errors.Join(opErr, getErr, printErr)
+	}
+	return errors.Join(opErr, getErr)
 }
 
 type Volume struct {

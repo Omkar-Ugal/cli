@@ -14,6 +14,47 @@ import (
 	"unikraft.com/cli/internal/resource"
 )
 
+// TestEnv holds all test state for TestResource operations.
+// Store it in context using WithTestEnv.
+type TestEnv struct {
+	Store map[string]TestResource
+	Hooks Hooks
+}
+
+// NewTestEnv creates a new test environment with an empty store.
+func NewTestEnv() *TestEnv {
+	return &TestEnv{
+		Store: make(map[string]TestResource),
+	}
+}
+
+// Add adds a TestResource to the environment's store.
+func (e *TestEnv) Add(r TestResource) {
+	e.Store[r.Name] = r
+}
+
+// NewResource returns a new zero-value TestResource.
+// The actual test state is stored in context via WithTestEnv.
+func (e *TestEnv) NewResource() TestResource {
+	return TestResource{}
+}
+
+type testEnvKey struct{}
+
+// WithTestEnv stores a TestEnv in the context.
+func WithTestEnv(ctx context.Context, env *TestEnv) context.Context {
+	return context.WithValue(ctx, testEnvKey{}, env)
+}
+
+// testEnvFrom retrieves the TestEnv from context, or panics if not present.
+func testEnvFrom(ctx context.Context) *TestEnv {
+	env, ok := ctx.Value(testEnvKey{}).(*TestEnv)
+	if !ok || env == nil {
+		panic("TestEnv not found in context; use WithTestEnv")
+	}
+	return env
+}
+
 type TestResource struct {
 	ID        string
 	Name      string
@@ -25,9 +66,6 @@ type TestResource struct {
 	Settings  TestSettings
 	Authors   []TestAuthor
 }
-
-// CallbackInvocations tracks how many times callbacks were invoked.
-var CallbackInvocations int
 
 var (
 	_ resource.Resource          = (*TestResource)(nil)
@@ -47,7 +85,13 @@ type TestAuthor struct {
 	Email string
 }
 
-var TestStore = map[string]TestResource{}
+type Hooks struct {
+	List          func(context.Context, func(context.Context) ([]resource.Resource, error)) ([]resource.Resource, error)
+	Get           func(context.Context, []string, func(context.Context, []string) ([]resource.Resource, error)) ([]resource.Resource, error)
+	Create        func(context.Context, []resource.Field, func(context.Context, []resource.Field) ([]resource.Resource, error)) ([]resource.Resource, error)
+	Delete        func(context.Context, []resource.Resource, func(context.Context, []resource.Resource) error) error
+	OnLazyResolve func(resourceName string)
+}
 
 func (TestResource) Type() resource.Type {
 	return resource.Type{
@@ -71,6 +115,7 @@ func (t TestResource) Raw() any {
 }
 
 func (t TestResource) Fields() ([]resource.Field, error) {
+	// Note: ValueCallback receives context and can access TestEnv from there
 	return []resource.Field{
 		{
 			Name:      "id",
@@ -110,7 +155,10 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 			Value:     t.Lazy,
 			Verbosity: resource.FieldVerbosityHidden,
 			ValueCallback: func(ctx context.Context) (any, error) {
-				CallbackInvocations++
+				env := testEnvFrom(ctx)
+				if env.Hooks.OnLazyResolve != nil {
+					env.Hooks.OnLazyResolve(t.Name)
+				}
 				return "computed-" + t.Name, nil
 			},
 		},
@@ -184,61 +232,83 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 }
 
 func (TestResource) List(ctx context.Context) ([]resource.Resource, error) {
-	var resources []resource.Resource
-	for _, t := range TestStore {
-		resources = append(resources, t)
+	env := testEnvFrom(ctx)
+	original := func(context.Context) ([]resource.Resource, error) {
+		var resources []resource.Resource
+		for _, r := range env.Store {
+			resources = append(resources, r)
+		}
+		// Sort by ID for deterministic output
+		slices.SortFunc(resources, func(a, b resource.Resource) int {
+			return strings.Compare(a.(TestResource).ID, b.(TestResource).ID)
+		})
+		return resources, nil
 	}
-	// Sort by ID for deterministic output
-	slices.SortFunc(resources, func(a, b resource.Resource) int {
-		return strings.Compare(a.(TestResource).ID, b.(TestResource).ID)
-	})
-	return resources, nil
+	if env.Hooks.List != nil {
+		return env.Hooks.List(ctx, original)
+	}
+	return original(ctx)
 }
 
 func (TestResource) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
-	// Build a map for lookup
-	resourceMap := make(map[string]TestResource)
-	for _, key := range keys {
-		if t, ok := TestStore[key]; ok {
-			resourceMap[key] = t
+	env := testEnvFrom(ctx)
+	original := func(_ context.Context, keys []string) ([]resource.Resource, error) {
+		// Build a map for lookup
+		resourceMap := make(map[string]TestResource)
+		for _, key := range keys {
+			if r, ok := env.Store[key]; ok {
+				resourceMap[key] = r
+			}
 		}
-	}
 
-	// Return resources in the order of keys provided
-	var resources []resource.Resource
-	for _, key := range keys {
-		if t, ok := resourceMap[key]; ok {
-			resources = append(resources, t)
+		// Return resources in the order of keys provided
+		var resources []resource.Resource
+		for _, key := range keys {
+			if r, ok := resourceMap[key]; ok {
+				resources = append(resources, r)
+			}
 		}
+		return resources, nil
 	}
-	return resources, nil
+	if env.Hooks.Get != nil {
+		return env.Hooks.Get(ctx, keys, original)
+	}
+	return original(ctx, keys)
 }
 
 func (TestResource) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
-	t := TestResource{
-		Settings: TestSettings{},
-	}
-
-	for key, field := range resource.IterFields(fields) {
-		if field.Create == nil || field.Create.Set == nil {
-			continue
+	env := testEnvFrom(ctx)
+	original := func(_ context.Context, fields []resource.Field) ([]resource.Resource, error) {
+		r := TestResource{
+			Settings: TestSettings{},
 		}
-		switch key.String() {
-		case "name":
-			t.Name = field.Create.Set.(string)
-		case "settings.x":
-			t.Settings.X = field.Create.Set.(int)
-		case "settings.y":
-			t.Settings.Y = field.Create.Set.(string)
-		}
-	}
 
-	TestStore[t.Name] = t
-	return []resource.Resource{t}, nil
+		for key, field := range resource.IterFields(fields) {
+			if field.Create == nil || field.Create.Set == nil {
+				continue
+			}
+			switch key.String() {
+			case "name":
+				r.Name = field.Create.Set.(string)
+			case "settings.x":
+				r.Settings.X = field.Create.Set.(int)
+			case "settings.y":
+				r.Settings.Y = field.Create.Set.(string)
+			}
+		}
+
+		env.Store[r.Name] = r
+		return []resource.Resource{r}, nil
+	}
+	if env.Hooks.Create != nil {
+		return env.Hooks.Create(ctx, fields, original)
+	}
+	return original(ctx, fields)
 }
 
 func (TestResource) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
-	t := target.(TestResource)
+	env := testEnvFrom(ctx)
+	r := target.(TestResource)
 
 	for key, field := range resource.IterFields(fields) {
 		if field.Edit == nil || field.Edit.Set == nil {
@@ -246,20 +316,27 @@ func (TestResource) Edit(ctx context.Context, target resource.Resource, fields [
 		}
 		switch key.String() {
 		case "settings.x":
-			t.Settings.X = field.Edit.Set.(int)
+			r.Settings.X = field.Edit.Set.(int)
 		case "settings.y":
-			t.Settings.Y = field.Edit.Set.(string)
+			r.Settings.Y = field.Edit.Set.(string)
 		}
 	}
 
-	TestStore[t.Name] = t
-	return t, nil
+	env.Store[r.Name] = r
+	return r, nil
 }
 
 func (TestResource) Delete(ctx context.Context, targets []resource.Resource) error {
-	for _, target := range targets {
-		t := target.(TestResource)
-		delete(TestStore, t.Name)
+	env := testEnvFrom(ctx)
+	original := func(_ context.Context, targets []resource.Resource) error {
+		for _, target := range targets {
+			r := target.(TestResource)
+			delete(env.Store, r.Name)
+		}
+		return nil
 	}
-	return nil
+	if env.Hooks.Delete != nil {
+		return env.Hooks.Delete(ctx, targets, original)
+	}
+	return original(ctx, targets)
 }

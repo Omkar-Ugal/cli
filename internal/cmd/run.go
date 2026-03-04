@@ -166,18 +166,21 @@ func (c *RunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.
 	if sandbox != nil {
 		creatable = sandbox.WrapCreatable(creatable)
 	}
-	created, err := creatable.Create(ctx, fields)
-	if err != nil {
-		return err
+	created, opErr := creatable.Create(ctx, fields)
+	if opErr != nil && len(created) == 0 {
+		return opErr
 	}
 	if len(created) == 0 {
 		return fmt.Errorf("no instances created")
 	}
-	err = c.Output.
+	printErr := c.Output.
 		WithDefault(cmd.PrinterTypeKeyValue).
 		Print(ctx, stdio.Stdout, c.Field, Instance{}, created...)
-	if err != nil {
-		return err
+	if printErr != nil {
+		return errors.Join(opErr, printErr)
+	}
+	if opErr != nil {
+		return opErr
 	}
 
 	if c.Follow {
