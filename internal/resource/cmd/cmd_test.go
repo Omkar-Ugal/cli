@@ -150,6 +150,229 @@ func TestList(t *testing.T) {
 		assert.Contains(t, output, "test1")
 		assert.NotContains(t, output, "test2")
 	})
+
+	t.Run("sort-asc", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"name"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Equal(t, "test1\ntest2\n", output)
+	})
+
+	t.Run("sort-asc-explicit", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"+name"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Equal(t, "test1\ntest2\n", output)
+	})
+
+	t.Run("sort-desc", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"-name"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Equal(t, "test2\ntest1\n", output)
+	})
+
+	t.Run("sort-asc-nested", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"settings.y"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// test1 has settings.y="hello", test2 has settings.y="world"
+		// ascending: "hello" < "world", so test1 comes first
+		output := out.String()
+		assert.Equal(t, "test1\ntest2\n", output)
+	})
+
+	t.Run("sort-desc-nested", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"-settings.y"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// test1 has settings.y="hello", test2 has settings.y="world"
+		// descending: "world" > "hello", so test2 comes first
+		output := out.String()
+		assert.Equal(t, "test2\ntest1\n", output)
+	})
+
+	t.Run("sort-multi-field", func(t *testing.T) {
+		var out bytes.Buffer
+		// Both test1 and test2 have state="pending", so sort by state first,
+		// then by name descending to break the tie
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"state", "-name"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// Both have same state, so secondary sort by -name means test2 first
+		output := out.String()
+		assert.Equal(t, "test2\ntest1\n", output)
+	})
+
+	t.Run("sort-multi-field-mixed", func(t *testing.T) {
+		var out bytes.Buffer
+		// Sort by state ascending, then by settings.x ascending
+		// test1 has settings.x=42, test2 has settings.x=7
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Sort: xkong.GreedyStrings{"+state", "settings.x"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		// Both have same state, secondary sort by settings.x asc: 7 < 42, so test2 first
+		output := out.String()
+		assert.Equal(t, "test2\ntest1\n", output)
+	})
+}
+
+func TestParseSortSpecs(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []SortSpec
+		wantErr  bool
+	}{
+		{
+			name:     "empty string",
+			input:    []string{""},
+			expected: []SortSpec{},
+		},
+		{
+			name:  "single field ascending implicit",
+			input: []string{"name"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("name"), Descending: false},
+			},
+		},
+		{
+			name:  "single field ascending explicit",
+			input: []string{"+name"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("name"), Descending: false},
+			},
+		},
+		{
+			name:  "single field descending",
+			input: []string{"-name"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("name"), Descending: true},
+			},
+		},
+		{
+			name:  "nested field",
+			input: []string{"timing.uptime"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("timing.uptime"), Descending: false},
+			},
+		},
+		{
+			name:  "nested field descending",
+			input: []string{"-timing.uptime"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("timing.uptime"), Descending: true},
+			},
+		},
+		{
+			name:  "multiple fields",
+			input: []string{"state", "name"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("state"), Descending: false},
+				{Path: resource.ParseFieldPath("name"), Descending: false},
+			},
+		},
+		{
+			name:  "multiple fields mixed directions",
+			input: []string{"state", "-timing.uptime"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("state"), Descending: false},
+				{Path: resource.ParseFieldPath("timing.uptime"), Descending: true},
+			},
+		},
+		{
+			name:  "multiple fields with explicit prefix",
+			input: []string{"+state", "-name", "+id"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("state"), Descending: false},
+				{Path: resource.ParseFieldPath("name"), Descending: true},
+				{Path: resource.ParseFieldPath("id"), Descending: false},
+			},
+		},
+		{
+			name:  "with spaces",
+			input: []string{" state ", " -name "},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("state"), Descending: false},
+				{Path: resource.ParseFieldPath("name"), Descending: true},
+			},
+		},
+		{
+			name:    "empty field name",
+			input:   []string{"-"},
+			wantErr: true,
+		},
+		{
+			name:  "empty field in list",
+			input: []string{"state", "", "name"},
+			expected: []SortSpec{
+				{Path: resource.ParseFieldPath("state"), Descending: false},
+				{Path: resource.ParseFieldPath("name"), Descending: false},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			specs, err := parseSortSpecs(tt.input...)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, specs)
+		})
+	}
 }
 
 func TestListOutput(t *testing.T) {
