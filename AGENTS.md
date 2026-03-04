@@ -32,4 +32,8 @@ This repo contains the Go-based Unikraft CLI. Use this file for contributor-faci
 
 - If modifying existing functionality that has tests, add new tests to cover the changes in behavior.
 - If wanting to explore Go documentation or inspect Go code, use the `go doc` command - don't explore the filesystem outside of the current directory for this.
-- Use the newest Go features you know about; do not worry about old Go versions.
+- Use the newest Go features you know about; do not worry about old Go versions. For example:
+  - Use `errors.Join` for combining errors.
+  - Use the `slices`/`maps`/`cmp`/`iter` packages for common operations on slices/maps/comparisons/iteration.
+  - Use `for i := range <n>` for iterating a fixed number of times.
+  - No need to use `i := i` in loops to capture loop variables for closures; Go 1.21+ captures them by default.
