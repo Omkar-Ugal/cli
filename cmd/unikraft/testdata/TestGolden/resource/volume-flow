@@ -9,6 +9,8 @@ stdout:
 	state:      available
 	size:       10MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 $ unikraft resource get volume:test/test-$UNIQ_VOLUME
 
@@ -21,6 +23,8 @@ stdout:
 	state:      available
 	size:       10MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 $ unikraft resource list
 
@@ -40,6 +44,8 @@ stdout:
 	- size:       10MiB
 	+ size:       20MiB
 	  persistent: true
+	  timestamps:
+	    created:  RELATIVE_TIME
 
 $ unikraft resource get volume:test/test-$UNIQ_VOLUME
 
@@ -52,6 +58,8 @@ stdout:
 	state:      available
 	size:       20MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 $ unikraft volume get test-$UNIQ_VOLUME
 
@@ -62,10 +70,12 @@ stdout:
 	state:      available
 	size:       20MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 $ unikraft resource delete --all --force
 
 $ unikraft volume ls
 
 stdout:
-	METRO  NAME  STATE  SIZE
+	METRO  NAME  STATE  SIZE  CREATED
