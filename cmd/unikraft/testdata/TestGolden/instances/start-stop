@@ -18,6 +18,8 @@ stdout:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
 
 $ unikraft instance stop test-$UNIQ_INST
 
@@ -40,6 +42,8 @@ stdout:
 	  - uuid:       12345678-1234-1234-1234-123456789abc
 	    private-ip: 10.X.X.X
 	    mac:        aa:bb:cc:dd:ee:ff
+	  timestamps:
+	    created:    RELATIVE_TIME
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -61,6 +65,8 @@ stdout:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
 
 $ unikraft instance start test-$UNIQ_INST
 
@@ -83,6 +89,8 @@ stdout:
 	  - uuid:       12345678-1234-1234-1234-123456789abc
 	    private-ip: 10.X.X.X
 	    mac:        aa:bb:cc:dd:ee:ff
+	  timestamps:
+	    created:    RELATIVE_TIME
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -104,6 +112,8 @@ stdout:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
 
 $ unikraft instance edit test-$UNIQ_INST --set state=stopped
 
@@ -126,6 +136,8 @@ stdout:
 	  - uuid:       12345678-1234-1234-1234-123456789abc
 	    private-ip: 10.X.X.X
 	    mac:        aa:bb:cc:dd:ee:ff
+	  timestamps:
+	    created:    RELATIVE_TIME
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -147,6 +159,8 @@ stdout:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
 
 $ unikraft instance edit test-$UNIQ_INST --set state=running
 
@@ -169,6 +183,8 @@ stdout:
 	  - uuid:       12345678-1234-1234-1234-123456789abc
 	    private-ip: 10.X.X.X
 	    mac:        aa:bb:cc:dd:ee:ff
+	  timestamps:
+	    created:    RELATIVE_TIME
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -190,6 +206,8 @@ stdout:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
 	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
 
 $ unikraft instance delete test-$UNIQ_INST
 

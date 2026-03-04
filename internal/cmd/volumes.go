@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"time"
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
@@ -173,7 +172,7 @@ type Volume struct {
 	Persistent bool                `mirror:"volume.persistent" field:",long"`
 
 	Timestamps struct {
-		CreatedAt time.Time `mirror:"volume.created_at"`
+		Created types.RelativeTime `mirror:"volume.created_at" field:",short"`
 	}
 
 	AttachedTo []struct {

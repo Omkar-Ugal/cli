@@ -1,7 +1,7 @@
 $ unikraft service list
 
 stdout:
-	METRO  NAME  AUTOSCALE  FQDN  SERVICES
+	METRO  NAME  AUTOSCALE  CREATED  FQDN  SERVICES
 
 $ unikraft service create --set name=test-$UNIQ_SVC_A --set metro=test --set domains=fqdn=$UNIQ_DOMAIN_A.unikraft.example --set services=443:8080/tls+http --set services=80:443/http+redirect
 
@@ -13,6 +13,8 @@ stdout:
 	limits:
 	  soft:        1
 	  hard:        65535
+	timestamps:
+	  created:     RELATIVE_TIME
 	domains:
 	- fqdn:        <DOMAIN_A>.unikraft.example
 	  certificate:
@@ -32,6 +34,8 @@ stdout:
 	limits:
 	  soft:        1
 	  hard:        65535
+	timestamps:
+	  created:     RELATIVE_TIME
 	domains:
 	- fqdn:        <DOMAIN_B>.unikraft.example
 	  certificate:
@@ -44,9 +48,9 @@ stdout:
 $ unikraft service list
 
 stdout:
-	METRO  NAME               AUTOSCALE  FQDN                           SERVICES
-	test   test-<SVC_B>  false      <DOMAIN_B>.unikraft.example  443:8080/tls+http, 80:443/http+redirect
-	test   test-<SVC_A>  false      <DOMAIN_A>.unikraft.example  443:8080/tls+http, 80:443/http+redirect
+	METRO  NAME               AUTOSCALE  CREATED   FQDN                           SERVICES
+	test   test-<SVC_B>  false      RELATIVE_TIME  <DOMAIN_B>.unikraft.example  443:8080/tls+http, 80:443/http+redirect
+	test   test-<SVC_A>  false      RELATIVE_TIME  <DOMAIN_A>.unikraft.example  443:8080/tls+http, 80:443/http+redirect
 
 $ unikraft service inspect test-$UNIQ_SVC_A test-$UNIQ_SVC_B
 
@@ -58,6 +62,8 @@ stdout:
 	limits:
 	  soft:        1
 	  hard:        65535
+	timestamps:
+	  created:     RELATIVE_TIME
 	domains:
 	- fqdn:        <DOMAIN_A>.unikraft.example
 	  certificate:
@@ -74,6 +80,8 @@ stdout:
 	limits:
 	  soft:        1
 	  hard:        65535
+	timestamps:
+	  created:     RELATIVE_TIME
 	domains:
 	- fqdn:        <DOMAIN_B>.unikraft.example
 	  certificate:

@@ -27,7 +27,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
@@ -75,7 +75,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
@@ -131,7 +131,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
@@ -187,7 +187,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
@@ -249,7 +249,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
@@ -309,7 +309,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
@@ -373,7 +373,7 @@ stdout:
 	  persistent
 	  autoscale
 	  limits, limits.soft, limits.hard
-	  timestamps, timestamps.created-at
+	  timestamps, timestamps.created
 	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid

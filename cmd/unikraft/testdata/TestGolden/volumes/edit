@@ -17,6 +17,8 @@ stdout:
 	state:      available
 	size:       20MiB
 	persistent: true
+	timestamps:
+	  created:  RELATIVE_TIME
 
 $ unikraft volume delete test-$UNIQ_VOLUME
 
