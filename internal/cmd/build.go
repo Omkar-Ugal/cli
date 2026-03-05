@@ -13,6 +13,7 @@ import (
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/images"
 	imagespec "unikraft.com/x/image-spec"
+	"unikraft.com/x/kingkong"
 	"unikraft.com/x/kraftfile"
 )
 
@@ -25,6 +26,41 @@ type BuildCmd struct {
 	NoCache  bool     `help:"Do not use cache when building the image."`
 	Secret   []string `help:"Secret to expose to the build (format: \"id=mysecret[,src=/local/secret]\")."`
 	SSH      []string `help:"SSH agent socket or keys to expose to the build (format: \"default|<id>[=<socket>|<key>[,<key>]]\")."`
+}
+
+func (BuildCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Build the project in the current directory",
+			Commands: []string{
+				"unikraft build .",
+			},
+		},
+		{
+			Description: "Build and publish an image from a Kraftfile",
+			Commands: []string{
+				"unikraft build . --output my-org/my-app:latest",
+			},
+		},
+		{
+			Description: "Build with custom build arguments",
+			Commands: []string{
+				"unikraft build ./app --build-arg VERSION=1.2.3 --build-arg COMMIT=abc123",
+			},
+		},
+		{
+			Description: "Build with secret and SSH access",
+			Commands: []string{
+				"unikraft build . --secret id=npm,src=$HOME/.npmrc --ssh default=$SSH_AUTH_SOCK",
+			},
+		},
+		{
+			Description: "Build and save to a local OCI archive",
+			Commands: []string{
+				"unikraft build . --output ./dist/my-app.oci.tar",
+			},
+		},
+	}
 }
 
 func (c *BuildCmd) Run(ctx context.Context, cfg *config.Config) error {

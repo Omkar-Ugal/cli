@@ -191,6 +191,11 @@ unikraft instances edit my-instance --set image=nginx:1.27
 unikraft volumes clone my-volume --set name=my-volume-backup
 ```
 
+**Build and publish an image from a Kraftfile:**
+```sh
+unikraft build . --output my-org/my-app:latest
+```
+
 ## Configuration
 
 The CLI stores configuration in `~/.config/unikraft/config.yaml` (or the path specified by `UNIKRAFT_CONFIG`).

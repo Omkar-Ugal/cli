@@ -74,6 +74,12 @@ func (cli UnikraftCLI) Examples() []kingkong.Example {
 			},
 		},
 		{
+			Description: "Build and publish an image from a Kraftfile",
+			Commands: []string{
+				"unikraft build . --output my-org/my-app:latest",
+			},
+		},
+		{
 			Description: "Deploy a new instance from an image",
 			Commands: []string{
 				"unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero policy=on nginx:latest",

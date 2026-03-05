@@ -23,6 +23,12 @@ func buildTestCases(t *testing.T, cfg *integration.Config) []testCase {
 
 	return []testCase{
 		{
+			name: "help",
+			commands: []command{
+				{args: []string{unikraftCmd, "build", "--help"}},
+			},
+		},
+		{
 			name:   "busybox",
 			online: true,
 			context: map[string]string{

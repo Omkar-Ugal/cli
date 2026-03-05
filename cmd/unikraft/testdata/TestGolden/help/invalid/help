@@ -45,6 +45,9 @@ stdout:
 	  # List instances across metros
 	  unikraft instances list
 
+	  # Build and publish an image from a Kraftfile
+	  unikraft build . --output my-org/my-app:latest
+
 	  # Deploy a new instance from an image
 	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
 	  policy=on nginx:latest
@@ -126,6 +129,9 @@ stdout:
 
 	  # List instances across metros
 	  unikraft instances list
+
+	  # Build and publish an image from a Kraftfile
+	  unikraft build . --output my-org/my-app:latest
 
 	  # Deploy a new instance from an image
 	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
