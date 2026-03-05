@@ -1,10 +1,10 @@
 $ unikraft service --help
 
 stdout:
+	Manage Unikraft Cloud services.
+
 	Usage:
 	  unikraft services <command> [flags]
-
-	Manage Unikraft Cloud services.
 
 	Commands:
 	  get, inspect, show
@@ -55,10 +55,10 @@ stdout:
 $ unikraft service get --help
 
 stdout:
+	Inspect a service.
+
 	Usage:
 	  unikraft services get <name> ... [flags]
-
-	Inspect a service.
 
 	Arguments:
 	  <name> ...
@@ -111,10 +111,10 @@ stdout:
 $ unikraft service list --help
 
 stdout:
+	List services.
+
 	Usage:
 	  unikraft services list [<name> ...] [flags]
-
-	List services.
 
 	Arguments:
 	  [<name> ...]
@@ -171,10 +171,10 @@ stdout:
 $ unikraft service wait --help
 
 stdout:
+	Wait for services to match a filter.
+
 	Usage:
 	  unikraft services wait --until=UNTIL <name> ... [flags]
-
-	Wait for services to match a filter.
 
 	Arguments:
 	  <name> ...
@@ -229,10 +229,10 @@ stdout:
 $ unikraft service create --help
 
 stdout:
+	Create a service.
+
 	Usage:
 	  unikraft services create [flags]
-
-	Create a service.
 
 	Examples:
 	  # Create a new service group
@@ -289,10 +289,10 @@ stdout:
 $ unikraft service edit --help
 
 stdout:
+	Edit a service.
+
 	Usage:
 	  unikraft services edit <name> [flags]
-
-	Edit a service.
 
 	Arguments:
 	  <name>
@@ -353,10 +353,10 @@ stdout:
 $ unikraft service delete --help
 
 stdout:
+	Remove a service.
+
 	Usage:
 	  unikraft services delete [<name> ...] [flags]
-
-	Remove a service.
 
 	Arguments:
 	  [<name> ...]

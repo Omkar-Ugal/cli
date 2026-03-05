@@ -1,10 +1,10 @@
 $ unikraft login --help
 
 stdout:
+	Login to Unikraft Cloud.
+
 	Usage:
 	  unikraft login [flags]
-
-	Login to Unikraft Cloud.
 
 	Flags:
 	      --check
@@ -46,10 +46,10 @@ stdout:
 $ unikraft logout --help
 
 stdout:
+	Logout from Unikraft Cloud.
+
 	Usage:
 	  unikraft logout [flags]
-
-	Logout from Unikraft Cloud.
 
 	Global flags:
 	  -h, --help
@@ -73,10 +73,10 @@ stdout:
 $ unikraft profile --help
 
 stdout:
+	Manage Unikraft Cloud profiles.
+
 	Usage:
 	  unikraft profile <command> [flags]
-
-	Manage Unikraft Cloud profiles.
 
 	Commands:
 	  get, inspect, show
@@ -113,10 +113,10 @@ stdout:
 $ unikraft profile get --help
 
 stdout:
+	Inspect a profile.
+
 	Usage:
 	  unikraft profile get <name> ... [flags]
-
-	Inspect a profile.
 
 	Arguments:
 	  <name> ...
@@ -161,10 +161,10 @@ stdout:
 $ unikraft profile list --help
 
 stdout:
+	List profiles.
+
 	Usage:
 	  unikraft profile list [<name> ...] [flags]
-
-	List profiles.
 
 	Arguments:
 	  [<name> ...]
@@ -213,10 +213,10 @@ stdout:
 $ unikraft profile use --help
 
 stdout:
+	Switch between profiles.
+
 	Usage:
 	  unikraft profile use <name>
-
-	Switch between profiles.
 
 	Arguments:
 	  <name>
@@ -244,10 +244,10 @@ stdout:
 $ unikraft metro --help
 
 stdout:
+	Manage Unikraft Cloud metros.
+
 	Usage:
 	  unikraft metros <command> [flags]
-
-	Manage Unikraft Cloud metros.
 
 	Commands:
 	  get, inspect, show
@@ -284,10 +284,10 @@ stdout:
 $ unikraft metro get --help
 
 stdout:
+	Inspect a metro.
+
 	Usage:
 	  unikraft metros get <name> ... [flags]
-
-	Inspect a metro.
 
 	Arguments:
 	  <name> ...
@@ -334,10 +334,10 @@ stdout:
 $ unikraft metro list --help
 
 stdout:
+	List metros.
+
 	Usage:
 	  unikraft metros list [<name> ...] [flags]
-
-	List metros.
 
 	Arguments:
 	  [<name> ...]
