@@ -73,7 +73,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 				return err
 			}
 			if name != "" {
-				req.VolName = ptr.ToPtr(name)
+				req.VolName = new(name)
 			}
 		case "tags":
 			tags, err := value.Parse[[]string](values)
@@ -229,7 +229,7 @@ func (Volume) List(ctx context.Context) ([]resource.Resource, error) {
 	}
 	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing volumes")
-		resp, err := c.GetVolumes(ctx, nil, true)
+		resp, err := c.GetVolumes(ctx, nil, new(true))
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +253,7 @@ func (Volume) Get(ctx context.Context, keys []string) ([]resource.Resource, erro
 
 	return group.CollectRefsSlices(ctx, g, multimetro.ParseKeys(keys).Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) ([]resource.Resource, group.Refs, error) {
 		log.G(ctx).Trace().Msg("getting volumes")
-		resp, err := c.GetVolumes(ctx, refs.NameOrUUIDs(), true)
+		resp, err := c.GetVolumes(ctx, refs.NameOrUUIDs(), new(true))
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, nil, err
 		}
@@ -374,7 +374,7 @@ func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resou
 			Uuid:  &volume.UUID,
 			Op:    platform.UpdateVolumesRequestItemOp(patch.Op),
 			Prop:  patch.Prop,
-			Value: platform.Ptr(patch.Value),
+			Value: new(patch.Value),
 		})
 	}
 

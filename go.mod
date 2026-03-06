@@ -1,6 +1,6 @@
 module unikraft.com/cli
 
-go 1.25.7
+go 1.26.0
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
@@ -39,7 +39,7 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.12.0
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.0.0-20260220160550-c3fd5262f0e2
+	unikraft.com/cloud/sdk v0.0.0-20260304174346-95a9a57f1328
 	unikraft.com/x/colors v0.0.0-20260304162956-523940cab1de
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/guesstermwidth v0.0.0-20260304162956-523940cab1de
