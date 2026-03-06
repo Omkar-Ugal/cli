@@ -340,7 +340,7 @@ func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields [
 			Uuid:  &sg.UUID,
 			Op:    platform.UpdateServiceGroupsRequestItemOp(patch.Op),
 			Prop:  patch.Prop,
-			Value: platform.Ptr(patch.Value),
+			Value: new(patch.Value),
 		})
 	}
 

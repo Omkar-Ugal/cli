@@ -405,7 +405,7 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 			Uuid:  &instance.UUID,
 			Op:    platform.UpdateInstancesRequestItemOp(patch.Op),
 			Prop:  patch.Prop,
-			Value: platform.Ptr(patch.Value),
+			Value: new(patch.Value),
 		})
 	}
 
@@ -527,7 +527,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 					reqVol.Name = &vol.Name
 				}
 				if vol.Size > 0 {
-					reqVol.SizeMb = ptr.ToPtr(int64(vol.Size))
+					reqVol.SizeMb = new(int64(vol.Size))
 				}
 				if vol.Readonly {
 					reqVol.Readonly = &vol.Readonly
@@ -604,7 +604,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 			req.Replicas = &replicas
 		case "wait-timeout":
 			timeout := field.Create.Set.(types.DurationS)
-			req.TimeoutS = ptr.ToPtr(int64(timeout))
+			req.TimeoutS = new(int64(timeout))
 		case "features":
 			features := field.Create.Set.([]string)
 			for _, f := range features {

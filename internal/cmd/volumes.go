@@ -73,7 +73,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 				return err
 			}
 			if name != "" {
-				req.VolName = ptr.ToPtr(name)
+				req.VolName = new(name)
 			}
 		case "tags":
 			tags, err := value.Parse[[]string](values)
@@ -374,7 +374,7 @@ func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resou
 			Uuid:  &volume.UUID,
 			Op:    platform.UpdateVolumesRequestItemOp(patch.Op),
 			Prop:  patch.Prop,
-			Value: platform.Ptr(patch.Value),
+			Value: new(patch.Value),
 		})
 	}
 

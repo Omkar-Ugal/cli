@@ -157,8 +157,8 @@ func (r *logsReader) readChunk(p []byte, off int64) (actualOffset int64, n int, 
 		Msg("fetching logs chunk")
 
 	req := platform.GetInstancesLogsRequestItem{
-		Offset: platform.Ptr(off),
-		Limit:  platform.Ptr(limit),
+		Offset: new(off),
+		Limit:  new(limit),
 	}
 	if r.id.Name != nil {
 		req.Name = r.id.Name
