@@ -19,6 +19,14 @@ The official command-line interface for [Unikraft Cloud](https://unikraft.cloud)
 ## Installation
 
 <details>
+<summary><strong>Homebrew (macOS & Linux)</strong></summary>
+
+```bash
+brew install unikraft/tap/unikraft
+```
+</details>
+
+<details>
 <summary><strong>Debian/Ubuntu</strong></summary>
 
 ```bash
