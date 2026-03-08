@@ -96,6 +96,10 @@ release:
     > This is a **stable** version of the Unikraft CLI.
 
     ## Installation
+    ### 1-liner (macOS & Linux)
+    ```bash
+    curl --proto '=https' --tlsv1.2 -LsSf https://unikraft.com/cli/install.sh | sh
+    ```
     ### Homebrew (macOS & Linux)
     ```bash
     brew install unikraft/tap/unikraft
