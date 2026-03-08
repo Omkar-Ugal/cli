@@ -15,7 +15,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.2.1+incompatible
+	github.com/docker/cli v29.3.0+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
 	github.com/google/uuid v1.6.0
