@@ -6,7 +6,7 @@ stdout:
 $ unikraft instance edit test-$UNIQ_INST --output quiet --set image=redis:latest --set runtime.args=after,second --set runtime.env=A=3,B=4 --set resources.memory=256
 
 stdout:
-	test/test-<INST>
+	test-<INST>
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -34,4 +34,4 @@ stdout:
 $ unikraft instance delete test-$UNIQ_INST
 
 stdout:
-	test/test-<INST>
+	test-<INST>

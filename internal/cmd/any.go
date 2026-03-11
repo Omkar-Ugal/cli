@@ -90,6 +90,10 @@ func (k anyResourceKey) String() string {
 	return k.typ + ":" + k.key
 }
 
+func (k anyResourceKey) Canonical() string {
+	return k.String()
+}
+
 func (k *anyResourceKey) UnmarshalText(text []byte) error {
 	typ, key, found := strings.Cut(string(text), ":")
 	if found {

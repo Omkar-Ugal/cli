@@ -6,7 +6,7 @@ stdout:
 $ unikraft volume edit test-$UNIQ_VOLUME --output quiet --set size=20
 
 stdout:
-	test/test-<VOLUME>
+	test-<VOLUME>
 
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
@@ -23,4 +23,4 @@ stdout:
 $ unikraft volume delete test-$UNIQ_VOLUME
 
 stdout:
-	test/test-<VOLUME>
+	test-<VOLUME>

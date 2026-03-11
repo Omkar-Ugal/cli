@@ -106,6 +106,10 @@ func (k staticKey) String() string {
 	return string(k)
 }
 
+func (k staticKey) Canonical() string {
+	return string(k)
+}
+
 func (t TestResource) Key() resource.Key {
 	return staticKey(t.Name)
 }

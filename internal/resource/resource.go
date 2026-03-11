@@ -21,6 +21,7 @@ type Type struct {
 
 type Key interface {
 	fmt.Stringer
+	Canonical() string
 }
 
 type Resource interface {

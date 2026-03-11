@@ -24,26 +24,25 @@ stdout:
 $ unikraft instance stop test-$UNIQ_INST
 
 stdout:
-	  metro:        test
-	  name:         test-<INST>
-	  uuid:         12345678-1234-1234-1234-123456789abc
-	- state:        running
+	+ metro:        test
+	+ name:         test-<INST>
+	+ uuid:         12345678-1234-1234-1234-123456789abc
 	+ state:        stopped
-	  image:        nginx
-	  runtime:
-	    env:
-	      A:        1
-	      B:        2
-	      C:        3
-	  resources:
-	    memory:     128MiB
-	    vcpus:      1
-	  networks:
-	  - uuid:       12345678-1234-1234-1234-123456789abc
-	    private-ip: 10.X.X.X
-	    mac:        aa:bb:cc:dd:ee:ff
-	  timestamps:
-	    created:    RELATIVE_TIME
+	+ image:        nginx
+	+ runtime:
+	+   env:
+	+     A:        1
+	+     B:        2
+	+     C:        3
+	+ resources:
+	+   memory:     128MiB
+	+   vcpus:      1
+	+ networks:
+	+ - uuid:       12345678-1234-1234-1234-123456789abc
+	+   private-ip: 10.X.X.X
+	+   mac:        aa:bb:cc:dd:ee:ff
+	+ timestamps:
+	+   created:    RELATIVE_TIME
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -71,26 +70,25 @@ stdout:
 $ unikraft instance start test-$UNIQ_INST
 
 stdout:
-	  metro:        test
-	  name:         test-<INST>
-	  uuid:         12345678-1234-1234-1234-123456789abc
-	- state:        stopped
+	+ metro:        test
+	+ name:         test-<INST>
+	+ uuid:         12345678-1234-1234-1234-123456789abc
 	+ state:        running
-	  image:        nginx
-	  runtime:
-	    env:
-	      A:        1
-	      B:        2
-	      C:        3
-	  resources:
-	    memory:     128MiB
-	    vcpus:      1
-	  networks:
-	  - uuid:       12345678-1234-1234-1234-123456789abc
-	    private-ip: 10.X.X.X
-	    mac:        aa:bb:cc:dd:ee:ff
-	  timestamps:
-	    created:    RELATIVE_TIME
+	+ image:        nginx
+	+ runtime:
+	+   env:
+	+     A:        1
+	+     B:        2
+	+     C:        3
+	+ resources:
+	+   memory:     128MiB
+	+   vcpus:      1
+	+ networks:
+	+ - uuid:       12345678-1234-1234-1234-123456789abc
+	+   private-ip: 10.X.X.X
+	+   mac:        aa:bb:cc:dd:ee:ff
+	+ timestamps:
+	+   created:    RELATIVE_TIME
 
 $ unikraft instance inspect test-$UNIQ_INST
 
@@ -212,4 +210,4 @@ stdout:
 $ unikraft instance delete test-$UNIQ_INST
 
 stdout:
-	test/test-<INST>
+	test-<INST>

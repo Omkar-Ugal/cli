@@ -22,52 +22,52 @@ func TestParseKey(t *testing.T) {
 		{
 			name:     "metro with uuid",
 			input:    "ams/" + testUUID,
-			expected: Key{Metro: "ams", UUID: testUUID},
+			expected: Key{Metro: "ams", UUID: testUUID, Display: "ams/" + testUUID},
 		},
 		{
 			name:     "metro with explicit uuid",
 			input:    "ams/uuid:" + testUUID,
-			expected: Key{Metro: "ams", UUID: testUUID},
+			expected: Key{Metro: "ams", UUID: testUUID, Display: "ams/uuid:" + testUUID},
 		},
 		{
 			name:     "metro with name",
 			input:    "ams/api-key",
-			expected: Key{Metro: "ams", Name: "api-key"},
+			expected: Key{Metro: "ams", Name: "api-key", Display: "ams/api-key"},
 		},
 		{
 			name:     "metro with explicit name",
 			input:    "ams/name:api-key",
-			expected: Key{Metro: "ams", Name: "api-key"},
+			expected: Key{Metro: "ams", Name: "api-key", Display: "ams/name:api-key"},
 		},
 		{
 			name:     "uuid only",
 			input:    testUUID,
-			expected: Key{UUID: testUUID},
+			expected: Key{UUID: testUUID, Display: testUUID},
 		},
 		{
 			name:     "explicit uuid only",
 			input:    "uuid:" + testUUID,
-			expected: Key{UUID: testUUID},
+			expected: Key{UUID: testUUID, Display: "uuid:" + testUUID},
 		},
 		{
 			name:     "name only",
 			input:    "api-key",
-			expected: Key{Name: "api-key"},
+			expected: Key{Name: "api-key", Display: "api-key"},
 		},
 		{
 			name:     "explicit name only",
 			input:    "name:api-key",
-			expected: Key{Name: "api-key"},
+			expected: Key{Name: "api-key", Display: "name:api-key"},
 		},
 		{
 			name:     "name is uuid",
 			input:    "name:" + testUUID,
-			expected: Key{Name: testUUID},
+			expected: Key{Name: testUUID, Display: "name:" + testUUID},
 		},
 		{
 			name:     "explicit uuid non-uuid",
 			input:    "uuid:not-a-uuid",
-			expected: Key{UUID: "not-a-uuid"},
+			expected: Key{UUID: "not-a-uuid", Display: "uuid:not-a-uuid"},
 		},
 	}
 
@@ -155,9 +155,9 @@ func TestParseKeys(t *testing.T) {
 		"uuid:not-a-uuid",
 	}
 	expected := Keys{
-		{Metro: "ams", UUID: testUUID},
-		{Metro: "lhr", Name: "api-key"},
-		{UUID: "not-a-uuid"},
+		{Metro: "ams", UUID: testUUID, Display: "ams/" + testUUID},
+		{Metro: "lhr", Name: "api-key", Display: "lhr/name:api-key"},
+		{UUID: "not-a-uuid", Display: "uuid:not-a-uuid"},
 	}
 
 	assert.Equal(t, expected, ParseKeys(inputs))
