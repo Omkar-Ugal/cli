@@ -827,14 +827,14 @@ func (c *InstancesStartCmd) Run(ctx context.Context, stdio config.Stdio) error {
 
 	keySet := make(map[string]struct{}, len(started))
 	for _, k := range started {
-		keySet[k.String()] = struct{}{}
+		keySet[k.Canonical()] = struct{}{}
 	}
 	before = slices.DeleteFunc(slices.Clone(before), func(r resource.Resource) bool {
-		_, ok := keySet[r.Key().String()]
+		_, ok := keySet[r.Key().Canonical()]
 		return !ok
 	})
 	updated = slices.DeleteFunc(slices.Clone(updated), func(r resource.Resource) bool {
-		_, ok := keySet[r.Key().String()]
+		_, ok := keySet[r.Key().Canonical()]
 		return !ok
 	})
 
@@ -903,14 +903,14 @@ func (c *InstancesStopCmd) Run(ctx context.Context, stdio config.Stdio) error {
 
 	keySet := make(map[string]struct{}, len(stopped))
 	for _, k := range stopped {
-		keySet[k.String()] = struct{}{}
+		keySet[k.Canonical()] = struct{}{}
 	}
 	before = slices.DeleteFunc(slices.Clone(before), func(r resource.Resource) bool {
-		_, ok := keySet[r.Key().String()]
+		_, ok := keySet[r.Key().Canonical()]
 		return !ok
 	})
 	updated = slices.DeleteFunc(slices.Clone(updated), func(r resource.Resource) bool {
-		_, ok := keySet[r.Key().String()]
+		_, ok := keySet[r.Key().Canonical()]
 		return !ok
 	})
 
@@ -977,14 +977,14 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 
 	keySet := make(map[string]struct{}, len(started))
 	for _, k := range started {
-		keySet[k.String()] = struct{}{}
+		keySet[k.Canonical()] = struct{}{}
 	}
 	before = slices.DeleteFunc(slices.Clone(before), func(r resource.Resource) bool {
-		_, ok := keySet[r.Key().String()]
+		_, ok := keySet[r.Key().Canonical()]
 		return !ok
 	})
 	updated = slices.DeleteFunc(slices.Clone(updated), func(r resource.Resource) bool {
-		_, ok := keySet[r.Key().String()]
+		_, ok := keySet[r.Key().Canonical()]
 		return !ok
 	})
 
