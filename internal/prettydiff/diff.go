@@ -83,12 +83,20 @@ func splitLines(diffs []diffmatchpatch.Diff) []line {
 			if ended {
 				segment = text[:idx]
 			}
-			part := diffmatchpatch.Diff{Type: diff.Type, Text: segment}
-			if diff.Type != diffmatchpatch.DiffInsert {
-				oldLine = append(oldLine, part)
+			addSegment := true
+			if ended && segment == "" && (len(oldLine) > 0 || len(newLine) > 0) {
+				// A leading newline in this diff chunk is just the line terminator
+				// for a line that already has content; don't add an empty segment.
+				addSegment = false
 			}
-			if diff.Type != diffmatchpatch.DiffDelete {
-				newLine = append(newLine, part)
+			if addSegment {
+				part := diffmatchpatch.Diff{Type: diff.Type, Text: segment}
+				if diff.Type != diffmatchpatch.DiffInsert {
+					oldLine = append(oldLine, part)
+				}
+				if diff.Type != diffmatchpatch.DiffDelete {
+					newLine = append(newLine, part)
+				}
 			}
 			if !ended {
 				break
@@ -121,13 +129,12 @@ func flushLines(lines []line, oldLine, newLine *[]diffmatchpatch.Diff, oldEnded,
 	if !oldEnded && !newEnded {
 		return lines
 	}
+
+	oldText := lineText(*oldLine)
+	newText := lineText(*newLine)
 	if oldEnded && newEnded {
-		oldText := lineText(*oldLine)
-		newText := lineText(*newLine)
 		if oldText == newText {
-			// diff segments can still be mixed even when the visible line text
-			// matches (e.g. insertions splitting shared prefixes), so we've had to
-			// compare text
+			// Both lines ended and have the same text - output as equal
 			lines = append(lines, line{
 				op: diffmatchpatch.DiffEqual,
 				diffs: []diffmatchpatch.Diff{{
@@ -139,7 +146,40 @@ func flushLines(lines []line, oldLine, newLine *[]diffmatchpatch.Diff, oldEnded,
 			*newLine = nil
 			return lines
 		}
+	} else if oldEnded && !newEnded {
+		// Old line ended (from a delete newline), new line hasn't.
+		// If they have the same text, the new side just hasn't seen its newline
+		// yet. We should output as equal and clear both to avoid a spurious
+		// delete+insert pair.
+		if oldText == newText && oldText != "" {
+			lines = append(lines, line{
+				op: diffmatchpatch.DiffEqual,
+				diffs: []diffmatchpatch.Diff{{
+					Type: diffmatchpatch.DiffEqual,
+					Text: oldText,
+				}},
+			})
+			*oldLine = nil
+			*newLine = nil
+			return lines
+		}
+	} else if !oldEnded && newEnded {
+		// New line ended (from an insert newline), old line hasn't.
+		// Similar logic - if they match, output as equal.
+		if oldText == newText && newText != "" {
+			lines = append(lines, line{
+				op: diffmatchpatch.DiffEqual,
+				diffs: []diffmatchpatch.Diff{{
+					Type: diffmatchpatch.DiffEqual,
+					Text: newText,
+				}},
+			})
+			*oldLine = nil
+			*newLine = nil
+			return lines
+		}
 	}
+
 	if oldEnded {
 		if len(*oldLine) > 0 {
 			lines = append(lines, line{op: diffmatchpatch.DiffDelete, diffs: *oldLine})

@@ -90,6 +90,24 @@ func TestDiffPrettyText_NoTrailingNewline(t *testing.T) {
 	}, strings.Split(strings.TrimSuffix(clean, "\n"), "\n"))
 }
 
+func TestDiffPrettyText_EnvDeletesNoInsert(t *testing.T) {
+	dmp := diffmatchpatch.New()
+	before := "    env:\n      A:        1\n      B:        2\n      C:        3\n      D:        4\nother:\n"
+	after := "    env:\n      B:        2\n      C:        3\nother:\n"
+
+	diffs := dmp.DiffMain(before, after, false)
+	result := Render(diffs)
+	clean := vtclean.Clean(result, false)
+	require.Equal(t, []string{
+		"      env:",
+		"-       A:        1",
+		"        B:        2",
+		"        C:        3",
+		"-       D:        4",
+		"  other:",
+	}, strings.Split(strings.TrimSuffix(clean, "\n"), "\n"))
+}
+
 func TestDiffPrettyText_EmptyStrings(t *testing.T) {
 	dmp := diffmatchpatch.New()
 
