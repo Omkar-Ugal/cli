@@ -76,8 +76,8 @@ var (
 )
 
 type TestSettings struct {
-	X int
-	Y string
+	Foo int
+	Bar string
 }
 
 type TestAuthor struct {
@@ -131,7 +131,7 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 			Value:     t.Name,
 			Verbosity: resource.FieldVerbosityShort,
 			Create: &resource.Patch{
-				Set: "",
+				Set: t.Name, // Use actual value, not empty string
 			},
 		},
 		{
@@ -166,30 +166,48 @@ func (t TestResource) Fields() ([]resource.Field, error) {
 				return "computed-" + t.Name, nil
 			},
 		},
+		// Create-only field: Value is nil, so it only appears during create
+		{
+			Name:      "create_only",
+			Value:     nil,
+			Verbosity: resource.FieldVerbosityLong,
+			Create: &resource.Patch{
+				Set: "", // Type template only - no actual value since Value is nil
+			},
+		},
+		// Edit-only field: Value is nil, so it only appears during edit
+		{
+			Name:      "edit_only",
+			Value:     nil,
+			Verbosity: resource.FieldVerbosityLong,
+			Edit: &resource.Patch{
+				Set: "", // Type template only - no actual value since Value is nil
+			},
+		},
 		{
 			Name:      "settings",
 			Verbosity: resource.FieldVerbosityLong,
 			Subfields: []resource.Field{
 				{
-					Name:      "x",
-					Value:     t.Settings.X,
+					Name:      "foo",
+					Value:     t.Settings.Foo,
 					Verbosity: resource.FieldVerbosityLong,
 					Create: &resource.Patch{
-						Set: 0,
+						Set: t.Settings.Foo, // Use actual value
 					},
 					Edit: &resource.Patch{
-						Set: 0,
+						Set: t.Settings.Foo, // Use actual value
 					},
 				},
 				{
-					Name:      "y",
-					Value:     t.Settings.Y,
+					Name:      "bar",
+					Value:     t.Settings.Bar,
 					Verbosity: resource.FieldVerbosityLong,
 					Create: &resource.Patch{
-						Set: "",
+						Set: t.Settings.Bar, // Use actual value
 					},
 					Edit: &resource.Patch{
-						Set: "",
+						Set: t.Settings.Bar, // Use actual value
 					},
 				},
 			},
@@ -294,10 +312,10 @@ func (TestResource) Create(ctx context.Context, fields []resource.Field) ([]reso
 			switch key.String() {
 			case "name":
 				r.Name = field.Create.Set.(string)
-			case "settings.x":
-				r.Settings.X = field.Create.Set.(int)
-			case "settings.y":
-				r.Settings.Y = field.Create.Set.(string)
+			case "settings.foo":
+				r.Settings.Foo = field.Create.Set.(int)
+			case "settings.bar":
+				r.Settings.Bar = field.Create.Set.(string)
 			}
 		}
 
@@ -319,10 +337,10 @@ func (TestResource) Edit(ctx context.Context, target resource.Resource, fields [
 			continue
 		}
 		switch key.String() {
-		case "settings.x":
-			r.Settings.X = field.Edit.Set.(int)
-		case "settings.y":
-			r.Settings.Y = field.Edit.Set.(string)
+		case "settings.foo":
+			r.Settings.Foo = field.Edit.Set.(int)
+		case "settings.bar":
+			r.Settings.Bar = field.Edit.Set.(string)
 		}
 	}
 

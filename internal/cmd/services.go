@@ -8,6 +8,7 @@ package cmd
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -87,6 +88,27 @@ func (s *Service) MarshalText() ([]byte, error) {
 	), nil
 }
 
+// MarshalJSON outputs the struct form (not the short text form).
+// This takes precedence over MarshalText for JSON/YAML serialization.
+func (s *Service) MarshalJSON() ([]byte, error) {
+	type serviceJSON Service // alias to avoid recursion
+	return json.Marshal((*serviceJSON)(s))
+}
+
+// UnmarshalJSON parses both the struct form and the short text form.
+// This takes precedence over UnmarshalText for JSON/YAML deserialization.
+func (s *Service) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return s.UnmarshalText([]byte(text))
+	}
+	type serviceJSON Service // alias to avoid recursion
+	return json.Unmarshal(data, (*serviceJSON)(s))
+}
+
 func (s *Service) UnmarshalText(text []byte) error {
 	str := string(text)
 	ports, handlers, _ := strings.Cut(str, "/")
@@ -117,13 +139,13 @@ func (s *Service) UnmarshalText(text []byte) error {
 }
 
 type Domain struct {
-	FQDN string `mirror:"fqdn" field:",short"`
-	Name string `field:",invisible"` // edit-only field
+	FQDN string `name:"fqdn" json:"fqdn" mirror:"fqdn" field:",short"`
+	Name string `name:"name" json:"name,omitempty" field:"-"` // field:"-" excludes from field system, name:"name" allows --set parsing
 
 	Certificate struct {
-		Name string `mirror:"name" field:",long"`
-		UUID string `mirror:"uuid" field:",long"`
-	} `mirror:"certificate"`
+		Name string `name:"name" json:"name" mirror:"name" field:",long"`
+		UUID string `name:"uuid" json:"uuid" mirror:"uuid" field:",long"`
+	} `name:"certificate" json:"certificate,omitzero" mirror:"certificate"`
 }
 
 func (ServiceGroup) Type() resource.Type {

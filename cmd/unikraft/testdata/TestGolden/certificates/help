@@ -22,15 +22,15 @@ stdout:
 	  metro
 	  name
 	  uuid
-	  cn
-	  chain
-	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
 	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
+	  cn
+	  chain
+	  pkey
 
 	Global flags:
 	  -h, --help
@@ -71,15 +71,15 @@ stdout:
 	  metro
 	  name
 	  uuid
-	  cn
-	  chain
-	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
 	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
+	  cn
+	  chain
+	  pkey
 
 	Flags:
 	  -w, --watch
@@ -128,15 +128,15 @@ stdout:
 	  metro
 	  name
 	  uuid
-	  cn
-	  chain
-	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
 	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
+	  cn
+	  chain
+	  pkey
 
 	Flags:
 	      --filter
@@ -185,15 +185,15 @@ stdout:
 	  metro
 	  name
 	  uuid
-	  cn
-	  chain
-	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
 	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
+	  cn
+	  chain
+	  pkey
 
 	Flags:
 	      --until, --filter
@@ -253,21 +253,25 @@ stdout:
 	  metro
 	  name
 	  uuid
-	  cn
-	  chain
-	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
 	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
+	  cn
+	  chain
+	  pkey
 
 	Flags:
 	      --set, --set-file
 	          Key-value pairs to set on the certificate.
 	  -e, --visual
-	          Open an editor to set fields visually.
+	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field
@@ -314,15 +318,15 @@ stdout:
 	  metro
 	  name
 	  uuid
-	  cn
-	  chain
-	  pkey
 	  common-name
 	  subject
 	  issuer
 	  serial-number
 	  state
 	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
+	  cn
+	  chain
+	  pkey
 
 	Flags:
 	      --all

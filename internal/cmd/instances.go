@@ -76,11 +76,6 @@ type Instance struct {
 		UUID    string   `mirror:"uuid" field:",long" create:"set"`
 		Name    string   `mirror:"name" field:",long" create:"set"`
 		Domains []Domain `mirror:"domains" field:",short,embed" create:"set"`
-
-		// create-only fields
-		Services  []*Service `field:",invisible,embed" create:"set"`
-		SoftLimit uint32     `field:",invisible" create:"set"`
-		HardLimit uint32     `field:",invisible" create:"set"`
 	} `mirror:"instance.service_group"`
 
 	Networks []struct {
@@ -117,13 +112,6 @@ type Instance struct {
 		ExitCode *uint32 `mirror:"instance.exit_code" field:"exit-code,long"`
 	} `field:",long"`
 
-	// create-only fields
-	Autostart   bool            `field:",invisible" create:"set"`
-	Replicas    int64           `field:",invisible" create:"set"`
-	WaitTimeout types.DurationS `field:",invisible" create:"set"`
-	Features    []string        `field:",invisible" create:"set"`
-	Vsock       bool            `field:",invisible" create:"set" edit:"set"`
-
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
 	Profile  *config.Profile   `field:"-" json:"profile"`
@@ -132,13 +120,12 @@ type Instance struct {
 }
 
 type InstanceVolume struct {
-	UUID     string `mirror:"uuid" json:"uuid,omitempty" field:",long"`
-	Name     string `mirror:"name" json:"name,omitempty" field:",long"`
-	At       string `mirror:"at" json:"at" field:",long"`
-	Readonly bool   `mirror:"readonly" json:"readonly,omitempty" field:",long"`
+	UUID     string `name:"uuid" mirror:"uuid" json:"uuid,omitempty" field:",long"`
+	Name     string `name:"name" mirror:"name" json:"name,omitempty" field:",long"`
+	At       string `name:"at" mirror:"at" json:"at" field:",long"`
+	Readonly bool   `name:"readonly" mirror:"readonly" json:"readonly,omitempty" field:",long"`
 
-	// create-only field
-	Size types.SizeMebibytes `field:",invisible,embed" create:"set"`
+	Size types.SizeMebibytes `name:"size" field:"-"` // excluded from field system, but used for marshalling/unmarshalling
 }
 
 func (v *InstanceVolume) MarshalText() ([]byte, error) {
@@ -157,6 +144,27 @@ func (v *InstanceVolume) MarshalText() ([]byte, error) {
 		parts = append(parts, fmt.Sprintf("size=%s", s))
 	}
 	return []byte(strings.Join(parts, ":")), nil
+}
+
+// MarshalJSON outputs the struct form (not the short text form).
+// This takes precedence over MarshalText for JSON/YAML serialization.
+func (v *InstanceVolume) MarshalJSON() ([]byte, error) {
+	type volumeJSON InstanceVolume // alias to avoid recursion
+	return json.Marshal((*volumeJSON)(v))
+}
+
+// UnmarshalJSON parses both the struct form and the short text form.
+// This takes precedence over UnmarshalText for JSON/YAML deserialization.
+func (v *InstanceVolume) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return v.UnmarshalText([]byte(text))
+	}
+	type volumeJSON InstanceVolume // alias to avoid recursion
+	return json.Unmarshal(data, (*volumeJSON)(v))
 }
 
 func (v *InstanceVolume) UnmarshalText(data []byte) error {
@@ -193,15 +201,14 @@ func (v *InstanceVolume) UnmarshalText(data []byte) error {
 		}
 	}
 
-	if name == "" {
-		v.Size = size
-	} else if uuid.Validate(name) == nil {
+	if uuid.Validate(name) == nil {
 		v.UUID = name
-	} else {
+	} else if name != "" {
 		v.Name = name
 	}
 	v.At = at
 	v.Readonly = readonly
+	v.Size = size
 
 	return nil
 }
@@ -235,10 +242,10 @@ func (i Instance) Fields() ([]resource.Field, error) {
 	}
 
 	for key, field := range resource.IterFields(result) {
-		switch key.String() {
-		case "name":
+		switch {
+		case key.String() == "name":
 			field.Hyperlink = i.hyperlink()
-		case "service":
+		case key.String() == "service":
 			nameField, _ := field.Get("name")
 			uuidField, _ := field.Get("uuid")
 			name, _ := nameField.Value.(string)
@@ -253,8 +260,66 @@ func (i Instance) Fields() ([]resource.Field, error) {
 					}.String(),
 				})
 			}
+
+			// Add create-only fields to service with nil Value
+			field.Subfields = append(field.Subfields,
+				resource.Field{
+					Name:      "services",
+					Verbosity: resource.FieldVerbosityInvisible,
+					Create:    &resource.Patch{Set: []*Service(nil)},
+				},
+				resource.Field{
+					Name:      "soft-limit",
+					Verbosity: resource.FieldVerbosityInvisible,
+					Create:    &resource.Patch{Set: uint32(0)},
+				},
+				resource.Field{
+					Name:      "hard-limit",
+					Verbosity: resource.FieldVerbosityInvisible,
+					Create:    &resource.Patch{Set: uint32(0)},
+				},
+			)
+		case key.MatchesString("volumes.*"):
+			// Add create-only size field to each volume with nil Value
+			field.Subfields = append(field.Subfields,
+				resource.Field{
+					Name:      "size",
+					Verbosity: resource.FieldVerbosityInvisible,
+					Create:    &resource.Patch{Set: types.SizeMebibytes(0)},
+				},
+			)
 		}
 	}
+
+	// Add create-only fields at root level with nil Value
+	result = append(result,
+		resource.Field{
+			Name:      "autostart",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: false},
+		},
+		resource.Field{
+			Name:      "replicas",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: int64(0)},
+		},
+		resource.Field{
+			Name:      "wait-timeout",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: types.DurationS(0)},
+		},
+		resource.Field{
+			Name:      "features",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: []string(nil)},
+		},
+		resource.Field{
+			Name:      "vsock",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: false},
+			Edit:      &resource.Patch{Set: false},
+		},
+	)
 
 	return result, nil
 }

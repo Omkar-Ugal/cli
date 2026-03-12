@@ -42,8 +42,8 @@ func setupTestEnv() *resourcet.TestEnv {
 		Hidden:    "hidden-test1",
 		Invisible: "invisible-test1",
 		Settings: resourcet.TestSettings{
-			X: 42,
-			Y: "hello",
+			Foo: 42,
+			Bar: "hello",
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Alice", Email: "alice@example.com"},
@@ -58,8 +58,8 @@ func setupTestEnv() *resourcet.TestEnv {
 		Hidden:    "hidden-test2",
 		Invisible: "invisible-test2",
 		Settings: resourcet.TestSettings{
-			X: 7,
-			Y: "world",
+			Foo: 7,
+			Bar: "world",
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Charlie", Email: "charlie@example.com"},
@@ -205,7 +205,7 @@ func TestList(t *testing.T) {
 	t.Run("sort-asc-nested", func(t *testing.T) {
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
-			Sort: xkong.GreedyStrings{"settings.y"},
+			Sort: xkong.GreedyStrings{"settings.bar"},
 			FormatOpts: FormatOpts{
 				Output: Printer{Type: PrinterTypeQuiet},
 			},
@@ -213,7 +213,7 @@ func TestList(t *testing.T) {
 		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
-		// test1 has settings.y="hello", test2 has settings.y="world"
+		// test1 has settings.bar="hello", test2 has settings.bar="world"
 		// ascending: "hello" < "world", so test1 comes first
 		output := out.String()
 		assert.Equal(t, "test1\ntest2\n", output)
@@ -222,7 +222,7 @@ func TestList(t *testing.T) {
 	t.Run("sort-desc-nested", func(t *testing.T) {
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
-			Sort: xkong.GreedyStrings{"-settings.y"},
+			Sort: xkong.GreedyStrings{"-settings.bar"},
 			FormatOpts: FormatOpts{
 				Output: Printer{Type: PrinterTypeQuiet},
 			},
@@ -230,7 +230,7 @@ func TestList(t *testing.T) {
 		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
-		// test1 has settings.y="hello", test2 has settings.y="world"
+		// test1 has settings.bar="hello", test2 has settings.bar="world"
 		// descending: "world" > "hello", so test2 comes first
 		output := out.String()
 		assert.Equal(t, "test2\ntest1\n", output)
@@ -256,10 +256,10 @@ func TestList(t *testing.T) {
 
 	t.Run("sort-multi-field-mixed", func(t *testing.T) {
 		var out bytes.Buffer
-		// Sort by state ascending, then by settings.x ascending
-		// test1 has settings.x=42, test2 has settings.x=7
+		// Sort by state ascending, then by settings.foo ascending
+		// test1 has settings.foo=42, test2 has settings.foo=7
 		cmd := &ResourceListCmd[resourcet.TestResource]{
-			Sort: xkong.GreedyStrings{"+state", "settings.x"},
+			Sort: xkong.GreedyStrings{"+state", "settings.foo"},
 			FormatOpts: FormatOpts{
 				Output: Printer{Type: PrinterTypeQuiet},
 			},
@@ -267,7 +267,7 @@ func TestList(t *testing.T) {
 		err := cmd.Run(ctx, testStdio(&out), sandbox)
 		require.NoError(t, err)
 
-		// Both have same state, secondary sort by settings.x asc: 7 < 42, so test2 first
+		// Both have same state, secondary sort by settings.foo asc: 7 < 42, so test2 first
 		output := out.String()
 		assert.Equal(t, "test2\ntest1\n", output)
 	})
@@ -700,8 +700,8 @@ func TestGet(t *testing.T) {
 	test := resources[0].(resourcet.TestResource)
 	assert.Equal(t, "test1", test.Name)
 	assert.Equal(t, "id-test1", test.ID)
-	assert.Equal(t, 42, test.Settings.X)
-	assert.Equal(t, "hello", test.Settings.Y)
+	assert.Equal(t, 42, test.Settings.Foo)
+	assert.Equal(t, "hello", test.Settings.Bar)
 
 	fields, err := test.Fields()
 	require.NoError(t, err)
@@ -965,9 +965,9 @@ func TestCreate(t *testing.T) {
 		switch key.String() {
 		case "name":
 			field.Create.Set = "test-new"
-		case "settings.x":
+		case "settings.foo":
 			field.Create.Set = 100
-		case "settings.y":
+		case "settings.bar":
 			field.Create.Set = "created"
 		}
 	}
@@ -978,8 +978,8 @@ func TestCreate(t *testing.T) {
 
 	created := res[0].(resourcet.TestResource)
 	assert.Equal(t, "test-new", created.Name)
-	assert.Equal(t, 100, created.Settings.X)
-	assert.Equal(t, "created", created.Settings.Y)
+	assert.Equal(t, 100, created.Settings.Foo)
+	assert.Equal(t, "created", created.Settings.Bar)
 	assert.Contains(t, env.Store, "test-new")
 }
 
@@ -995,8 +995,8 @@ func TestCreateOutput(t *testing.T) {
 			SetArgs: SetArgs{
 				Set: []map[string]string{
 					{"name": "test-output"},
-					{"settings.x": "100"},
-					{"settings.y": "created"},
+					{"settings.foo": "100"},
+					{"settings.bar": "created"},
 				},
 			},
 			FormatOpts: FormatOpts{
@@ -1027,8 +1027,8 @@ func TestCreateDryRun(t *testing.T) {
 		SetArgs: SetArgs{
 			Set: []map[string]string{
 				{"name": "test-dry"},
-				{"settings.x": "100"},
-				{"settings.y": "created"},
+				{"settings.foo": "100"},
+				{"settings.bar": "created"},
 			},
 		},
 	}
@@ -1042,8 +1042,8 @@ func TestCreateDryRun(t *testing.T) {
 
 	expected := [][]string{
 		{"name", ":=", "test-dry"},
-		{"settings.x", ":=", "100"},
-		{"settings.y", ":=", "created"},
+		{"settings.foo", ":=", "100"},
+		{"settings.bar", ":=", "created"},
 	}
 	for i, expectedFields := range expected {
 		assert.Equal(t, expectedFields, strings.Fields(lines[i]))
@@ -1060,8 +1060,8 @@ func TestCreatePatchSpecFileArgs(t *testing.T) {
 			Set: []map[string]string{{"name": "test-inline"}},
 			SetFile: []map[string]string{
 				{"name": nameFile},
-				{"settings.x": setFile},
-				{"settings.y": setTextFile},
+				{"settings.foo": setFile},
+				{"settings.bar": setTextFile},
 			},
 		},
 	}
@@ -1070,8 +1070,8 @@ func TestCreatePatchSpecFileArgs(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"test-inline", "test-file"}, spec.Set["name"])
-	assert.Equal(t, []string{"123"}, spec.Set["settings.x"])
-	assert.Equal(t, []string{"created"}, spec.Set["settings.y"])
+	assert.Equal(t, []string{"123"}, spec.Set["settings.foo"])
+	assert.Equal(t, []string{"created"}, spec.Set["settings.bar"])
 }
 
 func TestCreateSetFile(t *testing.T) {
@@ -1088,8 +1088,8 @@ func TestCreateSetFile(t *testing.T) {
 		SetArgs: SetArgs{
 			SetFile: []map[string]string{
 				{"name": nameFile},
-				{"settings.x": setFile},
-				{"settings.y": setTextFile},
+				{"settings.foo": setFile},
+				{"settings.bar": setTextFile},
 			},
 		},
 	}
@@ -1099,8 +1099,8 @@ func TestCreateSetFile(t *testing.T) {
 
 	created, ok := env.Store["test-file"]
 	require.True(t, ok)
-	assert.Equal(t, 101, created.Settings.X)
-	assert.Equal(t, "created", created.Settings.Y)
+	assert.Equal(t, 101, created.Settings.Foo)
+	assert.Equal(t, "created", created.Settings.Bar)
 }
 
 func TestEdit(t *testing.T) {
@@ -1110,8 +1110,8 @@ func TestEdit(t *testing.T) {
 		Name: "test-edit",
 		URL:  "https://example.com",
 		Settings: resourcet.TestSettings{
-			X: 10,
-			Y: "original",
+			Foo: 10,
+			Bar: "original",
 		},
 	})
 	ctx := resourcet.WithTestEnv(context.Background(), env)
@@ -1130,9 +1130,9 @@ func TestEdit(t *testing.T) {
 			continue
 		}
 		switch key.String() {
-		case "settings.x":
+		case "settings.foo":
 			field.Edit.Set = 999
-		case "settings.y":
+		case "settings.bar":
 			field.Edit.Set = "modified"
 		}
 	}
@@ -1143,12 +1143,12 @@ func TestEdit(t *testing.T) {
 	edited := res.(resourcet.TestResource)
 	assert.Equal(t, "test-edit", edited.Name)
 	assert.Equal(t, "id-edit", edited.ID)
-	assert.Equal(t, 999, edited.Settings.X)
-	assert.Equal(t, "modified", edited.Settings.Y)
+	assert.Equal(t, 999, edited.Settings.Foo)
+	assert.Equal(t, "modified", edited.Settings.Bar)
 
 	stored := env.Store["test-edit"]
-	assert.Equal(t, 999, stored.Settings.X)
-	assert.Equal(t, "modified", stored.Settings.Y)
+	assert.Equal(t, 999, stored.Settings.Foo)
+	assert.Equal(t, "modified", stored.Settings.Bar)
 }
 
 func TestEditOutput(t *testing.T) {
@@ -1158,8 +1158,8 @@ func TestEditOutput(t *testing.T) {
 		Name: "test-edit",
 		URL:  "https://example.com",
 		Settings: resourcet.TestSettings{
-			X: 10,
-			Y: "original",
+			Foo: 10,
+			Bar: "original",
 		},
 	})
 	ctx := resourcet.WithTestEnv(context.Background(), env)
@@ -1172,7 +1172,7 @@ func TestEditOutput(t *testing.T) {
 			Name: "test-edit",
 			SetArgs: SetArgs{
 				Set: []map[string]string{
-					{"settings.x": "999"},
+					{"settings.foo": "999"},
 				},
 			},
 			FormatOpts: FormatOpts{
@@ -1199,8 +1199,8 @@ func TestEditDryRun(t *testing.T) {
 		Name: "test-edit",
 		URL:  "https://example.com",
 		Settings: resourcet.TestSettings{
-			X: 10,
-			Y: "original",
+			Foo: 10,
+			Bar: "original",
 		},
 	})
 	ctx := resourcet.WithTestEnv(context.Background(), env)
@@ -1212,8 +1212,8 @@ func TestEditDryRun(t *testing.T) {
 		DryRun: true,
 		SetArgs: SetArgs{
 			Set: []map[string]string{
-				{"settings.x": "999"},
-				{"settings.y": "modified"},
+				{"settings.foo": "999"},
+				{"settings.bar": "modified"},
 			},
 		},
 	}
@@ -1221,19 +1221,85 @@ func TestEditDryRun(t *testing.T) {
 	require.NoError(t, err)
 
 	stored := env.Store["test-edit"]
-	assert.Equal(t, 10, stored.Settings.X)
-	assert.Equal(t, "original", stored.Settings.Y)
+	assert.Equal(t, 10, stored.Settings.Foo)
+	assert.Equal(t, "original", stored.Settings.Bar)
 
 	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
 	require.Len(t, lines, 2)
 
 	expected := [][]string{
-		{"settings.x", ":=", "999"},
-		{"settings.y", ":=", "modified"},
+		{"settings.foo", ":=", "999"},
+		{"settings.bar", ":=", "modified"},
 	}
 	for i, expectedFields := range expected {
 		assert.Equal(t, expectedFields, strings.Fields(lines[i]))
 	}
+}
+
+func TestEditCmdNoChangesDryRun(t *testing.T) {
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:   "id-edit",
+		Name: "test-edit",
+		URL:  "https://example.com",
+		Settings: resourcet.TestSettings{
+			Foo: 10,
+			Bar: "original",
+		},
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
+
+	var out bytes.Buffer
+	cmd := &ResourceEditCmd[resourcet.TestResource]{
+		Name:   "test-edit",
+		Cmd:    "cat", // pass through unchanged
+		DryRun: true,
+	}
+	err := cmd.Run(ctx, testStdio(&out), sandbox)
+	require.NoError(t, err)
+
+	// No changes should produce no output
+	assert.Empty(t, strings.TrimSpace(out.String()), "dry-run with no changes should produce empty output")
+
+	// Resource should be unchanged
+	stored := env.Store["test-edit"]
+	assert.Equal(t, 10, stored.Settings.Foo)
+	assert.Equal(t, "original", stored.Settings.Bar)
+}
+
+func TestEditCmdWithChangesDryRun(t *testing.T) {
+	env := resourcet.NewTestEnv()
+	env.Add(resourcet.TestResource{
+		ID:   "id-edit",
+		Name: "test-edit",
+		URL:  "https://example.com",
+		Settings: resourcet.TestSettings{
+			Foo: 10,
+			Bar: "old-value", // maps to field name "settings.bar"
+		},
+	})
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
+
+	var out bytes.Buffer
+	cmd := &ResourceEditCmd[resourcet.TestResource]{
+		Name:   "test-edit",
+		Cmd:    `sed 's/old-value/new-value/'`, // change settings.bar
+		DryRun: true,
+	}
+	err := cmd.Run(ctx, testStdio(&out), sandbox)
+	require.NoError(t, err)
+
+	// Should have output showing the change
+	output := strings.TrimSpace(out.String())
+	t.Logf("Output: %q", output)
+	assert.Contains(t, output, "settings.bar", "dry-run with changes should show changed field")
+	assert.Contains(t, output, "new-value", "dry-run with changes should show new value")
+
+	// Resource should be unchanged (dry-run)
+	stored := env.Store["test-edit"]
+	assert.Equal(t, "old-value", stored.Settings.Bar)
 }
 
 func TestEditPatchSpecFileArgs(t *testing.T) {
@@ -1243,8 +1309,8 @@ func TestEditPatchSpecFileArgs(t *testing.T) {
 
 	cmd := &ResourceEditCmd[resourcet.TestResource]{
 		SetArgs: SetArgs{
-			Set:     []map[string]string{{"settings.y": "inline"}},
-			SetFile: []map[string]string{{"settings.x": setFile}},
+			Set:     []map[string]string{{"settings.bar": "inline"}},
+			SetFile: []map[string]string{{"settings.foo": setFile}},
 		},
 		AddArgs: AddArgs{
 			Add:     []map[string]string{{"authors": "inline-entry"}},
@@ -1259,8 +1325,8 @@ func TestEditPatchSpecFileArgs(t *testing.T) {
 	spec, err := cmd.toPatchSpec()
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"inline"}, spec.Set["settings.y"])
-	assert.Equal(t, []string{"123"}, spec.Set["settings.x"])
+	assert.Equal(t, []string{"inline"}, spec.Set["settings.bar"])
+	assert.Equal(t, []string{"123"}, spec.Set["settings.foo"])
 	assert.Equal(t, []string{"inline-entry", "new-entry"}, spec.Add["authors"])
 	assert.Equal(t, []string{"inline-entry", "old-entry"}, spec.Del["url"])
 }

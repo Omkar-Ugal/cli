@@ -260,7 +260,11 @@ stdout:
 	      --set, --set-file
 	          Key-value pairs to set on the volume.
 	  -e, --visual
-	          Open an editor to set fields visually.
+	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field
@@ -368,6 +372,10 @@ stdout:
 	          Keys to delete from the volume.
 	  -e, --visual
 	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field

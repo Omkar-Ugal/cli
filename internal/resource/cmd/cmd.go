@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -584,7 +585,11 @@ type ResourceEditCmd[R resource.EditableResource] struct {
 	AddArgs
 	DelArgs
 
-	Visual bool `short:"e" help:"Open an editor to modify fields visually."`
+	Visual bool   `xor:"edit-mode" short:"e" help:"Open an editor to modify fields visually."`
+	Cmd    string `xor:"edit-mode" help:"Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout)."`
+	Load   []byte `xor:"edit-mode" collapse:"file-mode" type:"filecontent" help:"Load fields from a YAML file."`
+	Save   string `xor:"edit-mode" collapse:"file-mode" placeholder:"FILE" help:"Save editable fields as YAML to a file (use - for stdout)."`
+
 	DryRun bool `help:"Print patches without applying them."`
 
 	FormatOpts
@@ -668,13 +673,32 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	if err != nil {
 		return err
 	}
-	if cmd.Visual {
-		patched, err = patch.VisualEdit(ctx, stdio, res, fields, patched)
+
+	// Handle --save: write YAML to file and exit
+	if cmd.Save != "" {
+		return saveYAML(cmd.Save, stdio, res, fields, patched, false)
+	}
+
+	// Handle different editing modes (mutually exclusive via xor:"edit-mode" tag)
+	var editor patch.EditorFunc
+	switch {
+	case cmd.Visual:
+		editor, err = patch.VisualCommandEditorFunc(stdio)
+		if err != nil {
+			return err
+		}
+	case cmd.Cmd != "":
+		editor = patch.CommandEditorFunc(stdio, cmd.Cmd)
+	case len(cmd.Load) > 0:
+		editor = patch.ContentEditorFunc(cmd.Load)
+	}
+	if editor != nil {
+		patched, err = patch.Edit(ctx, res, fields, patched, editor)
 		if err != nil {
 			return err
 		}
 	}
-	patched = patch.FilterPatchableFields(patched)
+	patched = patch.FilterEditFields(patched)
 
 	if cmd.DryRun {
 		return PrintPatches(stdio.Stdout, patched, false)
@@ -698,7 +722,11 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 type ResourceCreateCmd[R resource.CreatableResource] struct {
 	SetArgs
 
-	Visual bool `short:"e" help:"Open an editor to set fields visually."`
+	Visual bool   `xor:"edit-mode" short:"e" help:"Open an editor to modify fields visually."`
+	Cmd    string `xor:"edit-mode" help:"Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout)."`
+	Load   []byte `xor:"edit-mode" collapse:"file-mode" type:"filecontent" help:"Load fields from a YAML file."`
+	Save   string `xor:"edit-mode" collapse:"file-mode" placeholder:"FILE" help:"Save creatable fields as YAML to a file (use - for stdout)."`
+
 	DryRun bool `help:"Print patches without applying them."`
 
 	FormatOpts
@@ -752,21 +780,43 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 		return err
 	}
 
-	if cmd.Visual {
-		// FIXME: should allow required fields
-		patched, err = patch.VisualCreate(ctx, stdio, empty, fields, patched)
+	// Handle --save: write YAML to file and exit
+	if cmd.Save != "" {
+		return saveYAML(cmd.Save, stdio, empty, fields, patched, true)
+	}
+
+	// Handle different editing modes (mutually exclusive via xor:"edit-mode" tag)
+	var editor patch.EditorFunc
+	switch {
+	case cmd.Visual:
+		editor, err = patch.VisualCommandEditorFunc(stdio)
+		if err != nil {
+			return err
+		}
+	case cmd.Cmd != "":
+		editor = patch.CommandEditorFunc(stdio, cmd.Cmd)
+	case len(cmd.Load) > 0:
+		editor = patch.ContentEditorFunc(cmd.Load)
+	}
+	if editor != nil {
+		patched, err = patch.Create(ctx, empty, fields, patched, editor)
 		if err != nil {
 			return err
 		}
 	}
 
-	fields = patch.FilterCreatableFields(patched)
+	patchedFields := patch.FilterCreateFields(patched)
 
 	if cmd.DryRun {
-		return PrintPatches(stdio.Stdout, fields, true)
+		return PrintPatches(stdio.Stdout, patchedFields, true)
 	}
 
-	resources, opErr := r.Create(ctx, fields)
+	// Validate required fields right before applying
+	if err := patch.ValidateRequired(fields, patched, true); err != nil {
+		return err
+	}
+
+	resources, opErr := r.Create(ctx, patchedFields)
 	if opErr != nil && len(resources) == 0 {
 		return opErr
 	}
@@ -777,4 +827,20 @@ func (cmd *ResourceCreateCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 		return errors.Join(opErr, printErr)
 	}
 	return opErr
+}
+
+// saveYAML writes YAML to a file or stdout (if filename is "-").
+func saveYAML(filename string, stdio config.Stdio, res resource.Resource, fields, patches []resource.Field, create bool) error {
+	var w io.Writer
+	if filename == "-" {
+		w = stdio.Stdout
+	} else {
+		f, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %w", err)
+		}
+		defer f.Close()
+		w = f
+	}
+	return patch.SaveYAML(res, fields, patches, w, create)
 }

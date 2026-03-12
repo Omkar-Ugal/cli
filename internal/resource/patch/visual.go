@@ -9,90 +9,159 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"reflect"
-	"slices"
 
 	"sigs.k8s.io/yaml"
-	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 )
 
-func VisualEdit(ctx context.Context, stdio config.Stdio, res resource.Resource, fields []resource.Field, patches []resource.Field) ([]resource.Field, error) {
-	return visualEdit(ctx, stdio, res, fields, patches, false)
+// EditorFunc is a callback that takes input YAML content and returns edited content.
+// This allows for different editing implementations (file-based, in-memory, etc.)
+type EditorFunc func(ctx context.Context, input []byte) ([]byte, error)
+
+// Edit applies patches to fields using the provided editor function.
+// It serializes fields to YAML, calls the editor, and updates patch.Set values based on changes.
+func Edit(ctx context.Context, res resource.Resource, fields []resource.Field, patches []resource.Field, editor EditorFunc) ([]resource.Field, error) {
+	return edit(ctx, res, fields, patches, false, editor)
 }
 
-func VisualCreate(ctx context.Context, stdio config.Stdio, res resource.Resource, fields []resource.Field, creates []resource.Field) ([]resource.Field, error) {
-	return visualEdit(ctx, stdio, res, fields, creates, true)
+// Create applies patches to fields for creation using the provided editor function.
+// It serializes fields to YAML, calls the editor, and updates patch.Set values based on changes.
+func Create(ctx context.Context, res resource.Resource, fields []resource.Field, patches []resource.Field, editor EditorFunc) ([]resource.Field, error) {
+	return edit(ctx, res, fields, patches, true, editor)
 }
 
-// visualEdit opens an editor for the user to modify fields visually.
-//
-// It takes all the fields and already existing patched fields as input, and
-// returns all patched fields after editing.
-func visualEdit(ctx context.Context, stdio config.Stdio, res resource.Resource, fields []resource.Field, patches []resource.Field, create bool) ([]resource.Field, error) {
+// SaveYAML writes fields to a writer as YAML.
+// If create is true, uses create patches; otherwise uses edit patches.
+func SaveYAML(res resource.Resource, fields []resource.Field, patches []resource.Field, w io.Writer, create bool) error {
+	data, err := saveFields(res, fields, patches, create)
+	if err != nil {
+		return fmt.Errorf("failed to serialize fields: %w", err)
+	}
+	if _, err := w.Write(data); err != nil {
+		return fmt.Errorf("failed to write YAML: %w", err)
+	}
+	return nil
+}
+
+// CommandEditorFunc creates an EditorFunc that runs a shell command with YAML on stdin
+// and reads the edited YAML from stdout.
+func CommandEditorFunc(stdio config.Stdio, command string) EditorFunc {
+	return func(ctx context.Context, input []byte) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, "sh", "-c", command)
+		cmd.Stdin = bytes.NewReader(input)
+		cmd.Stderr = stdio.Stderr
+
+		output, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("command exited with error: %w", err)
+		}
+		return output, nil
+	}
+}
+
+// VisualCommandEditorFunc creates an EditorFunc that uses a temp file and system editor.
+func VisualCommandEditorFunc(stdio config.Stdio) (EditorFunc, error) {
+	editorCmd, err := getEditor()
+	if err != nil {
+		return nil, err
+	}
+	return func(ctx context.Context, input []byte) ([]byte, error) {
+		tmpfile, err := os.CreateTemp("", "unikraft-edit-*.yaml")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create temp file: %w", err)
+		}
+		defer os.Remove(tmpfile.Name())
+
+		if _, err := tmpfile.Write(input); err != nil {
+			tmpfile.Close()
+			return nil, fmt.Errorf("failed to write temp file: %w", err)
+		}
+		if err := tmpfile.Close(); err != nil {
+			return nil, fmt.Errorf("failed to close temp file: %w", err)
+		}
+
+		cmd := exec.CommandContext(ctx, editorCmd, tmpfile.Name())
+		cmd.Stdin = stdio.Stdin
+		cmd.Stdout = stdio.Stdout
+		cmd.Stderr = stdio.Stderr
+		if err := cmd.Run(); err != nil {
+			return nil, fmt.Errorf("editor exited with error: %w", err)
+		}
+
+		output, err := os.ReadFile(tmpfile.Name())
+		if err != nil {
+			return nil, fmt.Errorf("failed to read edited file: %w", err)
+		}
+		return output, nil
+	}, nil
+}
+
+// ContentEditorFunc creates an EditorFunc that ignores input and returns the provided content.
+// This is designed to work with kong's FileContentFlag or similar pre-read file content.
+func ContentEditorFunc(content []byte) EditorFunc {
+	return func(ctx context.Context, input []byte) ([]byte, error) {
+		return content, nil
+	}
+}
+
+// edit is the core implementation that handles both edit and create operations.
+func edit(ctx context.Context, res resource.Resource, fields []resource.Field, patches []resource.Field, create bool, editor EditorFunc) ([]resource.Field, error) {
 	data, err := saveFields(res, fields, patches, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize fields: %w", err)
 	}
 
-	tmpfile, err := os.CreateTemp("", "unikraft-edit-*.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp file: %w", err)
-	}
-	defer os.Remove(tmpfile.Name())
-
-	if _, err := tmpfile.Write(data); err != nil {
-		tmpfile.Close()
-		return nil, fmt.Errorf("failed to write temp file: %w", err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close temp file: %w", err)
-	}
-
-	editor, err := getEditor()
+	editedData, err := editor(ctx, data)
 	if err != nil {
 		return nil, err
-	}
-
-	cmd := exec.CommandContext(ctx, editor, tmpfile.Name())
-	cmd.Stdin = stdio.Stdin
-	cmd.Stdout = stdio.Stdout
-	cmd.Stderr = stdio.Stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("editor exited with error: %w", err)
-	}
-
-	editedData, err := os.ReadFile(tmpfile.Name())
-	if err != nil {
-		return nil, fmt.Errorf("failed to read edited file: %w", err)
 	}
 	editedData = bytes.TrimSpace(editedData)
 	if len(editedData) == 0 {
 		return nil, fmt.Errorf("edited data is empty")
 	}
 
-	fields, err = loadFieldPatches(ctx, fields, editedData, create)
+	fields, err = loadFieldPatches(fields, editedData, create)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deserialize edited fields: %w", err)
 	}
 	return fields, nil
 }
 
+// saveFields serializes fields to YAML for editing.
+// It collects patch.Set values and merges in any pending patches.
 func saveFields(res resource.Resource, fields []resource.Field, patches []resource.Field, create bool) ([]byte, error) {
-	fields = resource.CloneFields(fields)
-
-	patchMap := make(map[string]resource.Field)
-	for key, field := range resource.IterFields(patches) {
-		patchMap[key.String()] = *field
+	// Filter to displayable fields and clear Add/Del templates
+	var displayableFields []resource.Field
+	if create {
+		displayableFields = FilterDisplayableCreateFields(fields)
+	} else {
+		displayableFields = FilterDisplayableEditFields(fields)
 	}
 
-	for key, field := range resource.IterFields(fields) {
-		keyStr := key.String()
+	// Clear Add/Del on all fields - they come from struct tags and aren't real values
+	for _, field := range resource.IterFields(displayableFields) {
+		if field.Edit != nil {
+			field.Edit.Add = nil
+			field.Edit.Del = nil
+		}
+		if field.Create != nil {
+			field.Create.Add = nil
+			field.Create.Del = nil
+		}
+	}
 
+	// Merge in pending patches - if Add/Del become non-nil, they were set via --add/--del
+	displayableFields = MergePatches(displayableFields, patches)
+
+	// Collect values from patch.Set into a map for YAML serialization
+	result := make(map[string]any)
+	for key, field := range resource.IterFields(displayableFields) {
 		var patch *resource.Patch
 		if create {
 			patch = field.Create
@@ -102,54 +171,16 @@ func saveFields(res resource.Resource, fields []resource.Field, patches []resour
 		if patch == nil || patch.Set == nil {
 			continue
 		}
-
-		// verify that the patch set type is assignable to the value type
-		value, err := collectValue(*field, reflect.TypeOf(patch.Set))
-		if err != nil {
-			return nil, fmt.Errorf("failed to collect value for field %s: %w", keyStr, err)
+		if patch.Add != nil {
+			return nil, fmt.Errorf("%s was added, but visual editing does not support this", key)
 		}
-		// TODO: instead of relying on patch.Set and field.Value being the same
-		// type, we should have each Resource store the actual patch.Set content
-		// (not just the type-info). Then patching should only update the
-		// patch.Set, and never actually touch the Value.
-		if !reflect.TypeOf(value).AssignableTo(reflect.TypeOf(patch.Set)) {
-			return nil, fmt.Errorf("%s of value %T cannot be patched with %T", keyStr, value, patch.Set)
+		if patch.Del != nil {
+			return nil, fmt.Errorf("%s was deleted, but visual editing does not support this", key)
 		}
-
-		// write already set patches into fields
-		if patchedField, ok := patchMap[keyStr]; ok {
-			var patch *resource.Patch
-			if create {
-				patch = patchedField.Create
-			} else {
-				patch = patchedField.Edit
-			}
-			if patch == nil {
-				return nil, fmt.Errorf("no patch available for field %s", keyStr)
-			}
-			if patch.Add != nil {
-				return nil, fmt.Errorf("%s was added, but visual editing does not support this", keyStr)
-			}
-			if patch.Del != nil {
-				return nil, fmt.Errorf("%s was deleted, but visual editing does not support this", keyStr)
-			}
-			if patch.Set == nil {
-				return nil, fmt.Errorf("%s is not settable", keyStr)
-			}
-			err := storeValue(field, reflect.ValueOf(patch.Set))
-			if err != nil {
-				return nil, fmt.Errorf("failed to store patched value for field %s: %w", keyStr, err)
-			}
-		}
+		setNestedValue(result, key, normalizeValue(patch.Set))
 	}
 
-	var patchableFields []resource.Field
-	if create {
-		patchableFields = FilterCreatableFields(fields)
-	} else {
-		patchableFields = FilterPatchableFields(fields)
-	}
-	result, err := yaml.Marshal(resource.FieldsToMap(patchableFields))
+	yamlBytes, err := yaml.Marshal(result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal fields to YAML: %w", err)
 	}
@@ -158,12 +189,12 @@ func saveFields(res resource.Resource, fields []resource.Field, patches []resour
 	if key := res.Key().String(); key != "" {
 		line = line + " " + key
 	}
-	result = append([]byte(line+"\n"), result...)
-
-	return result, nil
+	yamlBytes = append([]byte(line+"\n"), yamlBytes...)
+	return yamlBytes, nil
 }
 
-func loadFieldPatches(ctx context.Context, fields []resource.Field, data []byte, create bool) ([]resource.Field, error) {
+// loadFieldPatches parses edited YAML and updates patch.Set values for changed fields.
+func loadFieldPatches(fields []resource.Field, data []byte, create bool) ([]resource.Field, error) {
 	fields = resource.CloneFields(fields)
 
 	var obj map[string]any
@@ -171,22 +202,9 @@ func loadFieldPatches(ctx context.Context, fields []resource.Field, data []byte,
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
-	patchedFields, missing, err := resource.MapToFields(fields, obj)
-	if err != nil {
-		return nil, fmt.Errorf("failed to map edited data to fields: %w", err)
-	}
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("unknown fields: %v", missing)
-	}
-
-	before := resource.Field{Subfields: fields}
-	after := resource.Field{Subfields: patchedFields}
-	err = patchField(resource.FieldPath{}, &before, &after, create)
-	if err != nil {
-		return nil, err
-	}
-
-	for fieldPath, field := range resource.IterFields(fields) {
+	// Process all fields that have a patch template.
+	// For each field, convert the YAML value and compare with the original value.
+	for key, field := range resource.IterFields(fields) {
 		var patch *resource.Patch
 		if create {
 			patch = field.Create
@@ -196,101 +214,173 @@ func loadFieldPatches(ctx context.Context, fields []resource.Field, data []byte,
 		if patch == nil || patch.Set == nil {
 			continue
 		}
-		value, err := collectValue(*field, reflect.TypeOf(patch.Set))
-		if err != nil {
-			return nil, fmt.Errorf("failed to collect value for field %s: %w", fieldPath.String(), err)
-		}
-		log.G(ctx).
-			Debug().
-			Str("field", fieldPath.String()).
-			Any("old", value).
-			Any("new", patch.Set).
-			Msg("patched field")
-	}
 
-	if create {
-		fields = FilterCreatableFields(fields)
-	} else {
-		fields = FilterPatchableFields(fields)
-	}
-	return fields, nil
-}
-
-// patchField applies the changes from after to before, modifying before in
-// place by setting resource.Patch fields.
-func patchField(path resource.FieldPath, before *resource.Field, after *resource.Field, create bool) error {
-	var patch *resource.Patch
-	if create {
-		patch = before.Create
-	} else {
-		patch = before.Edit
-	}
-
-	if before.Name != after.Name {
-		return fmt.Errorf("field name changed from %s to %s at %s", before.Name, after.Name, path.String())
-	}
-
-	if !reflect.DeepEqual(before.Value, after.Value) {
-		if patch == nil {
-			return fmt.Errorf("no patch available for field %s", path.String())
-		}
-		if patch.Set == nil {
-			return fmt.Errorf("field %s is not settable", path.String())
-		}
-		if !reflect.TypeOf(after.Value).AssignableTo(reflect.TypeOf(patch.Set)) {
-			return fmt.Errorf("cannot assign value of type %T to patch of type %T for field %s", after.Value, patch.Set, path.String())
-		}
-		patch.Set = after.Value
+		// Visual editing only supports Set operations - always clear Add/Del
 		patch.Add = nil
 		patch.Del = nil
-	} else if before.Elem != nil && !reflect.DeepEqual(before.Subfields, after.Subfields) {
-		if patch == nil {
-			return fmt.Errorf("no patch available for field %s", path.String())
+
+		// Get the value from the edited YAML
+		newValue, found := getNestedValue(obj, key)
+
+		// Mark this path as consumed so we can detect unknown fields
+		deleteNestedValue(obj, key)
+
+		if !found {
+			// Field not in YAML - clear the patch
+			patch.Set = nil
+			continue
 		}
-		if patch.Set == nil {
-			return fmt.Errorf("field %s is not settable", path.String())
-		}
-		original, err := collectValue(*before, reflect.TypeOf(patch.Set))
+
+		// Convert newValue to the correct type (using patch.Set as type template)
+		convertedValue, err := convertValue(newValue, reflect.TypeOf(patch.Set))
 		if err != nil {
-			return fmt.Errorf("failed to collect value for field %s: %w", path.String(), err)
+			return nil, fmt.Errorf("failed to convert value for field %s: %w", key, err)
 		}
-		next, err := collectValue(*after, reflect.TypeOf(patch.Set))
-		if err != nil {
-			return fmt.Errorf("failed to collect value for field %s: %w", path.String(), err)
-		}
-		if !reflect.DeepEqual(original, next) {
-			// due to weirdness in having saved-and-loaded the values, the subfields
-			// might not be exactly identical, so we check DeepEqual on the collected
-			// values as well
-			patch.Set = next
-			patch.Add = nil
-			patch.Del = nil
-		} else {
-			patch = nil
-		}
-	} else {
-		if len(before.Subfields) != len(after.Subfields) {
-			return fmt.Errorf("number of subfields changed for field %s", path.String())
-		}
-		for i := range before.Subfields {
-			before := &before.Subfields[i]
-			after := &after.Subfields[i]
-			path := append(slices.Clone(path), before.Name)
-			err := patchField(path, before, after, create)
-			if err != nil {
-				return err
+
+		if originalValue := field.Value; originalValue != nil {
+			convertedOriginal, err := convertValue(originalValue, reflect.TypeOf(patch.Set))
+			if err == nil && reflect.DeepEqual(convertedOriginal, convertedValue) {
+				// Value is same as original - no patch needed
+				patch.Set = nil
+				continue
 			}
 		}
-		patch = nil
+
+		// Value differs from original (or field wasn't displayed) - keep the patch
+		patch.Set = convertedValue
 	}
 
+	// Check for unknown fields
+	unknownFields := collectKeys(obj, nil)
+	if len(unknownFields) > 0 {
+		return nil, fmt.Errorf("unknown fields: %v", unknownFields)
+	}
+
+	// Return only fields with pending patches
 	if create {
-		before.Create = patch
-	} else {
-		before.Edit = patch
+		return FilterCreateFields(fields), nil
+	}
+	return FilterEditFields(fields), nil
+}
+
+// getNestedValue retrieves a value from a nested map structure based on a field path.
+func getNestedValue(m map[string]any, path resource.FieldPath) (any, bool) {
+	if len(path) == 0 {
+		return nil, false
+	}
+	value, ok := m[path[0]]
+	if !ok {
+		return nil, false
+	}
+	if len(path) == 1 {
+		return value, true
+	}
+	nested, ok := value.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	return getNestedValue(nested, path[1:])
+}
+
+// setNestedValue sets a value in a nested map structure based on a field path.
+func setNestedValue(m map[string]any, path resource.FieldPath, value any) {
+	if len(path) == 0 {
+		return
+	}
+	if len(path) == 1 {
+		m[path[0]] = value
+		return
+	}
+	// Create nested map if needed
+	key := path[0]
+	if _, ok := m[key]; !ok {
+		m[key] = make(map[string]any)
+	}
+	if nested, ok := m[key].(map[string]any); ok {
+		setNestedValue(nested, path[1:], value)
+	}
+}
+
+// deleteNestedValue removes a value from a nested map structure and cleans up empty parents.
+func deleteNestedValue(m map[string]any, path resource.FieldPath) {
+	if len(path) == 0 {
+		return
+	}
+	if len(path) == 1 {
+		delete(m, path[0])
+		return
+	}
+	value, ok := m[path[0]]
+	if !ok {
+		return
+	}
+	nested, ok := value.(map[string]any)
+	if !ok {
+		return
+	}
+	deleteNestedValue(nested, path[1:])
+	// Clean up empty nested maps
+	if len(nested) == 0 {
+		delete(m, path[0])
+	}
+}
+
+// collectKeys collects all remaining keys in a nested map as field paths.
+func collectKeys(m map[string]any, prefix resource.FieldPath) []string {
+	var keys []string
+	for k, v := range m {
+		path := append(prefix, k)
+		if nested, ok := v.(map[string]any); ok {
+			keys = append(keys, collectKeys(nested, path)...)
+		} else {
+			keys = append(keys, path.String())
+		}
+	}
+	return keys
+}
+
+// convertValue converts a value to the target type by round-tripping through YAML.
+// This ensures proper handling of all YAML-supported types.
+func convertValue(value any, targetType reflect.Type) (any, error) {
+	if value == nil {
+		return reflect.Zero(targetType).Interface(), nil
 	}
 
-	return nil
+	valueType := reflect.TypeOf(value)
+	if valueType.AssignableTo(targetType) {
+		return value, nil
+	}
+	if valueType.ConvertibleTo(targetType) {
+		return reflect.ValueOf(value).Convert(targetType).Interface(), nil
+	}
+
+	// Round-trip through YAML for complex type conversions
+	yamlBytes, err := yaml.Marshal(value)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert %T to %s: failed to marshal: %w", value, targetType.String(), err)
+	}
+
+	target := reflect.New(targetType).Interface()
+	if err := yaml.Unmarshal(yamlBytes, target); err != nil {
+		return nil, fmt.Errorf("cannot convert %T to %s: failed to unmarshal: %w", value, targetType.String(), err)
+	}
+	return reflect.ValueOf(target).Elem().Interface(), nil
+}
+
+// normalizeValue converts nil slices/maps to empty ones for cleaner YAML output.
+// This ensures `services: []` instead of `services: null`.
+func normalizeValue(v any) any {
+	if v == nil {
+		return v
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Map:
+		if rv.IsNil() {
+			return reflect.MakeSlice(rv.Type(), 0, 0).Interface()
+		}
+	}
+	return v
 }
 
 func getEditor() (string, error) {
