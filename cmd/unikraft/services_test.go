@@ -5,73 +5,87 @@
 
 package main
 
-import "regexp"
+import (
+	"regexp"
+	"testing"
 
-var servicesTestCases = []testCase{
-	{
-		name: "services/help",
-		commands: []command{
-			{args: []string{unikraftCmd, "service", "--help"}},
-			{args: []string{unikraftCmd, "service", "get", "--help"}},
-			{args: []string{unikraftCmd, "service", "list", "--help"}},
-			{args: []string{unikraftCmd, "service", "wait", "--help"}},
-			{args: []string{unikraftCmd, "service", "create", "--help"}},
-			{args: []string{unikraftCmd, "service", "edit", "--help"}},
-			{args: []string{unikraftCmd, "service", "delete", "--help"}},
-		},
-	},
-	{
-		name:   "services/create",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "service", "list"}},
-			{args: []string{
-				unikraftCmd, "service", "create",
-				"--set", "name=test-$UNIQ_SVC_A",
-				"--set", "metro=" + defaultMetro,
-				"--set", "domains=fqdn=$UNIQ_DOMAIN_A.unikraft.example",
-				"--set", "services=443:8080/tls+http",
-				"--set", "services=80:443/http+redirect",
-			}},
-			{args: []string{
-				unikraftCmd, "service", "create",
-				"--set", "name=test-$UNIQ_SVC_B",
-				"--set", "metro=" + defaultMetro,
-				"--set", "domains=fqdn=$UNIQ_DOMAIN_B.unikraft.example",
-				"--set", "services=443:8080/tls+http,80:443/http+redirect",
-			}},
-			{args: []string{unikraftCmd, "service", "list"}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
+	"unikraft.com/cli/internal/integration"
+)
 
-			{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
+func servicesTestCases(t *testing.T, cfg *integration.Config) []testCase {
+	t.Helper()
+	if cfg == nil {
+		t.Skip("integration config not found")
+	}
+
+	metroName := cfg.MetroName
+
+	return []testCase{
+		{
+			name: "help",
+			commands: []command{
+				{args: []string{unikraftCmd, "service", "--help"}},
+				{args: []string{unikraftCmd, "service", "get", "--help"}},
+				{args: []string{unikraftCmd, "service", "list", "--help"}},
+				{args: []string{unikraftCmd, "service", "wait", "--help"}},
+				{args: []string{unikraftCmd, "service", "create", "--help"}},
+				{args: []string{unikraftCmd, "service", "edit", "--help"}},
+				{args: []string{unikraftCmd, "service", "delete", "--help"}},
+			},
 		},
-		cleaners: serviceCleaners,
-	},
-	{
-		name:   "services/edit",
-		online: true,
-		commands: []command{
-			{args: []string{
-				unikraftCmd, "service", "create",
-				"--output", "quiet",
-				"--set", "name=test-$UNIQ_SVC",
-				"--set", "metro=" + defaultMetro,
-				"--set", "domains=fqdn=$UNIQ_DOMAIN.unikraft.example",
-				"--set", "services=443:8080/tls+http",
-			}},
-			{args: []string{
-				unikraftCmd, "service", "edit", "test-$UNIQ_SVC",
-				"--output", "quiet",
-				"--set", "limits.soft=2",
-				"--set", "limits.hard=10",
-				"--set", "domains=fqdn=$UNIQ_DOMAIN_EDIT.unikraft.example",
-				"--set", "services=1000:2000/tls",
-			}},
-			{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC"}},
-			{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC"}},
+		{
+			name:   "create",
+			online: true,
+			commands: []command{
+				{args: []string{unikraftCmd, "service", "list"}},
+				{args: []string{
+					unikraftCmd, "service", "create",
+					"--set", "name=test-$UNIQ_SVC_A",
+					"--set", "metro=" + metroName,
+					"--set", "domains=fqdn=$UNIQ_DOMAIN_A.unikraft.example",
+					"--set", "services=443:8080/tls+http",
+					"--set", "services=80:443/http+redirect",
+				}},
+				{args: []string{
+					unikraftCmd, "service", "create",
+					"--set", "name=test-$UNIQ_SVC_B",
+					"--set", "metro=" + metroName,
+					"--set", "domains=fqdn=$UNIQ_DOMAIN_B.unikraft.example",
+					"--set", "services=443:8080/tls+http,80:443/http+redirect",
+				}},
+				{args: []string{unikraftCmd, "service", "list"}},
+				{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
+
+				{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC_A", "test-$UNIQ_SVC_B"}},
+			},
+			cleaners: serviceCleaners,
 		},
-		cleaners: serviceCleaners,
-	},
+		{
+			name:   "edit",
+			online: true,
+			commands: []command{
+				{args: []string{
+					unikraftCmd, "service", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_SVC",
+					"--set", "metro=" + metroName,
+					"--set", "domains=fqdn=$UNIQ_DOMAIN.unikraft.example",
+					"--set", "services=443:8080/tls+http",
+				}},
+				{args: []string{
+					unikraftCmd, "service", "edit", "test-$UNIQ_SVC",
+					"--output", "quiet",
+					"--set", "limits.soft=2",
+					"--set", "limits.hard=10",
+					"--set", "domains=fqdn=$UNIQ_DOMAIN_EDIT.unikraft.example",
+					"--set", "services=1000:2000/tls",
+				}},
+				{args: []string{unikraftCmd, "service", "inspect", "test-$UNIQ_SVC"}},
+				{args: []string{unikraftCmd, "service", "delete", "test-$UNIQ_SVC"}},
+			},
+			cleaners: serviceCleaners,
+		},
+	}
 }
 
 var serviceCleaners = []cleaner{

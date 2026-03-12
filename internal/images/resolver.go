@@ -3,7 +3,7 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-package dockerutil
+package images
 
 import (
 	"encoding/base64"
@@ -53,23 +53,12 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 	dockerConfig := dockerconfig.LoadDefaultConfigFile(os.Stderr)
 	opts := []docker.RegistryOpt{
 		docker.WithAuthorizer(docker.NewDockerAuthorizer(docker.WithAuthCreds(func(hostname string) (string, string, error) {
-			if profile != nil {
-				// FIXME: why are there two different auth schemes?
-				if hostname == "index.unikraft.io" {
-					return decodeAuth(profile.Token)
-				}
-				for _, index := range indexes {
-					if hostname == index.Host {
-						username := profile.Organization
-						if username == "" {
-							// organization may not be set on old or manually created
-							// profiles - so fall back to decoding the username from the
-							// token itself
-							username, _, _ = decodeAuth(profile.Token)
-						}
-						return username, profile.Token, nil
-					}
-				}
+			username, password, err := hostCreds(profile, hostname)
+			if err != nil {
+				return "", "", err
+			}
+			if username != "" || password != "" {
+				return username, password, nil
 			}
 
 			auth, err := dockerConfig.GetAuthConfig(hostname)
@@ -91,9 +80,9 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 			insecureHosts(docker.ConfigureDefaultRegistries(opts...), insecureHost),
 			docker.ConfigureDefaultRegistries(append(opts, docker.WithHostTranslator(func(s string) (string, error) {
 				if profile != nil {
-					for _, index := range indexes {
-						if s == index.Host {
-							return "index.unikraft.io", nil
+					for _, metro := range profile.Metros {
+						if s == metro.Index().Host {
+							return DefaultRegistry, nil
 						}
 					}
 				}
@@ -102,6 +91,67 @@ func Resolver(profile *config.Profile) remotes.Resolver {
 		),
 	}
 	return docker.NewResolver(dro)
+}
+
+func fallbackHost(registryHosts ...docker.RegistryHosts) docker.RegistryHosts {
+	return func(host string) ([]docker.RegistryHost, error) {
+		var allHosts []docker.RegistryHost
+		for _, registryHost := range registryHosts {
+			hosts, err := registryHost(host)
+			if err != nil {
+				return nil, err
+			}
+			allHosts = append(allHosts, hosts...)
+		}
+		return allHosts, nil
+	}
+}
+
+func insecureHosts(hosts docker.RegistryHosts, f func(host string) (bool, error)) docker.RegistryHosts {
+	return func(host string) ([]docker.RegistryHost, error) {
+		hosts, err := hosts(host)
+		if err != nil {
+			return nil, err
+		}
+		for i, host := range hosts {
+			ok, err := f(host.Host)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				host.Client = httpclient.InsecureHTTPClient
+				hosts[i] = host
+			}
+		}
+		return hosts, nil
+	}
+}
+
+// hostCreeds returns the username and password for the given hostname index,
+// if they're somehow available in the profile.
+func hostCreds(profile *config.Profile, hostname string) (string, string, error) {
+	if profile == nil {
+		return "", "", nil
+	}
+
+	// FIXME: why are there two different auth schemes?
+	if hostname == DefaultRegistry {
+		return decodeAuth(profile.Token)
+	}
+	for _, metro := range profile.Metros {
+		if hostname == metro.Index().Host {
+			username := profile.Organization
+			if username == "" {
+				// organization may not be set on old or manually created
+				// profiles - so fall back to decoding the username from the
+				// token itself
+				username, _, _ = decodeAuth(profile.Token)
+			}
+			return username, profile.Token, nil
+		}
+	}
+
+	return "", "", nil
 }
 
 // decodeAuth is imported from github.com/docker/cli/cli/config/configfile, and
@@ -126,38 +176,4 @@ func decodeAuth(authStr string) (string, string, error) {
 		return "", "", errors.New("invalid auth configuration file")
 	}
 	return userName, strings.Trim(password, "\x00"), nil
-}
-
-func fallbackHost(registryHosts ...docker.RegistryHosts) docker.RegistryHosts {
-	return func(host string) ([]docker.RegistryHost, error) {
-		var allHosts []docker.RegistryHost
-		for _, registryHost := range registryHosts {
-			hosts, err := registryHost(host)
-			if err != nil {
-				return nil, err
-			}
-			allHosts = append(allHosts, hosts...)
-		}
-		return allHosts, nil
-	}
-}
-
-func insecureHosts(hosts docker.RegistryHosts, f func(string) (bool, error)) docker.RegistryHosts {
-	return func(hostname string) ([]docker.RegistryHost, error) {
-		hosts, err := hosts(hostname)
-		if err != nil {
-			return nil, err
-		}
-		for i, host := range hosts {
-			ok, err := f(host.Host)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				host.Client = httpclient.InsecureHTTPClient
-				hosts[i] = host
-			}
-		}
-		return hosts, nil
-	}
 }

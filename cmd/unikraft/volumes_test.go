@@ -5,49 +5,64 @@
 
 package main
 
-var volumesTestCases = []testCase{
-	{
-		name: "volumes/help",
-		commands: []command{
-			{args: []string{unikraftCmd, "volume", "--help"}},
-			{args: []string{unikraftCmd, "volume", "get", "--help"}},
-			{args: []string{unikraftCmd, "volume", "list", "--help"}},
-			{args: []string{unikraftCmd, "volume", "wait", "--help"}},
-			{args: []string{unikraftCmd, "volume", "create", "--help"}},
-			{args: []string{unikraftCmd, "volume", "clone", "--help"}},
-			{args: []string{unikraftCmd, "volume", "edit", "--help"}},
-			{args: []string{unikraftCmd, "volume", "delete", "--help"}},
+import (
+	"testing"
+
+	"unikraft.com/cli/internal/integration"
+)
+
+func volumesTestCases(t *testing.T, cfg *integration.Config) []testCase {
+	t.Helper()
+	if cfg == nil {
+		t.Skip("integration config not found")
+	}
+
+	metroName := cfg.MetroName
+
+	return []testCase{
+		{
+			name: "help",
+			commands: []command{
+				{args: []string{unikraftCmd, "volume", "--help"}},
+				{args: []string{unikraftCmd, "volume", "get", "--help"}},
+				{args: []string{unikraftCmd, "volume", "list", "--help"}},
+				{args: []string{unikraftCmd, "volume", "wait", "--help"}},
+				{args: []string{unikraftCmd, "volume", "create", "--help"}},
+				{args: []string{unikraftCmd, "volume", "clone", "--help"}},
+				{args: []string{unikraftCmd, "volume", "edit", "--help"}},
+				{args: []string{unikraftCmd, "volume", "delete", "--help"}},
+			},
 		},
-	},
-	{
-		name:   "volumes/create",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "volume", "list"}},
-			{args: []string{unikraftCmd, "volume", "create", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
-			{args: []string{unikraftCmd, "volume", "list"}},
-			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
-			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+		{
+			name:   "create",
+			online: true,
+			commands: []command{
+				{args: []string{unikraftCmd, "volume", "list"}},
+				{args: []string{unikraftCmd, "volume", "create", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + metroName}},
+				{args: []string{unikraftCmd, "volume", "list"}},
+				{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
+				{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+			},
 		},
-	},
-	{
-		name:   "volumes/edit",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "volume", "create", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
-			{args: []string{unikraftCmd, "volume", "edit", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "size=20"}},
-			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
-			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+		{
+			name:   "edit",
+			online: true,
+			commands: []command{
+				{args: []string{unikraftCmd, "volume", "create", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + metroName}},
+				{args: []string{unikraftCmd, "volume", "edit", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "size=20"}},
+				{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME"}},
+				{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME"}},
+			},
 		},
-	},
-	{
-		name:   "volumes/clone",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "volume", "create", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + defaultMetro}},
-			{args: []string{unikraftCmd, "volume", "clone", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME_CLONE"}},
-			{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME", "test-$UNIQ_VOLUME_CLONE"}},
-			{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME", "test-$UNIQ_VOLUME_CLONE"}},
+		{
+			name:   "volumes/clone",
+			online: true,
+			commands: []command{
+				{args: []string{unikraftCmd, "volume", "create", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME", "--set", "size=10", "--set", "metro=" + metroName}},
+				{args: []string{unikraftCmd, "volume", "clone", "test-$UNIQ_VOLUME", "--output", "quiet", "--set", "name=test-$UNIQ_VOLUME_CLONE"}},
+				{args: []string{unikraftCmd, "volume", "inspect", "test-$UNIQ_VOLUME", "test-$UNIQ_VOLUME_CLONE"}},
+				{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOLUME", "test-$UNIQ_VOLUME_CLONE"}},
+			},
 		},
-	},
+	}
 }

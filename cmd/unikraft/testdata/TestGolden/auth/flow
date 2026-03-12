@@ -1,7 +1,7 @@
 $ unikraft login --check
 
 stderr:
-	│ existing authentication token found organization=
+	│ existing authentication token found organization=jedevc
 
 $ unikraft profile list
 
@@ -13,7 +13,7 @@ $ unikraft metro list
 
 stdout:
 	NAME  COUNTRY  ENDPOINT
-	test  xx       https://api.test.unikraft.internal/
+	test  xx       https://api.test.unikraft.internal
 
 $ unikraft logout
 
@@ -35,7 +35,6 @@ stderr:
 	│   use `unikraft login` to get started,
 	│   
 	│   or visit https://unikraft.com/docs/cli for more information
-	│  
-	exit status 1
+	│
 
 exit code: 1

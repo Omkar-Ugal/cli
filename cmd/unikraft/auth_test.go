@@ -5,31 +5,41 @@
 
 package main
 
-var authTestCases = []testCase{
-	{
-		name: "auth/help",
-		commands: []command{
-			{args: []string{unikraftCmd, "login", "--help"}},
-			{args: []string{unikraftCmd, "logout", "--help"}},
-			{args: []string{unikraftCmd, "profile", "--help"}},
-			{args: []string{unikraftCmd, "profile", "get", "--help"}},
-			{args: []string{unikraftCmd, "profile", "list", "--help"}},
-			{args: []string{unikraftCmd, "profile", "use", "--help"}},
-			{args: []string{unikraftCmd, "metro", "--help"}},
-			{args: []string{unikraftCmd, "metro", "get", "--help"}},
-			{args: []string{unikraftCmd, "metro", "list", "--help"}},
+import (
+	"testing"
+
+	"unikraft.com/cli/internal/integration"
+)
+
+func authTestCases(t *testing.T, _ *integration.Config) []testCase {
+	t.Helper()
+
+	return []testCase{
+		{
+			name: "help",
+			commands: []command{
+				{args: []string{unikraftCmd, "login", "--help"}},
+				{args: []string{unikraftCmd, "logout", "--help"}},
+				{args: []string{unikraftCmd, "profile", "--help"}},
+				{args: []string{unikraftCmd, "profile", "get", "--help"}},
+				{args: []string{unikraftCmd, "profile", "list", "--help"}},
+				{args: []string{unikraftCmd, "profile", "use", "--help"}},
+				{args: []string{unikraftCmd, "metro", "--help"}},
+				{args: []string{unikraftCmd, "metro", "get", "--help"}},
+				{args: []string{unikraftCmd, "metro", "list", "--help"}},
+			},
 		},
-	},
-	{
-		name:   "auth/flow",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "login", "--check"}},
-			{args: []string{unikraftCmd, "profile", "list"}},
-			{args: []string{unikraftCmd, "metro", "list"}},
-			{args: []string{unikraftCmd, "logout"}},
-			{args: []string{unikraftCmd, "profile", "list"}, allowErr: true},
-			{args: []string{unikraftCmd, "metro", "list"}, allowErr: true},
+		{
+			name:   "flow",
+			online: true,
+			commands: []command{
+				{args: []string{unikraftCmd, "login", "--check"}},
+				{args: []string{unikraftCmd, "profile", "list"}},
+				{args: []string{unikraftCmd, "metro", "list"}},
+				{args: []string{unikraftCmd, "logout"}},
+				{args: []string{unikraftCmd, "profile", "list"}, allowErr: true},
+				{args: []string{unikraftCmd, "metro", "list"}, allowErr: true},
+			},
 		},
-	},
+	}
 }

@@ -5,31 +5,40 @@
 
 package main
 
-import "regexp"
+import (
+	"regexp"
+	"testing"
 
-var imagesTestCases = []testCase{
-	{
-		name: "images/help",
-		commands: []command{
-			{args: []string{unikraftCmd, "image", "--help"}},
-			{args: []string{unikraftCmd, "image", "get", "--help"}},
-			{args: []string{unikraftCmd, "image", "list", "--help"}},
-			{args: []string{unikraftCmd, "image", "copy", "--help"}},
-		},
-	},
-	{
-		name:   "images/inspect",
-		online: true,
-		commands: []command{
-			{args: []string{unikraftCmd, "image", "list", "--filter", `ref~="/official/nginx:latest$"`}},
-			{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
-		},
-		cleaners: []cleaner{
-			{
-				// exact nginx version numbers may change between runs
-				pattern: regexp.MustCompile(`nginx:[0-9]+\.[0-9]+`),
-				repl:    "nginx:X.Y",
+	"unikraft.com/cli/internal/integration"
+)
+
+func imagesTestCases(t *testing.T, _ *integration.Config) []testCase {
+	t.Helper()
+
+	return []testCase{
+		{
+			name: "help",
+			commands: []command{
+				{args: []string{unikraftCmd, "image", "--help"}},
+				{args: []string{unikraftCmd, "image", "get", "--help"}},
+				{args: []string{unikraftCmd, "image", "list", "--help"}},
+				{args: []string{unikraftCmd, "image", "copy", "--help"}},
 			},
 		},
-	},
+		{
+			name:   "inspect",
+			online: true,
+			commands: []command{
+				{args: []string{unikraftCmd, "image", "list", "--filter", `ref~="/official/nginx:latest$"`}},
+				{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
+			},
+			cleaners: []cleaner{
+				{
+					// exact nginx version numbers may change between runs
+					pattern: regexp.MustCompile(`nginx:[0-9]+\.[0-9]+`),
+					repl:    "nginx:X.Y",
+				},
+			},
+		},
+	}
 }

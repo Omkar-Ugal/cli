@@ -45,6 +45,7 @@ type UnikraftCLI struct {
 	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
 	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
 	Run     RunCmd          `cmd:"" help:"Run an image as an instance."`
+	Build   BuildCmd        `cmd:"" help:"Build a Unikraft project into a container image."`
 
 	Metros       MetrosCmd       `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
 	Instances    InstancesCmd    `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms"`
@@ -70,6 +71,12 @@ func (cli UnikraftCLI) Examples() []kingkong.Example {
 			Description: "List instances across metros",
 			Commands: []string{
 				"unikraft instances list",
+			},
+		},
+		{
+			Description: "Build and publish an image from a Kraftfile",
+			Commands: []string{
+				"unikraft build . --output my-org/my-app:latest",
 			},
 		},
 		{

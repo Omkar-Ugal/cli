@@ -30,6 +30,7 @@ import (
 	"unicode"
 
 	"github.com/lunixbochs/vtclean"
+	"github.com/mitchellh/copystructure"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gotest.tools/v3/golden"
@@ -39,6 +40,7 @@ import (
 
 	"unikraft.com/cli/internal/cmd"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/integration"
 	"unikraft.com/cli/internal/resource"
 )
 
@@ -49,6 +51,7 @@ type testCase struct {
 	commands []command
 	online   bool
 	cleaners []cleaner
+	context  map[string]string
 }
 
 type command struct {
@@ -57,149 +60,191 @@ type command struct {
 	captureEnv string
 }
 
-var testCases []testCase
-
-var (
-	testToken  string
-	testMetros []string
-)
-
-const (
-	defaultMetro = "test"
-)
-
 func TestGolden(t *testing.T) {
-	if len(testCases) == 0 {
-		t.Skip("no test cases")
+	integration.SkipUnlessIntegration(t)
+	unikraftPath := buildUnikraftBinary(t)
+
+	cfg, err := integration.LoadConfig(t)
+	require.NoError(t, err)
+
+	groups := []struct {
+		name  string
+		cases func(*testing.T, *integration.Config) []testCase
+	}{
+		{name: "help", cases: helpTestCases},
+		{name: "auth", cases: authTestCases},
+		{name: "instances", cases: instancesTestCases},
+		{name: "volumes", cases: volumesTestCases},
+		{name: "services", cases: servicesTestCases},
+		{name: "certificates", cases: certificatesTestCases},
+		{name: "images", cases: imagesTestCases},
+		{name: "resources", cases: resourceTestCases},
+		{name: "build", cases: buildTestCases},
 	}
+
 	t.Parallel()
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, group := range groups {
+		t.Run(group.name, func(t *testing.T) {
+			tcs := group.cases(t, cfg)
 			t.Parallel()
-
-			if tc.online && testToken == "" {
-				t.Skip("skipping online test that requires UKC_TOKEN")
-			}
-			if tc.online && len(testMetros) == 0 {
-				t.Skip("skipping online test that requires UKC_METRO/UKC_METROS")
-			}
-
-			ctx := t.Context()
-			ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.TraceLevel))
-
-			assert.NotEmpty(t, tc.commands, "no commands specified")
-
-			configPath := filepath.Join(t.TempDir(), "config.yaml")
-			cfg, profile := defaultCfg()
-			if cfg != nil {
-				cfg.Path = configPath
-				require.NoError(t, cfg.Save())
-			}
-
-			sandboxPath := filepath.Join(t.TempDir(), "sandbox.json")
-			t.Cleanup(func() {
-				cfg, err := config.Load(configPath)
-				ctx := ctx
-				if cfg != nil {
-					require.NoError(t, err)
-					ctx = config.WithConfig(ctx, cfg)
-				}
-
-				sandbox, err := resource.LoadSandbox(sandboxPath, cmd.SandboxedResources...)
-				require.NoError(t, err)
-				require.NotNil(t, sandbox)
-				require.NoError(t, sandbox.Teardown(context.WithoutCancel(ctx)))
-			})
-
-			expander := &expander{}
-			output := strings.Builder{}
-			for i, command := range tc.commands {
-				require.NotEmpty(t, command.args, "no command specified")
-				var args []string
-				if command.args[0] == unikraftCmd {
-					args = append(args, "go", "run", ".")
-					args = append(args, command.args[1:]...)
-				} else {
-					args = command.args
-				}
-				args = expander.expandArgs(args)
-
-				log.G(ctx).Debug().
-					Strs("args", args).
-					Msg("executing command")
-
-				cmd := exec.CommandContext(ctx, args[0], args[1:]...)
-				var stdout, stderr bytes.Buffer
-				cmd.Stdout = &stdout
-				cmd.Stderr = &stderr
-				cmd.Env = os.Environ()
-				cmd.Env = slices.DeleteFunc(cmd.Env, func(s string) bool {
-					return strings.HasPrefix(s, "UNIKRAFT_")
+			for _, tc := range tcs {
+				t.Run(tc.name, func(t *testing.T) {
+					t.Parallel()
+					runTestCase(t, tc, cfg, unikraftPath)
 				})
-				cmd.Env = append(cmd.Env, "NO_COLOR=1") // color makes golden files harder to read
-				cmd.Env = append(cmd.Env, "UNIKRAFT_CONFIG="+configPath)
-				cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
-
-				err := cmd.Run()
-				if command.captureEnv != "" {
-					value := strings.TrimSpace(stdout.String())
-					if value == "" {
-						value = strings.TrimSpace(stderr.String())
-					}
-					if value != "" {
-						if expander.env == nil {
-							expander.env = make(map[string]string)
-						}
-						expander.env[command.captureEnv] = value
-					}
-				}
-				var exitErr *exec.ExitError
-				var exitCode int
-				if errors.As(err, &exitErr) && command.allowErr {
-					exitCode = exitErr.ExitCode()
-					// ignore exit errors for help commands
-					err = nil
-				}
-				require.NoError(t, err, "command %q failed\nstdout:\n%s\nstderr:\n%s",
-					strings.Join(args, " "),
-					stdout.String(),
-					stderr.String(),
-				)
-
-				report := report{
-					args:       command.args,
-					stdout:     stdout.String(),
-					stderr:     stderr.String(),
-					exitCode:   exitCode,
-					captureEnv: command.captureEnv,
-				}
-
-				report.cleaners = append(report.cleaners, tc.cleaners...)
-				report.cleaners = append(report.cleaners, expander.cleaners()...)
-				if profile != nil {
-					for _, metro := range profile.Metros {
-						report.cleaners = append(
-							report.cleaners,
-							cleaner{
-								pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Endpoint)),
-								repl:    "https://api." + metro.Name + ".unikraft.internal/",
-							},
-							cleaner{
-								pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index().Host)),
-								repl:    "index." + metro.Name + ".unikraft.internal",
-							},
-						)
-					}
-				}
-				if i != 0 {
-					output.WriteString("\n")
-				}
-				output.WriteString(report.String())
 			}
-
-			golden.Assert(t, output.String(), t.Name(), "\n"+output.String())
 		})
 	}
+}
+
+func runTestCase(t *testing.T, tc testCase, cfg *integration.Config, unikraftPath string) {
+	t.Helper()
+
+	testCfg := cfg
+	if tc.online {
+		if testCfg == nil {
+			t.Skip("online test requires config, but no config found")
+		}
+
+		cloned, err := copystructure.Copy(testCfg)
+		require.NoError(t, err)
+		testCfg = cloned.(*integration.Config)
+
+		testCfg.Config.Path = filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, testCfg.Config.Save())
+	}
+
+	ctx := t.Context()
+	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.TraceLevel))
+
+	assert.NotEmpty(t, tc.commands, "no commands specified")
+
+	sandboxPath := filepath.Join(t.TempDir(), "sandbox.json")
+	t.Cleanup(func() {
+		ctx := ctx
+		if testCfg != nil {
+			ctx = config.WithConfig(ctx, testCfg.Config)
+		}
+
+		sandbox, err := resource.LoadSandbox(sandboxPath, cmd.SandboxedResources...)
+		require.NoError(t, err)
+		require.NotNil(t, sandbox)
+
+		require.NoError(t, sandbox.Teardown(context.WithoutCancel(ctx)))
+	})
+
+	dir := t.TempDir()
+	for name, contents := range tc.context {
+		require.NotEmpty(t, name, "context filename cannot be empty")
+		path := filepath.Join(dir, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o644))
+	}
+
+	expander := &expander{}
+	output := strings.Builder{}
+	for i, command := range tc.commands {
+		require.NotEmpty(t, command.args, "no command specified")
+		args := expander.expandArgs(command.args)
+
+		log.G(ctx).Debug().
+			Strs("args", args).
+			Msg("executing command")
+
+		var cmd *exec.Cmd
+		if args[0] == unikraftCmd {
+			cmd = exec.CommandContext(ctx, unikraftPath, args[1:]...)
+			cmd.Args[0] = unikraftPath
+		} else {
+			cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+		}
+
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		cmd.Dir = dir
+		cmd.Env = os.Environ()
+		cmd.Env = slices.DeleteFunc(cmd.Env, func(s string) bool {
+			return strings.HasPrefix(s, "UNIKRAFT_")
+		})
+		cmd.Env = append(cmd.Env, "NO_COLOR=1") // color makes golden files harder to read
+		if testCfg != nil {
+			cmd.Env = append(cmd.Env, "UNIKRAFT_CONFIG="+testCfg.Config.Path)
+		}
+		cmd.Env = append(cmd.Env, "BUILDKIT_PROGRESS=quiet")
+		cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
+
+		err := cmd.Run()
+		if command.captureEnv != "" {
+			value := strings.TrimSpace(stdout.String())
+			if value == "" {
+				value = strings.TrimSpace(stderr.String())
+			}
+			if value != "" {
+				if expander.env == nil {
+					expander.env = make(map[string]string)
+				}
+				expander.env[command.captureEnv] = value
+			}
+		}
+		var exitErr *exec.ExitError
+		var exitCode int
+		if errors.As(err, &exitErr) && command.allowErr {
+			exitCode = exitErr.ExitCode()
+			// ignore exit errors for help commands
+			err = nil
+		}
+		require.NoError(t, err, "command %q failed\nstdout:\n%s\nstderr:\n%s",
+			strings.Join(args, " "),
+			stdout.String(),
+			stderr.String(),
+		)
+
+		report := report{
+			args:       command.args,
+			stdout:     stdout.String(),
+			stderr:     stderr.String(),
+			exitCode:   exitCode,
+			captureEnv: command.captureEnv,
+		}
+
+		report.cleaners = append(report.cleaners, tc.cleaners...)
+		report.cleaners = append(report.cleaners, expander.cleaners()...)
+
+		if testCfg != nil {
+			report.cleaners = append(
+				report.cleaners,
+				cleaner{
+					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Name)),
+					repl:    "default",
+				},
+			)
+			for _, metro := range testCfg.Profile.Metros {
+				report.cleaners = append(
+					report.cleaners,
+					cleaner{
+						pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Name)),
+						repl:    "test",
+					},
+					cleaner{
+						pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Endpoint)),
+						repl:    "https://api.test.unikraft.internal",
+					},
+					cleaner{
+						pattern: regexp.MustCompile(regexp.QuoteMeta(metro.Index().Host)),
+						repl:    "index.test.unikraft.internal",
+					},
+				)
+			}
+		}
+
+		if i != 0 {
+			output.WriteString("\n")
+		}
+		output.WriteString(report.String())
+	}
+
+	golden.Assert(t, output.String(), t.Name(), "\n"+output.String())
 }
 
 type report struct {
@@ -237,6 +282,10 @@ func (report *report) String() string {
 }
 
 func (report *report) cleanOutput(s string) string {
+	// Normalize CRLF so vtclean doesn't collapse log lines.
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+
 	// remove ANSI escape sequences
 	s = vtclean.Clean(s, false)
 	s = strings.TrimRightFunc(s, unicode.IsSpace)
@@ -293,9 +342,24 @@ type cleaner struct {
 // so we get consistent golden files.
 var cleaners = []cleaner{
 	{
+		// IP addresses like "10.0.1.29"
+		pattern: regexp.MustCompile(`\b10\.\d+\.\d+\.\d+\b`),
+		repl:    "10.X.X.X",
+	},
+	{
+		// MAC addresses like "12:b0:0a:b0:0a:29"
+		pattern: regexp.MustCompile(`[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}`),
+		repl:    "aa:bb:cc:dd:ee:ff",
+	},
+	{
 		// datetimes like "2000-01-02T12:34:56+01:00" change between runs
 		pattern: regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|(\+\d{2}:\d{2}))?\b`),
 		repl:    "YYYY-MM-DDTHH:MM:SSZ",
+	},
+	{
+		// kernel log timestamps like "[    0.065015]" change between runs
+		pattern: regexp.MustCompile(`\[\s*\d+\.\d+\]`),
+		repl:    "[    0.000000]",
 	},
 	{
 		// times like "12:34:56" or "12:34:56PM" change between runs
@@ -435,32 +499,6 @@ func (e *expander) cleaners() []cleaner {
 	return cleaners
 }
 
-func defaultCfg() (*config.Config, *config.Profile) {
-	if testToken == "" {
-		return nil, nil
-	}
-	profile := &config.Profile{
-		Type:  config.ProfileTypeCloud,
-		Name:  "default",
-		Token: testToken,
-	}
-	for _, metro := range testMetros {
-		profile.Metros = append(profile.Metros, config.Metro{
-			Name:     defaultMetro,
-			Endpoint: metro,
-			Country:  "xx",
-		})
-		break
-	}
-	cfg := &config.Config{
-		DefaultProfile: profile.Name,
-		Profiles: map[string]config.Profile{
-			profile.Name: *profile,
-		},
-	}
-	return cfg, profile
-}
-
 func generateCert() *generatedCert {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -503,4 +541,21 @@ func generateCert() *generatedCert {
 		chain: string(certPEM),
 		key:   string(keyPEM),
 	}
+}
+
+func buildUnikraftBinary(t *testing.T) string {
+	t.Helper()
+	binaryDir := t.TempDir()
+	binaryName := unikraftCmd
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	binaryPath := filepath.Join(binaryDir, binaryName)
+
+	cmd := exec.CommandContext(t.Context(), "go", "build", "-buildvcs=false", "-o", binaryPath, ".")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	require.NoError(t, cmd.Run(), "go build failed\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+	return binaryPath
 }

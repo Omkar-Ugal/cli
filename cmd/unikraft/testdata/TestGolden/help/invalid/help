@@ -23,6 +23,8 @@ stdout:
 	          Manage Unikraft Cloud profiles.
 	  run
 	          Run an image as an instance.
+	  build
+	          Build a Unikraft project into a container image.
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance, vm, vms
@@ -42,6 +44,9 @@ stdout:
 
 	  # List instances across metros
 	  unikraft instances list
+
+	  # Build and publish an image from a Kraftfile
+	  unikraft build . --output my-org/my-app:latest
 
 	  # Deploy a new instance from an image
 	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
@@ -74,8 +79,7 @@ stderr:
 	│  
 	│ error:
 	│   parsing arguments: unknown flag --bad-flag
-	│  
-	exit status 1
+	│
 
 exit code: 1
 
@@ -104,6 +108,8 @@ stdout:
 	          Manage Unikraft Cloud profiles.
 	  run
 	          Run an image as an instance.
+	  build
+	          Build a Unikraft project into a container image.
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance, vm, vms
@@ -123,6 +129,9 @@ stdout:
 
 	  # List instances across metros
 	  unikraft instances list
+
+	  # Build and publish an image from a Kraftfile
+	  unikraft build . --output my-org/my-app:latest
 
 	  # Deploy a new instance from an image
 	  unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero
@@ -155,7 +164,6 @@ stderr:
 	│  
 	│ error:
 	│   parsing arguments: unexpected argument bad-arg
-	│  
-	exit status 1
+	│
 
 exit code: 1
