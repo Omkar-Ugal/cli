@@ -41,6 +41,8 @@ type UnikraftCLI struct {
 
 	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 
+	TUI TUICmd `cmd:"" help:"Browse resources in a TUI."`
+
 	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
 	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
 	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`

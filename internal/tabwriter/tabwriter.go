@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"unikraft.com/x/guesstermwidth"
 
+	"unikraft.com/cli/internal/tableutil"
 	xio "unikraft.com/cli/internal/x/io"
 )
 
@@ -24,6 +25,7 @@ type tabWriter struct {
 	padding     int
 
 	maxwidth int
+	minwidth int
 }
 
 type row struct {
@@ -43,6 +45,12 @@ func WithMinColumnWidth(width int) TabWriterOpt {
 	}
 }
 
+func WithMinWidth(width int) TabWriterOpt {
+	return func(t *tabWriter) {
+		t.minwidth = max(0, width)
+	}
+}
+
 func WithMaxWidth(width int) TabWriterOpt {
 	return func(t *tabWriter) {
 		t.maxwidth = max(0, width)
@@ -55,6 +63,15 @@ func WithMaxScreenWidth() TabWriterOpt {
 			return
 		}
 		t.maxwidth = max(0, guesstermwidth.GuessTermWidth(t.w))
+	}
+}
+
+func WithMinScreenWidth() TabWriterOpt {
+	return func(t *tabWriter) {
+		if !guesstermwidth.IsTTY(t.w) {
+			return
+		}
+		t.minwidth = max(0, guesstermwidth.GuessTermWidth(t.w))
 	}
 }
 
@@ -138,19 +155,37 @@ func (t *tabWriter) flushRows() error {
 	}
 	colPadding[len(colPadding)-1] = 0
 
-	if t.maxwidth > 0 {
-		widthSum := 0
-		for _, p := range colPadding {
-			widthSum += p
-		}
-		for _, w := range colContent {
-			widthSum += w
-		}
+	minWidth := t.minwidth
+	if t.maxwidth > 0 && minWidth > t.maxwidth {
+		minWidth = t.maxwidth
+	}
 
+	if t.maxwidth > 0 {
+		widthSum := sumWidths(colContent, colPadding)
 		over := widthSum - t.maxwidth
-		over -= reducePadding(colPadding, over)
+		// Maintain at least one space of separation between columns by treating
+		// the first unit of padding as non-reducible.
+		reducible := make([]int, len(colPadding))
+		base := make([]int, len(colPadding))
+		for i := range colPadding {
+			base[i] = min(colPadding[i], 1)
+			reducible[i] = colPadding[i] - base[i]
+		}
+		reduced := tableutil.ReducePadding(reducible, over)
+		for i := range colPadding {
+			colPadding[i] = base[i] + reducible[i]
+		}
+		over -= reduced
 		if over > 0 {
-			reduceColumns(colContent, over)
+			tableutil.ReduceColumns(colContent, over)
+		}
+	}
+
+	if minWidth > 0 {
+		widthSum := sumWidths(colContent, colPadding)
+		under := minWidth - widthSum
+		if under > 0 {
+			tableutil.GrowPadding(colPadding, under)
 		}
 	}
 
@@ -180,52 +215,15 @@ func (t *tabWriter) flushRows() error {
 	return nil
 }
 
-func reducePadding(widths []int, reduce int) int {
-	if reduce <= 0 {
-		return 0
+func sumWidths(content []int, padding []int) int {
+	widthSum := 0
+	for _, p := range padding {
+		widthSum += p
 	}
-	const minPadding = 1
-	remaining := reduce
-	for remaining > 0 {
-		changed := false
-		for i := range widths {
-			if widths[i] <= minPadding {
-				continue
-			}
-			widths[i]--
-			remaining--
-			changed = true
-			if remaining == 0 {
-				break
-			}
-		}
-		if !changed {
-			break
-		}
+	for _, w := range content {
+		widthSum += w
 	}
-	return reduce - remaining
-}
-
-func reduceColumns(widths []int, reduce int) {
-	if reduce <= 0 {
-		return
-	}
-	remaining := reduce
-	for remaining > 0 {
-		maxIdx := -1
-		maxWidth := 0
-		for i, width := range widths {
-			if width > maxWidth {
-				maxWidth = width
-				maxIdx = i
-			}
-		}
-		if maxIdx == -1 {
-			break
-		}
-		widths[maxIdx]--
-		remaining--
-	}
+	return widthSum
 }
 
 func (t *tabWriter) Flush() error {

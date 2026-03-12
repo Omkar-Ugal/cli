@@ -13,7 +13,6 @@ import (
 
 	"charm.land/lipgloss/v2/compat"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/muesli/termenv"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"unikraft.com/x/colors"
 )
@@ -26,12 +25,10 @@ import (
 func Render(diffs []diffmatchpatch.Diff) string {
 	lines := splitLines(diffs)
 
-	color := termenv.ColorProfile() != termenv.Ascii
-
 	var buff bytes.Buffer
 	lines = groupLines(lines)
 	for _, line := range lines {
-		line.render(&buff, color)
+		line.render(&buff)
 	}
 	return buff.String()
 }
@@ -203,7 +200,7 @@ func lineText(lineDiffs []diffmatchpatch.Diff) string {
 	return buff.String()
 }
 
-func (line line) render(buff *bytes.Buffer, color bool) {
+func (line line) render(buff *bytes.Buffer) {
 	switch line.op {
 	case diffmatchpatch.DiffEqual:
 		buff.WriteString("  ")
@@ -212,12 +209,10 @@ func (line line) render(buff *bytes.Buffer, color bool) {
 		}
 		buff.WriteString("\n")
 	case diffmatchpatch.DiffDelete:
-		if color {
-			buff.WriteString(lineRemoveStyle.String())
-		}
+		buff.WriteString(lineRemoveStyle.String())
 		buff.WriteString("- ")
 		for _, d := range line.diffs {
-			if color && d.Type == diffmatchpatch.DiffDelete {
+			if d.Type == diffmatchpatch.DiffDelete {
 				buff.WriteString(wordRemoveStyle.String())
 				buff.WriteString(d.Text)
 				buff.WriteString(lineRemoveStyle.String())
@@ -225,18 +220,14 @@ func (line line) render(buff *bytes.Buffer, color bool) {
 				buff.WriteString(d.Text)
 			}
 		}
-		if color {
-			buff.WriteString(ansi.EraseLineRight)
-			buff.WriteString(resetStyle.String())
-		}
+		buff.WriteString(ansi.EraseLineRight)
+		buff.WriteString(resetStyle.String())
 		buff.WriteString("\n")
 	case diffmatchpatch.DiffInsert:
-		if color {
-			buff.WriteString(lineAddStyle.String())
-		}
+		buff.WriteString(lineAddStyle.String())
 		buff.WriteString("+ ")
 		for _, d := range line.diffs {
-			if color && d.Type == diffmatchpatch.DiffInsert {
+			if d.Type == diffmatchpatch.DiffInsert {
 				buff.WriteString(wordAddStyle.String())
 				buff.WriteString(d.Text)
 				buff.WriteString(lineAddStyle.String())
@@ -244,10 +235,8 @@ func (line line) render(buff *bytes.Buffer, color bool) {
 				buff.WriteString(d.Text)
 			}
 		}
-		if color {
-			buff.WriteString(ansi.EraseLineRight)
-			buff.WriteString(resetStyle.String())
-		}
+		buff.WriteString(ansi.EraseLineRight)
+		buff.WriteString(resetStyle.String())
 		buff.WriteString("\n")
 	}
 }
@@ -264,29 +253,8 @@ var (
 	// emit resets) and we might have input with existing ANSI codes that we
 	// don't want to reset.
 	resetStyle      = ansi.NewStyle(ansi.AttrDefaultBackgroundColor)
-	lineRemoveStyle = ansi.NewStyle().BackgroundColor(profileColor(lineRemoveColor))
-	lineAddStyle    = ansi.NewStyle().BackgroundColor(profileColor(lineAddColor))
-	wordRemoveStyle = ansi.NewStyle().BackgroundColor(profileColor(wordRemoveColor))
-	wordAddStyle    = ansi.NewStyle().BackgroundColor(profileColor(wordAddColor))
+	lineRemoveStyle = ansi.NewStyle().BackgroundColor(compat.Profile.Convert(lineRemoveColor))
+	lineAddStyle    = ansi.NewStyle().BackgroundColor(compat.Profile.Convert(lineAddColor))
+	wordRemoveStyle = ansi.NewStyle().BackgroundColor(compat.Profile.Convert(wordRemoveColor))
+	wordAddStyle    = ansi.NewStyle().BackgroundColor(compat.Profile.Convert(wordAddColor))
 )
-
-// profileColor converts a color to the current terminal's color profile.
-// This allows a reasonable fallback for terminals that don't support true
-// color.
-func profileColor(c ansi.Color) ansi.Color {
-	converted := termenv.ColorProfile().FromColor(c)
-	switch v := converted.(type) {
-	case nil:
-		return nil
-	case termenv.NoColor:
-		return nil
-	case termenv.ANSIColor:
-		return ansi.BasicColor(v)
-	case termenv.ANSI256Color:
-		return ansi.IndexedColor(v)
-	case termenv.RGBColor:
-		return ansi.HexColor(v)
-	default:
-		return nil
-	}
-}

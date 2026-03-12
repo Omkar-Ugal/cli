@@ -59,6 +59,18 @@ func (fp FieldPath) String() string {
 	return strings.Join(fp, ".")
 }
 
+// Leaf returns the last non-wildcard segment of the path.
+// For example, "network.interfaces.*.ip" -> "ip".
+func (fp FieldPath) Leaf() string {
+	for i := len(fp) - 1; i >= 0; i-- {
+		if fp[i] == "*" {
+			continue
+		}
+		return fp[i]
+	}
+	return ""
+}
+
 // IterFields iterates over all fields and their subfields, yielding the full
 // path to each field along with a pointer to the field itself.
 func IterFields(fields []Field) iter.Seq2[FieldPath, *Field] {

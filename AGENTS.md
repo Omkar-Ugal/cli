@@ -10,7 +10,7 @@ This repo contains the Go-based Unikraft CLI. Use this file for contributor-faci
 - Build the CLI with `task cli`; the binary is placed in `dist/`, and called `unikraft`.
 - Build documentation with `task docs`; outputs include Markdown docs in `dist/docs/` and man pages in `dist/man/`.
 - Quality gates: `task lint`, `task test`. Run these after making changes to ensure code quality.
-- Integration tests: `task integration`. These tests cover end-to-end scenarios, don't run unless the user prompts you. You can update the expected outputs by running `task integration-update`.
+- Integration tests: `task integration`. These tests cover end-to-end scenarios, don't run unless the user prompts you. You can update the expected outputs by running `task integration-update` - never update `testdata/` files manually.
 - Run these locally before pushing; CI also runs them.
 
 ## Architecture overview
@@ -27,6 +27,35 @@ This repo contains the Go-based Unikraft CLI. Use this file for contributor-faci
 - `kong` for CLI parsing and command/flag wiring
 - `unikraft.com/cloud/sdk` for Unikraft Cloud API clients and types.
 - `unikraft.com/x/...` repos for Unikraft-specific helpers (logging, colors, pointer utilities, terminal sizing, etc.).
+
+## Debugging TUI issues
+
+If you need to debug or test TUI behavior, use the `testtui` tool in `tools/testtui/`:
+
+```sh
+go run ./tools/testtui [resource-type] [resource-key]
+```
+
+This tool runs the same TUI model as `unikraft tui` but accepts scripted commands via stdin instead of taking over the terminal. You can:
+
+- Send keystrokes: `key enter`, `key ?`, `key ctrl+c`
+- Wait for content: `wait contains("Home")`, `wait not contains("Loading...")`
+- Capture snapshots: `snapshot` (prints current rendered view)
+- Add delays: `sleep 150ms`
+
+Example workflow to reproduce TUI states:
+
+```sh
+cat <<'EOF' | go run ./tools/testtui instances
+wait not contains("Loading...")
+snapshot
+key enter
+wait not contains("Loading...")
+snapshot
+EOF
+```
+
+Use `--output=json` for machine-readable events including snapshots and errors. See `tools/testtui/README.md` for full documentation including wait expressions, named pipes for long-lived sessions, and JSON output format.
 
 ## Advice
 
