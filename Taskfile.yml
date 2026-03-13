@@ -44,6 +44,8 @@ tasks:
     silent: true
     cmds:
       - task: go:lint
+        vars:
+          disable: [""]
 
   unit:
     aliases: [test]
