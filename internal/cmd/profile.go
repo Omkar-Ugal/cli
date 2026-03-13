@@ -6,7 +6,9 @@
 package cmd
 
 import (
+	"cmp"
 	"context"
+	"slices"
 
 	jujuerrors "github.com/juju/errors"
 	"unikraft.com/cli/internal/config"
@@ -68,6 +70,9 @@ func (Profile) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		results = append(results, result)
 	}
+	slices.SortFunc(results, func(a, b resource.Resource) int {
+		return cmp.Compare(a.(Profile).Name, b.(Profile).Name)
+	})
 	return results, nil
 }
 
