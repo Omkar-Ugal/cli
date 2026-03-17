@@ -24,6 +24,8 @@ type Mux struct {
 	sealed bool
 	wg     sync.WaitGroup
 	wOnce  sync.Once
+
+	disablePrefix bool
 }
 
 var prefixStyle = lipgloss.NewStyle().Foreground(colors.Slate500).Faint(true)
@@ -31,6 +33,15 @@ var prefixStyle = lipgloss.NewStyle().Foreground(colors.Slate500).Faint(true)
 func New() *Mux {
 	r, w := io.Pipe()
 	return &Mux{PipeReader: r, w: w}
+}
+
+func (m *Mux) DisablePrefix() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.sealed {
+		panic("called after Seal")
+	}
+	m.disablePrefix = true
 }
 
 func (m *Mux) With(name string, r io.Reader) {
@@ -93,13 +104,16 @@ func (m *Mux) run(name string, r io.Reader) {
 		width := m.width
 		m.mu.Unlock()
 
-		marker := markerPipe
-		if switched {
-			marker = markerNew
-		}
-		prefix := prefixStyle.Render(fmt.Sprintf("%*s %c ", width, name, marker))
+		var werr error
 
-		_, werr := m.w.Write([]byte(prefix))
+		if !m.disablePrefix {
+			marker := markerPipe
+			if switched {
+				marker = markerNew
+			}
+			prefix := prefixStyle.Render(fmt.Sprintf("%*s %c ", width, name, marker))
+			_, werr = m.w.Write([]byte(prefix))
+		}
 		if werr == nil {
 			_, werr = m.w.Write(line)
 		}
