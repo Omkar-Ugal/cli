@@ -534,6 +534,9 @@ stdout:
 	  unikraft instance logs my-instance --follow
 
 	Flags:
+	      --[no-]prefix
+	          Prefix log lines with instance name.
+	          [default: true]
 	      --tail
 	          Number of lines to show from the end of the logs.
 	  -f, --follow

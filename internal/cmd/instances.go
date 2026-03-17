@@ -703,6 +703,7 @@ func (Instance) Examples() map[cmd.CmdType][]kingkong.Example {
 type InstancesLogsCmd struct {
 	Name []string `arg:"" completion-predictor:"resource-key-instance" help:"Names of the instances to fetch logs for."`
 
+	Prefix bool `help:"Prefix log lines with instance name." negatable:"" default:"true"`
 	Tail   int  `help:"Number of lines to show from the end of the logs."`
 	Follow bool `short:"f" help:"Follow log output."`
 }
@@ -753,6 +754,9 @@ func (cmd *InstancesLogsCmd) Run(ctx context.Context, stdio config.Stdio) error 
 	}
 
 	mux := muxreader.New()
+	if !cmd.Prefix {
+		mux.DisablePrefix()
+	}
 	defer mux.Close()
 
 	ctx, cancel := context.WithCancel(ctx)
