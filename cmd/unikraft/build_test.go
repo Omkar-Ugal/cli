@@ -18,11 +18,13 @@ func buildTests(t *testing.T, r *testRunner) {
 		})
 	})
 
-	var busybox, busyboxFull, metroName string
+	var busybox, metroName string
 	if r.cfg != nil {
-		busybox = r.cfg.Profile.Organization + "/busybox-e2e:$UNIQ_IMAGE"
-		busyboxFull = fmt.Sprintf("%s/%s", r.cfg.Metro.Index().Host, busybox)
 		metroName = r.cfg.MetroName
+
+		busybox = fmt.Sprintf("%s/busybox-e2e:$UNIQ_IMAGE", r.cfg.Profile.Organization)
+		// this is what we'd use to test direct push
+		// busybox := fmt.Sprintf("%s/%s/busybox-e2e:$UNIQ_IMAGE", cfg.Metro.Index().Host, cfg.Profile.Organization)
 	}
 
 	t.Run("busybox", func(t *testing.T) {
@@ -56,7 +58,7 @@ cmd: ["sh", "/entrypoint.sh"]
 `,
 			}).
 			run(t, []command{
-				{args: []string{unikraftCmd, "build", ".", "--output", busyboxFull}},
+				{args: []string{unikraftCmd, "build", ".", "--output", busybox}},
 				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", busybox}},
 				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
 				{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},

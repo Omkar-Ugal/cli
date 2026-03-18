@@ -104,6 +104,7 @@ func instancesTests(t *testing.T, r *testRunner) {
 					},
 					captureEnv: "FQDN",
 				},
+				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==running", "--timeout", "10s", "test-$UNIQ_INST"}},
 				{args: []string{
 					"curl",
 					"-k",
