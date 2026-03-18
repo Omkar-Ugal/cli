@@ -35,14 +35,14 @@ func Format(value any) (string, error) {
 	}
 
 	if value == nil {
-		return "<nil>", nil
+		return "", nil
 	}
 
 	v := reflect.ValueOf(value)
 	switch v.Kind() {
 	case reflect.Pointer:
 		if v.IsNil() {
-			return "<nil>", nil
+			return "", nil
 		}
 		return Format(v.Elem().Interface())
 	case reflect.String:

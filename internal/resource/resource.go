@@ -98,7 +98,13 @@ func (f Field) HasChildren() bool {
 
 func (f Field) IsEmpty() bool {
 	if f.Value != nil {
-		return reflect.ValueOf(f.Value).IsZero()
+		if reflect.ValueOf(f.Value).IsZero() {
+			return true
+		}
+		if s, ok := f.Value.(fmt.Stringer); ok && s.String() == "" {
+			return true
+		}
+		return false
 	}
 	if f.ValueCallback != nil {
 		return false // has a potential value

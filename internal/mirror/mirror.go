@@ -48,6 +48,9 @@ func mirrorValue(source gjson.Result, dest reflect.Value, pkgPath string) error 
 	if !dest.IsValid() || !dest.CanSet() {
 		return nil
 	}
+	if !source.Exists() {
+		return nil
+	}
 
 	destType := dest.Type()
 	switch dest.Kind() {

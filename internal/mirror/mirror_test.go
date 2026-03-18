@@ -181,6 +181,37 @@ func TestMirror_NonPointerDestination(t *testing.T) {
 	assert.Empty(t, dest.Field)
 }
 
+func TestMirror_NilPointerValue(t *testing.T) {
+	initialValue := "set"
+	source := map[string]any{
+		"field": (*string)(nil),
+	}
+
+	type Dest struct {
+		Field *string `mirror:"field"`
+	}
+
+	dest := Dest{Field: &initialValue}
+	err := Mirror(source, &dest)
+	require.NoError(t, err)
+
+	assert.Nil(t, dest.Field)
+}
+
+func TestMirror_MissingPointerField(t *testing.T) {
+	source := map[string]any{}
+
+	type Dest struct {
+		Field *string `mirror:"field"`
+	}
+
+	var dest Dest
+	err := Mirror(source, &dest)
+	require.NoError(t, err)
+
+	assert.Nil(t, dest.Field)
+}
+
 func TestMirror_TimeValue(t *testing.T) {
 	expectedTime := time.Date(2025, 6, 15, 10, 30, 0, 0, time.UTC)
 	source := map[string]any{

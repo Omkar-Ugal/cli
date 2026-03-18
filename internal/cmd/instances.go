@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/stop"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
@@ -108,10 +109,12 @@ type Instance struct {
 	}
 
 	Stop struct {
-		Reason   int `mirror:"instance.stop_reason"`
-		ExitCode int `mirror:"instance.exit_code"`
-		Code     int `mirror:"instance.stop_code"`
-	}
+		Reason string     `field:",long"`
+		Origin string     `field:"origin,hidden"`
+		Errno  stop.Errno `field:"errno,hidden"`
+
+		ExitCode *uint32 `mirror:"instance.exit_code" field:"exit-code,long"`
+	} `field:",long"`
 
 	// create-only fields
 	Autostart   bool            `field:",invisible" create:"set"`
@@ -361,6 +364,14 @@ func (Instance) load(ref *group.Ref, instance platform.Instance, metro *config.M
 
 	if name, _, ok := strings.Cut(result.Image, "@"); ok {
 		result.Image = name
+	}
+
+	if s := instance.Stop(); s != nil {
+		result.Stop.Reason = s.String()
+		result.Stop.Origin = s.Origin()
+		if stopCode := s.KernelStopCode(); stopCode != nil {
+			result.Stop.Errno = stop.Errno(stopCode.Errno())
+		}
 	}
 
 	return result, nil
