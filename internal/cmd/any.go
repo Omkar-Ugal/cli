@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -186,28 +187,21 @@ func (a AnyResource) Get(ctx context.Context, keys []string) ([]resource.Resourc
 		}
 		backend := resourceBackends[i].(resource.GettableResource)
 		typ := backend.Type().Name
-		i := i
-		keyList := keyList
 		eg.Go(func() error {
 			resources, err := backend.Get(ctx, keyList)
-			if err != nil {
-				return fmt.Errorf("failed to get %s resources: %w", typ, err)
-			}
-
 			wrapped := make([]resource.Resource, 0, len(resources))
 			for _, res := range resources {
 				wrapped = append(wrapped, wrapAnyResource(res))
 			}
 			perBackend[i] = wrapped
+			if err != nil {
+				return fmt.Errorf("failed to get %s resources: %w", typ, err)
+			}
 			return nil
 		})
 	}
-
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-
-	return xslices.Flatten(perBackend), nil
+	err := eg.Wait()
+	return xslices.Flatten(perBackend), err
 }
 
 func (a AnyResource) List(ctx context.Context) ([]resource.Resource, error) {
@@ -218,23 +212,22 @@ func (a AnyResource) List(ctx context.Context) ([]resource.Resource, error) {
 		if !ok {
 			continue
 		}
+		typ := backend.Type().Name
 		eg.Go(func() error {
 			resources, err := listable.List(ctx)
-			if err != nil {
-				return err
-			}
 			wrapped := make([]resource.Resource, 0, len(resources))
 			for _, res := range resources {
 				wrapped = append(wrapped, wrapAnyResource(res))
 			}
 			perBackend[i] = wrapped
+			if err != nil {
+				return fmt.Errorf("failed to list %s resources: %w", typ, err)
+			}
 			return nil
 		})
 	}
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-	return xslices.Flatten(perBackend), nil
+	err := eg.Wait()
+	return xslices.Flatten(perBackend), err
 }
 
 func (a AnyResource) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
@@ -329,6 +322,7 @@ func (a AnyResource) Delete(ctx context.Context, targets []resource.Resource) er
 	// Delete in backend order.
 	// HACK: This is intentionally NOT parallelized because backend order matters
 	// (e.g. dependencies between resource types).
+	var errs []error
 	for i, typeTargets := range targetsByBackend {
 		if len(typeTargets) == 0 {
 			continue
@@ -338,9 +332,8 @@ func (a AnyResource) Delete(ctx context.Context, targets []resource.Resource) er
 		deletable := backend.(resource.DeletableResource)
 
 		if err := deletable.Delete(ctx, typeTargets); err != nil {
-			return fmt.Errorf("failed to delete %s resources: %w", typ, err)
+			errs = append(errs, fmt.Errorf("failed to delete %s resources: %w", typ, err))
 		}
 	}
-
-	return nil
+	return errors.Join(errs...)
 }
