@@ -57,7 +57,7 @@ cmd: ["sh", "/entrypoint.sh"]
 			}).
 			run(t, []command{
 				{args: []string{unikraftCmd, "build", ".", "--output", busyboxFull}},
-				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", busybox}},
+				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", busybox}},
 				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
 				{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
 				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},

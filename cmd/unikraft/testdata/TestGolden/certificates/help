@@ -27,10 +27,10 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 	  cn
 	  chain
 	  pkey
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Global flags:
 	  -h, --help
@@ -74,10 +74,10 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 	  cn
 	  chain
 	  pkey
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	  -w, --watch
@@ -129,10 +129,10 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 	  cn
 	  chain
 	  pkey
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --filter
@@ -184,10 +184,10 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 	  cn
 	  chain
 	  pkey
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --until, --filter
@@ -235,11 +235,11 @@ stdout:
 	    -keyout cert.key \
 	    -out cert.pem
 	  unikraft certificate create \
-	    --set name=demo-cert \
-	    --set cn=demo.unikraft.dev. \
-	    --set-file chain=cert.pem \
-	    --set-file pkey=cert.key \
-	    --set metro=fra
+	  	  --name demo-cert \
+	  	  --cn demo.unikraft.dev. \
+	  	  --chain cert.pem \
+	  	  --pkey cert.key \
+	  	  --metro fra
 
 	Fields:
 	  metro
@@ -250,15 +250,15 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 	  cn
 	  chain
 	  pkey
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
-	      --set, --set-file
+	      --set=<name>=<value>, --set-file=<name>=<filename>
 	          Key-value pairs to set on the certificate.
-	  -e, --visual
+	      --visual
 	          Open an editor to modify fields visually.
 	      --cmd
 	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
@@ -288,6 +288,20 @@ stdout:
 	          Toggle anonymous usage analytics.
 	          [default: true]
 
+	Create flags:
+	      --metro=<metro>
+	          Metro to create in.
+	          [examples: fra, sfo, nyc]
+	      --name=<name>
+	          Certificate name.
+	      --common-name=<fqdn>, --cn
+	          Certificate common name.
+	          [example: demo.unikraft.dev.]
+	      --chain=<file>
+	          Certificate chain file.
+	      --private-key=<file>, --pkey
+	          Certificate private key file.
+
 $ unikraft certificate delete --help
 
 stdout:
@@ -313,10 +327,10 @@ stdout:
 	  issuer
 	  serial-number
 	  state
-	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 	  cn
 	  chain
 	  pkey
+	  timestamps, timestamps.created, timestamps.not-before, timestamps.not-after
 
 	Flags:
 	      --all

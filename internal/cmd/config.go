@@ -18,7 +18,7 @@ import (
 
 type ConfigCmd struct {
 	cmd.ResourceCmd[Config]
-	cmd.GettableResourceCmd[Config] `set:"name=path" set:"names=paths"`
+	cmd.GettableResourceCmd[Config]
 }
 
 // Config wraps config.Config to implement the resource interfaces.

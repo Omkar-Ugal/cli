@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/alecthomas/kong"
+
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
@@ -27,11 +29,34 @@ import (
 
 type CertificatesCmd struct {
 	cmd.ResourceCmd[Certificate]
-	cmd.GettableResourceCmd[Certificate]      `set:"name=certificate" set:"names=certificates"`
-	cmd.WaitableResourceCmd[Certificate]      `set:"name=certificate" set:"names=certificates"`
-	cmd.ListableResourceCmd[Certificate]      `set:"name=certificate" set:"names=certificates"`
-	cmd.BulkDeletableResourceCmd[Certificate] `set:"name=certificate" set:"names=certificates"`
-	cmd.CreatableResourceCmd[Certificate]     `set:"name=certificate" set:"names=certificates"`
+	cmd.GettableResourceCmd[Certificate]
+	cmd.WaitableResourceCmd[Certificate]
+	cmd.ListableResourceCmd[Certificate]
+	cmd.BulkDeletableResourceCmd[Certificate]
+
+	Create CertificateCreateCmd `cmd:"" help:"Create a certificate."`
+}
+
+// CertificateCreateCmd extends the generic resource create command with shortcut
+// flags for commonly used certificate fields. Each field tagged with
+// `shortcut:"<path>"` or `shortcut-file:"<path>"` is translated into a --set or
+// --set-file entry before the standard create pipeline runs.
+type CertificateCreateCmd struct {
+	cmd.ResourceCreateCmd[Certificate]
+
+	Metro string `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
+	Name  string `group:"flag-create" shortcut:"name" help:"Certificate name." placeholder:"name"`
+
+	CommonName string `group:"flag-create" shortcut:"cn" help:"Certificate common name." placeholder:"fqdn" example:"demo.unikraft.dev." aliases:"cn"`
+	Chain      string `group:"flag-create" shortcut-file:"chain" help:"Certificate chain file." placeholder:"file"`
+	PrivateKey string `group:"flag-create" shortcut-file:"pkey" help:"Certificate private key file." placeholder:"file" aliases:"pkey"`
+}
+
+func (c *CertificateCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
+	if err := cmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
+		return err
+	}
+	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
 }
 
 type Certificate struct {
@@ -45,6 +70,10 @@ type Certificate struct {
 	SerialNumber string `mirror:"certificate.serial_number" field:",long"`
 
 	State types.CertificateState `mirror:"certificate.state" field:",short"`
+
+	CN    string `field:"cn,invisible,valueless" create:"set,required"`
+	Chain string `field:"chain,invisible,valueless" create:"set,required"`
+	Pkey  string `field:"pkey,invisible,valueless" create:"set,required"`
 
 	Timestamps struct {
 		Created   types.RelativeTime `mirror:"certificate.created_at" field:",short"`
@@ -89,25 +118,6 @@ func (c Certificate) Fields() ([]resource.Field, error) {
 			}
 		}
 	}
-
-	// Add create-only fields with nil Value
-	result = append(result,
-		resource.Field{
-			Name:      "cn",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: "", Required: true},
-		},
-		resource.Field{
-			Name:      "chain",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: "", Required: true},
-		},
-		resource.Field{
-			Name:      "pkey",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: "", Required: true},
-		},
-	)
 
 	return result, nil
 }
@@ -294,12 +304,18 @@ func (Certificate) Examples() map[cmd.CmdType][]kingkong.Example {
   -subj "/CN=demo.unikraft.dev" \
   -keyout cert.key \
   -out cert.pem`,
+					// `unikraft certificate create \
+					//   --set name=demo-cert \
+					//   --set cn=demo.unikraft.dev. \
+					//   --set-file chain=cert.pem \
+					//   --set-file pkey=cert.key \
+					//   --set metro=fra`,
 					`unikraft certificate create \
-  --set name=demo-cert \
-  --set cn=demo.unikraft.dev. \
-  --set-file chain=cert.pem \
-  --set-file pkey=cert.key \
-  --set metro=fra`,
+	  --name demo-cert \
+	  --cn demo.unikraft.dev. \
+	  --chain cert.pem \
+	  --pkey cert.key \
+	  --metro fra`,
 				},
 			},
 		},

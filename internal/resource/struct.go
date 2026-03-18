@@ -126,6 +126,10 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 			result.Verbosity = cmp.Or(result.Verbosity, newField.Verbosity)
 		}
 
+		if parsedField.Valueless {
+			result.Value = nil
+		}
+
 		result.Verbosity = cmp.Or(result.Verbosity, FieldVerbosityHidden)
 		fields = append(fields, result)
 	}
@@ -245,7 +249,8 @@ type ParsedField struct {
 	Type      reflect.Type
 	Verbosity FieldVerbosity
 
-	Embed bool
+	Embed     bool
+	Valueless bool
 
 	Edit   *Patch
 	Create *Patch
@@ -289,12 +294,14 @@ func ParseField(field reflect.StructField, value reflect.Value) (*ParsedField, e
 	}
 
 	embed := slices.Contains(opts, "embed")
+	valueless := slices.Contains(opts, "valueless")
 
 	return &ParsedField{
 		Name:      name,
 		Verbosity: verbosity,
 		Type:      field.Type,
 		Embed:     embed,
+		Valueless: valueless,
 		Edit:      edit,
 		Create:    create,
 	}, nil
