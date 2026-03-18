@@ -13,7 +13,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1378,9 +1380,12 @@ func TestValueCallback(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1394,16 +1399,22 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "running")
 		assert.NotContains(t, output, "computed-")
 		// Callback should not be invoked when lazy field is not requested
-		assert.Empty(t, resolved, "callbacks should not be invoked when lazy field not selected")
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.Empty(t, resolvedCopy, "callbacks should not be invoked when lazy field not selected")
 	})
 
 	t.Run("list_with_lazy_field", func(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1422,16 +1433,22 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "res2")
 		assert.Contains(t, output, "computed-res2")
 		// Callback should be invoked once per resource
-		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked for each resource")
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolvedCopy, "callbacks should be invoked for each resource")
 	})
 
 	t.Run("get_with_lazy_field", func(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1448,16 +1465,22 @@ func TestValueCallback(t *testing.T) {
 		output := out.String()
 		assert.Contains(t, output, "res1")
 		assert.Contains(t, output, "computed-res1")
-		assert.ElementsMatch(t, []string{"res1"}, resolved, "callback should be invoked once for requested resource")
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.ElementsMatch(t, []string{"res1"}, resolvedCopy, "callback should be invoked once for requested resource")
 	})
 
 	t.Run("quiet_output_with_lazy_field", func(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1474,16 +1497,22 @@ func TestValueCallback(t *testing.T) {
 		output := out.String()
 		assert.Contains(t, output, "res1 computed-res1")
 		assert.Contains(t, output, "res2 computed-res2")
-		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved)
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolvedCopy)
 	})
 
 	t.Run("filter_on_lazy_field_without_selecting_it", func(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1500,16 +1529,22 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "res1")
 		assert.NotContains(t, output, "res2")
 		// Callbacks should be invoked to evaluate the filter for all resources
-		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked to evaluate filter")
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolvedCopy, "callbacks should be invoked to evaluate filter")
 	})
 
 	t.Run("filter_and_select_lazy_field", func(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1531,16 +1566,22 @@ func TestValueCallback(t *testing.T) {
 		assert.NotContains(t, output, "res2")
 		// Callback should only be invoked once per resource, not twice
 		// (once for filtering, once for display would be wrong)
-		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callbacks should be invoked once per resource, not twice")
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolvedCopy, "callbacks should be invoked once per resource, not twice")
 	})
 
 	t.Run("list_filter_sort_select_lazy_once", func(t *testing.T) {
 		env := resourcet.NewTestEnv()
 		env.Add(resourcet.TestResource{ID: "1", Name: "res1", State: "running"})
 		env.Add(resourcet.TestResource{ID: "2", Name: "res2", State: "stopped"})
+		var resolvedMu sync.Mutex
 		var resolved []string
 		env.Hooks.OnLazyResolve = func(resourceName string) {
+			resolvedMu.Lock()
 			resolved = append(resolved, resourceName)
+			resolvedMu.Unlock()
 		}
 		ctx := resourcet.WithTestEnv(context.Background(), env)
 
@@ -1560,7 +1601,10 @@ func TestValueCallback(t *testing.T) {
 		assert.Contains(t, output, "res1")
 		assert.Contains(t, output, "computed-res1")
 		assert.NotContains(t, output, "res2")
-		assert.ElementsMatch(t, []string{"res1", "res2"}, resolved, "callback should be invoked once per resource")
+		resolvedMu.Lock()
+		resolvedCopy := slices.Clone(resolved)
+		resolvedMu.Unlock()
+		assert.ElementsMatch(t, []string{"res1", "res2"}, resolvedCopy, "callback should be invoked once per resource")
 	})
 }
 
