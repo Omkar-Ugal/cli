@@ -159,7 +159,13 @@ func parseReflect(input []string, value reflect.Value) error {
 					if !field.IsExported() {
 						continue
 					}
-					name, _, _ := strings.Cut(field.Tag.Get("field"), ",")
+					// Use "name" tag for value parsing, separate from "field" tag
+					// This allows fields to be excluded from the field system (field:"-")
+					// while still being parseable for --set values
+					name := field.Tag.Get("name")
+					if name == "-" {
+						continue
+					}
 					if name == "" {
 						name = field.Name
 						name = strcase.ToKebab(name)

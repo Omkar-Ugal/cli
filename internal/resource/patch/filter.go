@@ -5,22 +5,56 @@
 
 package patch
 
-import "unikraft.com/cli/internal/resource"
+import (
+	"reflect"
 
-func FilterPatchableFields(fields []resource.Field) []resource.Field {
+	"unikraft.com/cli/internal/resource"
+)
+
+// FilterEditFields filters to fields that have a pending edit patch.
+func FilterEditFields(fields []resource.Field) []resource.Field {
 	return resource.FilterFields(fields, func(field resource.Field) resource.FilterResult {
-		if field.Edit != nil {
-			return resource.FilterInclude
+		if field.Edit == nil {
+			return resource.FilterPrune
 		}
-		return resource.FilterPrune
+		return resource.FilterInclude
 	})
 }
 
-func FilterCreatableFields(fields []resource.Field) []resource.Field {
+// FilterCreateFields filters to fields that have a pending create patch.
+func FilterCreateFields(fields []resource.Field) []resource.Field {
 	return resource.FilterFields(fields, func(field resource.Field) resource.FilterResult {
-		if field.Create != nil {
-			return resource.FilterInclude
+		if field.Create == nil {
+			return resource.FilterPrune
 		}
-		return resource.FilterPrune
+		return resource.FilterInclude
+	})
+}
+
+// FilterDisplayableEditFields filters fields for visual editing display.
+// Includes fields that have an Edit patch and a non-nil Value to show.
+func FilterDisplayableEditFields(fields []resource.Field) []resource.Field {
+	return resource.FilterFields(fields, func(field resource.Field) resource.FilterResult {
+		if field.Edit == nil {
+			return resource.FilterPrune
+		}
+		if reflect.ValueOf(field.Edit.Set).IsZero() {
+			return resource.FilterPrune
+		}
+		return resource.FilterInclude
+	})
+}
+
+// FilterDisplayableCreateFields filters fields for visual creation display.
+// Includes all fields that have a Create patch (even with zero values, so users can fill them in).
+func FilterDisplayableCreateFields(fields []resource.Field) []resource.Field {
+	return resource.FilterFields(fields, func(field resource.Field) resource.FilterResult {
+		if field.Create == nil {
+			return resource.FilterPrune
+		}
+		if !field.Create.Required {
+			return resource.FilterPrune
+		}
+		return resource.FilterInclude
 	})
 }

@@ -39,11 +39,6 @@ type Certificate struct {
 	Name      string `mirror:"certificate.name" field:",short" create:"set"`
 	UUID      string `mirror:"certificate.uuid" field:",long"`
 
-	// create-only fields
-	CN         string `field:"cn,invisible" create:"set,required"`
-	Chain      string `field:"chain,invisible" create:"set,required"`
-	PrivateKey string `field:"pkey,invisible" create:"set,required"`
-
 	CommonName   string `mirror:"certificate.common_name" field:",short"`
 	Subject      string `mirror:"certificate.subject" field:",long"`
 	Issuer       string `mirror:"certificate.issuer" field:",long"`
@@ -79,7 +74,31 @@ func (c Certificate) Raw() any {
 }
 
 func (c Certificate) Fields() ([]resource.Field, error) {
-	return resource.FieldsFromStruct(c)
+	result, err := resource.FieldsFromStruct(c)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add create-only fields with nil Value
+	result = append(result,
+		resource.Field{
+			Name:      "cn",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: "", Required: true},
+		},
+		resource.Field{
+			Name:      "chain",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: "", Required: true},
+		},
+		resource.Field{
+			Name:      "pkey",
+			Verbosity: resource.FieldVerbosityInvisible,
+			Create:    &resource.Patch{Set: "", Required: true},
+		},
+	)
+
+	return result, nil
 }
 
 func (Certificate) List(ctx context.Context) ([]resource.Resource, error) {

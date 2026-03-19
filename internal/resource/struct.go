@@ -67,19 +67,30 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 		}
 		fieldVal := s.Field(i)
 
-		parsedField, err := ParseField(field)
+		parsedField, err := ParseField(field, fieldVal)
 		if err != nil {
 			return nil, err
 		}
 		if parsedField == nil {
 			continue
 		}
+
+		var createPatch, editPatch *Patch
+		if parsedField.Create != nil {
+			patch := *parsedField.Create
+			createPatch = &patch
+		}
+		if parsedField.Edit != nil {
+			patch := *parsedField.Edit
+			editPatch = &patch
+		}
+
 		result := Field{
 			Name:      parsedField.Name,
 			Verbosity: parsedField.Verbosity,
 			Value:     fieldVal.Interface(),
-			Create:    parsedField.Create,
-			Edit:      parsedField.Edit,
+			Create:    createPatch,
+			Edit:      editPatch,
 		}
 
 		newField, err := fieldFromStruct(parsedField, fieldVal)
@@ -180,7 +191,7 @@ type ParsedField struct {
 	Create *Patch
 }
 
-func ParseField(field reflect.StructField) (*ParsedField, error) {
+func ParseField(field reflect.StructField, value reflect.Value) (*ParsedField, error) {
 	if !field.IsExported() {
 		return nil, nil
 	}
@@ -208,11 +219,11 @@ func ParseField(field reflect.StructField) (*ParsedField, error) {
 		verbosity = FieldVerbosityLong
 	}
 
-	edit, err := parsePatch(field.Type, field.Tag.Get("edit"))
+	edit, err := parsePatch(field.Type, value, field.Tag.Get("edit"))
 	if err != nil {
 		return nil, err
 	}
-	create, err := parsePatch(field.Type, field.Tag.Get("create"))
+	create, err := parsePatch(field.Type, value, field.Tag.Get("create"))
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +240,7 @@ func ParseField(field reflect.StructField) (*ParsedField, error) {
 	}, nil
 }
 
-func parsePatch(tp reflect.Type, tag string) (*Patch, error) {
+func parsePatch(tp reflect.Type, val reflect.Value, tag string) (*Patch, error) {
 	if tag == "" {
 		return nil, nil
 	}
@@ -240,11 +251,11 @@ func parsePatch(tp reflect.Type, tag string) (*Patch, error) {
 		var err error
 		switch k {
 		case "set":
-			patch.Set, err = parsePatchValue(tp, v)
+			patch.Set, err = parsePatchValue(tp, v, val)
 		case "add":
-			patch.Add, err = parsePatchValue(tp, v)
+			patch.Add, err = parsePatchEmpty(tp, v)
 		case "del":
-			patch.Del, err = parsePatchValue(tp, v)
+			patch.Del, err = parsePatchEmpty(tp, v)
 		case "required":
 			patch.Required = true
 		}
@@ -255,17 +266,38 @@ func parsePatch(tp reflect.Type, tag string) (*Patch, error) {
 	return patch, nil
 }
 
-func parsePatchValue(tp reflect.Type, value string) (any, error) {
-	switch value {
+func parsePatchValue(tp reflect.Type, tag string, value reflect.Value) (any, error) {
+	switch tag {
 	case "":
-		return reflect.Zero(tp).Interface(), nil
+		return value.Interface(), nil
 	case "keys":
 		if tp.Kind() == reflect.Map {
-			return reflect.Zero(tp.Key()).Interface(), nil
+			keys := reflect.MakeSlice(reflect.SliceOf(tp.Key()), 0, value.Len())
+			for _, key := range value.MapKeys() {
+				keys = reflect.Append(keys, key)
+			}
+			return keys.Interface(), nil
 		}
 		return nil, fmt.Errorf("keys patch value only valid for map types")
 	default:
-		return nil, fmt.Errorf("unknown patch value: %s", value)
+		return nil, fmt.Errorf("unknown patch value: %s", tag)
+	}
+}
+
+// parsePatchEmpty returns a typed nil value for add/del patch templates.
+// This preserves type information while keeping the value nil.
+func parsePatchEmpty(tp reflect.Type, tag string) (any, error) {
+	switch tag {
+	case "":
+		return reflect.Zero(tp).Interface(), nil
+	case "keys":
+		if tp.Kind() != reflect.Map {
+			return nil, fmt.Errorf("keys patch value only valid for map types")
+		}
+		sliceType := reflect.SliceOf(tp.Key())
+		return reflect.Zero(sliceType).Interface(), nil
+	default:
+		return nil, fmt.Errorf("unknown patch value: %s", tag)
 	}
 }
 

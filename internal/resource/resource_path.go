@@ -89,6 +89,12 @@ func GetFieldByPath(fields []Field, spec FieldPath) []Field {
 	return getFieldByPath(nil, fields, spec)
 }
 
+// GetFieldByPathString is a convenience wrapper around GetFieldByPath that
+// parses the path string first.
+func GetFieldByPathString(fields []Field, path string) []Field {
+	return GetFieldByPath(fields, ParseFieldPath(path))
+}
+
 func getFieldByPath(parent *Field, fields []Field, spec FieldPath) []Field {
 	if len(spec) == 0 {
 		return fields

@@ -48,7 +48,6 @@ func (spec *PatchSpec) Keys() iter.Seq[string] {
 // issues.
 func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, error) {
 	foundFields := make(map[string]struct{})
-	unsetFields := make(map[string]struct{})
 	setForbiddenFields := make(map[string]struct{})
 	addForbiddenFields := make(map[string]struct{})
 	delForbiddenFields := make(map[string]struct{})
@@ -73,9 +72,7 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 			original = &resource.Patch{}
 		}
 
-		done := false
 		if vs, ok := spec.Set[keyStr]; ok {
-			done = true
 			if original.Set != nil {
 				set, err := value.ParseNew(vs, original.Set)
 				if err != nil {
@@ -87,7 +84,6 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 			}
 		}
 		if vs, ok := spec.Add[keyStr]; ok {
-			done = true
 			if original.Add != nil {
 				add, err := value.ParseNew(vs, original.Add)
 				if err != nil {
@@ -99,7 +95,6 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 			}
 		}
 		if vs, ok := spec.Del[keyStr]; ok {
-			done = true
 			if original.Del != nil {
 				del, err := value.ParseNew(vs, original.Del)
 				if err != nil {
@@ -109,9 +104,6 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 			} else {
 				delForbiddenFields[keyStr] = struct{}{}
 			}
-		}
-		if !done && original.Required {
-			unsetFields[keyStr] = struct{}{}
 		}
 	}
 
@@ -125,9 +117,6 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 	var err error
 	if len(unknownFields) > 0 {
 		err = errors.Join(err, fmt.Errorf("unknown fields: %v", unknownFields))
-	}
-	if len(unsetFields) > 0 {
-		err = errors.Join(err, fmt.Errorf("required values: %v", xmaps.OrderedKeys(unsetFields)))
 	}
 	if len(setForbiddenFields) > 0 {
 		err = errors.Join(err, fmt.Errorf("fields not settable: %v", xmaps.OrderedKeys(setForbiddenFields)))
@@ -143,7 +132,47 @@ func PatchedFields(fields []resource.Field, spec PatchSpec) ([]resource.Field, e
 	}
 
 	if spec.Create {
-		return FilterCreatableFields(fields), nil
+		return FilterCreateFields(fields), nil
 	}
-	return FilterPatchableFields(fields), nil
+	return FilterEditFields(fields), nil
+}
+
+// ValidateRequired checks that all required fields have a value set in the patches.
+// originalFields should contain the field definitions with Required flags,
+// patchedFields should contain the patches with values.
+func ValidateRequired(originalFields, patchedFields []resource.Field, create bool) error {
+	// Build a map of which fields have patches set
+	patchedSet := make(map[string]struct{})
+	for key, field := range resource.IterFields(patchedFields) {
+		var patch *resource.Patch
+		if create {
+			patch = field.Create
+		} else {
+			patch = field.Edit
+		}
+		if patch != nil && patch.Set != nil {
+			patchedSet[key.String()] = struct{}{}
+		}
+	}
+
+	// Check all required fields in the original schema
+	unsetFields := make(map[string]struct{})
+	for key, field := range resource.IterFields(originalFields) {
+		var patch *resource.Patch
+		if create {
+			patch = field.Create
+		} else {
+			patch = field.Edit
+		}
+		if patch != nil && patch.Required {
+			if _, ok := patchedSet[key.String()]; !ok {
+				unsetFields[key.String()] = struct{}{}
+			}
+		}
+	}
+
+	if len(unsetFields) > 0 {
+		return fmt.Errorf("required values: %v", xmaps.OrderedKeys(unsetFields))
+	}
+	return nil
 }

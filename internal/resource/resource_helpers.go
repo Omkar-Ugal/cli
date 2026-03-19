@@ -8,7 +8,6 @@ package resource
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"slices"
 
 	"golang.org/x/sync/errgroup"
@@ -115,107 +114,6 @@ func fieldsToSlice(fields []Field) []any {
 		result = append(result, fieldToValue(field))
 	}
 	return result
-}
-
-// MapToFields converts a map[string]any into a slice of Fields, it loads into
-// the field Value.
-func MapToFields(fields []Field, m map[string]any) ([]Field, []FieldPath, error) {
-	return mapToFields(fields, m)
-}
-
-func valueToField(field *Field, val any) (*Field, []FieldPath, error) {
-	fieldClone := *field
-	field = &fieldClone
-
-	var unknown []FieldPath
-
-	if field.Value != nil {
-		field.Value = reflect.New(reflect.TypeOf(field.Value)).Elem().Interface()
-		if err := DecodeStruct(val, &field.Value); err != nil {
-			return nil, nil, fmt.Errorf("failed to decode value %v for field %q: %w", val, field.Name, err)
-		}
-	}
-
-	if field.Elem != nil {
-		var valSlice []any
-		if val != nil {
-			var ok bool
-			valSlice, ok = val.([]any)
-			if !ok {
-				return nil, nil, fmt.Errorf("expected slice for field %s, got %T", field.Name, val)
-			}
-		}
-		subfields, fieldUnknown, err := slicesToFields(field.Elem, valSlice)
-		if err != nil {
-			return nil, nil, err
-		}
-		field.Subfields = subfields
-		unknown = fieldUnknown
-	} else if len(field.Subfields) > 0 {
-		var valMap map[string]any
-		if val != nil {
-			var ok bool
-			valMap, ok = val.(map[string]any)
-			if !ok {
-				return nil, nil, fmt.Errorf("expected map for field %s, got %T", field.Name, val)
-			}
-		}
-		subfields, fieldUnknown, err := MapToFields(field.Subfields, valMap)
-		if err != nil {
-			return nil, nil, err
-		}
-		field.Subfields = subfields
-		unknown = fieldUnknown
-	}
-
-	for i := range unknown {
-		unknown[i] = append(FieldPath{field.Name}, unknown[i]...)
-	}
-	return field, unknown, nil
-}
-
-func mapToFields(fields []Field, m map[string]any) ([]Field, []FieldPath, error) {
-	fields = slices.Clone(fields)
-	used := map[string]struct{}{}
-	var unknown []FieldPath
-	for i, field := range fields {
-		val, ok := m[field.Name]
-		if !ok {
-			continue
-		}
-		field, fieldUnknown, err := valueToField(&field, val)
-		if err != nil {
-			return nil, nil, err
-		}
-		fields[i] = *field
-		unknown = append(unknown, fieldUnknown...)
-		used[field.Name] = struct{}{}
-	}
-	for key := range m {
-		if _, ok := used[key]; !ok {
-			unknown = append(unknown, FieldPath{key})
-		}
-	}
-	return fields, unknown, nil
-}
-
-func slicesToFields(elem *Field, vals []any) ([]Field, []FieldPath, error) {
-	if len(vals) == 0 {
-		return nil, nil, nil
-	}
-	fields := make([]Field, 0, len(vals))
-	var unknown []FieldPath
-	for i, val := range vals {
-		elem := *elem
-		elem.Name = fmt.Sprintf("%d", i)
-		field, fieldUnknown, err := valueToField(&elem, val)
-		if err != nil {
-			return nil, nil, err
-		}
-		fields = append(fields, *field)
-		unknown = append(unknown, fieldUnknown...)
-	}
-	return fields, unknown, nil
 }
 
 // FilterFields filters the given fields based on the provided predicate

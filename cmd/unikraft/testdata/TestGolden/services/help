@@ -28,7 +28,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*
@@ -76,7 +76,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*
@@ -132,7 +132,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*
@@ -188,7 +188,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*
@@ -250,7 +250,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*
@@ -259,7 +259,11 @@ stdout:
 	      --set, --set-file
 	          Key-value pairs to set on the service.
 	  -e, --visual
-	          Open an editor to set fields visually.
+	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field
@@ -310,7 +314,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*
@@ -324,6 +328,10 @@ stdout:
 	          Keys to delete from the service.
 	  -e, --visual
 	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field
@@ -374,7 +382,7 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.name, domains.*.certificate,
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
 	  domains.*.certificate.name, domains.*.certificate.uuid
 	  instances, instances.*, instances.*.name, instances.*.uuid
 	  services, services.*

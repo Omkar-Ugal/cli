@@ -39,9 +39,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -53,6 +53,7 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Global flags:
 	  -h, --help
@@ -100,9 +101,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -114,6 +115,7 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Flags:
 	  -w, --watch
@@ -169,9 +171,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -183,6 +185,7 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Flags:
 	      --filter
@@ -238,9 +241,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -252,6 +255,7 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Flags:
 	      --until, --filter
@@ -315,9 +319,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -329,12 +333,17 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Flags:
 	      --set, --set-file
 	          Key-value pairs to set on the instance.
 	  -e, --visual
-	          Open an editor to set fields visually.
+	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field
@@ -388,9 +397,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -402,6 +411,7 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Flags:
 	      --set, --set-file
@@ -412,6 +422,10 @@ stdout:
 	          Keys to delete from the instance.
 	  -e, --visual
 	          Open an editor to modify fields visually.
+	      --cmd
+	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+	      --load, --save
+	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
 	  -f, --field
@@ -465,9 +479,9 @@ stdout:
 	  resources, resources.memory, resources.vcpus
 	  volumes, volumes.*
 	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.name, service.domains.*.certificate,
+	  service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.services.*, service.soft-limit, service.hard-limit
+	  service.services, service.soft-limit, service.hard-limit
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
 	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
@@ -479,6 +493,7 @@ stdout:
 	  replicas
 	  wait-timeout
 	  features
+	  vsock
 
 	Flags:
 	      --all

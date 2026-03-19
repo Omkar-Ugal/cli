@@ -190,6 +190,113 @@ func instancesTestCases(t *testing.T, cfg *integration.Config) []testCase {
 			},
 			cleaners: instanceCleaners,
 		},
+		{
+			name:   "instances/volume",
+			online: true,
+			commands: []command{
+				// Create a volume first
+				{args: []string{
+					unikraftCmd, "volume", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_VOL",
+					"--set", "size=20",
+					"--set", "metro=" + metroName,
+				}},
+				// Create an instance with the volume mounted at /mnt
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=true",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+					"--set", "volumes=test-$UNIQ_VOL:/mnt",
+				}},
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "volume", "delete", "test-$UNIQ_VOL"}},
+			},
+			cleaners: instanceCleaners,
+		},
+		{
+			name:   "instances/volume-inline",
+			online: true,
+			commands: []command{
+				// Create an instance with an inline volume (volume created automatically)
+				// This tests the create-only "size" field in InstanceVolume
+				// Format is :AT[:ro][:size=N] (no name, only size)
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=true",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+					"--set", "volumes=:/data:size=20",
+				}},
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			},
+			cleaners: instanceCleaners,
+		},
+		{
+			name:   "instances/autostart",
+			online: true,
+			commands: []command{
+				// Create an instance with autostart=true (should start automatically)
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=true",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+				}},
+				// Verify instance is running (autostart worked)
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			},
+			cleaners: instanceCleaners,
+		},
+		{
+			name:   "instances/add-domain",
+			online: true,
+			commands: []command{
+				// Create an instance with a service (required to add domains later)
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=true",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+					"--set", "service.services=443:8080/tls+http",
+				}},
+				// Capture the auto-generated service name
+				{
+					args: []string{
+						unikraftCmd, "instance", "inspect", "test-$UNIQ_INST",
+						"--output", "template={{ .service.name }}",
+					},
+					captureEnv: "SERVICE_NAME",
+				},
+				// Edit the service to add a domain
+				{args: []string{
+					unikraftCmd, "service", "edit", "$SERVICE_NAME",
+					"--output", "quiet",
+					"--add", "domains=name=$UNIQ_DOMAIN",
+				}},
+				// Verify instance now has the domain via the service
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			},
+			cleaners: instanceCleaners,
+		},
 	}
 }
 
@@ -203,6 +310,21 @@ var instanceCleaners = []cleaner{
 		// auto-generated domain names like "foo.ukp-stable.apw.unikraft.internal"
 		pattern: regexp.MustCompile(`\b\.[a-z0-9.\-]+\.unikraft\.(app|internal)\b`),
 		repl:    ".unikraft.internal",
+	},
+	{
+		// auto-generated volume names like "vol-0g8gc"
+		pattern: regexp.MustCompile(`\bvol-[a-z0-9]+\b`),
+		repl:    "<INLINE_VOL>",
+	},
+	{
+		// IP addresses like "10.0.1.29"
+		pattern: regexp.MustCompile(`\b10\.\d+\.\d+\.\d+\b`),
+		repl:    "10.X.X.X",
+	},
+	{
+		// MAC addresses like "12:b0:0a:HH:MM:1d" (already partially cleaned)
+		pattern: regexp.MustCompile(`[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}`),
+		repl:    "aa:bb:cc:dd:ee:ff",
 	},
 	{
 		// states can be running/starting

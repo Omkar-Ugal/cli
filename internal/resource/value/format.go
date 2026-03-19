@@ -6,12 +6,13 @@
 package value
 
 import (
-	"cmp"
 	"encoding"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/ettle/strcase"
 )
 
 type Wrapped interface {
@@ -89,10 +90,16 @@ func Format(value any) (string, error) {
 			if valStr == "" {
 				continue
 			}
-			name := cmp.Or(
-				strings.SplitN(field.Tag.Get("field"), ",", 2)[0],
-				strings.ToLower(field.Name),
-			)
+			// Use "name" tag for value formatting, separate from "field" tag
+			// This allows fields to be excluded from the field system (field:"-")
+			// while still being formattable for --set values
+			name := field.Tag.Get("name")
+			if name == "-" {
+				continue
+			}
+			if name == "" {
+				name = strcase.ToKebab(field.Name)
+			}
 			result = append(result, fmt.Sprintf("%s=%s", name, valStr))
 		}
 		return strings.Join(result, ","), nil
