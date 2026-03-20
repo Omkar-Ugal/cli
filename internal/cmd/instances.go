@@ -482,8 +482,10 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 	targetState := instance.State
 	if fields := resource.GetFieldByPath(fields, resource.FieldPath{"state"}); len(fields) > 0 {
 		field := fields[0]
-		targetState = field.Edit.Set.(types.InstanceState)
-		field.Edit = nil
+		if field.Edit != nil && field.Edit.Set != nil {
+			targetState = field.Edit.Set.(types.InstanceState)
+			field.Edit = nil
+		}
 	}
 
 	patches := patchRequests(fields, instancePatchSpec)
