@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 type watchModel struct {
@@ -57,29 +57,29 @@ func (model watchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return model, model.watchRenderCmd()
 	case watchStatusMsg:
 		return model, model.watchStatusTickCmd()
-	case tea.KeyMsg:
-		if msg.Type == tea.KeyCtrlC {
+	case tea.KeyPressMsg:
+		if msg.Keystroke() == "ctrl+c" {
 			return model, tea.Quit
 		}
 	}
 	return model, nil
 }
 
-func (model watchModel) View() string {
+func (model watchModel) View() tea.View {
 	if model.output == "" {
-		return ""
+		return tea.NewView("")
 	}
 
 	output := strings.TrimSuffix(model.output, "\n")
 	if model.lastRefresh.IsZero() {
-		return output
+		return tea.NewView(output)
 	}
 
 	elapsed := time.Since(model.lastRefresh).Seconds()
 	status := fmt.Sprintf("last refreshed %.1fs ago", elapsed)
 	status = lipgloss.NewStyle().Italic(true).Faint(true).Render(status)
 
-	return output + "\n" + status
+	return tea.NewView(output + "\n" + status)
 }
 
 func (model watchModel) watchRenderCmd() tea.Cmd {

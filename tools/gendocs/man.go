@@ -18,10 +18,11 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/cpuguy83/go-md2man/v2/md2man"
-	"github.com/muesli/termenv"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/x/kingkong"
@@ -41,7 +42,8 @@ type ManCmd struct {
 }
 
 func (c *ManCmd) Run(ctx context.Context) error {
-	lipgloss.SetColorProfile(termenv.Ascii)
+	compat.Profile = colorprofile.Ascii
+	lipgloss.Writer.Profile = colorprofile.Ascii
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {
 		return fmt.Errorf("could not create parent directories: %w", err)

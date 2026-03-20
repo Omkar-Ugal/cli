@@ -14,9 +14,10 @@ import (
 	"reflect"
 	"strings"
 
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 	"github.com/alecthomas/kong"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
+	"github.com/charmbracelet/colorprofile"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
@@ -31,7 +32,8 @@ type MdxCmd struct {
 }
 
 func (c *MdxCmd) Run(ctx context.Context) error {
-	lipgloss.SetColorProfile(termenv.Ascii)
+	compat.Profile = colorprofile.Ascii
+	lipgloss.Writer.Profile = colorprofile.Ascii
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {
 		return fmt.Errorf("could not create parent directories: %w", err)

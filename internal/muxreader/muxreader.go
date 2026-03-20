@@ -11,7 +11,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 	"unikraft.com/x/colors"
 )
 
