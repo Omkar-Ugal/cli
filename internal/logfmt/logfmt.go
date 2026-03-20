@@ -9,7 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 	"github.com/rs/zerolog"
 
 	"unikraft.com/x/colors"
@@ -52,9 +53,9 @@ func New(sink io.Writer, typ log.Type, level log.Level) *log.Logger {
 }
 
 var (
-	traceColor = lipgloss.AdaptiveColor{Light: string(colors.Slate200), Dark: string(colors.Slate600)}
-	debugColor = lipgloss.AdaptiveColor{Light: string(colors.Slate300), Dark: string(colors.Slate500)}
-	infoColor  = lipgloss.AdaptiveColor{Light: string(colors.Slate400), Dark: string(colors.Slate400)}
+	traceColor = compat.AdaptiveColor{Light: colors.Slate200, Dark: colors.Slate600}
+	debugColor = compat.AdaptiveColor{Light: colors.Slate300, Dark: colors.Slate500}
+	infoColor  = compat.AdaptiveColor{Light: colors.Slate400, Dark: colors.Slate400}
 
 	levelColors = map[log.Level]func(str ...string) string{
 		log.TraceLevel: lipgloss.NewStyle().Background(traceColor).Foreground(traceColor).Render,

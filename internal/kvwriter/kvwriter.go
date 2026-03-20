@@ -12,9 +12,8 @@ import (
 	"slices"
 	"unicode"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/muesli/termenv"
 
 	xio "unikraft.com/cli/internal/x/io"
 )
@@ -136,7 +135,7 @@ func (b *keyValueWriter) flush() error {
 		}
 	}
 
-	color := lipgloss.ColorProfile() != termenv.Ascii
+	color := colorprofile.Detect(b.w, nil) != colorprofile.NoTTY
 
 	maxKeyLen := 0
 	for _, entry := range b.cells {

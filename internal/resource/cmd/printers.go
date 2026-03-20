@@ -16,10 +16,10 @@ import (
 	"slices"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/Masterminds/sprig/v3"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/muesli/termenv"
 	"sigs.k8s.io/yaml"
 	"unikraft.com/x/joinerrgroup"
 
@@ -274,6 +274,13 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 
 	headerPaths, headerFields := xslices.Collect2(resource.IterFields(headers))
 
+	profile := colorprofile.Detect(out, nil)
+	color := profile != colorprofile.NoTTY && profile != colorprofile.Ascii
+	headerStyle := lipgloss.NewStyle()
+	if color {
+		headerStyle = headerStyle.Bold(true)
+	}
+
 	firstCol := true
 	for i, header := range headerFields {
 		if header.HasChildren() && header.Value == nil {
@@ -289,7 +296,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 		}
 		firstCol = false
 		name := strings.ToUpper(headerName(path))
-		_, err := fmt.Fprintf(out, "%s", lipgloss.NewStyle().SetString(name).Bold(true).String())
+		_, err := fmt.Fprintf(out, "%s", headerStyle.SetString(name).String())
 		if err != nil {
 			return err
 		}
@@ -352,7 +359,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 				if field.Hyperlink != "" {
 					// TODO: use lipgloss styles when it supports hyperlinks
 					// https://github.com/charmbracelet/lipgloss/issues/220
-					if lipgloss.ColorProfile() != termenv.Ascii {
+					if color {
 						value = ansi.SetHyperlink(field.Hyperlink) + value + ansi.ResetHyperlink()
 					}
 				}
