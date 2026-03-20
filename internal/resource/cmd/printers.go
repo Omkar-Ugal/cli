@@ -158,7 +158,7 @@ func printKV(ctx context.Context, out io.Writer, specs []string, resources ...re
 			if err != nil {
 				return err
 			}
-			fields, err = selectResourceFields(fields, false, resource.FieldVerbosityLong, specs)
+			fields, err = SelectFields(fields, false, resource.FieldVerbosityLong, specs)
 			if err != nil {
 				return err
 			}
@@ -267,7 +267,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 		return err
 	}
 
-	headers, err = selectResourceFields(headers, true, resource.FieldVerbosityShort, fieldSpecs)
+	headers, err = SelectFields(headers, true, resource.FieldVerbosityShort, fieldSpecs)
 	if err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ func printQuiet(ctx context.Context, out io.Writer, specs []string, resources ..
 			if err != nil {
 				return err
 			}
-			fields, err = selectResourceFields(fields, false, resource.FieldVerbosityNone, specs)
+			fields, err = SelectFields(fields, false, resource.FieldVerbosityNone, specs)
 			if err != nil {
 				return err
 			}
@@ -560,76 +560,6 @@ func printDebug(ctx context.Context, out io.Writer, resources ...resource.Resour
 		}
 	}
 	return nil
-}
-
-func selectResourceFields(fields []resource.Field, header bool, verbosity resource.FieldVerbosity, fieldSpecs []string) ([]resource.Field, error) {
-	var base []resource.FieldPath
-	var include []resource.FieldPath
-	var exclude []resource.FieldPath
-	for _, field := range fieldSpecs {
-		if len(field) == 0 {
-			continue
-		}
-		if field == "all" {
-			if base == nil {
-				base = []resource.FieldPath{}
-			}
-			continue
-		}
-		switch field[0] {
-		case '+':
-			field = field[1:]
-			include = append(include, resource.ParseFieldPath(field))
-		case '-':
-			field = field[1:]
-			exclude = append(exclude, resource.ParseFieldPath(field))
-		default:
-			base = append(base, resource.ParseFieldPath(field))
-		}
-	}
-
-	var missing []resource.FieldPath
-
-	result, missing := resource.FilterFieldsByPath(fields, base, !header)
-	if base == nil {
-		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
-			// remove fields that are too verbose
-			if field.Verbosity < verbosity {
-				return resource.FilterExclude
-			}
-			// remove empty fields
-			if !header && field.IsEmpty() {
-				return resource.FilterExclude
-			}
-			return resource.FilterRecurse
-		})
-	} else {
-		result = resource.FilterFields(result, func(field resource.Field) resource.FilterResult {
-			// remove invisible fields
-			if field.Verbosity == resource.FieldVerbosityInvisible {
-				return resource.FilterExclude
-			}
-			return resource.FilterRecurse
-		})
-	}
-
-	if len(include) > 0 {
-		included, includeMissing := resource.FilterFieldsByPath(fields, include, !header)
-		result = resource.MergeFields(result, included)
-		missing = append(missing, includeMissing...)
-	}
-
-	if len(exclude) > 0 {
-		excluded, excludeMissing := resource.FilterFieldsByPath(fields, exclude, !header)
-		result = resource.RemoveFields(result, excluded)
-		missing = append(missing, excludeMissing...)
-	}
-
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("unknown fields: %v", missing)
-	}
-
-	return result, nil
 }
 
 func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {

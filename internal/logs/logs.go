@@ -130,6 +130,19 @@ func (r *logsReader) ReadAt(p []byte, off int64) (n int, err error) {
 		if !r.follow {
 			return 0, io.EOF
 		}
+	}
+
+	for {
+		_, n, err = r.readChunk(p, off)
+		if err != nil {
+			return n, err
+		}
+		if r.end != nil && *r.end <= off+int64(n) && !r.follow {
+			return n, io.EOF
+		}
+		if n > 0 {
+			return n, nil
+		}
 
 		select {
 		case <-r.ctx.Done():
@@ -137,15 +150,6 @@ func (r *logsReader) ReadAt(p []byte, off int64) (n int, err error) {
 		case <-time.After(logBackoffDuration):
 		}
 	}
-
-	_, n, err = r.readChunk(p, off)
-	if err != nil {
-		return n, err
-	}
-	if r.end != nil && *r.end <= off+int64(n) && !r.follow {
-		return n, io.EOF
-	}
-	return n, nil
 }
 
 func (r *logsReader) readChunk(p []byte, off int64) (actualOffset int64, n int, err error) {

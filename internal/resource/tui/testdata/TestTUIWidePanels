@@ -1,0 +1,39 @@
+=== list ===
+ tests                                                                                                                                      
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│  ID        NAME   STATE    URL                                                                                                           │
+│  id-test1  test1  pending  https://example.com                                                                                           │
+│  id-test2  test2  pending  https://example.org                                                                                           │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+│                                                                                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ enter open • r refresh • esc back • ? help • ctrl+c quit                                                                                   
+
+=== list+detail ===
+ tests > test test1                                                                                                                         
+╭─────────────────────────────────────────────────────╮ ╭──────────────────────────────────────────────────────────────────────────────────╮
+│  ID        NAME   STATE    URL                      │ │  Field      Value                                                                │
+│  id-test1  test1  pending  https://example.com      │ │  id         id-test1                                                             │
+│  id-test2  test2  pending  https://example.org      │ │  name       test1                                                                │
+│                                                     │ │  state      pending                                                              │
+│                                                     │ │  url        https://example.com                                                  │
+│                                                     │ │  settings                                                                        │
+│                                                     │ │    foo      42                                                                   │
+│                                                     │ │    bar      hello                                                                │
+│                                                     │ │  authors                                                                         │
+│                                                     │ │    [0]                                                                           │
+│                                                     │ │      name   Alice                                                                │
+│                                                     │ │      email  alice@example.com                                                    │
+│                                                     │ │    [1]                                                                           │
+│                                                     │ │      name   Bob                                                                  │
+╰─────────────────────────────────────────────────────╯ ╰──────────────────────────────────────────────────────────────────────────────────╯
+ r refresh • esc back • ? help • ctrl+c quit                                                                                                

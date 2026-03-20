@@ -15,6 +15,8 @@ stdout:
 	Commands:
 	  completion
 	          Outputs shell code for initialising tab completions.
+	  tui
+	          Browse resources in a TUI.
 	  login
 	          Login to Unikraft Cloud.
 	  logout
@@ -100,6 +102,8 @@ stdout:
 	Commands:
 	  completion
 	          Outputs shell code for initialising tab completions.
+	  tui
+	          Browse resources in a TUI.
 	  login
 	          Login to Unikraft Cloud.
 	  logout

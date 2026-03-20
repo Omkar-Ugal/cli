@@ -8,8 +8,20 @@ package types
 import (
 	"fmt"
 
+	"github.com/charmbracelet/x/ansi"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/x/colors"
+)
+
+// ANSI escape sequences for styling using charmbracelet/x/ansi.
+// These use only foreground changes and reset the foreground to default (SGR 39).
+var (
+	fgPrimary = ansi.NewStyle().ForegroundColor(colors.Primary).String()
+	fgSuccess = ansi.NewStyle().ForegroundColor(colors.Success).String()
+	fgWarning = ansi.NewStyle().ForegroundColor(colors.Warning).String()
+	fgError   = ansi.NewStyle().ForegroundColor(colors.Error).String()
+	fgInfo    = ansi.NewStyle().ForegroundColor(colors.Info).String()
+	fgReset   = ansi.NewStyle().ForegroundColor(nil).String()
 )
 
 // InstanceState is a wrapper around platform.InstanceState to automatically
@@ -17,7 +29,7 @@ import (
 type InstanceState platform.InstanceState
 
 func (state InstanceState) String() string {
-	return state.color()(string(state))
+	return state.ansiFg() + string(state) + fgReset
 }
 
 func (state InstanceState) IsRunning() bool {
@@ -58,28 +70,28 @@ func (state InstanceState) MarshalText() ([]byte, error) {
 	return []byte(state), nil
 }
 
-func (state InstanceState) color() func(...string) string {
+func (state InstanceState) ansiFg() string {
 	switch platform.InstanceState(state) {
 	case platform.InstanceStateStopped:
-		return colors.ErrorFg
+		return fgError
 	case platform.InstanceStateStarting:
-		return colors.InfoFg
+		return fgInfo
 	case platform.InstanceStateRunning:
-		return colors.SuccessFg
+		return fgSuccess
 	case platform.InstanceStateDraining:
-		return colors.WarningFg
+		return fgWarning
 	case platform.InstanceStateStopping:
-		return colors.WarningFg
+		return fgWarning
 	case platform.InstanceStateStandby:
-		return colors.PrimaryFg
+		return fgPrimary
 	}
-	return colors.InfoFg
+	return fgInfo
 }
 
 type VolumeState platform.VolumeState
 
 func (state VolumeState) String() string {
-	return state.color()(string(state))
+	return state.ansiFg() + string(state) + fgReset
 }
 
 func (state VolumeState) validate() error {
@@ -110,31 +122,31 @@ func (state VolumeState) MarshalText() ([]byte, error) {
 	return []byte(state), nil
 }
 
-func (state VolumeState) color() func(...string) string {
+func (state VolumeState) ansiFg() string {
 	// FIXME: these colors probably aren't right
 	switch platform.VolumeState(state) {
 	case platform.VolumeStateUninitialized:
-		return colors.InfoFg
+		return fgInfo
 	case platform.VolumeStateInitializing:
-		return colors.WarningFg
+		return fgWarning
 	case platform.VolumeStateAvailable:
-		return colors.SuccessFg
+		return fgSuccess
 	case platform.VolumeStateIdle:
-		return colors.PrimaryFg
+		return fgPrimary
 	case platform.VolumeStateMounted:
-		return colors.SuccessFg
+		return fgSuccess
 	case platform.VolumeStateBusy:
-		return colors.WarningFg
+		return fgWarning
 	case platform.VolumeStateError:
-		return colors.ErrorFg
+		return fgError
 	}
-	return colors.InfoFg
+	return fgInfo
 }
 
 type CertificateState platform.CertificateState
 
 func (state CertificateState) String() string {
-	return state.color()(string(state))
+	return state.ansiFg() + string(state) + fgReset
 }
 
 func (state CertificateState) validate() error {
@@ -161,14 +173,14 @@ func (state CertificateState) MarshalText() ([]byte, error) {
 	return []byte(state), nil
 }
 
-func (state CertificateState) color() func(...string) string {
+func (state CertificateState) ansiFg() string {
 	switch platform.CertificateState(state) {
 	case platform.CertificateStatePending:
-		return colors.WarningFg
+		return fgWarning
 	case platform.CertificateStateValid:
-		return colors.SuccessFg
+		return fgSuccess
 	case platform.CertificateStateError:
-		return colors.ErrorFg
+		return fgError
 	}
-	return colors.InfoFg
+	return fgInfo
 }

@@ -154,6 +154,38 @@ a     b
 	require.Equal(t, expected, buf.String())
 }
 
+func TestTabWriterMinWidth(t *testing.T) {
+	var buf bytes.Buffer
+	w := TabWriter(&buf, WithMinWidth(10))
+
+	input := `
+a	b
+`
+	_, err := w.Write([]byte(input))
+	require.NoError(t, err)
+	err = w.Flush()
+	require.NoError(t, err)
+
+	expected := "\n" + "a" + strings.Repeat(" ", 8) + "b\n"
+	require.Equal(t, expected, buf.String())
+}
+
+func TestTabWriterMinScreenWidthNoTTY(t *testing.T) {
+	var buf bytes.Buffer
+	w := TabWriter(&buf, WithMinScreenWidth())
+
+	input := `
+a	b
+`
+	_, err := w.Write([]byte(input))
+	require.NoError(t, err)
+	err = w.Flush()
+	require.NoError(t, err)
+
+	expected := "\n" + "a" + strings.Repeat(" ", 2) + "b\n"
+	require.Equal(t, expected, buf.String())
+}
+
 func TestTabWriterMaxWidthPadding(t *testing.T) {
 	var buf bytes.Buffer
 	w := TabWriter(&buf, WithMaxWidth(10))

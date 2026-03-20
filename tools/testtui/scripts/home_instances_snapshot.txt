@@ -1,0 +1,19 @@
+# Start on home, open the instances list, and snapshot it.
+
+key down
+key down
+key enter
+wait contains("Home > instances")
+wait not contains("Loading...")
+snapshot
+
+# Open the first running instance and snapshot the detail view.
+#
+# Note: this assumes the first running instance is the second row.
+# If yours differs, add/remove `key down` lines.
+wait contains("running") or contains("RUNNING")
+key down
+key enter
+wait not contains("Loading...")
+wait contains("state") and (contains("running") or contains("RUNNING"))
+snapshot

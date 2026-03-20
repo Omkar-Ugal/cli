@@ -84,7 +84,7 @@ func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	if err != nil {
 		panic(err)
 	}
-	fields, err = selectResourceFields(fields, true, resource.FieldVerbosityInvisible, nil)
+	fields, err = SelectFields(fields, true, resource.FieldVerbosityInvisible, nil)
 	if err != nil {
 		panic(err)
 	}

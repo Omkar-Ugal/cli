@@ -3,11 +3,13 @@ module unikraft.com/cli
 go 1.26.0
 
 require (
+	charm.land/bubbles/v2 v2.0.0-rc.1.0.20260213124548-d004225e8c3b
 	charm.land/bubbletea/v2 v2.0.2
 	charm.land/lipgloss/v2 v2.0.2
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/kong v1.14.0
+	github.com/charmbracelet/colorprofile v0.4.2
 	github.com/charmbracelet/x/ansi v0.11.6
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/containerd/containerd/v2 v2.2.2
@@ -21,10 +23,10 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jotaen/kong-completion v0.0.12
 	github.com/juju/errors v1.0.0
+	github.com/lunixbochs/vtclean v0.0.0-00010101000000-000000000000
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/buildkit v0.28.0
 	github.com/moby/moby/client v0.3.0
-	github.com/muesli/termenv v0.16.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -61,11 +63,9 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/charmbracelet/colorprofile v0.4.2
 	github.com/charmbracelet/ultraviolet v0.0.0-20260205113103-524a6607adb8 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -170,3 +170,7 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	tailscale.com v1.94.1 // indirect
 )
+
+// Includes a fix for stripping hyperlinks
+// https://github.com/lunixbochs/vtclean/pull/15
+replace github.com/lunixbochs/vtclean => github.com/jedevc/vtclean v0.0.0-20251216110630-4486acca2b5a
