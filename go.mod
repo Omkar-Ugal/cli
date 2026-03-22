@@ -23,7 +23,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jotaen/kong-completion v0.0.12
 	github.com/juju/errors v1.0.0
-	github.com/lunixbochs/vtclean v0.0.0-00010101000000-000000000000
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/buildkit v0.28.0
 	github.com/moby/moby/client v0.3.0
@@ -171,6 +170,5 @@ require (
 	tailscale.com v1.94.1 // indirect
 )
 
-// Includes a fix for stripping hyperlinks
-// https://github.com/lunixbochs/vtclean/pull/15
-replace github.com/lunixbochs/vtclean => github.com/jedevc/vtclean v0.0.0-20251216110630-4486acca2b5a
+// HACK: hot-fix for https://github.com/charmbracelet/lipgloss/pull/636
+replace charm.land/lipgloss/v2 => github.com/jedevc/lipgloss/v2 v2.0.0-20260322175907-46dd1f11f91e

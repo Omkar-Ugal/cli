@@ -23,7 +23,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/lunixbochs/vtclean"
 )
 
 // Runner drives a Bubble Tea model and exposes snapshot-oriented helpers.
@@ -89,7 +88,7 @@ func (r *Runner) PressKeys(keys ...tea.Key) {
 // The snapshot is truncated to the Runner's width/height and cleaned of ANSI
 // escape sequences.
 func (r *Runner) Snapshot() string {
-	return vtclean.Clean(r.view(), false)
+	return ansi.Strip(r.view())
 }
 
 // WaitUntil blocks until pred returns true for the current Snapshot or the
