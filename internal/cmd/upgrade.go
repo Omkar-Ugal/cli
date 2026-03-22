@@ -463,23 +463,3 @@ func installBinary(srcPath, destPath string) error {
 
 	return nil
 }
-
-// compareSemver compares two semantic version strings.
-// Returns:
-//
-//	-1 if a < b
-//	 0 if a == b
-//	 1 if a > b
-func compareSemver(a, b string) (int, error) {
-	va, err := semver.NewVersion(a)
-	if err != nil {
-		return 0, jujuerrors.Annotate(err, "parsing version")
-	}
-
-	vb, err := semver.NewVersion(b)
-	if err != nil {
-		return 0, jujuerrors.Annotate(err, "parsing version")
-	}
-
-	return va.Compare(vb), nil
-}
