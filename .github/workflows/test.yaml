@@ -96,7 +96,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p ~/.config/unikraft
-          echo "${UNIKRAFT_CONFIG}" > ~/.config/unikraft/config.yaml
+          echo "${UNIKRAFT_CONFIG_CONTENT}" > ~/.config/unikraft/config.yaml
           task --yes integration
         env:
-          UNIKRAFT_CONFIG: ${{ secrets.UNIKRAFT_CONFIG }}
+          UNIKRAFT_CONFIG_CONTENT: ${{ secrets.UNIKRAFT_CONFIG }}
