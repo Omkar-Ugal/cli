@@ -37,7 +37,7 @@ import (
 type UnikraftCLI struct {
 	globalFlags
 
-	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information."`
+	Version version.VersionCmd `cmd:"" help:"Show version information." aliases:"version,ver,v"`
 
 	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 

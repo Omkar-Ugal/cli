@@ -13,6 +13,8 @@ stdout:
 	  dev (GOOS/GOARCH)
 
 	Commands:
+	  version, ver, v
+	          Show version information.
 	  completion
 	          Outputs shell code for initialising tab completions.
 	  tui
@@ -74,8 +76,6 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.
 
 	Run "unikraft <command> --help" for more information on a command.
 
@@ -102,6 +102,8 @@ stdout:
 	  dev (GOOS/GOARCH)
 
 	Commands:
+	  version, ver, v
+	          Show version information.
 	  completion
 	          Outputs shell code for initialising tab completions.
 	  tui
@@ -163,8 +165,6 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.
 
 	Run "unikraft <command> --help" for more information on a command.
 

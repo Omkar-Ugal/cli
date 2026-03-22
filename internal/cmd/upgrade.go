@@ -37,7 +37,7 @@ var ErrChecksumNotAvailable = errors.New("checksum file not available")
 type UpgradeCmd struct {
 	Channel string `help:"Release channel to upgrade from." default:"stable" enum:"stable,staging"`
 	Force   bool   `short:"f" help:"Force upgrade even if already at latest version."`
-	Use     string `short:"v" name:"use" help:"Upgrade to a specific version."`
+	Version string `short:"v" help:"Upgrade to a specific version."`
 	BinDir  string `help:"Directory where to install the binary. If empty, uses the current binary location."`
 	BaseUrl string `help:"Base URL for fetching releases." env:"UNIKRAFT_CLI_INSTALL_URL" default:"https://pkg.unikraft.com" hidden:"true"`
 }
@@ -81,9 +81,9 @@ func (cmd *UpgradeCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	}
 
 	var targetVersion string
-	if cmd.Use != "" {
+	if cmd.Version != "" {
 		// Use the specified version
-		targetVersion = cmd.Use
+		targetVersion = cmd.Version
 		log.G(ctx).
 			Info().
 			Str("version", targetVersion).
