@@ -18,6 +18,24 @@ The official command-line interface for [Unikraft Cloud](https://unikraft.cloud)
 
 ## Installation
 
+<details open>
+<summary><strong>1-liner (macOS & Linux)</strong></summary>
+
+```bash
+curl --proto '=https' --tlsv1.2 -fsSL https://unikraft.com/cli/install.sh | sh
+```
+Installs into the first preferred `bin` directory found in your `PATH` (falling back to `$HOME/.local/bin` if none are available).
+Use environment variable `UNIKRAFT_CLI_INSTALL_BIN_DIR` to customize the installation directory.
+</details>
+
+<details>
+<summary><strong>Homebrew (macOS & Linux)</strong></summary>
+
+```bash
+brew install unikraft/tap/unikraft
+```
+</details>
+
 <details>
 <summary><strong>Debian/Ubuntu</strong></summary>
 

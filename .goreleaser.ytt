@@ -96,6 +96,14 @@ release:
     > This is a **stable** version of the Unikraft CLI.
 
     ## Installation
+    ### 1-liner (macOS & Linux)
+    ```bash
+    curl --proto '=https' --tlsv1.2 -LsSf https://unikraft.com/cli/install.sh | sh
+    ```
+    ### Homebrew (macOS & Linux)
+    ```bash
+    brew install unikraft/tap/unikraft
+    ```
     ### Debian/Ubuntu
     ```bash
     # Update and install dependencies
@@ -136,6 +144,28 @@ release:
     yum install unikraft-cli
     ```
   #@ end
+
+brews:
+- name: unikraft
+  ids:
+#@ for arch in oses["linux"]:
+  - #@ "archive-unikraft-cli-linux-{}".format(arch)
+#@ end
+#@ for arch in oses["darwin"]:
+  - #@ "archive-unikraft-cli-darwin-{}".format(arch)
+#@ end
+  url_template: "https://github.com/unikraft/cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  commit_author:
+    name: Unikraft Bot
+    email: monkey@unikraft.io
+  commit_msg_template: "Bump {{ .ProjectName }} to version {{ .Tag }}"
+  homepage: "https://unikraft.com"
+  description: "The official CLI for Unikraft Cloud — deploy and manage unikernels globally in milliseconds."
+  license: "BSD-3-Clause"
+  skip_upload: false
+  repository:
+    owner: unikraft
+    name: homebrew-tap
 
 builds:
 #@ for os, archs in oses.items():

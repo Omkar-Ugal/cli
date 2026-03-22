@@ -38,8 +38,6 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.
 
 $ unikraft image get --help
 
@@ -87,8 +85,6 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.
 
 $ unikraft image list --help
 
@@ -147,8 +143,6 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.
 
 $ unikraft image copy --help
 
@@ -191,5 +185,3 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.

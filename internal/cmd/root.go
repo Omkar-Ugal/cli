@@ -37,7 +37,7 @@ import (
 type UnikraftCLI struct {
 	globalFlags
 
-	Version version.VersionFlag `group:"flag-global" name:"version" help:"Print version information."`
+	Version version.VersionCmd `cmd:"" help:"Show version information." aliases:"version,ver,v"`
 
 	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 
@@ -55,6 +55,7 @@ type UnikraftCLI struct {
 	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs"`
 	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
 	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
+	Upgrade      UpgradeCmd      `cmd:"" help:"Upgrade the Unikraft CLI to the latest version."`
 
 	Resources AnyResourceCmd `cmd:"" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources"`
 

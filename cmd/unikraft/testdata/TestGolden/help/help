@@ -13,6 +13,8 @@ stdout:
 	  dev (GOOS/GOARCH)
 
 	Commands:
+	  version, ver, v
+	          Show version information.
 	  completion
 	          Outputs shell code for initialising tab completions.
 	  tui
@@ -39,6 +41,8 @@ stdout:
 	          Manage Unikraft Cloud certificates.
 	  images, image, img, imgs
 	          Manage Unikraft Cloud images.
+	  upgrade
+	          Upgrade the Unikraft CLI to the latest version.
 
 	Examples:
 	  # Login to Unikraft Cloud
@@ -73,7 +77,5 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
-	      --version
-	          Print version information.
 
 	Run "unikraft <command> --help" for more information on a command.

@@ -21,7 +21,7 @@ func helpTestCases(t *testing.T, _ *integration.Config) []testCase {
 		},
 		{
 			name:     "version",
-			commands: []command{{args: []string{unikraftCmd, "--version"}}},
+			commands: []command{{args: []string{unikraftCmd, "version"}}},
 		},
 		{
 			name:     "help",
