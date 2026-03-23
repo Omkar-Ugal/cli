@@ -7,7 +7,7 @@ stdout:
 	- name:         default
 	  type:         cloud
 	  token:        <token>
-	  organization: jedevc
+	  organization: test
 	  metros:
 	  - name:       test
 	    endpoint:   https://api.test.unikraft.internal
@@ -32,7 +32,7 @@ stdout:
 	          }
 	        ],
 	        "name": "default",
-	        "organization": "jedevc",
+	        "organization": "test",
 	        "token": "<token>",
 	        "type": "cloud"
 	      }
@@ -54,6 +54,6 @@ stdout:
 	        insecure: false
 	        name: test
 	      name: default
-	      organization: jedevc
+	      organization: test
 	      token: <token>
 	      type: cloud

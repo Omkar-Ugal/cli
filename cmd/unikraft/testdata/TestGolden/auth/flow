@@ -1,7 +1,7 @@
 $ unikraft login --check
 
 stderr:
-	│ existing authentication token found organization=jedevc
+	│ existing authentication token found organization=test
 
 $ unikraft profile list
 

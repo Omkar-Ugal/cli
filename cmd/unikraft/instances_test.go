@@ -325,7 +325,7 @@ var instanceCleaners = []cleaner{
 	},
 	{
 		// MAC addresses like "12:b0:0a:HH:MM:1d" (already partially cleaned)
-		pattern: regexp.MustCompile(`[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}`),
+		pattern: regexp.MustCompile(`\b[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}\b`),
 		repl:    "aa:bb:cc:dd:ee:ff",
 	},
 	{

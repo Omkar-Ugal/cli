@@ -256,9 +256,10 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Name)),
 					repl:    "default",
 				},
-			)
-			report.cleaners = append(
-				report.cleaners,
+				cleaner{
+					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Organization)),
+					repl:    "test",
+				},
 				cleaner{
 					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Token)),
 					repl:    "<token>",
@@ -305,6 +306,7 @@ func (report *report) String() string {
 	out := strings.Builder{}
 
 	cmd := strings.Join(formatArgs(report.args), " ")
+	cmd = report.cleanOutput(cmd)
 	if report.captureEnv != "" {
 		cmd = report.captureEnv + "=$(" + cmd + ")"
 	}
