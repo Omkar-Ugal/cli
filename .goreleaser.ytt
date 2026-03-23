@@ -146,7 +146,11 @@ release:
   #@ end
 
 brews:
+#@ if getattr(data.values, "PRERELEASE", "true") == "true":
+- name: unikraft-staging
+#@ else:
 - name: unikraft
+#@ end
   ids:
 #@ for arch in oses["linux"]:
   - #@ "archive-unikraft-cli-linux-{}".format(arch)
