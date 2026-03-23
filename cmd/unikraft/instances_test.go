@@ -74,7 +74,7 @@ func instancesTests(t *testing.T, r *testRunner) {
 					"--set", "resources.memory=16Mib",
 					"--set", "resources.vcpus=1",
 				}},
-				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
 				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
 			})
 	})
