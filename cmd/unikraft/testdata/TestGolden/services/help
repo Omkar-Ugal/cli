@@ -6,7 +6,7 @@ stdout:
 	Usage:
 	  unikraft services <command> [flags]
 
-	Commands:
+	Resources:
 	  get, inspect, show
 	          Inspect a service.
 	  wait
