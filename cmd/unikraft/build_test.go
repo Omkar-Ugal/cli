@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 )
 
@@ -27,6 +28,7 @@ func buildTests(t *testing.T, r *testRunner) {
 	t.Run("busybox", func(t *testing.T) {
 		r.
 			online().
+			withCleaners(buildCleaners).
 			withContext(map[string]string{
 				"Dockerfile": `
 FROM busybox:latest
@@ -61,4 +63,12 @@ cmd: ["sh", "/entrypoint.sh"]
 				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
 			})
 	})
+}
+
+var buildCleaners = []cleaner{
+	{
+		// buildkit versions like "version=v0.25.2" or "version=v0.0.0+unknown" change between environments
+		pattern: regexp.MustCompile(`\bversion=v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\b`),
+		repl:    "version=vX.Y.Z",
+	},
 }

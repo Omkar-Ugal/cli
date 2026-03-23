@@ -212,6 +212,12 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 		cmd.Env = append(cmd.Env, "BUILDKIT_PROGRESS=quiet")
 		cmd.Env = append(cmd.Env, resource.UnikraftSandboxEnv+"="+sandboxPath)
 
+		if i > 0 {
+			// HACK: this is awful, but the platform can take a moment for things to
+			// get ready :(
+			time.Sleep(500 * time.Millisecond)
+		}
+
 		err := cmd.Run()
 		if command.captureEnv != "" {
 			value := strings.TrimSpace(stdout.String())
@@ -256,9 +262,10 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Name)),
 					repl:    "default",
 				},
-			)
-			report.cleaners = append(
-				report.cleaners,
+				cleaner{
+					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Organization)),
+					repl:    "test",
+				},
 				cleaner{
 					pattern: regexp.MustCompile(regexp.QuoteMeta(testCfg.Profile.Token)),
 					repl:    "<token>",
@@ -305,6 +312,7 @@ func (report *report) String() string {
 	out := strings.Builder{}
 
 	cmd := strings.Join(formatArgs(report.args), " ")
+	cmd = report.cleanOutput(cmd)
 	if report.captureEnv != "" {
 		cmd = report.captureEnv + "=$(" + cmd + ")"
 	}

@@ -295,7 +295,7 @@ profiles:
     - country: xx # void
       endpoint: http://api.ukp-stable.apw.unikraft.internal/
       name: ukp-stable
-    organization: jedevc
+    organization: foo
 `) + "\n"
 
 	desired := strings.TrimSpace(`
