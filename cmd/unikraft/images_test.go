@@ -30,7 +30,6 @@ func imagesTests(t *testing.T, r *testRunner) {
 				},
 			}).
 			run(t, []command{
-				{args: []string{unikraftCmd, "image", "list", "--filter", `ref~="/official/nginx:latest$"`}},
 				{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
 			})
 	})

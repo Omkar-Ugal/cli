@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/distribution/reference"
 	"github.com/google/uuid"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
@@ -58,7 +59,8 @@ type Instance struct {
 	Tags []string `mirror:"instance.tags"`
 
 	State types.InstanceState `mirror:"instance.state" field:",short" edit:"set"`
-	Image string              `mirror:"instance.image" field:",short" create:"set,required" edit:"set"`
+
+	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short" create:"set,required" edit:"set"`
 
 	Runtime struct {
 		Args []string          `mirror:"instance.args" field:",short" create:"set" edit:"set"`
@@ -428,11 +430,6 @@ func (Instance) load(ref *group.Ref, instance platform.Instance, metro *config.M
 	if err != nil {
 		return Instance{}, fmt.Errorf("could not mirror instance data: %w", err)
 	}
-
-	if name, _, ok := strings.Cut(result.Image, "@"); ok {
-		result.Image = name
-	}
-
 	if s := instance.Stop(); s != nil {
 		result.Stop.Reason = s.String()
 		result.Stop.Origin = s.Origin()
@@ -440,7 +437,6 @@ func (Instance) load(ref *group.Ref, instance platform.Instance, metro *config.M
 			result.Stop.Errno = stop.Errno(stopCode.Errno())
 		}
 	}
-
 	return result, nil
 }
 
@@ -536,7 +532,7 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInsta
 	var zero platform.UpdateInstancesRequestItemProp
 	switch path {
 	case "image":
-		return platform.UpdateInstancesRequestItemPropImage, value.(string)
+		return platform.UpdateInstancesRequestItemPropImage, value.(types.ImageRef[reference.Named]).Reference.String()
 	case "runtime.args":
 		return platform.UpdateInstancesRequestItemPropArgs, value.([]string)
 	case "runtime.env":
@@ -575,7 +571,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "metro":
 			metro = field.Create.Set.(string)
 		case "image":
-			req.Image = new(field.Create.Set.(string))
+			req.Image = new(field.Create.Set.(types.ImageRef[reference.Named]).Reference.String())
 		case "runtime.args":
 			req.Args = field.Create.Set.([]string)
 		case "runtime.env":
