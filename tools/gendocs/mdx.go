@@ -18,6 +18,9 @@ import (
 	"charm.land/lipgloss/v2/compat"
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/colorprofile"
+	"github.com/charmbracelet/x/ansi"
+	"sigs.k8s.io/yaml"
+
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
@@ -32,8 +35,9 @@ type MdxCmd struct {
 }
 
 func (c *MdxCmd) Run(ctx context.Context) error {
-	compat.Profile = colorprofile.Ascii
-	lipgloss.Writer.Profile = colorprofile.Ascii
+	compat.Profile = colorprofile.NoTTY
+	lipgloss.Writer.Profile = colorprofile.NoTTY
+	_ = os.Setenv("NO_COLOR", "1")
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {
 		return fmt.Errorf("could not create parent directories: %w", err)
@@ -56,10 +60,28 @@ func (c *MdxCmd) Run(ctx context.Context) error {
 func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 	buf := new(bytes.Buffer)
 	name := NodePath(node)
+	help := strings.TrimSuffix(node.Help, "\n")
+	if idx := strings.LastIndex(help, "\n"); idx != -1 {
+		lastLine := help[idx+1:]
+		if strings.TrimSpace(lastLine) == "" {
+			help = strings.TrimSuffix(help, "\n"+lastLine)
+		}
+	}
+
+	frontmatter := struct {
+		Title       string `json:"title"`
+		Description string `json:"description,omitempty"`
+	}{
+		Title:       name,
+		Description: help,
+	}
+	frontmatterBytes, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return fmt.Errorf("could not marshal frontmatter for %s: %w", name, err)
+	}
 
 	buf.WriteString("---\n")
-	buf.WriteString("title: \"" + name + "\"\n")
-	buf.WriteString("description: " + node.Help + "\n")
+	buf.Write(frontmatterBytes)
 	buf.WriteString("---\n\n")
 
 	if node.Detail != "" {
@@ -70,12 +92,18 @@ func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 		if node.Parent == nil {
 			buf.WriteString("```\n")
 		}
-	} else if node.Help != "" {
-		buf.WriteString(node.Help + "\n\n")
+	} else if help != "" {
+		if node.Parent == nil && strings.Contains(help, "\n") {
+			buf.WriteString("```\n")
+			buf.WriteString(help + "\n")
+			buf.WriteString("```\n\n")
+		} else {
+			buf.WriteString(help + "\n\n")
+		}
 	}
 
 	if IsRunnable(node) {
-		fmt.Fprintf(buf, "```\n%s\n```\n\n", kingkong.Summary(node))
+		fmt.Fprintf(buf, "```\n%s\n```\n\n", ansi.Strip(kingkong.Summary(node)))
 	}
 
 	printDocsExamples(buf, node)
