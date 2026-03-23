@@ -6,7 +6,7 @@ stdout:
 	Usage:
 	  unikraft config <command> [flags]
 
-	Commands:
+	Config:
 	  get, inspect, show
 	          Inspect a path.
 

@@ -38,31 +38,28 @@ import (
 type UnikraftCLI struct {
 	globalFlags
 
-	Version version.VersionCmd `cmd:"" help:"Show version information." aliases:"version,ver,v"`
+	Run   RunCmd   `cmd:"" group:"cmd-commands" help:"Run an image as an instance."`
+	Build BuildCmd `cmd:"" group:"cmd-commands" help:"Build a Unikraft project into a container image."`
+	TUI   TUICmd   `cmd:"" group:"cmd-commands" help:"Browse resources in a TUI."`
 
-	Completion kongcompletion.Completion `cmd:"" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
+	Metros       MetrosCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
+	Instances    InstancesCmd    `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms"`
+	Volumes      VolumesCmd      `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols"`
+	Services     ServicesCmd     `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs"`
+	Certificates CertificatesCmd `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
+	Images       ImagesCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
+	Resources    AnyResourceCmd  `cmd:"" group:"cmd-resources" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources"`
 
-	TUI TUICmd `cmd:"" help:"Browse resources in a TUI."`
+	Login   login.LoginCmd  `cmd:"" group:"cmd-config" help:"Login to Unikraft Cloud."`
+	Logout  login.LogoutCmd `cmd:"" group:"cmd-config" help:"Logout from Unikraft Cloud."`
+	Profile ProfileCmd      `cmd:"" group:"cmd-config" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
+	Config  ConfigCmd       `cmd:"" group:"cmd-config" help:"Manage CLI configuration." aliases:"config,conf,cfg"`
 
-	Run   RunCmd   `cmd:"" help:"Run an image as an instance."`
-	Build BuildCmd `cmd:"" help:"Build a Unikraft project into a container image."`
+	Completion kongcompletion.Completion `cmd:"" group:"cmd-utilities" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
+	Version    version.VersionCmd        `cmd:"" group:"cmd-utilities" help:"Show version information." aliases:"version,ver,v"`
+	Upgrade    UpgradeCmd                `cmd:"" group:"cmd-utilities" help:"Upgrade the Unikraft CLI to the latest version."`
 
-	Login   login.LoginCmd  `cmd:"" help:"Login to Unikraft Cloud."`
-	Logout  login.LogoutCmd `cmd:"" help:"Logout from Unikraft Cloud."`
-	Profile ProfileCmd      `cmd:"" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
-	Config  ConfigCmd       `cmd:"" help:"Manage CLI configuration." aliases:"config,conf,cfg"`
-
-	Metros       MetrosCmd       `cmd:"" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
-	Instances    InstancesCmd    `cmd:"" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms"`
-	Volumes      VolumesCmd      `cmd:"" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols"`
-	Services     ServicesCmd     `cmd:"" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs"`
-	Certificates CertificatesCmd `cmd:"" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
-	Images       ImagesCmd       `cmd:"" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
-	Upgrade      UpgradeCmd      `cmd:"" help:"Upgrade the Unikraft CLI to the latest version."`
-
-	Resources AnyResourceCmd `cmd:"" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources"`
-
-	SendAnalytics SendAnalyticsCmd `cmd:"" help:"Send analytics payload (used internally for detached analytics)." name:"_send_analytics" hidden:""`
+	SendAnalytics SendAnalyticsCmd `cmd:"" group:"cmd-utilities" help:"Send analytics payload (used internally for detached analytics)." name:"_send_analytics" hidden:""`
 }
 
 func (cli UnikraftCLI) Examples() []kingkong.Example {
@@ -316,6 +313,22 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 			{
 				Key:   "flag-local",
 				Title: kingkong.Underline("Subcommand flags") + ":",
+			},
+			{
+				Key:   "cmd-commands",
+				Title: kingkong.Underline("Commands") + ":",
+			},
+			{
+				Key:   "cmd-resources",
+				Title: kingkong.Underline("Resources") + ":",
+			},
+			{
+				Key:   "cmd-config",
+				Title: kingkong.Underline("Config") + ":",
+			},
+			{
+				Key:   "cmd-utilities",
+				Title: kingkong.Underline("Utilities") + ":",
 			},
 		}),
 		kong.NamedMapper("optional", xkong.Optional()),

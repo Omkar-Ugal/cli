@@ -13,24 +13,14 @@ stdout:
 	  dev (GOOS/GOARCH)
 
 	Commands:
-	  version, ver, v
-	          Show version information.
-	  completion
-	          Outputs shell code for initialising tab completions.
-	  tui
-	          Browse resources in a TUI.
 	  run
 	          Run an image as an instance.
 	  build
 	          Build a Unikraft project into a container image.
-	  login
-	          Login to Unikraft Cloud.
-	  logout
-	          Logout from Unikraft Cloud.
-	  profile, profiles
-	          Manage Unikraft Cloud profiles.
-	  config, conf, cfg
-	          Manage CLI configuration.
+	  tui
+	          Browse resources in a TUI.
+
+	Resources:
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance, vm, vms
@@ -43,6 +33,22 @@ stdout:
 	          Manage Unikraft Cloud certificates.
 	  images, image, img, imgs
 	          Manage Unikraft Cloud images.
+
+	Config:
+	  login
+	          Login to Unikraft Cloud.
+	  logout
+	          Logout from Unikraft Cloud.
+	  profile, profiles
+	          Manage Unikraft Cloud profiles.
+	  config, conf, cfg
+	          Manage CLI configuration.
+
+	Utilities:
+	  completion
+	          Outputs shell code for initialising tab completions.
+	  version, ver, v
+	          Show version information.
 	  upgrade
 	          Upgrade the Unikraft CLI to the latest version.
 
@@ -104,24 +110,14 @@ stdout:
 	  dev (GOOS/GOARCH)
 
 	Commands:
-	  version, ver, v
-	          Show version information.
-	  completion
-	          Outputs shell code for initialising tab completions.
-	  tui
-	          Browse resources in a TUI.
 	  run
 	          Run an image as an instance.
 	  build
 	          Build a Unikraft project into a container image.
-	  login
-	          Login to Unikraft Cloud.
-	  logout
-	          Logout from Unikraft Cloud.
-	  profile, profiles
-	          Manage Unikraft Cloud profiles.
-	  config, conf, cfg
-	          Manage CLI configuration.
+	  tui
+	          Browse resources in a TUI.
+
+	Resources:
 	  metros, metro
 	          Manage Unikraft Cloud metros.
 	  instances, instance, vm, vms
@@ -134,6 +130,22 @@ stdout:
 	          Manage Unikraft Cloud certificates.
 	  images, image, img, imgs
 	          Manage Unikraft Cloud images.
+
+	Config:
+	  login
+	          Login to Unikraft Cloud.
+	  logout
+	          Logout from Unikraft Cloud.
+	  profile, profiles
+	          Manage Unikraft Cloud profiles.
+	  config, conf, cfg
+	          Manage CLI configuration.
+
+	Utilities:
+	  completion
+	          Outputs shell code for initialising tab completions.
+	  version, ver, v
+	          Show version information.
 	  upgrade
 	          Upgrade the Unikraft CLI to the latest version.
 
