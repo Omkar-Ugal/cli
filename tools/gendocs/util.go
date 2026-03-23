@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
-
 	"unikraft.com/cli/internal/cmd"
 	"unikraft.com/x/kingkong"
 )

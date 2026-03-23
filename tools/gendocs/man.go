@@ -22,6 +22,7 @@ import (
 	"charm.land/lipgloss/v2/compat"
 	"github.com/alecthomas/kong"
 	"github.com/charmbracelet/colorprofile"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/cpuguy83/go-md2man/v2/md2man"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
@@ -42,8 +43,9 @@ type ManCmd struct {
 }
 
 func (c *ManCmd) Run(ctx context.Context) error {
-	compat.Profile = colorprofile.Ascii
-	lipgloss.Writer.Profile = colorprofile.Ascii
+	compat.Profile = colorprofile.NoTTY
+	lipgloss.Writer.Profile = colorprofile.NoTTY
+	_ = os.Setenv("NO_COLOR", "1")
 
 	if err := os.MkdirAll(c.Outdir, 0o775); err != nil {
 		return fmt.Errorf("could not create parent directories: %w", err)
@@ -201,7 +203,7 @@ func genManContent(node *kong.Node, header *ManHeader) ([]byte, error) {
 	buf.WriteString("# NAME\n")
 	fmt.Fprintf(buf, "%s \\- %s\n\n", dashCommandName, node.Help)
 	buf.WriteString("# SYNOPSIS\n")
-	fmt.Fprintf(buf, "`%s`\n\n", kingkong.Summary(node))
+	fmt.Fprintf(buf, "`%s`\n\n", ansi.Strip(kingkong.Summary(node)))
 	buf.WriteString("# DESCRIPTION\n")
 	buf.WriteString(description + "\n\n")
 
