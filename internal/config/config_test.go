@@ -56,3 +56,89 @@ profiles:
 	assert.Contains(t, content, "token: newtoken", "expected token to be updated")
 	assert.NotContains(t, content, "foobar", "expected unknown profile key to be removed")
 }
+
+func TestLegacyProfileParsing(t *testing.T) {
+	tests := []struct {
+		name             string
+		metroEnv         string
+		expectedName     string
+		expectedEndpoint string
+	}{
+		{
+			name:             "full URL",
+			metroEnv:         "https://api.fra.unikraft.cloud/v1",
+			expectedName:     "fra",
+			expectedEndpoint: "https://api.fra.unikraft.cloud",
+		},
+		{
+			name:             "short name",
+			metroEnv:         "fra",
+			expectedName:     "fra",
+			expectedEndpoint: "https://api.fra.unikraft.cloud",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("UKC_METRO", tt.metroEnv)
+			t.Setenv("UKC_TOKEN", "test-token")
+
+			root := t.TempDir()
+			path := filepath.Join(root, "config.yaml")
+
+			input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: legacy
+`) + "\n"
+
+			err := os.WriteFile(path, []byte(input), 0o600)
+			require.NoError(t, err)
+
+			config, err := Load(path)
+			require.NoError(t, err)
+
+			profile := config.Profiles["default"]
+			assert.Equal(t, ProfileTypeLegacy, profile.Type)
+			assert.Equal(t, "test-token", profile.Token)
+			require.Len(t, profile.Metros, 1)
+
+			metro := profile.Metros[0]
+			assert.Equal(t, tt.expectedName, metro.Name)
+			assert.Equal(t, tt.expectedEndpoint, metro.Endpoint)
+		})
+	}
+}
+
+func TestLegacyProfileSaveDoesNotPersistEnvVars(t *testing.T) {
+	t.Setenv("UKC_METRO", "https://api.fra.unikraft.cloud/v1")
+	t.Setenv("UKC_TOKEN", "test-token-secret")
+
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: legacy
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err)
+
+	err = config.Save()
+	require.NoError(t, err)
+
+	output, err := os.ReadFile(path)
+	require.NoError(t, err)
+	content := string(output)
+
+	assert.NotContains(t, content, "test-token-secret")
+	assert.NotContains(t, content, "metros")
+	assert.Contains(t, content, "type: legacy")
+}

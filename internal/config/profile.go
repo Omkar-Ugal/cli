@@ -9,6 +9,8 @@ import (
 	"cmp"
 	"fmt"
 	"net/url"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/MakeNowJust/heredoc"
@@ -38,8 +40,6 @@ func (e ErrProfileNotFound) Error() string {
 }
 
 // ProfileType represents the type of profile used in the Unikraft CLI.
-// It can be either "local" for local profiles or "cloud" for cloud-based
-// profiles.
 type ProfileType string
 
 const (
@@ -50,6 +50,10 @@ const (
 	// ProfileTypeCloud indicates a cloud profile, which is used for accessing
 	// cloud-based resources and services provided by Unikraft.
 	ProfileTypeCloud ProfileType = "cloud"
+
+	// ProfileTypeLegacy indicates a legacy profile, which is used for backward
+	// compatibility with the kraft CLI.
+	ProfileTypeLegacy ProfileType = "legacy"
 )
 
 // Profile represents a user profile configuration for the Unikraft CLI.
@@ -60,13 +64,53 @@ type Profile struct {
 	Type ProfileType `json:"type" field:",long"`
 	// Token is the authentication token associated with the profile, used for
 	// authenticating with Unikraft Cloud services.
-	Token string `json:"token" field:",long"`
+	Token string `json:"token,omitempty" field:",long"`
 	// Organization is the organization associated with the profile.
 	Organization string `json:"organization,omitempty" field:",short"`
 	// ControlPlane is the endpoint for the control plane associated with the profile.
 	ControlPlane string `json:"controlplane,omitempty" field:",long"`
 	// Metros is a static list of metros.
 	Metros []Metro `json:"metros,omitempty" field:",long,embed"`
+}
+
+func (p *Profile) populate() {
+	if p.Type == ProfileTypeLegacy {
+		np := Profile{
+			Name:  p.Name,
+			Type:  ProfileTypeLegacy,
+			Token: os.Getenv("UKC_TOKEN"),
+		}
+
+		endpoint := os.Getenv("UKC_METRO")
+		if endpoint != "" {
+			var name string
+			if strings.Contains(endpoint, "://") {
+				_, host, _ := strings.Cut(endpoint, "://")
+				host = strings.TrimPrefix(host, "api.")
+				name, _, _ = strings.Cut(host, ".")
+				endpoint = strings.TrimSuffix(strings.TrimSuffix(endpoint, "/"), "/v1")
+			} else {
+				name = endpoint
+				endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", endpoint)
+			}
+
+			insecure, _ := strconv.ParseBool(os.Getenv("UKC_ALLOW_INSECURE"))
+			metro := Metro{
+				Name:     name,
+				Endpoint: endpoint,
+				Insecure: insecure,
+			}
+			np.Metros = []Metro{metro}
+		}
+		*p = np
+	}
+}
+
+func (p *Profile) depopulate() {
+	if p.Type == ProfileTypeLegacy {
+		p.Token = ""
+		p.Metros = nil
+	}
 }
 
 func (p Profile) Validate() error {
@@ -80,6 +124,7 @@ func (p Profile) Validate() error {
 		}
 	case ProfileTypeLocal:
 		return fmt.Errorf("local profiles are not currently supported")
+	case ProfileTypeLegacy:
 	default:
 		return fmt.Errorf("invalid profile type: %s", p.Type)
 	}
