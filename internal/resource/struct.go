@@ -131,10 +131,7 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 	}
 
 	var value any
-	if v, ok := v.Interface().(interface {
-		encoding.TextMarshaler
-		encoding.TextUnmarshaler
-	}); ok {
+	if v, ok := v.Interface().(encoding.TextMarshaler); ok {
 		value = v
 	}
 
