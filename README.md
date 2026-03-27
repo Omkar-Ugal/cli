@@ -91,7 +91,7 @@ yum install unikraft-cli
 <details>
 <summary><strong>From Source</strong></summary>
 
-- Requires [Go](https://golang.org/dl/) 1.25 or later;
+- Requires [Go](https://golang.org/dl/);
 - Git;
 - GNU Make or [Task](https://taskfile.dev/).
 
