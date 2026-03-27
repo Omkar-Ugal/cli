@@ -12,22 +12,22 @@ changelog:
   use: github
   filters:
     include:
-    - ^.*#[[:digit:]]+.*$
+    - '^.*\(#[[:digit:]]+\).*$'
   groups:
   - title: ⚠️ Breaking Changes
-    regexp: '^[[:xdigit:]]+: [[:lower:]]+(\(.*\))?!:.*$'
+    regexp: '^.*?.*?(\(.*?\))?!:.*$'
     order: 1
   - title: "\U0001F680 New Features"
-    regexp: '^[[:xdigit:]]+: feat(\(.*\))?:.*$'
+    regexp: '^.*?feat(\(.*?\))?:.*$'
     order: 2
   - title: "\U0001F41B Bug Fixes"
-    regexp: '^[[:xdigit:]]+: fix(\(.*\))?:.*$'
+    regexp: '^.*?fix(\(.*?\))?:.*$'
     order: 3
   - title: "\U0001F4D6 Docs"
-    regexp: '^[[:xdigit:]]+: docs(\(.*\))?:.*$'
+    regexp: '^.*?docs(\(.*?\))?:.*$'
     order: 4
   - title: "\U0001F916 Bumps"
-    regexp: '^[[:xdigit:]]+: (gomod|build)\(deps\):.*$'
+    regexp: '^.*?(gomod|build)\(deps\):.*$'
     order: 5
   - title: "\U0001F412 Miscellaneous"
     order: 999
