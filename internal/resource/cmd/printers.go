@@ -271,6 +271,9 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 	if err != nil {
 		return err
 	}
+	for i := range headers {
+		headers[i] = resource.PruneFields(headers[i])
+	}
 
 	headerPaths, headerFields := xslices.Collect2(resource.IterFields(headers))
 
@@ -334,6 +337,9 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 			firstCol = false
 
 			fields := resource.GetFieldByPath(fields, path)
+			for i := range fields {
+				fields[i] = resource.PruneFields(fields[i])
+			}
 			fieldIdx := -1
 			for _, field := range resource.IterFields(fields) {
 				if field.Value == nil {

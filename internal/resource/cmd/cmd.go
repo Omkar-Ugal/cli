@@ -88,6 +88,9 @@ func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	if err != nil {
 		panic(err)
 	}
+	for i := range fields {
+		fields[i] = resource.PruneFields(fields[i])
+	}
 
 	buf := &bytes.Buffer{}
 

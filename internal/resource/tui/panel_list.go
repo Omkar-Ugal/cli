@@ -165,6 +165,9 @@ func (p *listPanel) applyResources(resources []resource.Resource) {
 		p.table.SetRows(nil)
 		return
 	}
+	for i := range fields {
+		fields[i] = resource.PruneFields(fields[i])
+	}
 
 	paths, headers := xslices.Collect2(resource.IterFields(fields))
 	colPaths := make([]resource.FieldPath, 0, len(headers))
@@ -242,6 +245,9 @@ func (p *listPanel) renderField(res resource.Resource, path resource.FieldPath) 
 		return ""
 	}
 	fields = resource.GetFieldByPath(fields, path)
+	for i := range fields {
+		fields[i] = resource.PruneFields(fields[i])
+	}
 	values := make([]string, 0)
 	for _, field := range resource.IterFields(fields) {
 		if field.Value == nil {
