@@ -140,9 +140,6 @@ func (Certificate) Get(ctx context.Context, keys []string) ([]resource.Resource,
 		var results []resource.Resource
 		var errs []error
 		for i, certificate := range resp.Data.Certificates {
-			if certificate.Status == nil || *certificate.Status != "success" {
-				continue
-			}
 			result, err := Certificate{}.load(&refs[i], certificate, &c.Metro)
 			if err != nil {
 				errs = append(errs, err)
