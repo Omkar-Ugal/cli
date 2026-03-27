@@ -75,5 +75,7 @@ func hyperlink(s, url string) string {
 	if compat.Profile == colorprofile.NoTTY {
 		return s
 	}
-	return ansi.SetHyperlink(url) + s + ansi.ResetHyperlink()
+	underlineSeq := ansi.NewStyle(ansi.AttrUnderline).String()
+	underlineReset := ansi.NewStyle(ansi.AttrNoUnderline).String()
+	return ansi.SetHyperlink(url) + underlineSeq + s + underlineReset + ansi.ResetHyperlink()
 }

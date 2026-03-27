@@ -243,8 +243,8 @@ func (p *detailPanel) layout() {
 
 func appendKVRows(rows *[]table.Row, links *[]*resource.Link, parent *resource.Field, fields []resource.Field, indent int) error {
 	linkColor := compat.AdaptiveColor{Light: colors.Slate600, Dark: colors.Slate400}
-	linkSeq := ansi.NewStyle(ansi.AttrItalic).ForegroundColor(compat.Profile.Convert(linkColor)).String()
-	linkReset := ansi.NewStyle(ansi.AttrNoItalic).ForegroundColor(nil).String()
+	linkSeq := ansi.NewStyle(ansi.AttrItalic, ansi.AttrUnderline).ForegroundColor(compat.Profile.Convert(linkColor)).String()
+	linkReset := ansi.NewStyle(ansi.AttrNoItalic, ansi.AttrNoUnderline).ForegroundColor(nil).String()
 
 	for _, field := range fields {
 		prefix := strings.Repeat("  ", indent)
