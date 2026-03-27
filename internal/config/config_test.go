@@ -10,6 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSavePreservesCommentsAndDropsUnknownKeys(t *testing.T) {
@@ -27,9 +30,8 @@ profiles:
     foobar: remove-me
 `) + "\n"
 
-	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err, "write config")
 
 	config := &Config{
 		Path:           path,
@@ -42,26 +44,15 @@ profiles:
 		},
 	}
 
-	if err := config.Save(); err != nil {
-		t.Fatalf("save config: %v", err)
-	}
+	err = config.Save()
+	require.NoError(t, err, "save config")
 
 	output, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read config: %v", err)
-	}
+	require.NoError(t, err, "read config")
 	content := string(output)
 
-	if !strings.Contains(content, "# global comment") {
-		t.Fatalf("expected global comment to be preserved, got:\n%s", content)
-	}
-	if !strings.Contains(content, "# default profile comment") {
-		t.Fatalf("expected profile comment to be preserved, got:\n%s", content)
-	}
-	if !strings.Contains(content, "token: newtoken") {
-		t.Fatalf("expected token to be updated, got:\n%s", content)
-	}
-	if strings.Contains(content, "foobar") {
-		t.Fatalf("expected unknown profile key to be removed, got:\n%s", content)
-	}
+	assert.Contains(t, content, "# global comment", "expected global comment to be preserved")
+	assert.Contains(t, content, "# default profile comment", "expected profile comment to be preserved")
+	assert.Contains(t, content, "token: newtoken", "expected token to be updated")
+	assert.NotContains(t, content, "foobar", "expected unknown profile key to be removed")
 }
