@@ -79,6 +79,17 @@ func (c Certificate) Fields() ([]resource.Field, error) {
 		return nil, err
 	}
 
+	for key, field := range resource.IterFields(result) {
+		if key.String() == "metro" {
+			if c.MetroName != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "metro",
+					Key:  c.MetroName,
+				})
+			}
+		}
+	}
+
 	// Add create-only fields with nil Value
 	result = append(result,
 		resource.Field{
