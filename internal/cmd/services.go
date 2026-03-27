@@ -288,7 +288,10 @@ func (ServiceGroup) Delete(ctx context.Context, targets []resource.Resource) err
 	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting service groups")
 		_, err := c.DeleteServiceGroups(ctx, refs.NameOrUUIDs())
-		return refs, err
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, err
+		}
+		return refs, nil
 	})
 }
 

@@ -316,7 +316,7 @@ func (Volume) Delete(ctx context.Context, targets []resource.Resource) error {
 		log.G(ctx).Trace().Msg("deleting volumes")
 		for _, key := range refs {
 			_, err := c.DeleteVolumeByUUID(ctx, key.UUID)
-			if err != nil {
+			if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 				return nil, err
 			}
 		}

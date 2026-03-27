@@ -197,7 +197,7 @@ func (Certificate) Delete(ctx context.Context, targets []resource.Resource) erro
 		var deleted []group.Ref
 		for _, key := range refs {
 			_, err := c.DeleteCertificateByUUID(ctx, key.UUID)
-			if err != nil {
+			if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 				return nil, err
 			}
 			deleted = append(deleted, key)
