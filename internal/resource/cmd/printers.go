@@ -277,7 +277,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 
 	headerPaths, headerFields := xslices.Collect2(resource.IterFields(headers))
 
-	profile := colorprofile.Detect(out, nil)
+	profile := lipgloss.Writer.Profile
 	color := profile != colorprofile.NoTTY && profile != colorprofile.Ascii
 	headerStyle := lipgloss.NewStyle()
 	if color {
