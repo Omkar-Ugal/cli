@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/log"
@@ -132,13 +133,19 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 			continue
 		}
 
+		// HACK: this is awful, but the platform can take a moment for things to
+		// get ready :(
+		time.Sleep(500 * time.Millisecond)
+
 		resources, err := r.Get(ctx, targets)
 		if err != nil {
 			var notFoundErr group.ErrRefNotFound
-			if errors.As(err, &notFoundErr) {
-				continue // HACK: some resources may have been deleted through other mysterious means
+			if !errors.As(err, &notFoundErr) {
+				// HACK: some resources may have been deleted through other mysterious means
+				rerr = errors.Join(rerr, fmt.Errorf("failed to get resources for cleanup: %w", err))
 			}
-			rerr = errors.Join(rerr, fmt.Errorf("failed to get resources for cleanup: %w", err))
+		}
+		if len(resources) == 0 {
 			continue
 		}
 		err = r.Delete(ctx, resources)
@@ -146,6 +153,7 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 			rerr = errors.Join(rerr, fmt.Errorf("failed to delete resources for cleanup: %w", err))
 			continue
 		}
+
 	}
 	return rerr
 }
@@ -157,7 +165,25 @@ func (s *Sandbox) Add(ctx context.Context, r Resource) error {
 	if _, ok := s.Keys[r.Type().Name]; !ok {
 		return nil
 	}
-	s.Keys[r.Type().Name][r.Key().Canonical()] = struct{}{}
+	visited := make(map[string]struct{})
+	return s.add(ctx, r, visited)
+}
+
+func (s *Sandbox) add(ctx context.Context, r Resource, visited map[string]struct{}) error {
+	if s == nil {
+		return nil
+	}
+	if _, ok := s.Keys[r.Type().Name]; !ok {
+		return nil
+	}
+	typeName := r.Type().Name
+	key := r.Key().Canonical()
+	visitKey := typeName + ":" + key
+	if _, ok := visited[visitKey]; ok {
+		return nil
+	}
+	visited[visitKey] = struct{}{}
+	s.Keys[typeName][key] = struct{}{}
 
 	fields, err := r.Fields()
 	if err != nil {
@@ -165,9 +191,15 @@ func (s *Sandbox) Add(ctx context.Context, r Resource) error {
 	}
 	for _, field := range IterFields(fields) {
 		for _, link := range field.Links {
+			if link.Type == "" || link.Key == "" {
+				continue
+			}
 			for _, r := range s.Cleanup {
 				if r.Type().Name != link.Type {
 					continue
+				}
+				if keys, ok := s.Keys[link.Type]; ok {
+					keys[link.Key] = struct{}{}
 				}
 
 				r, ok := r.(GettableResource)
@@ -179,7 +211,7 @@ func (s *Sandbox) Add(ctx context.Context, r Resource) error {
 					return fmt.Errorf("failed to get linked resource %s %s: %w", link.Type, link.Key, err)
 				}
 				for _, linkedResource := range linkedResources {
-					if err := s.Add(ctx, linkedResource); err != nil {
+					if err := s.add(ctx, linkedResource, visited); err != nil {
 						return err
 					}
 				}
