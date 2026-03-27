@@ -12,8 +12,8 @@ import (
 
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"charm.land/lipgloss/v2/compat"
+	"github.com/charmbracelet/x/ansi"
 	"unikraft.com/x/colors"
 
 	"unikraft.com/cli/internal/resource"
@@ -242,40 +242,82 @@ func (p *detailPanel) layout() {
 }
 
 func appendKVRows(rows *[]table.Row, links *[]*resource.Link, parent *resource.Field, fields []resource.Field, indent int) error {
-	linkStyle := lipgloss.NewStyle().
-		Foreground(compat.AdaptiveColor{Light: colors.Slate600, Dark: colors.Slate400}).
-		Italic(true)
+	linkColor := compat.AdaptiveColor{Light: colors.Slate600, Dark: colors.Slate400}
+	linkSeq := ansi.NewStyle(ansi.AttrItalic).ForegroundColor(compat.Profile.Convert(linkColor)).String()
+	linkReset := ansi.NewStyle(ansi.AttrNoItalic).ForegroundColor(nil).String()
 
 	for _, field := range fields {
 		prefix := strings.Repeat("  ", indent)
 		link := firstLink(field)
 
 		if parent != nil && parent.Elem != nil {
-			key := prefix + "[" + field.Name + "]"
-			if link != nil {
-				key = linkStyle.Render(key)
-			}
-			if field.Value == nil {
-				*rows = append(*rows, table.Row{key, ""})
-				*links = append(*links, link)
-				if err := appendKVRows(rows, links, &field, field.Subfields, indent+1); err != nil {
-					return err
+			// Array element - always show subfields in TUI, never use Value
+			if len(field.Subfields) > 0 {
+				// Has subfields - render them with `-` prefix on first one
+				usedElementLink := false
+				for j, subfield := range field.Subfields {
+					var key string
+					subLink := firstLink(subfield)
+					if subLink == nil && link != nil && !usedElementLink {
+						subLink = link
+						usedElementLink = true
+					}
+					if j == 0 {
+						// First subfield gets the `-` prefix
+						key = prefix + "- " + subfield.Name
+					} else {
+						// Subsequent subfields: indent to align with first
+						key = prefix + "  " + subfield.Name
+					}
+					if subLink != nil {
+						key = linkSeq + key + linkReset
+					}
+
+					// Prefer subfields over value for detail view
+					if len(subfield.Subfields) > 0 {
+						*rows = append(*rows, table.Row{key, ""})
+						*links = append(*links, subLink)
+						if err := appendKVRows(rows, links, &subfield, subfield.Subfields, indent+1); err != nil {
+							return err
+						}
+					} else if subfield.Value != nil {
+						value, err := subfield.Render()
+						if err != nil {
+							return err
+						}
+						value = hyperlink(value, subfield.Hyperlink)
+						*rows = append(*rows, table.Row{key, value})
+						*links = append(*links, subLink)
+					} else {
+						*rows = append(*rows, table.Row{key, ""})
+						*links = append(*links, subLink)
+					}
 				}
-				continue
+			} else {
+				// No subfields - use value if present
+				key := prefix + "-"
+				if link != nil {
+					key = linkSeq + key + linkReset
+				}
+				if field.Value != nil {
+					value, err := field.Render()
+					if err != nil {
+						return err
+					}
+					value = hyperlink(value, field.Hyperlink)
+					*rows = append(*rows, table.Row{key, value})
+					*links = append(*links, link)
+				} else {
+					*rows = append(*rows, table.Row{key, ""})
+					*links = append(*links, link)
+				}
 			}
-			value, err := field.Render()
-			if err != nil {
-				return err
-			}
-			value = hyperlink(value, field.Hyperlink)
-			*rows = append(*rows, table.Row{key, value})
-			*links = append(*links, link)
 			continue
 		}
 
 		key := prefix + field.Name
 		if link != nil {
-			key = linkStyle.Render(key)
+			key = linkSeq + key + linkReset
 		}
 		if field.Value == nil {
 			*rows = append(*rows, table.Row{key, ""})
