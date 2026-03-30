@@ -14,7 +14,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.2
 	github.com/containerd/containerd/v2 v2.2.2
 	github.com/containerd/log v0.1.0
-	github.com/containerd/platforms v1.0.0-rc.3
+	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/distribution/reference v0.6.0
 	github.com/docker/cli v29.3.1+incompatible
@@ -173,3 +173,6 @@ require (
 
 // HACK: hot-fix for https://github.com/charmbracelet/lipgloss/pull/636
 replace charm.land/lipgloss/v2 => github.com/jedevc/lipgloss/v2 v2.0.0-20260322175907-46dd1f11f91e
+
+// HACK: pin to rc.2 due to bug in rc.3, see https://github.com/moby/buildkit/pull/6616
+replace github.com/containerd/platforms => github.com/containerd/platforms v1.0.0-rc.2
