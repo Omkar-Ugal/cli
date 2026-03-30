@@ -6,6 +6,7 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
@@ -86,6 +87,11 @@ func Load(path string) (*Config, error) {
 	dt, err := io.ReadAll(f)
 	if err != nil {
 		return nil, jujuerrors.Annotate(err, "reading config file")
+	}
+
+	if len(bytes.TrimSpace(dt)) == 0 {
+		// treat empty files as if they don't exist
+		return nil, nil
 	}
 
 	c := Config{}
