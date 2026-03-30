@@ -116,7 +116,7 @@ func getFieldByPath(parent *Field, fields []Field, spec FieldPath) []Field {
 	for _, field := range fields {
 		if spec[0] == field.Name || spec[0] == "*" && parent != nil && parent.Elem != nil {
 			if len(spec) == 1 {
-				result = append(result, pruneFields(field))
+				result = append(result, field)
 			} else {
 				subfields := getFieldByPath(&field, field.Subfields, spec[1:])
 				result = append(result, subfields...)
@@ -144,7 +144,6 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 		if !strict {
 			field = mergeElem(field)
 		}
-		field = pruneFields(field)
 		return field, nil
 	}
 
@@ -169,14 +168,12 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 					elem := *field.Elem
 					elem.Name = "*"
 					elem = mergeElem(elem)
-					elem = pruneFields(elem)
 					result.Subfields = append(result.Subfields, elem)
 				}
 				for _, subfield := range field.Subfields {
 					if !strict {
 						subfield = mergeElem(subfield)
 					}
-					subfield = pruneFields(subfield)
 					result.Subfields = append(result.Subfields, subfield)
 				}
 			}
@@ -224,18 +221,29 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 	return result, missing
 }
 
-func pruneFields(field Field) Field {
-	if field.Elem != nil {
-		elem := pruneFields(*field.Elem)
-		field.Elem = &elem
-	}
+// PruneFields removes redundant subfields for fields with values.
+//
+// If a field has a Value set, its subfields and element template are dropped
+// to prevent redundant output in list/table views.
+func PruneFields(field Field) Field {
 	if field.Value != nil {
 		field.Subfields = nil
+		field.Elem = nil
 		return field
 	}
+
+	if field.Elem != nil {
+		elem := PruneFields(*field.Elem)
+		field.Elem = &elem
+	}
+
+	if len(field.Subfields) == 0 {
+		return field
+	}
+
 	field.Subfields = slices.Clone(field.Subfields)
 	for i := range field.Subfields {
-		field.Subfields[i] = pruneFields(field.Subfields[i])
+		field.Subfields[i] = PruneFields(field.Subfields[i])
 	}
 	return field
 }

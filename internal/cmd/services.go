@@ -170,12 +170,36 @@ func (s ServiceGroup) Fields() ([]resource.Field, error) {
 	}
 
 	for key, field := range resource.IterFields(result) {
-		if key.MatchesString("domains.*.certificate") {
+		switch {
+		case key.String() == "metro":
+			if s.MetroName != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "metro",
+					Key:  s.MetroName,
+				})
+			}
+		case key.MatchesString("instances.*"):
+			// Add link to instance resource
 			nameField, _ := field.Get("name")
 			uuidField, _ := field.Get("uuid")
 			name, _ := nameField.Value.(string)
 			uuid, _ := uuidField.Value.(string)
-			if name != "" && uuid != "" {
+			if name != "" || uuid != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "instance",
+					Key: multimetro.Key{
+						Metro: s.Metro.Name,
+						Name:  name,
+						UUID:  uuid,
+					}.String(),
+				})
+			}
+		case key.MatchesString("domains.*.certificate"):
+			nameField, _ := field.Get("name")
+			uuidField, _ := field.Get("uuid")
+			name, _ := nameField.Value.(string)
+			uuid, _ := uuidField.Value.(string)
+			if name != "" || uuid != "" {
 				field.Links = append(field.Links, resource.Link{
 					Type: "certificate",
 					Key: multimetro.Key{
@@ -288,7 +312,10 @@ func (ServiceGroup) Delete(ctx context.Context, targets []resource.Resource) err
 	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting service groups")
 		_, err := c.DeleteServiceGroups(ctx, refs.NameOrUUIDs())
-		return refs, err
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, err
+		}
+		return refs, nil
 	})
 }
 

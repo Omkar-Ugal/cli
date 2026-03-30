@@ -247,6 +247,13 @@ func (i Instance) Fields() ([]resource.Field, error) {
 		switch {
 		case key.String() == "name":
 			field.Hyperlink = i.hyperlink()
+		case key.String() == "metro":
+			if i.MetroName != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "metro",
+					Key:  i.MetroName,
+				})
+			}
 		case key.String() == "service":
 			nameField, _ := field.Get("name")
 			uuidField, _ := field.Get("uuid")
@@ -282,6 +289,22 @@ func (i Instance) Fields() ([]resource.Field, error) {
 				},
 			)
 		case key.MatchesString("volumes.*"):
+			// Add link to volume resource
+			nameField, _ := field.Get("name")
+			uuidField, _ := field.Get("uuid")
+			name, _ := nameField.Value.(string)
+			uuid, _ := uuidField.Value.(string)
+			if name != "" || uuid != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "volume",
+					Key: multimetro.Key{
+						Metro: i.Metro.Name,
+						Name:  name,
+						UUID:  uuid,
+					}.String(),
+				})
+			}
+
 			// Add create-only size field to each volume with nil Value
 			field.Subfields = append(field.Subfields,
 				resource.Field{
@@ -290,6 +313,13 @@ func (i Instance) Fields() ([]resource.Field, error) {
 					Create:    &resource.Patch{Set: types.SizeMebibytes(0)},
 				},
 			)
+		case key.String() == "image":
+			if i.Image.Reference != nil {
+				field.Links = append(field.Links, resource.Link{
+					Type: "image",
+					Key:  i.Image.Reference.String(),
+				})
+			}
 		}
 	}
 
@@ -454,7 +484,7 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting instances")
 		instances, err := c.DeleteInstances(ctx, refs.NameOrUUIDs())
-		if err != nil {
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, err
 		}
 		var deleted []group.Ref

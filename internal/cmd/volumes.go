@@ -214,7 +214,56 @@ func (i Volume) Raw() any {
 }
 
 func (i Volume) Fields() ([]resource.Field, error) {
-	return resource.FieldsFromStruct(i)
+	result, err := resource.FieldsFromStruct(i)
+	if err != nil {
+		return nil, err
+	}
+
+	for key, field := range resource.IterFields(result) {
+		switch {
+		case key.String() == "metro":
+			if i.MetroName != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "metro",
+					Key:  i.MetroName,
+				})
+			}
+		case key.MatchesString("attached-to.*"):
+			// Add link to instance resource
+			nameField, _ := field.Get("name")
+			uuidField, _ := field.Get("uuid")
+			name, _ := nameField.Value.(string)
+			uuid, _ := uuidField.Value.(string)
+			if name != "" || uuid != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "instance",
+					Key: multimetro.Key{
+						Metro: i.Metro.Name,
+						Name:  name,
+						UUID:  uuid,
+					}.String(),
+				})
+			}
+		case key.MatchesString("mounted-by.*"):
+			// Add link to instance resource
+			nameField, _ := field.Get("name")
+			uuidField, _ := field.Get("uuid")
+			name, _ := nameField.Value.(string)
+			uuid, _ := uuidField.Value.(string)
+			if name != "" || uuid != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "instance",
+					Key: multimetro.Key{
+						Metro: i.Metro.Name,
+						Name:  name,
+						UUID:  uuid,
+					}.String(),
+				})
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func (Volume) List(ctx context.Context) ([]resource.Resource, error) {
@@ -316,7 +365,7 @@ func (Volume) Delete(ctx context.Context, targets []resource.Resource) error {
 		log.G(ctx).Trace().Msg("deleting volumes")
 		for _, key := range refs {
 			_, err := c.DeleteVolumeByUUID(ctx, key.UUID)
-			if err != nil {
+			if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 				return nil, err
 			}
 		}

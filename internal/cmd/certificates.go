@@ -79,6 +79,17 @@ func (c Certificate) Fields() ([]resource.Field, error) {
 		return nil, err
 	}
 
+	for key, field := range resource.IterFields(result) {
+		if key.String() == "metro" {
+			if c.MetroName != "" {
+				field.Links = append(field.Links, resource.Link{
+					Type: "metro",
+					Key:  c.MetroName,
+				})
+			}
+		}
+	}
+
 	// Add create-only fields with nil Value
 	result = append(result,
 		resource.Field{
@@ -140,9 +151,6 @@ func (Certificate) Get(ctx context.Context, keys []string) ([]resource.Resource,
 		var results []resource.Resource
 		var errs []error
 		for i, certificate := range resp.Data.Certificates {
-			if certificate.Status == nil || *certificate.Status != "success" {
-				continue
-			}
 			result, err := Certificate{}.load(&refs[i], certificate, &c.Metro)
 			if err != nil {
 				errs = append(errs, err)
@@ -200,7 +208,7 @@ func (Certificate) Delete(ctx context.Context, targets []resource.Resource) erro
 		var deleted []group.Ref
 		for _, key := range refs {
 			_, err := c.DeleteCertificateByUUID(ctx, key.UUID)
-			if err != nil {
+			if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 				return nil, err
 			}
 			deleted = append(deleted, key)
