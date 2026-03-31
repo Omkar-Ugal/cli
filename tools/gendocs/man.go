@@ -193,8 +193,12 @@ func genManContent(node *kong.Node, header *ManHeader) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	// Preamble
-	description := node.Detail
-	if description == "" {
+	var description string
+	if node.Parent == nil {
+		description = node.Help
+	} else if node.Detail != "" {
+		description = node.Detail
+	} else {
 		description = node.Help
 	}
 

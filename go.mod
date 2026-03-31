@@ -50,7 +50,7 @@ require (
 	unikraft.com/x/guesstermwidth v0.0.0-20260304162956-523940cab1de
 	unikraft.com/x/image-spec v0.0.0-20260304162956-523940cab1de
 	unikraft.com/x/joinerrgroup v0.0.0-20260304162956-523940cab1de
-	unikraft.com/x/kingkong v0.0.0-20260313145522-d793c36d706e
+	unikraft.com/x/kingkong v0.0.0-20260331102539-2c733927b46f
 	unikraft.com/x/kraftfile v0.0.0-20260318103446-c2c548a69fc0
 	unikraft.com/x/log v0.0.0-20260126171022-af62c17fcdf7
 	unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af

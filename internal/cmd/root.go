@@ -283,7 +283,8 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 	return kong.New(cli,
 		kong.Name("unikraft"),
 		kong.UsageOnError(),
-		kong.Description("The Unikraft Command-Line Interface.\n"+
+		kong.Description("The Unikraft Command-Line Interface."),
+		kingkong.DescriptionDetail("The Unikraft Command-Line Interface.\n"+
 			"    _         \n"+
 			"  c'3'o  .-.  Docs:   https://unikraft.com/docs/cli\n"+
 			"  (| |)_/     Issues: https://github.com/unikraft/cli/issues\n"+
