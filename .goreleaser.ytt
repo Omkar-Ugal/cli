@@ -145,6 +145,10 @@ release:
     ```
   #@ end
 
+before:
+  hooks:
+  - sh -c 'rm -rf .goreleaser-docs && mkdir -p .goreleaser-docs/man && go run ./tools/gendocs man --compress .goreleaser-docs/man'
+
 brews:
 - name: #@ "unikraft-staging" if getattr(data.values, "PRERELEASE", "true") == "true" else "unikraft"
   ids:
@@ -162,6 +166,8 @@ brews:
   homepage: "https://unikraft.com"
   description: "The official CLI for Unikraft Cloud — deploy and manage unikernels globally in milliseconds."
   license: "BSD-3-Clause"
+  extra_install: |
+    man1.install Dir["docs/man/*.1.gz"]
   skip_upload: false
   repository:
     owner: unikraft
@@ -201,6 +207,10 @@ archives:
   name_template: unikraft-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}
   ids:
   - #@ "unikraft-{}-{}".format(os, arch)
+  files:
+  - src: .goreleaser-docs/man/*.1.gz
+    dst: docs/man
+    strip_parent: true
 #@ end
 #@ end
 
@@ -217,6 +227,9 @@ nfpms:
   - deb
   - rpm
   - apk
+  contents:
+  - src: .goreleaser-docs/man/*.1.gz
+    dst: /usr/share/man/man1
   epoch: #@ getattr(data.values, "DEB_EPOCH", "1")
   prerelease: #@ getattr(data.values, "DEB_PRERELEASE", "")
   version_metadata: #@ getattr(data.values, "DEB_METADATA", "")
