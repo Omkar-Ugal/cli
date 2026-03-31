@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -49,6 +50,14 @@ func ConfigFilePath() (string, error) {
 func (c *Config) Save() error {
 	if c.Path == "" {
 		return jujuerrors.New("config file path is not set")
+	}
+
+	c2 := *c
+	c = &c2
+	c.Profiles = maps.Clone(c.Profiles)
+	for k, v := range c.Profiles {
+		v.depopulate()
+		c.Profiles[k] = v
 	}
 
 	updated, err := mergeConfig(c)
@@ -104,7 +113,9 @@ func Load(path string) (*Config, error) {
 		profile.Name = name
 		if err := profile.Validate(); err != nil {
 			validationErrs = errors.Join(validationErrs, jujuerrors.Annotatef(err, "validating profile %q", name))
+			continue
 		}
+		profile.populate()
 		c.Profiles[name] = profile
 	}
 	if validationErrs != nil {

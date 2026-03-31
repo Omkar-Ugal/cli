@@ -2,7 +2,7 @@
 
 > [!NOTE]
 >
-> This is the new **Unikraft CLI** which will eventually supersede `kraft cloud`.  It is still in **early development** and subject to change before the v1.0.0 release.  [Feedback appreciated](https://unikraft.link/devsurvey)!
+> This is the new **Unikraft CLI** which will eventually supersede `kraft cloud`. It is still in **early development** and subject to change before the v1.0.0 release. [Feedback appreciated](https://unikraft.link/devsurvey)!
 
 The official command-line interface for [Unikraft Cloud](https://unikraft.cloud) — deploy and manage unikernels globally in milliseconds.
 
@@ -24,8 +24,10 @@ The official command-line interface for [Unikraft Cloud](https://unikraft.cloud)
 ```bash
 curl --proto '=https' --tlsv1.2 -fsSL https://unikraft.com/cli/install.sh | sh
 ```
+
 Installs into the first preferred `bin` directory found in your `PATH` (falling back to `$HOME/.local/bin` if none are available).
 Use environment variable `UNIKRAFT_CLI_INSTALL_BIN_DIR` to customize the installation directory.
+
 </details>
 
 <details>
@@ -34,6 +36,7 @@ Use environment variable `UNIKRAFT_CLI_INSTALL_BIN_DIR` to customize the install
 ```bash
 brew install unikraft/tap/unikraft
 ```
+
 </details>
 
 <details>
@@ -63,6 +66,7 @@ EOF
 sudo apt update
 sudo apt install unikraft-cli
 ```
+
 </details>
 
 <details>
@@ -81,14 +85,15 @@ EOF
 # Install the CLI at the specific pre-release version
 yum install unikraft-cli
 ```
+
 </details>
 
 <details>
 <summary><strong>From Source</strong></summary>
 
-* Requires [Go](https://golang.org/dl/) 1.25 or later;
-* Git;
-* GNU Make or [Task](https://taskfile.dev/).
+- Requires [Go](https://golang.org/dl/);
+- Git;
+- GNU Make or [Task](https://taskfile.dev/).
 
 ```sh
 # Clone the repository
@@ -101,6 +106,7 @@ make cli
 # The binary is available at dist/unikraft
 ./dist/unikraft --version
 ```
+
 </details>
 
 ## Quick Start
@@ -130,10 +136,21 @@ profiles:
     organization: <org-name>
     token: <api-token>
     metros:
-      - name: <metro-name>         # e.g. fra
+      - name: <metro-name> # e.g. fra
         endpoint: <metro-endpoint> # e.g. https://api.fra.unikraft.cloud
-        country: <metro-country>   # e.g. de
-        insecure: false            # skip tls verification (avoid for production use)
+        country: <metro-country> # e.g. de
+        insecure: false # skip tls verification (avoid for production use)
+```
+
+You can also easily migrate your old `UKC_METRO`/`UKC_TOKEN` environment variable setup to a profile:
+
+```yaml
+# Linux: ~/.config/unikraft/config.yaml
+# MacOS: ~/Library/Application\ Support/unikraft/config.yaml
+profile: default
+profiles:
+  default:
+    type: legacy
 ```
 
 ### 2. Deploy Your First Instance
@@ -175,41 +192,49 @@ unikraft instances logs my-instance
 ### Examples
 
 **Deploy with environment variables:**
+
 ```sh
 unikraft run --metro=sfo -e KEY=VALUE -e DEBUG=true my-app:latest
 ```
 
 **Deploy with an attached volume:**
+
 ```sh
 unikraft run --metro=was -v my-volume:/data my-app:latest
 ```
 
 **Deploy with custom resources:**
+
 ```sh
 unikraft run --metro=dal -m 512MiB --vcpus 2 my-app:latest
 ```
 
 **Deploy with scale-to-zero:**
+
 ```sh
 unikraft run --metro=sin --scale-to-zero policy=on,cooldown-time=300 my-app:latest
 ```
 
 **Create an instance with multiple service ports:**
+
 ```sh
 unikraft run --metro=fra -p 443:8080/http+tls -p 80:443/http+redirect nginx:latest
 ```
 
 **Edit an existing instance:**
+
 ```sh
 unikraft instances edit my-instance --set image=nginx:1.27
 ```
 
 **Clone a volume:**
+
 ```sh
 unikraft volumes clone my-volume --set name=my-volume-backup
 ```
 
 **Build and publish an image from a Kraftfile:**
+
 ```sh
 unikraft build . --output my-org/my-app:latest
 ```
