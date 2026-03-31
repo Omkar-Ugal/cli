@@ -36,15 +36,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
@@ -90,15 +90,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
@@ -148,15 +148,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
@@ -204,15 +204,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
@@ -254,7 +254,7 @@ stdout:
 	          Open an editor to modify fields visually.
 	      --cmd
 	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
-	      --load, --save
+	      --load, --save=<FILE>
 	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
@@ -266,15 +266,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
@@ -320,7 +320,7 @@ stdout:
 	          Open an editor to modify fields visually.
 	      --cmd
 	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
-	      --load, --save
+	      --load, --save=<FILE>
 	          Load fields from a YAML file.
 	      --dry-run
 	          Print patches without applying them.
@@ -332,15 +332,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
@@ -390,15 +390,15 @@ stdout:
 	Global flags:
 	  -h, --help
 	          Show context-sensitive help.
-	      --config ($UNIKRAFT_CONFIG)
+	      --config=<file> ($UNIKRAFT_CONFIG)
 	          Path to the configuration file.
-	      --log-level ($UNIKRAFT_LOG_LEVEL)
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
 	          Set the logging level.
-	          [default: info, choice: trace,debug,info,warn,error,fatal]
-	      --log-type ($UNIKRAFT_LOG_TYPE)
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
 	          Set the log type.
-	          [default: text, choice: text,json]
-	      --profile ($UNIKRAFT_PROFILE)
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
 	          Set the current profile.
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
