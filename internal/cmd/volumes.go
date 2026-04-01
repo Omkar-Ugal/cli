@@ -64,7 +64,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if err := c.Apply(&spec); err != nil {
 		return err
 	}
-	req := platform.CloneVolumeByUUIDRequestBody{}
+	req := platform.CloneVolumesRequest{}
 	var unknownFields []string
 	for key, values := range spec.Set {
 		switch key {
@@ -122,9 +122,11 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if err != nil {
 		return err
 	}
+	req.Uuid = ptr.NilIfZero(volume.UUID)
+	req.Name = ptr.NilIfZero(volume.Name)
 	keys, opErr := group.CollectMetro(ctx, g, volume.Metro.Name, func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("cloning volume")
-		resp, err := client.CloneVolumeByUUID(ctx, volume.UUID, req)
+		resp, err := client.CloneVolumes(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -363,13 +365,22 @@ func (Volume) Delete(ctx context.Context, targets []resource.Resource) error {
 	}
 	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting volumes")
-		for _, key := range refs {
-			_, err := c.DeleteVolumeByUUID(ctx, key.UUID)
-			if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
-				return nil, err
-			}
+		resp, err := c.DeleteVolumes(ctx, refs.NameOrUUIDs())
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, err
 		}
-		return refs, nil
+		var deleted []group.Ref
+		for _, volume := range resp.Data.Volumes {
+			if volume.Status == nil || *volume.Status != platform.ResponseStatusSUCCESS {
+				continue
+			}
+			deleted = append(deleted, group.Ref{
+				Metro: c.Metro.Name,
+				Name:  ptr.ZeroIfNil(volume.Name),
+				UUID:  ptr.ZeroIfNil(volume.Uuid),
+			})
+		}
+		return deleted, nil
 	})
 }
 
