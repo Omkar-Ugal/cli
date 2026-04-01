@@ -170,8 +170,10 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if err != nil {
 		return err
 	}
-	req.Uuid = ptr.NilIfZero(volume.UUID)
-	req.Name = ptr.NilIfZero(volume.Name)
+	req.Uuid = ptr.NilIfZero(volume.key.UUID)
+	if req.Uuid == nil {
+		req.Name = ptr.NilIfZero(volume.key.Name)
+	}
 	keys, opErr := group.CollectMetro(ctx, g, volume.Metro.Name, func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("cloning volume")
 		resp, err := client.CloneVolumes(ctx, req)
