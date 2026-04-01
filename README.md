@@ -89,6 +89,21 @@ yum install unikraft-cli
 </details>
 
 <details>
+<summary><strong>GitHub Actions</strong></summary>
+
+- Requires [GitHub Actions](https://docs.github.com/en/actions).
+
+Use the official [`unikraft/setup-action`](https://github.com/unikraft/setup-action)
+to install the CLI in your workflow:
+
+```yaml
+- name: Install Unikraft CLI
+  uses: unikraft/setup-action@v1
+```
+
+</details>
+
+<details>
 <summary><strong>From Source</strong></summary>
 
 - Requires [Go](https://golang.org/dl/);
