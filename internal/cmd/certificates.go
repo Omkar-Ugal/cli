@@ -205,13 +205,20 @@ func (Certificate) Delete(ctx context.Context, targets []resource.Resource) erro
 	}
 	return group.DoRefs(ctx, g, keys.Refs(), func(ctx context.Context, c multimetro.MetroClient, refs group.Refs) (group.Refs, error) {
 		log.G(ctx).Trace().Msg("deleting certificates")
+		resp, err := c.DeleteCertificates(ctx, refs.NameOrUUIDs())
+		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
+			return nil, err
+		}
 		var deleted []group.Ref
-		for _, key := range refs {
-			_, err := c.DeleteCertificateByUUID(ctx, key.UUID)
-			if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
-				return nil, err
+		for _, certificate := range resp.Data.Certificates {
+			if certificate.Status == nil || *certificate.Status != platform.ResponseStatusSUCCESS {
+				continue
 			}
-			deleted = append(deleted, key)
+			deleted = append(deleted, group.Ref{
+				Metro: c.Metro.Name,
+				Name:  ptr.ZeroIfNil(certificate.Name),
+				UUID:  ptr.ZeroIfNil(certificate.Uuid),
+			})
 		}
 		return deleted, nil
 	})
