@@ -11,10 +11,10 @@ stdout:
 	          Inspect a resource.
 	  list, ls
 	          List resources.
-	  edit
-	          Edit a resource.
 	  create
 	          Create a resource.
+	  edit
+	          Edit a resource.
 	  delete, rm, remove
 	          Remove a resource.
 

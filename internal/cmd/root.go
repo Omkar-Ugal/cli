@@ -38,22 +38,22 @@ import (
 type UnikraftCLI struct {
 	globalFlags
 
-	Run   RunCmd   `cmd:"" group:"cmd-commands" help:"Run an image as an instance."`
+	Run   RunCmd   `cmd:"" group:"cmd-commands" help:"Run an image as an instance." set:"name=instance" set:"names=instances"`
 	Build BuildCmd `cmd:"" group:"cmd-commands" help:"Build a Unikraft project into a container image."`
 	TUI   TUICmd   `cmd:"" group:"cmd-commands" help:"Browse resources in a TUI."`
 
-	Metros       MetrosCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud metros." aliases:"metro,metros"`
-	Instances    InstancesCmd    `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms"`
-	Volumes      VolumesCmd      `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols"`
-	Services     ServicesCmd     `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs"`
-	Certificates CertificatesCmd `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs"`
-	Images       ImagesCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs"`
-	Resources    AnyResourceCmd  `cmd:"" group:"cmd-resources" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources"`
+	Metros       MetrosCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud metros." aliases:"metro,metros" set:"name=metro" set:"names=metros"`
+	Instances    InstancesCmd    `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms" set:"name=instance" set:"names=instances"`
+	Volumes      VolumesCmd      `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols" set:"name=volume" set:"names=volumes"`
+	Services     ServicesCmd     `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs" set:"name=service" set:"names=services"`
+	Certificates CertificatesCmd `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs" set:"name=certificate" set:"names=certificates"`
+	Images       ImagesCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs" set:"name=image" set:"names=images"`
+	Resources    AnyResourceCmd  `cmd:"" group:"cmd-resources" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources" set:"name=resource" set:"names=resources"`
 
 	Login   login.LoginCmd  `cmd:"" group:"cmd-config" help:"Login to Unikraft Cloud."`
 	Logout  login.LogoutCmd `cmd:"" group:"cmd-config" help:"Logout from Unikraft Cloud."`
-	Profile ProfileCmd      `cmd:"" group:"cmd-config" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles"`
-	Config  ConfigCmd       `cmd:"" group:"cmd-config" help:"Manage CLI configuration." aliases:"config,conf,cfg"`
+	Profile ProfileCmd      `cmd:"" group:"cmd-config" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles" set:"name=profile" set:"names=profiles"`
+	Config  ConfigCmd       `cmd:"" group:"cmd-config" help:"Manage CLI configuration." aliases:"config,conf,cfg" set:"name=path" set:"names=paths"`
 
 	Completion kongcompletion.Completion `cmd:"" group:"cmd-utilities" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
 	Version    version.VersionCmd        `cmd:"" group:"cmd-utilities" help:"Show version information." aliases:"version,ver,v"`
@@ -85,7 +85,7 @@ func (cli UnikraftCLI) Examples() []kingkong.Example {
 		{
 			Description: "Deploy a new instance from an image",
 			Commands: []string{
-				"unikraft run --metro=sfo --autostart -p 443:8080/http+tls --scale-to-zero policy=on nginx:latest",
+				"unikraft run --metro=sfo --image=nginx:latest --autostart -p 443:8080/http+tls --scale-to-zero policy=on",
 			},
 		},
 		{
@@ -220,6 +220,7 @@ func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context
 			Msg("loaded sandbox from environment")
 	}
 	kctx.Bind(sandbox)
+	kctx.Bind(kctx)
 
 	cleanup := func() error {
 		if err := sandbox.Save(); err != nil {
@@ -310,6 +311,14 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 			return nil
 		}),
 		kong.ExplicitGroups([]kong.Group{
+			{
+				Key:   "flag-create",
+				Title: kingkong.Underline("Create flags") + ":",
+			},
+			{
+				Key:   "flag-edit",
+				Title: kingkong.Underline("Edit flags") + ":",
+			},
 			globalFlagGroup,
 			{
 				Key:   "flag-local",

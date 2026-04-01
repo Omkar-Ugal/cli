@@ -15,10 +15,10 @@ stdout:
 	          List instances.
 	  delete, rm, remove
 	          Remove a instance.
-	  edit
-	          Edit a instance.
 	  create
-	          Create a instance.
+	          Create an instance.
+	  edit
+	          Edit an instance.
 	  logs
 	          Fetch and display instance logs.
 	  start
@@ -37,23 +37,22 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Global flags:
 	  -h, --help
@@ -97,23 +96,22 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Flags:
 	  -w, --watch
@@ -165,23 +163,22 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Flags:
 	      --filter
@@ -233,23 +230,22 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Flags:
 	      --until, --filter
@@ -285,7 +281,7 @@ stdout:
 $ unikraft instance create --help
 
 stdout:
-	Create a instance.
+	Create an instance.
 
 	Usage:
 	  unikraft instances create [flags]
@@ -293,12 +289,12 @@ stdout:
 	Examples:
 	  # Create a new instance
 	  unikraft instance create \
-	    --set name=demo-instance \
-	    --set metro=fra \
-	    --set image=nginx:latest \
-	    --set autostart=true \
-	    --set resources.memory=128 \
-	    --set resources.vcpus=1
+	  	  --name demo-instance \
+	  	  --metro fra \
+	  	  --image nginx:latest \
+	  	  --autostart \
+	  	  --memory 128 \
+	  	  --vcpus 1
 
 	Fields:
 	  metro
@@ -309,28 +305,27 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Flags:
-	      --set, --set-file
+	      --set=<name>=<value>, --set-file=<name>=<filename>
 	          Key-value pairs to set on the instance.
-	  -e, --visual
+	      --visual
 	          Open an editor to modify fields visually.
 	      --cmd
 	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
@@ -360,10 +355,55 @@ stdout:
 	          Toggle anonymous usage analytics.
 	          [default: true]
 
+	Create flags:
+	      --metro=<metro>
+	          Metro to deploy in.
+	          [examples: fra, sfo, nyc]
+	  -n, --name=<name>
+	          Instance name.
+	      --image=<name>:<tag>
+	          Image to deploy.
+	          [examples: nginx:latest, my-app:v1.2.3]
+	      --args=<arg>
+	          Arguments to pass to the instance.
+	  -e, --env=<key>=<value>
+	          Environment variables.
+	          [examples: DEBUG=true, PORT=8080]
+	  -m, --memory=<size>
+	          Memory allocation.
+	          [examples: 128MiB, 1GiB]
+	      --vcpus=<n>
+	          Number of vCPUs.
+	          [examples: 1, 2, 4]
+	  -v, --volume=<name>:<path>[:<ro>]
+	          Attach volume.
+	          [examples: my-vol:/data, cache:/tmp:ro]
+	      --service=<name>
+	          Service group name or key.
+	  -p, --publish=<src>:<dest>[/<handlers>]
+	          Publish port.
+	          [examples: 443:8080/http+tls, 80:8080/http]
+	      --domain=<fqdn>
+	          Service domain.
+	          [examples: example.com, api.example.com]
+	      --scale-to-zero=<key>=<value>
+	          Scale-to-zero options.
+	          [example: policy=on,cooldown-time=300]
+	      --restart=<policy>
+	          Restart policy.
+	          [examples: always, on-failure, never]
+	      --autostart
+	          Start instance automatically.
+	      --replicas=<n>
+	          Number of replicas.
+	          [examples: 1, 3]
+	      --features=<feature>
+	          Instance features.
+
 $ unikraft instance edit --help
 
 stdout:
-	Edit a instance.
+	Edit an instance.
 
 	Usage:
 	  unikraft instances edit <target> [flags]
@@ -374,7 +414,7 @@ stdout:
 
 	Examples:
 	  # Resize instance memory
-	  unikraft instance edit demo-instance --set resources.memory=256
+	  unikraft instance edit demo-instance --memory 256
 
 	Fields:
 	  metro
@@ -385,32 +425,31 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Flags:
-	      --set, --set-file
+	      --set=<name>=<value>, --set-file=<name>=<filename>
 	          Key-value pairs to set on the instance.
-	      --add, --add-file
+	      --add=<name>=<value>, --add-file=<name>=<filename>
 	          Key-value pairs to add to the instance.
-	      --del, --del-file
+	      --del=<name>=<value>, --del-file=<name>=<filename>
 	          Keys to delete from the instance.
-	  -e, --visual
+	      --visual
 	          Open an editor to modify fields visually.
 	      --cmd
 	          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
@@ -439,6 +478,25 @@ stdout:
 	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
 	          Toggle anonymous usage analytics.
 	          [default: true]
+
+	Edit flags:
+	      --image=<name>:<tag>
+	          Image to deploy.
+	          [examples: nginx:latest, my-app:v1.2.3]
+	      --args=<arg>
+	          Arguments to pass to the instance.
+	  -e, --env=<key>=<value>
+	          Environment variables.
+	          [examples: DEBUG=true, PORT=8080]
+	  -m, --memory=<size>
+	          Memory allocation.
+	          [examples: 128MiB, 1GiB]
+	      --vcpus=<n>
+	          Number of vCPUs.
+	          [examples: 1, 2, 4]
+	      --scale-to-zero=<key>=<value>
+	          Scale-to-zero options.
+	          [example: policy=on,cooldown-time=300]
 
 $ unikraft instance delete --help
 
@@ -465,23 +523,22 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
-	  service, service.uuid, service.name, service.domains, service.domains.*,
-	  service.domains.*.fqdn, service.domains.*.certificate,
+	  service, service.uuid, service.name, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
 	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
-	  service.services, service.soft-limit, service.hard-limit
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
-	  zero.stateful, scale-to-zero.cooldown-time
+	  scale-to-zero
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
-	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 	  autostart
 	  replicas
 	  wait-timeout
 	  features
 	  vsock
+	  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
 
 	Flags:
 	      --all

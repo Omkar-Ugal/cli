@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alecthomas/kong"
 	"github.com/distribution/reference"
 	"github.com/google/uuid"
 	"unikraft.com/cloud/sdk/platform"
@@ -38,17 +39,85 @@ import (
 
 type InstancesCmd struct {
 	cmd.ResourceCmd[Instance]
-	cmd.GettableResourceCmd[Instance]      `set:"name=instance" set:"names=instances"`
-	cmd.WaitableResourceCmd[Instance]      `set:"name=instance" set:"names=instances"`
-	cmd.ListableResourceCmd[Instance]      `set:"name=instance" set:"names=instances"`
-	cmd.BulkDeletableResourceCmd[Instance] `set:"name=instance" set:"names=instances"`
-	cmd.EditableResourceCmd[Instance]      `set:"name=instance" set:"names=instances"`
-	cmd.CreatableResourceCmd[Instance]     `set:"name=instance" set:"names=instances"`
+	cmd.GettableResourceCmd[Instance]
+	cmd.WaitableResourceCmd[Instance]
+	cmd.ListableResourceCmd[Instance]
+	cmd.BulkDeletableResourceCmd[Instance]
+
+	Create InstanceCreateCmd `cmd:"" help:"Create an instance."`
+	Edit   InstanceEditCmd   `cmd:"" help:"Edit an instance."`
 
 	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs."`
 	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances."`
 	Stop    InstancesStopCmd    `cmd:"" help:"Stop one or more instances."`
 	Restart InstancesRestartCmd `cmd:"" help:"Restart one or more instances."`
+}
+
+// InstanceCreateCmd extends the generic resource create command with shortcut
+// flags for commonly used instance fields. Each field tagged with
+// `shortcut:"<path>"` is translated into a --set <path>=<value> entry before
+// the standard create pipeline runs.
+type InstanceCreateCmd struct {
+	cmd.ResourceCreateCmd[Instance]
+
+	// Shortcut flags - ordered to match Instance struct layout.
+	Metro string `group:"flag-create" shortcut:"metro" help:"Metro to deploy in." placeholder:"metro" example:"fra,sfo,nyc"`
+	Name  string `group:"flag-create" shortcut:"name" short:"n" help:"Instance name." placeholder:"name"`
+
+	Image string `group:"flag-create" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
+
+	Args []string `group:"flag-create" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
+	Env  []string `group:"flag-create" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
+
+	Memory types.SizeMebibytes `group:"flag-create" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
+	Vcpus  int                 `group:"flag-create" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
+
+	Volume []InstanceVolume `group:"flag-create" shortcut:"volumes" short:"v" help:"Attach volume." placeholder:"<name>:<path>[:<ro>]" example:"my-vol:/data,cache:/tmp:ro"`
+
+	Service InstanceService `group:"flag-create" shortcut:"service" help:"Service group name or key." placeholder:"name"`
+	Publish []Service       `group:"flag-create" shortcut:"service.services" short:"p" help:"Publish port." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls,80:8080/http"`
+	Domain  []Domain        `group:"flag-create" shortcut:"service.domains" help:"Service domain." placeholder:"fqdn" example:"example.com,api.example.com"`
+
+	ScaleToZero InstanceScaleToZero `group:"flag-create" shortcut:"scale-to-zero" help:"Scale-to-zero options." placeholder:"<key>=<value>" example:"policy=on\\,cooldown-time=300"`
+
+	Restart string `group:"flag-create" shortcut:"restart.policy" help:"Restart policy." placeholder:"policy" example:"always,on-failure,never"`
+
+	Autostart *bool    `group:"flag-create" shortcut:"autostart" help:"Start instance automatically."`
+	Replicas  int64    `group:"flag-create" shortcut:"replicas" help:"Number of replicas." placeholder:"n" example:"1,3"`
+	Features  []string `group:"flag-create" shortcut:"features" help:"Instance features." placeholder:"feature"`
+}
+
+func (c *InstanceCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
+	if err := cmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
+		return err
+	}
+	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
+}
+
+// InstanceEditCmd extends the generic resource edit command with shortcut
+// flags for commonly used editable instance fields. Each field tagged with
+// `shortcut:"<path>"` is translated into a --set <path>=<value> entry before
+// the standard edit pipeline runs.
+type InstanceEditCmd struct {
+	cmd.ResourceEditCmd[Instance]
+
+	// Shortcut flags - only fields that support editing.
+	Image string `group:"flag-edit" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
+
+	Args []string `group:"flag-edit" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
+	Env  []string `group:"flag-edit" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
+
+	Memory types.SizeMebibytes `group:"flag-edit" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
+	Vcpus  int                 `group:"flag-edit" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
+
+	ScaleToZero InstanceScaleToZero `group:"flag-edit" shortcut:"scale-to-zero" help:"Scale-to-zero options." placeholder:"<key>=<value>" example:"policy=on\\,cooldown-time=300"`
+}
+
+func (c *InstanceEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
+	if err := cmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
+		return err
+	}
+	return c.ResourceEditCmd.Run(ctx, stdio, sandbox)
 }
 
 type Instance struct {
@@ -72,13 +141,8 @@ type Instance struct {
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short" create:"set" edit:"set"`
 	}
 
+	Service *InstanceService  `mirror:"instance.service_group" field:",embed" create:"set"`
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
-
-	Service struct {
-		UUID    string   `mirror:"uuid" field:",long" create:"set"`
-		Name    string   `mirror:"name" field:",long" create:"set"`
-		Domains []Domain `mirror:"domains" field:",short,embed" create:"set"`
-	} `mirror:"instance.service_group"`
 
 	Networks []struct {
 		UUID      string `mirror:"uuid" field:",long"`
@@ -92,7 +156,7 @@ type Instance struct {
 		Stopped types.RelativeTime `mirror:"instance.stopped_at"`
 	}
 
-	ScaleToZero InstanceScaleToZero `field:",embed" mirror:"instance.scale_to_zero"`
+	ScaleToZero InstanceScaleToZero `field:",embed" mirror:"instance.scale_to_zero" create:"set" edit:"set"`
 
 	Timing struct {
 		Uptime   types.DurationMS `mirror:"instance.uptime_ms"`
@@ -105,6 +169,12 @@ type Instance struct {
 		StartCount   int    `mirror:"instance.start_count"`
 		RestartCount int    `mirror:"instance.restart_count"`
 	}
+
+	Autostart   bool            `field:"autostart,invisible,valueless" create:"set"`
+	Replicas    int64           `field:"replicas,invisible,valueless" create:"set"`
+	WaitTimeout types.DurationS `field:"wait-timeout,invisible,valueless" create:"set"`
+	Features    []string        `field:"features,invisible,valueless" create:"set"`
+	Vsock       bool            `field:"vsock,invisible,valueless" create:"set" edit:"set"`
 
 	Stop struct {
 		Reason string     `field:",long"`
@@ -121,13 +191,44 @@ type Instance struct {
 	key multimetro.Key
 }
 
+type InstanceService struct {
+	Metro     string     `field:"-"`
+	UUID      string     `mirror:"uuid" field:",long"`
+	Name      string     `mirror:"name" field:",long"`
+	Services  []*Service `mirror:"services" field:",invisible,valueless" create:"set"`
+	Domains   []Domain   `mirror:"domains" field:",short,embed" create:"set"`
+	SoftLimit uint32     `field:"soft-limit,invisible,valueless" create:"set"`
+	HardLimit uint32     `field:"hard-limit,invisible,valueless" create:"set"`
+}
+
+func (i *InstanceService) UnmarshalText(data []byte) error {
+	str := strings.TrimSpace(string(data))
+	if str == "" {
+		return nil
+	}
+	if strings.Contains(str, "=") {
+		type instanceServiceAlias InstanceService
+		parsed, err := value.Parse[instanceServiceAlias]([]string{str})
+		if err != nil {
+			return err
+		}
+		*i = InstanceService(parsed)
+		return nil
+	}
+	key := multimetro.ParseKey(str)
+	i.Metro = key.Metro
+	i.UUID = key.UUID
+	i.Name = key.Name
+	return nil
+}
+
 type InstanceVolume struct {
 	UUID     string `name:"uuid" mirror:"uuid" json:"uuid,omitempty" field:",long"`
 	Name     string `name:"name" mirror:"name" json:"name,omitempty" field:",long"`
 	At       string `name:"at" mirror:"at" json:"at" field:",long"`
 	Readonly bool   `name:"readonly" mirror:"readonly" json:"readonly,omitempty" field:",long"`
 
-	Size types.SizeMebibytes `name:"size" field:"-"` // excluded from field system, but used for marshalling/unmarshalling
+	Size types.SizeMebibytes `name:"size" field:"size,invisible,valueless" create:"set"`
 }
 
 func (v *InstanceVolume) MarshalText() ([]byte, error) {
@@ -216,10 +317,54 @@ func (v *InstanceVolume) UnmarshalText(data []byte) error {
 }
 
 type InstanceScaleToZero struct {
-	Enabled      bool   `mirror:"enabled" field:",long"`
-	Policy       string `mirror:"policy" field:",long" create:"set" edit:"set"`
-	Stateful     bool   `mirror:"stateful" field:",long" create:"set" edit:"set"`
-	CooldownTime int64  `mirror:"cooldown_time_ms" field:",long" create:"set" edit:"set"`
+	Enabled      bool             `name:"-" json:"-" mirror:"enabled" field:",long"`
+	Policy       string           `name:"policy" json:"policy,omitempty" mirror:"policy" field:",long"`
+	Stateful     bool             `name:"stateful" json:"stateful,omitempty" mirror:"stateful" field:",long"`
+	CooldownTime types.DurationMS `name:"cooldown-time" json:"cooldown-time,omitempty" mirror:"cooldown_time_ms" field:",long"`
+	NotifyTime   types.DurationMS `name:"notify-time" json:"notify-time,omitempty" mirror:"notify_time_ms" field:",long"`
+}
+
+func (s *InstanceScaleToZero) UnmarshalText(data []byte) error {
+	str := strings.TrimSpace(string(data))
+	if str == "" {
+		return nil
+	}
+
+	lower := strings.ToLower(str)
+	if lower == "on" || lower == "off" {
+		s.Policy = lower
+		return nil
+	}
+
+	type scaleToZeroAlias InstanceScaleToZero
+	parsed, err := value.Parse[scaleToZeroAlias]([]string{str})
+	if err != nil {
+		return err
+	}
+	*s = InstanceScaleToZero(parsed)
+	return nil
+}
+
+func (s InstanceScaleToZero) MarshalText() ([]byte, error) {
+	var parts []string
+	if s.Policy != "" {
+		parts = append(parts, fmt.Sprintf("policy=%s", s.Policy))
+	}
+	if s.Stateful {
+		parts = append(parts, "stateful=true")
+	}
+	if s.CooldownTime > 0 {
+		parts = append(parts, fmt.Sprintf("cooldown-time=%s", s.CooldownTime))
+	}
+	if s.NotifyTime > 0 {
+		parts = append(parts, fmt.Sprintf("notify-time=%s", s.NotifyTime))
+	}
+	return []byte(strings.Join(parts, ",")), nil
+}
+
+func (s InstanceScaleToZero) MarshalJSON() ([]byte, error) {
+	type scaleToZeroJSON InstanceScaleToZero
+	return json.Marshal(scaleToZeroJSON(s))
 }
 
 func (Instance) Type() resource.Type {
@@ -269,25 +414,6 @@ func (i Instance) Fields() ([]resource.Field, error) {
 					}.String(),
 				})
 			}
-
-			// Add create-only fields to service with nil Value
-			field.Subfields = append(field.Subfields,
-				resource.Field{
-					Name:      "services",
-					Verbosity: resource.FieldVerbosityInvisible,
-					Create:    &resource.Patch{Set: []*Service(nil)},
-				},
-				resource.Field{
-					Name:      "soft-limit",
-					Verbosity: resource.FieldVerbosityInvisible,
-					Create:    &resource.Patch{Set: uint32(0)},
-				},
-				resource.Field{
-					Name:      "hard-limit",
-					Verbosity: resource.FieldVerbosityInvisible,
-					Create:    &resource.Patch{Set: uint32(0)},
-				},
-			)
 		case key.MatchesString("volumes.*"):
 			// Add link to volume resource
 			nameField, _ := field.Get("name")
@@ -304,15 +430,6 @@ func (i Instance) Fields() ([]resource.Field, error) {
 					}.String(),
 				})
 			}
-
-			// Add create-only size field to each volume with nil Value
-			field.Subfields = append(field.Subfields,
-				resource.Field{
-					Name:      "size",
-					Verbosity: resource.FieldVerbosityInvisible,
-					Create:    &resource.Patch{Set: types.SizeMebibytes(0)},
-				},
-			)
 		case key.String() == "image":
 			if i.Image.Reference != nil {
 				field.Links = append(field.Links, resource.Link{
@@ -322,36 +439,6 @@ func (i Instance) Fields() ([]resource.Field, error) {
 			}
 		}
 	}
-
-	// Add create-only fields at root level with nil Value
-	result = append(result,
-		resource.Field{
-			Name:      "autostart",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: false},
-		},
-		resource.Field{
-			Name:      "replicas",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: int64(0)},
-		},
-		resource.Field{
-			Name:      "wait-timeout",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: types.DurationS(0)},
-		},
-		resource.Field{
-			Name:      "features",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: []string(nil)},
-		},
-		resource.Field{
-			Name:      "vsock",
-			Verbosity: resource.FieldVerbosityInvisible,
-			Create:    &resource.Patch{Set: false},
-			Edit:      &resource.Patch{Set: false},
-		},
-	)
 
 	return result, nil
 }
@@ -574,12 +661,22 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInsta
 		return platform.UpdateInstancesRequestItemPropMemory_mb, int64(value.(types.SizeMebibytes))
 	case "resources.vcpus":
 		return platform.UpdateInstancesRequestItemPropVcpus, value.(int)
-	case "scale-to-zero.policy":
-		return platform.UpdateInstancesRequestItemPropScale_to_zero, map[string]any{"policy": value.(string)}
-	case "scale-to-zero.stateful":
-		return platform.UpdateInstancesRequestItemPropScale_to_zero, map[string]any{"stateful": value.(bool)}
-	case "scale-to-zero.cooldown-time":
-		return platform.UpdateInstancesRequestItemPropScale_to_zero, map[string]any{"cooldown_time_ms": int32(value.(int64))}
+	case "scale-to-zero":
+		value := value.(InstanceScaleToZero)
+		req := map[string]any{}
+		if value.Policy != "" {
+			req["policy"] = value.Policy
+		}
+		if value.Stateful {
+			req["stateful"] = value.Stateful
+		}
+		if value.CooldownTime > 0 {
+			req["cooldown_time_ms"] = int32(value.CooldownTime)
+		}
+		if value.NotifyTime > 0 {
+			req["notify_time_ms"] = int32(value.NotifyTime)
+		}
+		return platform.UpdateInstancesRequestItemPropScale_to_zero, req
 	case "vsock":
 		return "vsock", value.(bool)
 	default:
@@ -615,24 +712,23 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "restart.policy":
 			policy := platform.CreateInstanceRequestRestartPolicy(field.Create.Set.(string))
 			req.RestartPolicy = &policy
-		case "scale-to-zero.policy":
-			if req.ScaleToZero == nil {
-				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+		case "scale-to-zero":
+			scale := field.Create.Set.(InstanceScaleToZero)
+			req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			if scale.Policy != "" {
+				req.ScaleToZero.Policy = new(platform.CreateInstanceRequestScaleToZeroPolicy(scale.Policy))
 			}
-			policy := platform.CreateInstanceRequestScaleToZeroPolicy(field.Create.Set.(string))
-			req.ScaleToZero.Policy = &policy
-		case "scale-to-zero.stateful":
-			if req.ScaleToZero == nil {
-				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			if scale.Stateful {
+				req.ScaleToZero.Stateful = &scale.Stateful
 			}
-			stateful := field.Create.Set.(bool)
-			req.ScaleToZero.Stateful = &stateful
-		case "scale-to-zero.cooldown-time":
-			if req.ScaleToZero == nil {
-				req.ScaleToZero = &platform.CreateInstanceRequestScaleToZero{}
+			if scale.CooldownTime > 0 {
+				cooldown := int32(scale.CooldownTime)
+				req.ScaleToZero.CooldownTimeMs = &cooldown
 			}
-			cooldown := int32(field.Create.Set.(int64))
-			req.ScaleToZero.CooldownTimeMs = &cooldown
+			if scale.NotifyTime > 0 {
+				notify := int32(scale.NotifyTime)
+				req.ScaleToZero.NotifyTimeMs = &notify
+			}
 		case "volumes":
 			for _, vol := range field.Create.Set.([]*InstanceVolume) {
 				reqVol := platform.CreateInstanceRequestVolume{
@@ -652,22 +748,16 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 				}
 				req.Volumes = append(req.Volumes, reqVol)
 			}
-		case "service.uuid":
-			uuid := field.Create.Set.(string)
-			if uuid != "" {
-				if req.ServiceGroup == nil {
-					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
-				}
-				req.ServiceGroup.Uuid = &uuid
+		case "service":
+			svc := field.Create.Set.(*InstanceService)
+			if req.ServiceGroup == nil {
+				req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
 			}
-		case "service.name":
-			name := field.Create.Set.(string)
-			if name != "" {
-				if req.ServiceGroup == nil {
-					req.ServiceGroup = &platform.CreateInstanceRequestServiceGroup{}
-				}
-				req.ServiceGroup.Name = &name
+			if svc.Metro != "" && svc.Metro != metro {
+				return nil, fmt.Errorf("cannot create instance: metro mismatch between service (%q) and instance (%q)", svc.Metro, metro)
 			}
+			req.ServiceGroup.Name = ptr.NilIfZero(svc.Name)
+			req.ServiceGroup.Uuid = ptr.NilIfZero(svc.UUID)
 		case "service.services":
 			services := field.Create.Set.([]*Service)
 			if len(services) > 0 {
@@ -793,20 +883,30 @@ func (Instance) Examples() map[cmd.CmdType][]kingkong.Example {
 			{
 				Description: "Create a new instance",
 				Commands: []string{
+					// `unikraft instance create \
+					//   --set name=demo-instance \
+					//   --set metro=fra \
+					//   --set image=nginx:latest \
+					//   --set autostart=true \
+					//   --set resources.memory=128 \
+					//   --set resources.vcpus=1`,
 					`unikraft instance create \
-  --set name=demo-instance \
-  --set metro=fra \
-  --set image=nginx:latest \
-  --set autostart=true \
-  --set resources.memory=128 \
-  --set resources.vcpus=1`,
+	  --name demo-instance \
+	  --metro fra \
+	  --image nginx:latest \
+	  --autostart \
+	  --memory 128 \
+	  --vcpus 1`,
 				},
 			},
 		},
 		cmd.CmdTypeEdit: {
 			{
 				Description: "Resize instance memory",
-				Commands:    []string{"unikraft instance edit demo-instance --set resources.memory=256"},
+				Commands: []string{
+					// "unikraft instance edit demo-instance --set resources.memory=256",
+					"unikraft instance edit demo-instance --memory 256",
+				},
 			},
 		},
 		cmd.CmdTypeDelete: {
