@@ -29,6 +29,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -75,6 +77,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -129,6 +133,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -183,6 +189,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -242,6 +250,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -290,6 +300,12 @@ stdout:
 	      --size=<size>
 	          Volume size.
 	          [examples: 10GiB, 100MiB]
+	      --filesystem=<filesystem>
+	          Volume filesystem.
+	          [example: ext4]
+	      --quota-policy=<quota-policy>
+	          Volume quota policy.
+	          [examples: static, dynamic]
 
 $ unikraft volume clone --help
 
@@ -362,6 +378,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -409,6 +427,9 @@ stdout:
 	      --size=<size>
 	          Volume size.
 	          [examples: 20GiB, 100MiB]
+	      --quota-policy=<quota-policy>
+	          Volume quota policy.
+	          [examples: static, dynamic]
 
 $ unikraft volume delete --help
 
@@ -433,6 +454,8 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
+	  quota-policy
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid

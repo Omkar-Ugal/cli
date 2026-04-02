@@ -11,23 +11,27 @@ stdout:
 $ unikraft volume inspect test-$UNIQ_VOLUME test-$UNIQ_VOLUME_CLONE
 
 stdout:
-	metro:      test
-	name:       test-<VOLUME>
-	uuid:       12345678-1234-1234-1234-123456789abc
-	state:      available
-	size:       10MiB
-	persistent: true
+	metro:        test
+	name:         test-<VOLUME>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        available
+	size:         10MiB
+	filesystem:   virtiofs
+	quota-policy: static
+	persistent:   true
 	timestamps:
-	  created:  RELATIVE_TIME
+	  created:    RELATIVE_TIME
 
-	metro:      test
-	name:       test-<VOLUME_CLONE>
-	uuid:       12345678-1234-1234-1234-123456789abc
-	state:      available
-	size:       10MiB
-	persistent: true
+	metro:        test
+	name:         test-<VOLUME_CLONE>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        available
+	size:         10MiB
+	filesystem:   virtiofs
+	quota-policy: static
+	persistent:   true
 	timestamps:
-	  created:  RELATIVE_TIME
+	  created:    RELATIVE_TIME
 
 $ unikraft volume delete test-$UNIQ_VOLUME test-$UNIQ_VOLUME_CLONE
 
