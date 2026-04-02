@@ -29,6 +29,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -75,6 +76,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -129,6 +131,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -183,6 +186,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -242,6 +246,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -290,6 +295,9 @@ stdout:
 	      --size=<size>
 	          Volume size.
 	          [examples: 10GiB, 100MiB]
+	      --filesystem=<filesystem>
+	          Volume filesystem.
+	          [example: ext4]
 
 $ unikraft volume clone --help
 
@@ -362,6 +370,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -433,6 +442,7 @@ stdout:
 	  tags
 	  state
 	  size
+	  filesystem
 	  persistent
 	  timestamps, timestamps.created
 	  attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid

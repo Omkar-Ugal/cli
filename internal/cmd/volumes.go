@@ -8,6 +8,7 @@ package cmd
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -50,9 +51,10 @@ type VolumesCmd struct {
 type VolumeCreateCmd struct {
 	cmd.ResourceCreateCmd[Volume]
 
-	Metro string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
-	Name  string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
-	Size  types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
+	Metro      string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
+	Name       string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
+	Size       types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
+	Filesystem string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
 }
 
 func (c *VolumeCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -227,6 +229,7 @@ type Volume struct {
 
 	State      types.VolumeState   `mirror:"volume.state" field:",short"`
 	Size       types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
+	Filesystem string              `mirror:"volume.filesystem" field:",long" create:"set"`
 	Persistent bool                `mirror:"volume.persistent" field:",long"`
 
 	Timestamps struct {
@@ -448,6 +451,19 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 			case "size":
 				size := field.Create.Set.(types.SizeMebibytes)
 				req.SizeMb = uint64(size)
+			case "filesystem":
+				filesystem := field.Create.Set.(string)
+				if filesystem != "" {
+					data, err := json.Marshal(filesystem)
+					if err != nil {
+						return nil, err
+					}
+					// HACK: set on additional properties, since we need an updated SDK
+					if req.AdditionalProperties == nil {
+						req.AdditionalProperties = make(map[string]json.RawMessage)
+					}
+					req.AdditionalProperties["filesystem"] = data
+				}
 			}
 		}
 	}
