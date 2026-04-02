@@ -35,9 +35,9 @@ import (
 type ImagesCmd struct {
 	cmd.ResourceCmd[ImageEntry]
 	cmd.GettableResourceCmd[Image]
+	cmd.DeletableResourceCmd[Image]
 
 	List ImagesListCmd `cmd:"" help:"List images." aliases:"ls"`
-
 	Copy ImagesCopyCmd `cmd:"" help:"Copy images."`
 }
 
@@ -153,9 +153,14 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 
 		for _, img := range imgs {
 			config := img.Image
+			envs := make(map[string]string, len(config.Config.Env))
+			for _, entry := range config.Config.Env {
+				if key, val, ok := strings.Cut(entry, "="); ok {
+					envs[key] = val
+				}
+			}
 
 			meta := img.Metadata()
-
 			resource := Image{
 				Ref: types.ImageRef[reference.Named]{
 					Reference: img.Name,
@@ -163,7 +168,7 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 				Digest: img.Descriptor.Digest,
 				Config: ImageConfig{
 					Cmd:      config.Config.Cmd,
-					Env:      envMapFromList(config.Config.Env),
+					Env:      envs,
 					Platform: types.Platform(config.Platform),
 				},
 				Metadata: ImageMetadata{
@@ -182,22 +187,35 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 	return resources, nil
 }
 
-func envMapFromList(entries []string) map[string]string {
-	result := make(map[string]string, len(entries))
-	for _, entry := range entries {
-		key, val, ok := strings.Cut(entry, "=")
-		if key == "" {
+func (Image) Delete(ctx context.Context, targets []resource.Resource) error {
+	access, err := images.Accessor(ctx)
+	if err != nil {
+		return err
+	}
+
+	var errs []error
+	for _, target := range targets {
+		var image Image
+		switch typed := target.(type) {
+		case Image:
+			image = typed
+		case *Image:
+			image = *typed
+		default:
+			errs = append(errs, fmt.Errorf("unexpected resource type %T", target))
 			continue
 		}
-		if !ok {
-			val = ""
+		ref := image.Ref.Reference.String()
+		uri, err := imagespec.GuessURI(ref)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("parsing image reference %q: %w", ref, err))
+			continue
 		}
-		result[key] = val
+		if err := access.Delete(ctx, uri); err != nil {
+			errs = append(errs, fmt.Errorf("deleting image %q: %w", ref, err))
+		}
 	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
+	return errors.Join(errs...)
 }
 
 func (Image) Examples() map[cmd.CmdType][]kingkong.Example {
@@ -216,6 +234,12 @@ func (Image) Examples() map[cmd.CmdType][]kingkong.Example {
 			{
 				Description: "Filter images by reference",
 				Commands:    []string{`unikraft image list --filter 'ref~="/nginx"'`},
+			},
+		},
+		cmd.CmdTypeDelete: {
+			{
+				Description: "Delete a remote image",
+				Commands:    []string{"unikraft image delete unikraft.io/official/nginx:latest"},
 			},
 		},
 	}
