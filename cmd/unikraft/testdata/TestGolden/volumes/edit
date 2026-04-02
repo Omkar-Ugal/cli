@@ -11,15 +11,16 @@ stdout:
 $ unikraft volume inspect test-$UNIQ_VOLUME
 
 stdout:
-	metro:      test
-	name:       test-<VOLUME>
-	uuid:       12345678-1234-1234-1234-123456789abc
-	state:      available
-	size:       20MiB
-	filesystem: virtiofs
-	persistent: true
+	metro:        test
+	name:         test-<VOLUME>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        available
+	size:         20MiB
+	filesystem:   virtiofs
+	quota-policy: static
+	persistent:   true
 	timestamps:
-	  created:  RELATIVE_TIME
+	  created:    RELATIVE_TIME
 
 $ unikraft volume delete test-$UNIQ_VOLUME
 

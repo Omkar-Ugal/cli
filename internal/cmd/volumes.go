@@ -51,10 +51,11 @@ type VolumesCmd struct {
 type VolumeCreateCmd struct {
 	cmd.ResourceCreateCmd[Volume]
 
-	Metro      string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
-	Name       string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
-	Size       types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
-	Filesystem string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
+	Metro       string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
+	Name        string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
+	Size        types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
+	Filesystem  string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
+	QuotaPolicy string              `group:"flag-create" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 }
 
 func (c *VolumeCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -71,7 +72,8 @@ func (c *VolumeCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 type VolumeEditCmd struct {
 	cmd.ResourceEditCmd[Volume]
 
-	Size types.SizeMebibytes `group:"flag-edit" shortcut:"size" help:"Volume size." placeholder:"size" example:"20GiB,100MiB"`
+	Size        types.SizeMebibytes `group:"flag-edit" shortcut:"size" help:"Volume size." placeholder:"size" example:"20GiB,100MiB"`
+	QuotaPolicy string              `group:"flag-edit" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 }
 
 func (c *VolumeEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -227,10 +229,11 @@ type Volume struct {
 
 	Tags []string `mirror:"volume.tags"`
 
-	State      types.VolumeState   `mirror:"volume.state" field:",short"`
-	Size       types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
-	Filesystem string              `mirror:"volume.filesystem" field:",long" create:"set"`
-	Persistent bool                `mirror:"volume.persistent" field:",long"`
+	State       types.VolumeState   `mirror:"volume.state" field:",short"`
+	Size        types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
+	Filesystem  string              `mirror:"volume.filesystem" field:",long" create:"set"`
+	QuotaPolicy string              `mirror:"volume.quota_policy" field:"quota-policy,long" create:"set" edit:"set"`
+	Persistent  bool                `mirror:"volume.persistent" field:",long"`
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"volume.created_at" field:",short"`
@@ -464,6 +467,19 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 					}
 					req.AdditionalProperties["filesystem"] = data
 				}
+			case "quota-policy":
+				quotaPolicy := field.Create.Set.(string)
+				if quotaPolicy != "" {
+					data, err := json.Marshal(quotaPolicy)
+					if err != nil {
+						return nil, err
+					}
+					// HACK: set on additional properties, since we need an updated SDK
+					if req.AdditionalProperties == nil {
+						req.AdditionalProperties = make(map[string]json.RawMessage)
+					}
+					req.AdditionalProperties["quota_policy"] = data
+				}
 			}
 		}
 	}
@@ -586,6 +602,8 @@ func volumePatchSpec(path string, _ patchOp, value any) (platform.UpdateVolumesR
 	switch path {
 	case "size":
 		return platform.UpdateVolumesRequestItemPropSize_mb, int64(value.(types.SizeMebibytes))
+	case "quota-policy":
+		return platform.UpdateVolumesRequestItemPropQuota_policy, value.(string)
 	default:
 		return zero, nil
 	}
