@@ -70,6 +70,36 @@ func Build(ctx context.Context, opts BuildOpts, c *client.Client) ([]*imagespec.
 		opts.Platform = append(opts.Platform, kernel.Image.Platform)
 	}
 
+	meta := imagespec.ImageMetadata{
+		Created: new(time.Now()),
+	}
+
+	// If no rootfs path is set, build images with just the kernel.
+	if opts.Rootfs.Path == "" {
+		var cfg ocispec.ImageConfig
+		cfg.Cmd = opts.Cmd
+		cfg.Labels = opts.Labels
+		if opts.Env != nil {
+			env := make([]string, 0, len(opts.Env))
+			for _, kv := range opts.Env {
+				env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+			}
+			cfg.Env = env
+		}
+
+		images := make([]*imagespec.Image, 0, len(kernels))
+		for _, kernel := range kernels {
+			images = append(images, imagespec.NewImage(
+				imagespec.WithKernel(kernel.Kernel),
+				imagespec.WithImageConfig(cfg),
+				imagespec.WithImageMetadata(meta),
+				imagespec.WithPlatform(kernel.Image.Platform),
+			))
+			kernel.Kernel = nil
+		}
+		return images, nil
+	}
+
 	roots, err := BuildRootfs(ctx, c, opts)
 	if err != nil {
 		return nil, err
@@ -79,10 +109,6 @@ func Build(ctx context.Context, opts BuildOpts, c *client.Client) ([]*imagespec.
 			root.Close()
 		}
 	}()
-
-	meta := imagespec.ImageMetadata{
-		Created: new(time.Now()),
-	}
 
 	if len(kernels) != len(roots) {
 		panic(fmt.Sprintf("internal error: number of kernels (%d) does not match number of root filesystems (%d)", len(kernels), len(roots)))

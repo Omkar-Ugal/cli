@@ -73,3 +73,29 @@ func TestKraftfileToBuildOptsRootfsSourceError(t *testing.T) {
 	_, err := KraftfileToBuildOpts(rootfsDir, kf)
 	require.Error(t, err)
 }
+
+func TestKraftfileToBuildOptsNoRootfs(t *testing.T) {
+	rootfsDir := t.TempDir()
+
+	runtime := kraftfile.Runtime("unikraft.io/unikraft.org/base")
+	kf := &kraftfile.Kraftfile{
+		Cmd:     kraftfile.Command{"/server"},
+		Runtime: &runtime,
+		Targets: []kraftfile.Target{
+			{
+				Arch: "x86_64",
+				Plat: "fc",
+			},
+		},
+	}
+
+	opts, err := KraftfileToBuildOpts(rootfsDir, kf)
+	require.NoError(t, err)
+	require.Equal(t, "unikraft.io/unikraft.org/base", opts.Runtime)
+	require.Empty(t, opts.Rootfs.Path)
+	require.False(t, opts.Rootfs.Compress)
+	require.Equal(t, []string{"/server"}, opts.Cmd)
+	require.Len(t, opts.Platform, 1)
+	require.Equal(t, "x86_64", opts.Platform[0].Architecture)
+	require.Equal(t, "fc", opts.Platform[0].OS)
+}
