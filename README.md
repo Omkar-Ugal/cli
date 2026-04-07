@@ -171,7 +171,7 @@ profiles:
 ### 2. Deploy Your First Instance
 
 ```sh
-unikraft run --metro=fra -p 443:8080/http+tls nginx:latest
+unikraft run --metro=fra -p 443:8080/http+tls --image=nginx:latest
 ```
 
 This deploys an NGINX instance in Frankfurt with HTTPS enabled.
@@ -209,31 +209,31 @@ unikraft instances logs my-instance
 **Deploy with environment variables:**
 
 ```sh
-unikraft run --metro=sfo -e KEY=VALUE -e DEBUG=true my-app:latest
+unikraft run --metro=sfo -e KEY=VALUE -e DEBUG=true --image=my-app:latest
 ```
 
 **Deploy with an attached volume:**
 
 ```sh
-unikraft run --metro=was -v my-volume:/data my-app:latest
+unikraft run --metro=was -v my-volume:/data --image=my-app:latest
 ```
 
 **Deploy with custom resources:**
 
 ```sh
-unikraft run --metro=dal -m 512MiB --vcpus 2 my-app:latest
+unikraft run --metro=dal -m 512MiB --vcpus 2 --image=my-app:latest
 ```
 
 **Deploy with scale-to-zero:**
 
 ```sh
-unikraft run --metro=sin --scale-to-zero policy=on,cooldown-time=300 my-app:latest
+unikraft run --metro=sin --scale-to-zero policy=on,cooldown-time=300 --image=my-app:latest
 ```
 
 **Create an instance with multiple service ports:**
 
 ```sh
-unikraft run --metro=fra -p 443:8080/http+tls -p 80:443/http+redirect nginx:latest
+unikraft run --metro=fra -p 443:8080/http+tls -p 80:443/http+redirect --image=nginx:latest
 ```
 
 **Edit an existing instance:**
