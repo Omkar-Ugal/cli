@@ -1,8 +1,23 @@
 $ unikraft image inspect nginx:latest
 
 stdout:
-	ref:        nginx
-	digest:     sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	ref:                              nginx
+	digest:                           sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
 	config:
-	  platform: kraftcloud/x86_64
-	  cmd:      /usr/bin/nginx,-c,/etc/nginx/nginx.conf
+	  platform:                       kraftcloud/x86_64
+	  cmd:                            /usr/bin/nginx,-c,/etc/nginx/nginx.conf
+	metadata:
+	  created:                        YYYY-MM-DD HH:MM:SS +0000 UTC
+	  kraftkit-version:               v0.12.6-dirty
+	kernel:
+	  digest:                         sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	  media-type:                     application/vnd.oci.image.layer.v1.tar
+	  annotations:
+	    org.unikraft.kernel.image:    /unikraft/bin/kernel
+	  size:                           15279104
+	kernel.dbg:
+	  digest:                         sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+	  media-type:                     application/vnd.oci.image.layer.v1.tar
+	  annotations:
+	    org.unikraft.kernel.imagedbg: /unikraft/bin/kernel.dbg
+	  size:                           24346112

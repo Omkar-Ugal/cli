@@ -60,6 +60,7 @@ stdout:
 	  digest
 	  config, config.platform, config.entrypoint, config.cmd, config.env,
 	  config.exposed-ports, config.volumes
+	  metadata, metadata.author, metadata.created, metadata.kraftkit-version
 
 	Flags:
 	  -w, --watch
