@@ -95,13 +95,26 @@ need_cmd() { command -v "$1" >/dev/null 2>&1 || err "Required command not found:
 # HTTP download abstraction - uses curl if available, falls back to wget
 # Usage: http_download <url> <output_file>
 # Returns: HTTP status code (or approximation for wget)
-# Sets: HTTP_CODE variable
+# Sets: HTTP_CODE variable, SSL_ERROR variable ("1" if SSL error, "" otherwise)
 http_download() {
   url="$1"
   output="$2"
+  SSL_ERROR=""
 
   if command -v curl >/dev/null 2>&1; then
-    HTTP_CODE=$(curl -sSL -w '%{http_code}' -o "$output" "$url" 2>/dev/null) || HTTP_CODE="000"
+    curl_exit=0
+    HTTP_CODE=$(curl -sSL -w '%{http_code}' -o "$output" "$url" 2>/dev/null) || curl_exit=$?
+    if [ "$curl_exit" -ne 0 ]; then
+      # curl SSL-related exit codes:
+      # 35: SSL connect error
+      # 51: Peer's SSL certificate was not OK
+      # 60: Peer certificate cannot be authenticated with known CA certificates
+      # 77: Problem reading SSL CA cert
+      case "$curl_exit" in
+        35|51|60|77) SSL_ERROR="1" ;;
+      esac
+      HTTP_CODE="000"
+    fi
   elif command -v wget >/dev/null 2>&1; then
     # wget doesn't easily return HTTP codes, so we parse server response
     stderr_file=$(mktemp)
@@ -109,6 +122,11 @@ http_download() {
       wget_exit=0
     else
       wget_exit=$?
+    fi
+
+    # wget exit code 5 indicates SSL verification failure
+    if [ "$wget_exit" -eq 5 ]; then
+      SSL_ERROR="1"
     fi
 
     # Try to extract HTTP code from server response
@@ -198,7 +216,11 @@ resolve_prefix() {
   if [ -z "$v" ]; then
     step_fail "Fetching latest version"
     if [ "$HTTP_CODE" = "000" ]; then
-      err "Network error: could not connect to $BASE_URL"
+      if [ -n "$SSL_ERROR" ]; then
+        err "SSL certificate verification failed connecting to $BASE_URL. Ensure CA certificates are installed (e.g., ca-certificates package)."
+      else
+        err "Network error: could not connect to $BASE_URL"
+      fi
     elif [ "$HTTP_CODE" = "404" ]; then
       err "Version file not found at ${ch_file_url} (HTTP 404)"
     else
@@ -354,7 +376,11 @@ main() {
   if [ "$HTTP_CODE" != "200" ]; then
     step_fail "Downloading Unikraft CLI"
     if [ "$HTTP_CODE" = "000" ]; then
-      err "Network error: could not connect to download server"
+      if [ -n "$SSL_ERROR" ]; then
+        err "SSL certificate verification failed. Ensure CA certificates are installed (e.g., ca-certificates package)."
+      else
+        err "Network error: could not connect to download server"
+      fi
     elif [ "$HTTP_CODE" = "404" ]; then
       err "Binary not found (HTTP 404). Version $VERSION may not exist for ${PLATFORM}/${ARCH}."
     else
