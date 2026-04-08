@@ -192,17 +192,22 @@ unikraft instances logs my-instance
 
 | Command        | Description                                                                    |
 | -------------- | ------------------------------------------------------------------------------ |
-| `login`        | Login to Unikraft Cloud                                                        |
-| `logout`       | Logout from Unikraft Cloud                                                     |
-| `profile`      | Manage profiles (list, get, use)                                               |
 | `run`          | Run an image as an instance                                                    |
+| `build`        | Build a Unikraft project into a VM image                                       |
+| `tui`          | Browse resources in a TUI                                                      |
+| `metros`       | List available metro locations                                                 |
 | `instances`    | Manage instances (list, get, create, edit, delete, logs, start, stop, restart) |
 | `volumes`      | Manage persistent volumes (list, get, create, edit, delete, clone)             |
 | `services`     | Manage service groups (list, get, create, edit, delete)                        |
 | `certificates` | Manage TLS certificates (list, get, create, delete)                            |
 | `images`       | Manage images (list, get, copy)                                                |
-| `metros`       | List available metro locations                                                 |
+| `login`        | Login to Unikraft Cloud                                                        |
+| `logout`       | Logout from Unikraft Cloud                                                     |
+| `profile`      | Manage profiles (list, get, use)                                               |
+| `config`       | Manage CLI configuration                                                       |
 | `completion`   | Generate shell completion scripts                                              |
+| `version`      | Show version information                                                       |
+| `upgrade`      | Upgrade the Unikraft CLI to the latest version                                 |
 
 ### Examples
 
