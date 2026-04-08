@@ -34,7 +34,7 @@ type Metro struct {
 	Name     string `field:",short" json:"name"`
 	Country  string `field:",short" json:"country"`
 	Endpoint string `field:",short" json:"endpoint"`
-	Insecure bool   `field:",long" json:"insecure"`
+	Insecure *bool  `field:",long" json:"insecure"`
 }
 
 func (Metro) Type() resource.Type {
@@ -58,7 +58,7 @@ func (i Metro) Fields() ([]resource.Field, error) {
 		return nil, err
 	}
 
-	baseClient := httpclient.GetClient(i.Insecure)
+	baseClient := httpclient.GetClient(ptr.ZeroIfNil(i.Insecure))
 
 	quotas := &metroQuotas{
 		httpClient: baseClient,
