@@ -70,6 +70,8 @@ type Profile struct {
 	Organization string `json:"organization,omitempty" field:",short"`
 	// ControlPlane is the endpoint for the control plane associated with the profile.
 	ControlPlane string `json:"controlplane,omitempty" field:",long"`
+	// Insecure indicates whether to allow insecure connections to the control plane, skipping TLS verification.
+	Insecure bool `json:"controlplane_insecure,omitempty" field:",long"`
 	// Metros is a static list of metros.
 	Metros []Metro `json:"metros,omitempty" field:",long,embed"`
 }
