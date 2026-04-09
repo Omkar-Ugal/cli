@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/containerd/containerd/v2/pkg/filters"
 	"github.com/containerd/platforms"
@@ -30,7 +31,6 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/types"
-	xmaps "unikraft.com/cli/internal/x/maps"
 	xreference "unikraft.com/cli/internal/x/reference"
 )
 
@@ -61,20 +61,34 @@ type Image struct {
 	Ref    types.ImageRef[reference.Named] `field:",short"`
 	Digest digest.Digest                   `field:",long"`
 
-	Config ImageConfig `field:",embed"`
+	Config   ImageConfig   `field:",embed"`
+	Metadata ImageMetadata `field:",long,embed"`
+
+	Kernel      *ImageFile  `field:",long,embed"`
+	KernelDebug *ImageFile  `field:"kernel.dbg,long,embed"`
+	Initrd      *ImageFile  `field:",long,embed"`
+	Roms        []ImageFile `field:",long,embed"`
 
 	Image imagespec.Image `field:"-" json:"image"`
 }
 
 type ImageConfig struct {
-	Platform string `field:",short"`
+	Platform types.Platform `field:",short"`
 
-	Entrypoint []string `field:",long"`
-	Cmd        []string `field:",long"`
-	Env        []string `field:",long"`
+	Cmd []string          `field:",long"`
+	Env map[string]string `field:",long"`
+}
 
-	ExposedPorts []string `field:",long"`
-	Volumes      []string `field:",long"`
+type ImageMetadata struct {
+	Author  string     `field:",long"`
+	Created *time.Time `field:",long"`
+}
+
+type ImageFile struct {
+	Digest      digest.Digest     `field:",long"`
+	MediaType   string            `field:",long"`
+	Annotations map[string]string `field:",long"`
+	Size        types.SizeBytes   `field:",long"`
 }
 
 func (Image) Type() resource.Type {
@@ -93,92 +107,38 @@ func (i Image) Raw() any {
 }
 
 func (i Image) Fields() ([]resource.Field, error) {
-	fields, err := resource.FieldsFromStruct(i)
-	if err != nil {
-		return nil, err
+	return resource.FieldsFromStruct(i)
+}
+
+func imageFileFrom(file imagespec.File) *ImageFile {
+	if file == nil {
+		return nil
 	}
+	desc, _ := file.Source()
+	return &ImageFile{
+		Digest:      desc.Digest,
+		MediaType:   desc.MediaType,
+		Annotations: desc.Annotations,
+		Size:        types.SizeBytes(desc.Size),
+	}
+}
 
-	// custom fields impl for Image
-
-	meta := i.Image.Metadata()
-	fields = append(fields,
-		resource.Field{
-			Name: "metadata",
-			Subfields: []resource.Field{
-				{
-					Name:      "author",
-					Value:     meta.Author,
-					Verbosity: resource.FieldVerbosityLong,
-				},
-				{
-					Name:      "created",
-					Value:     meta.Created,
-					Verbosity: resource.FieldVerbosityLong,
-				},
-				{
-					Name:      "kraftkit-version",
-					Value:     meta.KraftkitVersion,
-					Verbosity: resource.FieldVerbosityLong,
-				},
-			},
-			Verbosity: resource.FieldVerbosityLong,
-		})
-
-	fromImageSpecFile := func(file imagespec.File) []resource.Field {
-		desc, _ := file.Source()
-		return []resource.Field{
-			{
-				Name:      "digest",
-				Value:     desc.Digest,
-				Verbosity: resource.FieldVerbosityLong,
-			},
-			{
-				Name:      "media-type",
-				Value:     desc.MediaType,
-				Verbosity: resource.FieldVerbosityLong,
-			},
-			{
-				Name:      "annotations",
-				Value:     desc.Annotations,
-				Verbosity: resource.FieldVerbosityLong,
-			},
-			{
-				Name:      "size",
-				Value:     desc.Size,
-				Verbosity: resource.FieldVerbosityLong,
-			},
+func imageRomsFrom(files []imagespec.File) []ImageFile {
+	if len(files) == 0 {
+		return nil
+	}
+	roms := make([]ImageFile, 0, len(files))
+	for _, file := range files {
+		rom := imageFileFrom(file)
+		if rom == nil {
+			continue
 		}
+		roms = append(roms, *rom)
 	}
-
-	if f := i.Image.Kernel; f != nil {
-		fields = append(fields, resource.Field{
-			Name:      "kernel",
-			Subfields: fromImageSpecFile(f),
-			Verbosity: resource.FieldVerbosityLong,
-		})
+	if len(roms) == 0 {
+		return nil
 	}
-	if f := i.Image.KernelDebug; f != nil {
-		fields = append(fields, resource.Field{
-			Name:      "kernel.dbg",
-			Subfields: fromImageSpecFile(f),
-			Verbosity: resource.FieldVerbosityLong,
-		})
-	}
-	if f := i.Image.Initrd; f != nil {
-		fields = append(fields, resource.Field{
-			Name:      "initrd",
-			Subfields: fromImageSpecFile(f),
-			Verbosity: resource.FieldVerbosityLong,
-		})
-	}
-	for idx, f := range i.Image.Roms {
-		fields = append(fields, resource.Field{
-			Name:      fmt.Sprintf("rom-%d", idx),
-			Subfields: fromImageSpecFile(f),
-			Verbosity: resource.FieldVerbosityLong,
-		})
-	}
-	return fields, nil
+	return roms
 }
 
 func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error) {
@@ -205,25 +165,51 @@ func (Image) Get(ctx context.Context, keys []string) ([]resource.Resource, error
 
 		for _, img := range imgs {
 			config := img.Image
+
+			meta := img.Metadata()
+
 			resource := Image{
 				Ref: types.ImageRef[reference.Named]{
 					Reference: img.Name,
 				},
 				Digest: img.Descriptor.Digest,
-				Image:  *img,
 				Config: ImageConfig{
-					Entrypoint:   config.Config.Entrypoint,
-					Cmd:          config.Config.Cmd,
-					Env:          config.Config.Env,
-					Platform:     platforms.Format(config.Platform),
-					ExposedPorts: xmaps.OrderedKeys(config.Config.ExposedPorts),
-					Volumes:      xmaps.OrderedKeys(config.Config.Volumes),
+					Cmd:      config.Config.Cmd,
+					Env:      envMapFromList(config.Config.Env),
+					Platform: types.Platform(config.Platform),
 				},
+				Metadata: ImageMetadata{
+					Author:  meta.Author,
+					Created: meta.Created,
+				},
+				Kernel:      imageFileFrom(img.Kernel),
+				KernelDebug: imageFileFrom(img.KernelDebug),
+				Initrd:      imageFileFrom(img.Initrd),
+				Roms:        imageRomsFrom(img.Roms),
+				Image:       *img,
 			}
 			resources = append(resources, &resource)
 		}
 	}
 	return resources, nil
+}
+
+func envMapFromList(entries []string) map[string]string {
+	result := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		key, val, ok := strings.Cut(entry, "=")
+		if key == "" {
+			continue
+		}
+		if !ok {
+			val = ""
+		}
+		result[key] = val
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func (Image) Examples() map[cmd.CmdType][]kingkong.Example {
