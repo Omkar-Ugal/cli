@@ -228,6 +228,18 @@ func (d *Domain) UnmarshalText(text []byte) error {
 	return nil
 }
 
+func (d *Domain) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return d.UnmarshalText([]byte(text))
+	}
+	type domainJSON Domain
+	return json.Unmarshal(data, (*domainJSON)(d))
+}
+
 func (ServiceGroup) Type() resource.Type {
 	return resource.Type{
 		Name:  "service",

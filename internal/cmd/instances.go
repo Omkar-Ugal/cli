@@ -222,6 +222,18 @@ func (i *InstanceService) UnmarshalText(data []byte) error {
 	return nil
 }
 
+func (i *InstanceService) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return i.UnmarshalText([]byte(text))
+	}
+	type instanceServiceJSON InstanceService
+	return json.Unmarshal(data, (*instanceServiceJSON)(i))
+}
+
 type InstanceVolume struct {
 	UUID     string `name:"uuid" mirror:"uuid" json:"uuid,omitempty" field:",long"`
 	Name     string `name:"name" mirror:"name" json:"name,omitempty" field:",long"`
