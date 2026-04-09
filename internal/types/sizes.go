@@ -54,3 +54,46 @@ func (m SizeMebibytes) MarshalJSON() ([]byte, error) {
 func (m SizeMebibytes) String() string {
 	return units.BytesSize(float64(m) * units.MiB)
 }
+
+// SizeBytes is a size wrapper that represents a size in bytes.
+type SizeBytes int64
+
+func (b *SizeBytes) UnmarshalText(text []byte) error {
+	if d, err := strconv.ParseInt(string(text), 10, 64); err == nil {
+		*b = SizeBytes(d)
+		return nil
+	}
+	value, err := units.FromHumanSize(string(text))
+	if err != nil {
+		return err
+	}
+	*b = SizeBytes(value)
+	return nil
+}
+
+func (b *SizeBytes) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return b.UnmarshalText([]byte(text))
+	}
+	return b.UnmarshalText(data)
+}
+
+func (b SizeBytes) MarshalText() ([]byte, error) {
+	return []byte(units.BytesSize(float64(b))), nil
+}
+
+func (b SizeBytes) MarshalJSON() ([]byte, error) {
+	text, err := b.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(string(text))
+}
+
+func (b SizeBytes) String() string {
+	return units.BytesSize(float64(b))
+}

@@ -28,6 +28,11 @@ func imagesTests(t *testing.T, r *testRunner) {
 					pattern: regexp.MustCompile(`nginx:[0-9]+\.[0-9]+`),
 					repl:    "nginx:X.Y",
 				},
+				{
+					// exact image size may change between runs
+					pattern: regexp.MustCompile(`([0-9]+(\.[0-9]+)?)([KMG]i?B)`),
+					repl:    "100MB",
+				},
 			}).
 			run(t, []command{
 				{args: []string{unikraftCmd, "image", "inspect", "nginx:latest"}},
