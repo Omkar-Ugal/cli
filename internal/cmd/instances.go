@@ -222,6 +222,18 @@ func (i *InstanceService) UnmarshalText(data []byte) error {
 	return nil
 }
 
+func (i *InstanceService) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return i.UnmarshalText([]byte(text))
+	}
+	type instanceServiceJSON InstanceService
+	return json.Unmarshal(data, (*instanceServiceJSON)(i))
+}
+
 type InstanceVolume struct {
 	UUID     string `name:"uuid" mirror:"uuid" json:"uuid,omitempty" field:",long"`
 	Name     string `name:"name" mirror:"name" json:"name,omitempty" field:",long"`
@@ -343,6 +355,18 @@ func (s *InstanceScaleToZero) UnmarshalText(data []byte) error {
 	}
 	*s = InstanceScaleToZero(parsed)
 	return nil
+}
+
+func (s *InstanceScaleToZero) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return s.UnmarshalText([]byte(text))
+	}
+	type scaleToZeroJSON InstanceScaleToZero
+	return json.Unmarshal(data, (*scaleToZeroJSON)(s))
 }
 
 func (s InstanceScaleToZero) MarshalText() ([]byte, error) {
