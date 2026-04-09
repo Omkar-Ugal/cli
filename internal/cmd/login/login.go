@@ -20,8 +20,8 @@ import (
 	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/httpclient"
 	"unikraft.com/cli/internal/logfmt"
+	"unikraft.com/cli/internal/multimetro"
 )
 
 type LoginCmd struct {
@@ -46,6 +46,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 	tempProfile := &config.Profile{
 		Type:         config.ProfileTypeCloud,
 		ControlPlane: cmp.Or(cmd.ControlPlane, controlplane.DefaultEndpoint),
+		Insecure:     cmd.AllowInsecure,
 	}
 
 	if cmd.Check {
@@ -123,6 +124,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 	profile.Token = token
 	profile.Organization = organization
 	profile.ControlPlane = loginControlPlane
+	profile.Insecure = cmd.AllowInsecure
 
 	// Fetch and merge metros
 	newMetros, err := cmd.getMetros(ctx, profile)
@@ -230,24 +232,11 @@ func (cmd *LoginCmd) generateUniqueProfileName(cfg *config.Config, organization 
 	}
 }
 
-func (cmd *LoginCmd) client(profile *config.Profile) controlplane.Client {
-	copts := []controlplane.ClientOption{
-		controlplane.WithDefaultEndpoint(profile.ControlPlane),
-	}
-	if profile.Token != "" {
-		copts = append(copts, controlplane.WithToken(profile.Token))
-	}
-	if cmd.AllowInsecure {
-		copts = append(copts, controlplane.WithHTTPClient(httpclient.InsecureHTTPClient))
-	} else {
-		copts = append(copts, controlplane.WithHTTPClient(httpclient.DefaultHTTPClient))
-	}
-	client := controlplane.NewClient(copts...)
-	return client
-}
-
 func (cmd *LoginCmd) getMetros(ctx context.Context, profile *config.Profile) ([]config.Metro, error) {
-	client := cmd.client(profile)
+	client, err := multimetro.NewControlClientFromProfile(profile)
+	if err != nil {
+		return nil, err
+	}
 
 	metroResp, err := client.ListMetros(ctx)
 	if err != nil {
@@ -269,7 +258,10 @@ func (cmd *LoginCmd) getMetros(ctx context.Context, profile *config.Profile) ([]
 }
 
 func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.Response[controlplane.CheckAuthorizationResponseData], error) {
-	client := cmd.client(profile)
+	client, err := multimetro.NewControlClientFromProfile(profile)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := getFingerprint()
 	if err != nil {
@@ -353,7 +345,10 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 }
 
 func (cmd *LoginCmd) getOrg(ctx context.Context, profile *config.Profile) (string, error) {
-	client := cmd.client(profile)
+	client, err := multimetro.NewControlClientFromProfile(profile)
+	if err != nil {
+		return "", err
+	}
 
 	resp, err := client.GetAuthorization(ctx)
 	if err != nil {

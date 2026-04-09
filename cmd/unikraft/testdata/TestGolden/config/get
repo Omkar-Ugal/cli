@@ -24,6 +24,7 @@ stdout:
 	    "profiles": {
 	      "default": {
 	        "control-plane": "",
+	        "insecure": false,
 	        "metros": [
 	          {
 	            "country": "xx",
@@ -49,6 +50,7 @@ stdout:
 	  profiles:
 	    default:
 	      control-plane: ""
+	      insecure: false
 	      metros:
 	      - country: xx
 	        endpoint: https://api.test.unikraft.internal

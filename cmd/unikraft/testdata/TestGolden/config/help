@@ -14,9 +14,10 @@ stdout:
 	  path
 	  profile
 	  profiles, profiles.*, profiles.*.name, profiles.*.type, profiles.*.token,
-	  profiles.*.organization, profiles.*.control-plane, profiles.*.metros,
-	  profiles.*.metros.*, profiles.*.metros.*.name, profiles.*.metros.*.endpoint,
-	  profiles.*.metros.*.country, profiles.*.metros.*.insecure
+	  profiles.*.organization, profiles.*.control-plane, profiles.*.insecure,
+	  profiles.*.metros, profiles.*.metros.*, profiles.*.metros.*.name,
+	  profiles.*.metros.*.endpoint, profiles.*.metros.*.country,
+	  profiles.*.metros.*.insecure
 
 	Global flags:
 	  -h, --help
@@ -55,9 +56,10 @@ stdout:
 	  path
 	  profile
 	  profiles, profiles.*, profiles.*.name, profiles.*.type, profiles.*.token,
-	  profiles.*.organization, profiles.*.control-plane, profiles.*.metros,
-	  profiles.*.metros.*, profiles.*.metros.*.name, profiles.*.metros.*.endpoint,
-	  profiles.*.metros.*.country, profiles.*.metros.*.insecure
+	  profiles.*.organization, profiles.*.control-plane, profiles.*.insecure,
+	  profiles.*.metros, profiles.*.metros.*, profiles.*.metros.*.name,
+	  profiles.*.metros.*.endpoint, profiles.*.metros.*.country,
+	  profiles.*.metros.*.insecure
 
 	Flags:
 	  -w, --watch
