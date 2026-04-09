@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/ettle/strcase"
-	"github.com/mitchellh/mapstructure"
 	"unikraft.com/cli/internal/xsync"
 )
 
@@ -366,25 +365,6 @@ func parsePatchEmpty(tp reflect.Type, tag string) (any, error) {
 	default:
 		return nil, fmt.Errorf("unknown patch value: %s", tag)
 	}
-}
-
-// HACK: avoid use of this method, and prefer using the info available directly
-// on the Field - this function makes heavy assumptions about the structure of
-// field data and how values are read/written. Currently it is only used for
-// visual editing.
-func DecodeStruct(input any, output any) error {
-	config := mapstructure.DecoderConfig{
-		TagName:          "field",
-		ErrorUnused:      true,
-		Result:           output,
-		WeaklyTypedInput: true,
-		DecodeHook:       mapstructure.TextUnmarshallerHookFunc(),
-	}
-	decoder, err := mapstructure.NewDecoder(&config)
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(input)
 }
 
 // wireLazyCallbacks sets up ValueCallbacks on all fields for a LazyLoader.
