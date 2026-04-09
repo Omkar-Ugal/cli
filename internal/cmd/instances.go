@@ -345,6 +345,18 @@ func (s *InstanceScaleToZero) UnmarshalText(data []byte) error {
 	return nil
 }
 
+func (s *InstanceScaleToZero) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return s.UnmarshalText([]byte(text))
+	}
+	type scaleToZeroJSON InstanceScaleToZero
+	return json.Unmarshal(data, (*scaleToZeroJSON)(s))
+}
+
 func (s InstanceScaleToZero) MarshalText() ([]byte, error) {
 	var parts []string
 	if s.Policy != "" {
