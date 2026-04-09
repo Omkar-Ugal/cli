@@ -11,6 +11,7 @@ import (
 
 	"github.com/mitchellh/copystructure"
 	"unikraft.com/cli/internal/config"
+	"unikraft.com/x/ptr"
 )
 
 func LoadConfig(t *testing.T) (*Config, error) {
@@ -57,6 +58,8 @@ func populate() (*Config, error) {
 		profile.ControlPlane = ""
 		profile.Metros = profile.Metros[:1]
 		profile.Metros[0].Name = "test"
+		profile.Metros[0].Country = "xx"
+		profile.Metros[0].Insecure = new(ptr.ZeroIfNil(profile.Metros[0].Insecure))
 
 		config := &config.Config{
 			DefaultProfile: profile.Name,

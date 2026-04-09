@@ -12,6 +12,7 @@ import (
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/log"
+	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
@@ -45,7 +46,7 @@ func NewClient(ctx context.Context) (*group.Group[MetroClient], error) {
 	group := group.New[MetroClient]()
 	for _, metro := range metros {
 		client := platform.NewClient(
-			platform.WithHTTPClient(httpclient.GetClient(metro.Insecure)),
+			platform.WithHTTPClient(httpclient.GetClient(ptr.ZeroIfNil(metro.Insecure))),
 			platform.WithToken(profile.Token),
 			platform.WithDefaultMetro(metro.Endpoint),
 		)

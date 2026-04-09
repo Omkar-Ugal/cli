@@ -15,6 +15,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	jujuerrors "github.com/juju/errors"
+	"unikraft.com/x/ptr"
 )
 
 // DefaultProfile is the name of the default profile used by the Unikraft CLI.
@@ -94,7 +95,11 @@ func (p *Profile) populate() {
 				endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", endpoint)
 			}
 
-			insecure, _ := strconv.ParseBool(os.Getenv("UKC_ALLOW_INSECURE"))
+			var insecure *bool
+			if v := os.Getenv("UKC_ALLOW_INSECURE"); v != "" {
+				b, _ := strconv.ParseBool(v)
+				insecure = &b
+			}
 			metro := Metro{
 				Name:     name,
 				Endpoint: endpoint,
@@ -140,7 +145,7 @@ type Metro struct {
 	// Country code for the metro.
 	Country string `json:"country" field:",short"`
 	// Allows insecure connections to the metro, skipping TLS verification.
-	Insecure bool `json:"insecure,omitempty" field:",long"`
+	Insecure *bool `json:"insecure,omitempty" field:",long"`
 }
 
 type Index struct {
@@ -162,7 +167,7 @@ func (m Metro) Index() Index {
 	return Index{
 		Host:     "index." + hostname,
 		HTTP:     u.Scheme == "http",
-		Insecure: m.Insecure,
+		Insecure: ptr.ZeroIfNil(m.Insecure),
 	}
 }
 
