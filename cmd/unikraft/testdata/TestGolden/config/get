@@ -25,6 +25,7 @@ stdout:
 	      "default": {
 	        "control-plane": "",
 	        "insecure": false,
+	        "metro-default": "",
 	        "metros": [
 	          {
 	            "country": "xx",
@@ -51,6 +52,7 @@ stdout:
 	    default:
 	      control-plane: ""
 	      insecure: false
+	      metro-default: ""
 	      metros:
 	      - country: xx
 	        endpoint: https://api.unikraft.test

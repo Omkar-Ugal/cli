@@ -74,6 +74,18 @@ type Profile struct {
 	Insecure bool `json:"controlplane_insecure,omitempty" field:",long"`
 	// Metros is a static list of metros.
 	Metros []Metro `json:"metros,omitempty" field:",long,embed"`
+	// MetroDefault is the default metro to use when creating resources.
+	MetroDefault string `json:"metro_default,omitempty"`
+}
+
+func (p Profile) GetDefaultMetro() string {
+	if p.MetroDefault != "" {
+		return p.MetroDefault
+	}
+	if len(p.Metros) == 1 {
+		return p.Metros[0].Name
+	}
+	return ""
 }
 
 func (p *Profile) populate() {
