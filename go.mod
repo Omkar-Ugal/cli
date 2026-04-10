@@ -23,7 +23,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jotaen/kong-completion v0.0.12
 	github.com/juju/errors v1.0.0
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moby/buildkit v0.29.0
 	github.com/moby/moby/client v0.4.0
 	github.com/opencontainers/go-digest v1.0.0
