@@ -17,11 +17,11 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.2
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.3.1+incompatible
+	github.com/docker/cli v29.4.0+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
 	github.com/google/uuid v1.6.0
-	github.com/jotaen/kong-completion v0.0.12
+	github.com/jotaen/kong-completion v0.0.13
 	github.com/juju/errors v1.0.0
 	github.com/moby/buildkit v0.29.0
 	github.com/moby/moby/client v0.4.0
@@ -37,11 +37,11 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/unikraft/go-archivefs v0.0.0-20260218131508-64011984668c
 	github.com/unikraft/go-cpio v0.0.0-20260209140144-8e02f12b23e0
-	golang.org/x/net v0.52.0
+	golang.org/x/net v0.53.0
 	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
-	mvdan.cc/sh/v3 v3.13.0
+	mvdan.cc/sh/v3 v3.13.1
 	sigs.k8s.io/yaml v1.6.0
 	unikraft.com/cloud/sdk v0.0.0-20260410093415-4a305de2be28
 	unikraft.com/x/colors v0.0.0-20260313145522-d793c36d706e
@@ -157,11 +157,11 @@ require (
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
-	golang.org/x/mod v0.34.0
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/mod v0.35.0
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
