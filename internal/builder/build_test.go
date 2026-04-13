@@ -8,6 +8,7 @@ package builder
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/unikraft/go-cpio"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/log"
 
@@ -70,6 +72,81 @@ EOF
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
 	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+}
+
+func TestBuildAbsoluteSymlinksIntegration(t *testing.T) {
+	ctx := integrationContext(t)
+	// Reproducer for https://github.com/moby/buildkit/issues/6684
+	// This test ensures that absolute symlinks are correctly preserved in the rootfs
+	// and not incorrectly rewritten with platform-specific prefixes.
+	// The debian:bookworm-slim image contains absolute symlinks like /etc/alternatives/awk -> /usr/bin/mawk
+	dockerfile := `
+FROM debian:bookworm-slim
+
+# Create test symlinks to verify correct behavior
+RUN ln -s /usr/bin/bash /test-symlink
+RUN ln -s /etc/passwd /another-test-link
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	opts := BuildOpts{
+		Runtime: "unikraft.io/unikraft.org/base",
+		Rootfs: RootfsOpts{
+			Format: kraftfile.FsTypeCpio,
+			Path:   rootfsPath,
+		},
+		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+	}
+
+	imgs := runBuild(t, ctx, opts)
+	require.Len(t, imgs, 1)
+	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+
+	// Inspect the CPIO archive to verify symlink targets
+	initrd := imgs[0].Initrd
+	require.NotNil(t, initrd)
+
+	f, _, err := initrd.Open(ctx)
+	require.NoError(t, err)
+	defer f.Close()
+
+	cr := cpio.NewReader(f)
+
+	// Track found symlinks and their targets
+	foundSymlinks := make(map[string]string)
+
+	for {
+		hdr, err := cr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+
+		if hdr.Mode&cpio.TypeSymlink != 0 {
+			foundSymlinks[hdr.Name] = hdr.Linkname
+		}
+	}
+
+	// Verify our test symlinks are correct
+	require.Contains(t, foundSymlinks, "./test-symlink")
+	require.Equal(t, "/usr/bin/bash", foundSymlinks["./test-symlink"],
+		"test-symlink should point to /usr/bin/bash, not a rewritten path")
+
+	require.Contains(t, foundSymlinks, "./another-test-link")
+	require.Equal(t, "/etc/passwd", foundSymlinks["./another-test-link"],
+		"another-test-link should point to /etc/passwd, not a rewritten path")
+
+	// Verify a symlink from the debian image itself
+	require.Contains(t, foundSymlinks, "./etc/alternatives/awk")
+	require.Equal(t, "/usr/bin/mawk", foundSymlinks["./etc/alternatives/awk"],
+		"Debian's awk symlink should point to /usr/bin/mawk, not a rewritten path")
+
+	// Ensure no symlinks have been incorrectly rewritten with platform prefixes
+	for name, target := range foundSymlinks {
+		require.NotContains(t, target, "fc_x86_64",
+			"symlink %s should not contain platform prefix in target: %s", name, target)
+		require.NotContains(t, target, "/fc_x86_64",
+			"symlink %s should not contain platform prefix in target: %s", name, target)
+	}
 }
 
 func TestBuildMultiPlatformIntegration(t *testing.T) {

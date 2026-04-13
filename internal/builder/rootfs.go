@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -59,9 +58,11 @@ func BuildRootfs(ctx context.Context, c *client.Client, opts BuildOpts) (_ []*im
 	}
 
 	attrs := map[string]string{}
-	if len(opts.Platform) > 0 {
-		attrs["multi-platform"] = "true"
-	}
+	// HACK: disabled multi-platform mode due to buildkit symlink bug.
+	// https://github.com/moby/buildkit/issues/6684
+	// if len(opts.Platform) > 0 {
+	// 	attrs["multi-platform"] = "true"
+	// }
 	localDirs := map[string]string{}
 	if err := applyBuildOpts(attrs, localDirs, &session, opts); err != nil {
 		return nil, err
@@ -135,10 +136,13 @@ func BuildRootfs(ctx context.Context, c *client.Client, opts BuildOpts) (_ []*im
 		ep := expPlatforms[i]
 		config := configs[i]
 
-		path := filepath.Join(
-			localDest,
-			strings.ReplaceAll(ep.ID, "/", "_"),
-		)
+		path := localDest
+		_ = ep
+		// HACK: only valid with multi-platform enabled
+		// path := filepath.Join(
+		// 	localDest,
+		// 	strings.ReplaceAll(ep.ID, "/", "_"),
+		// )
 
 		f, err := os.CreateTemp("", "unikraft-rootfs-*."+string(opts.Rootfs.Format))
 		if err != nil {
@@ -220,6 +224,11 @@ func applyBuildOpts(attrs map[string]string, localDirs map[string]string, sessio
 	}
 	slices.Sort(ps)
 	ps = slices.Compact(ps)
+	if len(ps) > 1 {
+		// HACK: disabled multi-platform mode due to buildkit symlink bug.
+		// https://github.com/moby/buildkit/issues/6684
+		return fmt.Errorf("multi-platform builds are currently not supported")
+	}
 	if len(ps) > 0 {
 		attrs["platform"] = strings.Join(ps, ",")
 	}
