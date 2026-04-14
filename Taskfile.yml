@@ -19,8 +19,9 @@ vars:
   ytt_version: v0.52.0
   ytt_bin: "{{.go_bin}} run carvel.dev/ytt/cmd/ytt@{{.ytt_version}}"
 
-  svu_version: v3.2.3
-  svu_bin: "{{.go_bin}} run github.com/caarlos0/svu/v3@{{.svu_version}}"
+  # svu_version: v3.2.3
+  # svu_bin: "{{.go_bin}} run github.com/caarlos0/svu/v3@{{.svu_version}}"
+  svu_bin: "{{.go_bin}} run github.com/caarlos0/svu/v3"
 
   task_version: v3.48.0
   task_bin:
@@ -150,7 +151,7 @@ tasks:
     desc: Show the last stable version of the CLI.
     silent: true
     cmds:
-    - git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude='*-*' --abbrev=0 | awk -F. -v OFS=. '{$NF += 1 ; print}'
+    - git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --exclude='*-*' --abbrev=0
 
   snapshot:
     desc: Generate a snapshot release.
