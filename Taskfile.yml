@@ -19,7 +19,7 @@ vars:
   ytt_version: v0.52.0
   ytt_bin: "{{.go_bin}} run carvel.dev/ytt/cmd/ytt@{{.ytt_version}}"
 
-  # HACK: svu hotfix, see go.mod replace
+  # HACK: hot-fix for svu, see go.mod replace
   # svu_version: v3.2.3
   # svu_bin: "{{.go_bin}} run github.com/caarlos0/svu/v3@{{.svu_version}}"
   svu_bin: "{{.go_bin}} run github.com/caarlos0/svu/v3"
