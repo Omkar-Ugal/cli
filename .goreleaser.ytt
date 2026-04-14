@@ -48,6 +48,10 @@ release:
     > This is a **pre-release** version of the Unikraft CLI.  It may contain features that are still in development and could be unstable.
 
     ## Installation
+    ### 1-liner (macOS & Linux)
+    ```bash
+    curl --proto '=https' --tlsv1.2 -LsSf https://unikraft.com/cli/install.sh | UNIKRAFT_CLI_INSTALL_CHANNEL=staging sh
+    ```
     ### Debian/Ubuntu
     ```bash
     # Update and install dependencies
