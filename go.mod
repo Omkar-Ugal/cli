@@ -35,7 +35,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
-	github.com/unikraft/go-archivefs v0.0.0-20260218131508-64011984668c
+	github.com/unikraft/go-archivefs v0.0.0-20260414073833-365b9a2f34bd
 	github.com/unikraft/go-cpio v0.0.0-20260209140144-8e02f12b23e0
 	golang.org/x/net v0.53.0
 	golang.org/x/sync v0.20.0
@@ -55,14 +55,13 @@ require (
 	unikraft.com/x/ptr v0.0.0-20260116231133-1da0081544af
 )
 
-require github.com/atotto/clipboard v0.1.4 // indirect
-
 require (
 	cyphar.com/go-pathrs v0.2.3 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

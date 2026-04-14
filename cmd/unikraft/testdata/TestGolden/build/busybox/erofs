@@ -1,0 +1,52 @@
+$ unikraft build . --output test/busybox-e2e:$UNIQ_IMAGE
+
+stderr:
+	│ found buildkit addr=<docker> version=vX.Y.Z
+	│ compression is not supported for EROFS, ignoring compress option
+
+$ unikraft run --name test-$UNIQ_INST --metro test --output quiet --image test/busybox-e2e:$UNIQ_IMAGE
+
+stdout:
+	test/test-<INST>
+
+$ unikraft instance wait --until state==stopped --timeout 10s test-$UNIQ_INST
+
+stdout:
+	metro:        test
+	name:         test-<INST>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        stopped
+	image:        test/busybox-e2e
+	resources:
+	  memory:     128MiB
+	  vcpus:      1
+	networks:
+	- uuid:       12345678-1234-1234-1234-123456789abc
+	  private-ip: 10.X.X.X
+	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
+	stop:
+	  reason:     app exit
+	  exit-code:  0
+
+$ unikraft instance logs test-$UNIQ_INST
+
+stdout:
+	test-<INST> ┏ [    0.000000] RDSEED32 is broken. Disabling the corresponding CPUID bit.
+	test-<INST> │ == BEGIN /etc/unikraft-e2e ==
+	test-<INST> │ unikraft-e2e
+	test-<INST> │ == END /etc/unikraft-e2e ==
+	test-<INST> │ == BEGIN ls /etc/unikraft-e2e ==
+	test-<INST> │ /etc/unikraft-e2e
+	test-<INST> │ == END ls /etc/unikraft-e2e ==
+	test-<INST> │ == BEGIN status ==
+	test-<INST> │ UNIKRAFT_E2E_OK
+	test-<INST> │ == END status ==
+	test-<INST> │ Application exited with 0x0 (exit code: 0)
+	test-<INST> │ [    0.000000] reboot: Restarting system
+
+$ unikraft instance delete test-$UNIQ_INST
+
+stdout:
+	test-<INST>
