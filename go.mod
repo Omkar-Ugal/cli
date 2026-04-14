@@ -197,8 +197,8 @@ tool github.com/caarlos0/svu/v3
 // HACK: hot-fix for https://github.com/charmbracelet/lipgloss/pull/636
 replace charm.land/lipgloss/v2 => github.com/jedevc/lipgloss/v2 v2.0.0-20260322175907-46dd1f11f91e
 
+// HACK: hot-fix for https://github.com/caarlos0/svu/pull/289
+replace github.com/caarlos0/svu/v3 => github.com/jedevc/svu/v3 v3.0.0-20260414140658-a7d4962c9e66
+
 // HACK: pin to rc.2 due to bug in rc.3, see https://github.com/moby/buildkit/pull/6616
 replace github.com/containerd/platforms => github.com/containerd/platforms v1.0.0-rc.2
-
-// HACK: svu hotfix
-replace github.com/caarlos0/svu/v3 => github.com/jedevc/svu/v3 v3.0.0-20260414140658-a7d4962c9e66
