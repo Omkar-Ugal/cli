@@ -76,7 +76,7 @@ func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), r
 
 	// If no other buildkits found, error out!
 	if c == nil {
-		return nil, nil, fmt.Errorf("no buildkit host found; please start a buildkit daemon or configure a buildkit host")
+		return nil, nil, fmt.Errorf("buildkit not found; please start a docker or buildkit daemon, or set BUILDKIT_HOST")
 	}
 
 	log.G(ctx).

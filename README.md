@@ -124,6 +124,15 @@ make cli
 
 </details>
 
+### `unikraft build` dependencies
+
+To use `unikraft build` to build and publish your own images from
+`Dockerfile`s, you need a BuildKit builder. The easiest way to get one is via
+Docker, see <https://docs.docker.com/engine/install/> for installation
+instructions.
+
+Alternatively, you can also directly setup and use BuildKit, see <https://github.com/moby/buildkit#quick-start>.
+
 ## Quick Start
 
 ### 1. Login to [Unikraft Cloud](https://console.unikraft.cloud/auth/signin)
