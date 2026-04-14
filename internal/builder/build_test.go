@@ -281,8 +281,9 @@ func runBuild(t *testing.T, ctx context.Context, opts BuildOpts) []*imagespec.Im
 	if cleanup != nil {
 		t.Cleanup(cleanup)
 	}
+	ctx = buildkit.WithBuildkitContext(ctx, bkc)
 
-	imgs, err := Build(ctx, opts, bkc)
+	imgs, err := Build(ctx, opts)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		for _, img := range imgs {

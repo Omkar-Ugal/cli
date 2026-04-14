@@ -25,6 +25,10 @@ import (
 )
 
 func ConnectToBuildkit(ctx context.Context) (c *client.Client, cleanup func(), rerr error) {
+	if c = BuildkitFromContext(ctx); c != nil {
+		return c, func() {}, nil
+	}
+
 	var buildkitInfo *client.Info
 	var buildkitAddr string
 

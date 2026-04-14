@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/containerd/platforms"
-	"github.com/moby/buildkit/client"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	imagespec "unikraft.com/x/image-spec"
 
@@ -55,7 +54,7 @@ const (
 )
 
 // Build a unikraft image based on the provided build options.
-func Build(ctx context.Context, opts BuildOpts, c *client.Client) ([]*imagespec.Image, error) {
+func Build(ctx context.Context, opts BuildOpts) ([]*imagespec.Image, error) {
 	kernels, err := BuildKernel(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -100,7 +99,7 @@ func Build(ctx context.Context, opts BuildOpts, c *client.Client) ([]*imagespec.
 		return images, nil
 	}
 
-	roots, err := BuildRootfs(ctx, c, opts)
+	roots, err := BuildRootfs(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
