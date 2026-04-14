@@ -28,11 +28,13 @@ func buildTests(t *testing.T, r *testRunner) {
 	}
 
 	t.Run("busybox", func(t *testing.T) {
-		r.
-			online().
-			withCleaners(buildCleaners).
-			withContext(map[string]string{
-				"Dockerfile": `
+		for _, format := range []string{"cpio", "erofs"} {
+			t.Run(format, func(t *testing.T) {
+				r.
+					online().
+					withCleaners(buildCleaners).
+					withContext(map[string]string{
+						"Dockerfile": `
 FROM busybox:latest
 RUN echo "unikraft-e2e" > /etc/unikraft-e2e
 COPY <<EOF /entrypoint.sh
@@ -49,21 +51,25 @@ echo "== END status =="
 EOF
 RUN chmod +x /entrypoint.sh
 `,
-				"Kraftfile": `
+						"Kraftfile": fmt.Sprintf(`
 spec: v0.7
 name: busybox-e2e
 runtime: base-compat:latest
-rootfs: ./Dockerfile
+rootfs:
+  format: %s
+  source: ./Dockerfile
 cmd: ["sh", "/entrypoint.sh"]
-`,
-			}).
-			run(t, []command{
-				{args: []string{unikraftCmd, "build", ".", "--output", busybox}},
-				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", busybox}},
-				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
-				{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
-				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+`, format),
+					}).
+					run(t, []command{
+						{args: []string{unikraftCmd, "build", ".", "--output", busybox}},
+						{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", busybox}},
+						{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
+						{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
+						{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+					})
 			})
+		}
 	})
 }
 
