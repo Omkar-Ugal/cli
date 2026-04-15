@@ -30,6 +30,7 @@ import (
 
 	"unikraft.com/cli/internal/builder/cpio"
 	"unikraft.com/cli/internal/builder/erofs"
+	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/images"
 	"unikraft.com/x/kraftfile"
@@ -39,7 +40,7 @@ type Rootfs struct {
 	File *os.File
 }
 
-func BuildRootfs(ctx context.Context, c *client.Client, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
+func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
 	if len(opts.Platform) == 0 {
 		return nil, fmt.Errorf("at least one platform must be specified")
 	}
@@ -86,6 +87,14 @@ func BuildRootfs(ctx context.Context, c *client.Client, opts BuildOpts) (_ []*im
 		LocalDirs:     localDirs,
 		Frontend:      "dockerfile.v0",
 		FrontendAttrs: attrs,
+	}
+
+	c, cleanup, err := buildkit.ConnectToBuildkit(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if cleanup != nil {
+		defer cleanup()
 	}
 
 	pw, err := progresswriter.NewPrinter(context.WithoutCancel(ctx), os.Stderr, "auto")

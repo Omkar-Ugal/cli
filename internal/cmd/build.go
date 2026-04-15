@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/mod/semver"
 	"unikraft.com/cli/internal/builder"
-	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/images"
 	imagespec "unikraft.com/x/image-spec"
@@ -108,15 +107,7 @@ func (c *BuildCmd) Run(ctx context.Context, cfg *config.Config) error {
 		buildOpts.Rootfs.SSH = ssh
 	}
 
-	bkc, cleanup, err := buildkit.ConnectToBuildkit(ctx)
-	if err != nil {
-		return err
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
-	imgs, err := builder.Build(ctx, buildOpts, bkc)
+	imgs, err := builder.Build(ctx, buildOpts)
 	if err != nil {
 		return err
 	}
