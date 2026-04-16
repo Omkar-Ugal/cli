@@ -65,17 +65,19 @@ tasks:
         CLI_ARGS: "-race"
 
   integration:
-    desc: Run integration tests.
+    desc: Run integration tests. Use TEST=<pattern> to filter (e.g., TEST=help).
     silent: true
     cmds:
     - task: go:test
       vars:
         go_tags: "integration"
         package: ./cmd/unikraft ./internal/builder
+        CLI_ARGS: '{{if .TEST}}-run "TestGolden/{{.TEST}}"{{end}}'
 
   integration-update:
+    desc: Update integration test golden files. Use TEST=<pattern> to filter (e.g., TEST=help).
     cmd: >-
-      go test -v ./cmd/unikraft -tags integration --update
+      {{.go_bin}} test -v ./cmd/unikraft -tags integration --update {{if .TEST}}-run "TestGolden/{{.TEST}}"{{end}}
 
   docs:
     desc: Generate all documentation.

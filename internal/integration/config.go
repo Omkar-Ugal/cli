@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"os"
 	"sync"
 	"testing"
 
@@ -43,6 +44,9 @@ func populate() (*Config, error) {
 		if err != nil || baseCfg == nil {
 			onceErr = err
 			return
+		}
+		if profileName := os.Getenv("UNIKRAFT_PROFILE"); profileName != "" {
+			baseCfg.OverrideCurrentProfile(profileName)
 		}
 
 		profile, err := baseCfg.CurrentProfile()
