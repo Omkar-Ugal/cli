@@ -67,7 +67,6 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 		}
 
 		opts.Rootfs.Path = filepath.Join(dir, opts.Rootfs.Path)
-		opts.Rootfs.Compress = true
 	}
 
 	return opts, nil
