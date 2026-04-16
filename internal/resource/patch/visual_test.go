@@ -78,24 +78,19 @@ count: 42
 
 	result, err := Edit(context.Background(), res, fields, nil, editor)
 	require.NoError(t, err)
-	require.Len(t, result, 2)
+	// Only the changed field should be in the result
+	require.Len(t, result, 1)
 
 	// Check that name was updated
-	var nameField, countField *resource.Field
+	var nameField *resource.Field
 	for i := range result {
-		switch result[i].Name {
-		case "name":
+		if result[i].Name == "name" {
 			nameField = &result[i]
-		case "count":
-			countField = &result[i]
 		}
 	}
 
 	require.NotNil(t, nameField)
-	require.NotNil(t, countField)
 	assert.Equal(t, "new-name", nameField.Edit.Set)
-	// count was unchanged, so Edit.Set should be nil (no patch to apply)
-	assert.Nil(t, countField.Edit.Set)
 }
 
 func TestCreate_Basic(t *testing.T) {
@@ -343,7 +338,7 @@ func TestEdit_FieldRemoved(t *testing.T) {
 		},
 	}
 
-	// Editor removes the count field
+	// Editor removes the count field (leaving name unchanged)
 	editor := func(ctx context.Context, input []byte) ([]byte, error) {
 		return []byte(`
 name: original
@@ -353,18 +348,8 @@ name: original
 	result, err := Edit(context.Background(), res, fields, nil, editor)
 	require.NoError(t, err)
 
-	// Find the count field
-	var countField *resource.Field
-	for i := range result {
-		if result[i].Name == "count" {
-			countField = &result[i]
-			break
-		}
-	}
-
-	// count was removed, so Edit.Set should be nil (no patch)
-	require.NotNil(t, countField, "count field should still be in result")
-	assert.Nil(t, countField.Edit.Set, "removed field should have Set=nil")
+	// Since name is unchanged and count is removed (no change), result should be empty
+	assert.Empty(t, result, "no fields should have changes when one is unchanged and one is removed")
 }
 
 func TestEdit_WithTestResource(t *testing.T) {
@@ -601,18 +586,8 @@ visible: false
 	result, err := Edit(context.Background(), res, fields, nil, editor)
 	require.NoError(t, err)
 
-	// Find the visible field
-	var visibleField *resource.Field
-	for i := range result {
-		if result[i].Name == "visible" {
-			visibleField = &result[i]
-			break
-		}
-	}
-
-	// Field should be in result but with nil Set (no change)
-	require.NotNil(t, visibleField, "visible field should be in result")
-	assert.Nil(t, visibleField.Edit.Set, "unchanged displayed field should have Set=nil")
+	// Field is unchanged, so it should NOT be in the result
+	assert.Empty(t, result, "unchanged displayed field should not be in result")
 }
 
 func TestEdit_PendingPatchShownInEditor(t *testing.T) {
@@ -683,9 +658,8 @@ hidden: true
 	assert.True(t, *hiddenField.Edit.Set.(*bool), "patch should be preserved")
 
 	// Name field was displayed with original value ("original").
-	// Since edited value equals original, Set should be nil (no change needed).
-	require.NotNil(t, nameField, "name field should be in result")
-	assert.Nil(t, nameField.Edit.Set, "unchanged field should have Set=nil")
+	// Since edited value equals original, it should NOT be in the result.
+	assert.Nil(t, nameField, "unchanged field should not be in result")
 }
 
 func TestEdit_PendingPatchChangedInEditor(t *testing.T) {
@@ -1037,4 +1011,77 @@ func TestEdit_SimulateActualCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Edit failed: %v", err)
 	}
+}
+
+// imageRef simulates an ImageRef type that implements TextMarshaler/TextUnmarshaler
+type imageRef struct{ ref string }
+
+func (t imageRef) MarshalText() ([]byte, error) { return []byte(t.ref), nil }
+func (t *imageRef) UnmarshalText(b []byte) error {
+	t.ref = string(b)
+	return nil
+}
+
+// TestEdit_TextMarshalerEquality tests that fields with TextMarshaler values
+// that marshal to the same text are considered equal. This is important for
+// types like ImageRef where the value might have different internal state
+// after YAML round-tripping but should be considered equal.
+func TestEdit_TextMarshalerEquality(t *testing.T) {
+	res := mockResource{name: "test"}
+
+	// The current value and template both use imageRef with "nginx"
+	currentValue := imageRef{ref: "nginx"}
+
+	fields := []resource.Field{
+		{
+			Name:  "image",
+			Value: currentValue,
+			Edit:  &resource.Patch{Set: currentValue}, // Set contains current value
+		},
+	}
+
+	patches := []resource.Field{}
+
+	editor := func(ctx context.Context, input []byte) ([]byte, error) {
+		// Return the same value - simulates `--cmd cat`
+		return input, nil
+	}
+
+	result, err := Edit(context.Background(), res, fields, patches, editor)
+	require.NoError(t, err)
+
+	// Since the value was unchanged, there should be no patches
+	assert.Empty(t, result, "expected no patches when TextMarshaler values are semantically equal")
+}
+
+// TestEdit_TextMarshalerInequality tests that fields with TextMarshaler values
+// that marshal to different text are considered different.
+func TestEdit_TextMarshalerInequality(t *testing.T) {
+	res := mockResource{name: "test"}
+
+	currentValue := imageRef{ref: "nginx"}
+
+	fields := []resource.Field{
+		{
+			Name:  "image",
+			Value: currentValue,
+			Edit:  &resource.Patch{Set: currentValue},
+		},
+	}
+
+	patches := []resource.Field{}
+
+	editor := func(ctx context.Context, input []byte) ([]byte, error) {
+		// Change the value
+		return []byte("image: alpine\n"), nil
+	}
+
+	result, err := Edit(context.Background(), res, fields, patches, editor)
+	require.NoError(t, err)
+
+	// Since the value was changed, there should be a patch
+	require.Len(t, result, 1)
+	assert.Equal(t, "image", result[0].Name)
+	assert.NotNil(t, result[0].Edit.Set)
+	assert.Equal(t, imageRef{ref: "alpine"}, result[0].Edit.Set)
 }
