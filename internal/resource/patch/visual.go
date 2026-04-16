@@ -8,6 +8,7 @@ package patch
 import (
 	"bytes"
 	"context"
+	"encoding"
 	"fmt"
 	"io"
 	"os"
@@ -239,7 +240,7 @@ func loadFieldPatches(fields []resource.Field, data []byte, create bool) ([]reso
 
 		if originalValue := field.Value; originalValue != nil {
 			convertedOriginal, err := convertValue(originalValue, reflect.TypeOf(patch.Set))
-			if err == nil && reflect.DeepEqual(convertedOriginal, convertedValue) {
+			if err == nil && valuesEqual(convertedOriginal, convertedValue) {
 				// Value is same as original - no patch needed
 				patch.Set = nil
 				continue
@@ -337,6 +338,27 @@ func collectKeys(m map[string]any, prefix resource.FieldPath) []string {
 		}
 	}
 	return keys
+}
+
+// valuesEqual compares two values for semantic equality.
+func valuesEqual(a, b any) bool {
+	// Fast path: try reflect.DeepEqual first
+	if reflect.DeepEqual(a, b) {
+		return true
+	}
+
+	// For TextMarshalers, compare by marshaled text
+	aMarshaler, aOk := a.(encoding.TextMarshaler)
+	bMarshaler, bOk := b.(encoding.TextMarshaler)
+	if aOk && bOk {
+		aText, aErr := aMarshaler.MarshalText()
+		bText, bErr := bMarshaler.MarshalText()
+		if aErr == nil && bErr == nil {
+			return bytes.Equal(aText, bText)
+		}
+	}
+
+	return false
 }
 
 // convertValue converts a value to the target type by round-tripping through YAML.
