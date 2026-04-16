@@ -129,6 +129,7 @@ func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context
 		kongcompletion.WithPredictor("resource-key-instance", cmd.PredictResourceKey[Instance](ctx)),
 		kongcompletion.WithPredictor("resource-key-instance-template", cmd.PredictResourceKey[InstanceTemplate](ctx)),
 		kongcompletion.WithPredictor("resource-key-volume", cmd.PredictResourceKey[Volume](ctx)),
+		kongcompletion.WithPredictor("resource-key-volume-template", cmd.PredictResourceKey[VolumeTemplate](ctx)),
 		kongcompletion.WithPredictor("resource-key-service", cmd.PredictResourceKey[ServiceGroup](ctx)),
 		kongcompletion.WithPredictor("resource-key-certificate", cmd.PredictResourceKey[Certificate](ctx)),
 		kongcompletion.WithPredictor("resource-key-image", cmd.PredictResourceKey[ImageEntry](ctx)),
@@ -354,6 +355,7 @@ var SandboxedResources = []resource.Resource{
 	Instance{},
 	InstanceTemplate{},
 	Volume{},
+	VolumeTemplate{},
 	ServiceGroup{},
 	Certificate{},
 }
