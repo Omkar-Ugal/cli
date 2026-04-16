@@ -45,6 +45,7 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 	unikraft.com/cloud/sdk v0.0.0-20260416133315-be4aec303a89
 	unikraft.com/x/colors v0.0.0-20260313145522-d793c36d706e
+	unikraft.com/x/filters v0.0.0-20260416164455-ec39ae908f3f
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/guesstermwidth v0.0.0-20260304162956-523940cab1de
 	unikraft.com/x/image-spec v0.0.0-20260402110633-a9f8f467a2b5

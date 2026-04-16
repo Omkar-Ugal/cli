@@ -157,6 +157,129 @@ func TestList(t *testing.T) {
 		assert.NotContains(t, output, "test2")
 	})
 
+	t.Run("filter-wildcard-nested", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"authors.*.email==alice@example.com"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "test1") // has Alice as author
+		assert.NotContains(t, output, "test2")
+
+		out.Reset()
+		cmd.Filter = []string{"authors.*.email==charlie@example.com"}
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output = out.String()
+		assert.Contains(t, output, "test2") // has Charlie as author
+		assert.NotContains(t, output, "test1")
+
+		out.Reset()
+		cmd.Filter = []string{"authors.*.name==Bob"}
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output = out.String()
+		assert.Contains(t, output, "test1") // has Bob as author
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("filter-indexed-nested", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"authors.0.name==Alice"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "test1")    // first author is Alice
+		assert.NotContains(t, output, "test2") // first author is Charlie
+
+		out.Reset()
+		cmd.Filter = []string{"authors.1.email==bob@example.com"}
+		err = cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output = out.String()
+		assert.Contains(t, output, "test1")    // second author is Bob
+		assert.NotContains(t, output, "test2") // second author is Dana
+	})
+
+	t.Run("filter-nested-struct", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"settings.bar==hello"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+
+		output := out.String()
+		assert.Contains(t, output, "test1")    // settings.bar == "hello"
+		assert.NotContains(t, output, "test2") // settings.bar == "world"
+	})
+
+	t.Run("filter-unknown-field", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"nonexistent==value"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nonexistent")
+
+		output := out.String()
+		assert.NotContains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("filter-unknown-field-dedup", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"missing_field==value"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.Error(t, err)
+
+		// Error should mention missing_field only once, not once per resource
+		errStr := err.Error()
+		assert.Contains(t, errStr, "missing_field")
+		count := strings.Count(errStr, "missing_field")
+		assert.Equal(t, 1, count, "expected 1 occurrence, got %d", count)
+	})
+
+	t.Run("filter-unknown-nested-field", func(t *testing.T) {
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"settings.nonexistent==value"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nonexistent")
+	})
+
 	t.Run("sort-asc", func(t *testing.T) {
 		var out bytes.Buffer
 		cmd := &ResourceListCmd[resourcet.TestResource]{
