@@ -17,6 +17,9 @@ func FilterEditFields(fields []resource.Field) []resource.Field {
 		if field.Edit == nil {
 			return resource.FilterPrune
 		}
+		if field.Edit.Set == nil && field.Edit.Add == nil && field.Edit.Del == nil {
+			return resource.FilterPrune
+		}
 		return resource.FilterInclude
 	})
 }
@@ -25,6 +28,9 @@ func FilterEditFields(fields []resource.Field) []resource.Field {
 func FilterCreateFields(fields []resource.Field) []resource.Field {
 	return resource.FilterFields(fields, func(field resource.Field) resource.FilterResult {
 		if field.Create == nil {
+			return resource.FilterPrune
+		}
+		if field.Create.Set == nil && field.Create.Add == nil && field.Create.Del == nil {
 			return resource.FilterPrune
 		}
 		return resource.FilterInclude
