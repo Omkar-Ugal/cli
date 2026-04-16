@@ -289,7 +289,7 @@ func (InstanceTemplate) Delete(ctx context.Context, targets []resource.Resource)
 		var deleted []group.Ref
 		for _, template := range templates.Data.Instances {
 			status := ptr.ZeroIfNil(template.Status)
-			if status != "" && status != string(platform.ResponseStatusSUCCESS) {
+			if status != "" && status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			deleted = append(deleted, group.Ref{
@@ -414,7 +414,7 @@ func (InstanceTemplate) Create(ctx context.Context, fields []resource.Field) ([]
 				}
 				for _, tmpl := range resp.Data.Instances {
 					status := ptr.ZeroIfNil(tmpl.Status)
-					if status != "" && status != string(platform.ResponseStatusSUCCESS) {
+					if status != "" && status != platform.ResponseStatusSUCCESS {
 						name := cmp.Or(ptr.ZeroIfNil(tmpl.Name), ptr.ZeroIfNil(tmpl.Uuid))
 						message := ptr.ZeroIfNil(tmpl.Message)
 						if message == "" {

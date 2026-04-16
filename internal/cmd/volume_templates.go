@@ -247,7 +247,7 @@ func (VolumeTemplate) Delete(ctx context.Context, targets []resource.Resource) e
 		var deleted []group.Ref
 		for _, template := range templates.Data.Volumes {
 			status := ptr.ZeroIfNil(template.Status)
-			if status != "" && status != string(platform.ResponseStatusSUCCESS) {
+			if status != "" && status != platform.ResponseStatusSUCCESS {
 				continue
 			}
 			deleted = append(deleted, group.Ref{
