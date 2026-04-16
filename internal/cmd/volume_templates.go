@@ -73,9 +73,9 @@ func (c *VolumeTemplateEditCmd) Run(ctx context.Context, stdio config.Stdio, san
 }
 
 type VolumeTemplate struct {
-	MetroName string `mirror:"metro.name" field:"metro,short"`
-	Name      string `mirror:"volume.name" field:",short"`
-	UUID      string `mirror:"volume.uuid" field:",long"`
+	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short"`
+	Name      string          `mirror:"volume.name" field:",short"`
+	UUID      string          `mirror:"volume.uuid" field:",long"`
 
 	Tags       []string `mirror:"volume.tags" edit:"set,add,del"`
 	DeleteLock bool     `mirror:"volume.delete_lock" field:"delete-lock,hidden" edit:"set"`
@@ -114,24 +114,7 @@ func (v VolumeTemplate) Raw() any {
 }
 
 func (v VolumeTemplate) Fields(ctx context.Context) ([]resource.Field, error) {
-	result, err := resource.FieldsFromStruct(v)
-	if err != nil {
-		return nil, err
-	}
-
-	for key, field := range resource.IterFields(result) {
-		switch {
-		case key.String() == "metro":
-			if v.MetroName != "" {
-				field.Links = append(field.Links, resource.Link{
-					Type: "metro",
-					Key:  v.MetroName,
-				})
-			}
-		}
-	}
-
-	return result, nil
+	return resource.FieldsFromStruct(v)
 }
 
 func (VolumeTemplate) List(ctx context.Context) ([]resource.Resource, error) {
