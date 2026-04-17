@@ -261,8 +261,9 @@ func integrationContext(t *testing.T) context.Context {
 func writeDockerfile(t *testing.T, dockerfile string) string {
 	t.Helper()
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(dir, "Dockerfile"), []byte(dockerfile), 0o644))
-	return dir
+	dockerfilePath := filepath.Join(dir, "Dockerfile")
+	require.NoError(t, os.WriteFile(dockerfilePath, []byte(dockerfile), 0o644))
+	return dockerfilePath
 }
 
 func writeSecretFile(t *testing.T, contents string) string {
