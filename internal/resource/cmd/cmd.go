@@ -137,7 +137,7 @@ type FormatOpts struct {
 type ResourceListCmd[R resource.GettableListableResource] struct {
 	Targets []string            `arg:"" name:"target" optional:"" completion-predictor:"resource-key-${name}" help:"Target ${names} to list."`
 	Filter  []string            `help:"Filter output based on a field value (e.g. --filter state==running)." sep:"none"`
-	Watch   *time.Duration      `short:"w" help:"Watch for changes and refresh output." type:"optional"`
+	Watch   *time.Duration      `short:"w" help:"Watch for changes and refresh output. Defaults to 2s." type:"optional" placeholder:"duration"`
 	Sort    xkong.GreedyStrings `help:"Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending."`
 
 	FormatOpts
@@ -220,7 +220,7 @@ func (cmd *ResourceListCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 
 type ResourceGetCmd[R resource.GettableResource] struct {
 	Targets []string       `arg:"" name:"target" optional:"" completion-predictor:"resource-key-${name}" help:"Target ${names} to get."`
-	Watch   *time.Duration `short:"w" help:"Watch for changes and refresh output." type:"optional"`
+	Watch   *time.Duration `short:"w" help:"Watch for changes and refresh output. Defaults to 2s." type:"optional" placeholder:"duration"`
 
 	FormatOpts
 }
