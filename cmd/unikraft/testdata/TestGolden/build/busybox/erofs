@@ -2,7 +2,6 @@ $ unikraft build . --output test/busybox-e2e:$UNIQ_IMAGE
 
 stderr:
 	│ found buildkit addr=<docker> version=vX.Y.Z
-	│ compression is not supported for EROFS, ignoring compress option
 
 $ unikraft run --name test-$UNIQ_INST --metro test --output quiet --image test/busybox-e2e:$UNIQ_IMAGE
 
