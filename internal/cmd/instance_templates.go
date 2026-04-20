@@ -85,7 +85,7 @@ type InstanceTemplate struct {
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
 
 	Runtime struct {
-		Args []string          `mirror:"instance.args" field:",short"`
+		Args InstanceArgs      `mirror:"instance.args" field:",short"`
 		Env  map[string]string `mirror:"instance.env" field:",long"`
 	}
 
