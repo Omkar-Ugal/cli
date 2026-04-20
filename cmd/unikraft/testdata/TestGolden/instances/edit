@@ -17,7 +17,7 @@ stdout:
 	state:        stopped
 	image:        redis
 	runtime:
-	  args:       after,second
+	  args:       ["after,second"]
 	  env:
 	    A:        3
 	    B:        4

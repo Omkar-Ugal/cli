@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/ettle/strcase"
@@ -56,9 +57,15 @@ func Format(value any) (string, error) {
 			if err != nil {
 				return "", err
 			}
+			if val.Kind() == reflect.String {
+				valStr = strconv.Quote(valStr)
+			}
 			result = append(result, valStr)
 		}
-		return strings.Join(result, ","), nil
+		if len(result) == 0 {
+			return "", nil
+		}
+		return "[" + strings.Join(result, ", ") + "]", nil
 	case reflect.Map:
 		var result []string
 		for _, key := range v.MapKeys() {
@@ -74,7 +81,7 @@ func Format(value any) (string, error) {
 			result = append(result, fmt.Sprintf("%s=%s", keyStr, valStr))
 		}
 		slices.Sort(result)
-		return strings.Join(result, ","), nil
+		return strings.Join(result, ", "), nil
 	case reflect.Struct:
 		var result []string
 		for i := range v.NumField() {
@@ -102,7 +109,7 @@ func Format(value any) (string, error) {
 			}
 			result = append(result, fmt.Sprintf("%s=%s", name, valStr))
 		}
-		return strings.Join(result, ","), nil
+		return strings.Join(result, ", "), nil
 	default:
 		return fmt.Sprintf("%v", value), nil
 	}
