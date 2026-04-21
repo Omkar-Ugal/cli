@@ -62,8 +62,8 @@ stdout:
 	  profiles.*.metros.*.insecure
 
 	Flags:
-	  -w, --watch
-	          Watch for changes and refresh output.
+	  -w, --watch=<duration>
+	          Watch for changes and refresh output. Defaults to 2s.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output

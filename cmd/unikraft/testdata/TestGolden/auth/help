@@ -126,8 +126,8 @@ stdout:
 	  metros
 
 	Flags:
-	  -w, --watch
-	          Watch for changes and refresh output.
+	  -w, --watch=<duration>
+	          Watch for changes and refresh output. Defaults to 2s.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
@@ -174,8 +174,8 @@ stdout:
 	Flags:
 	      --filter
 	          Filter output based on a field value (e.g. --filter state==running).
-	  -w, --watch
-	          Watch for changes and refresh output.
+	  -w, --watch=<duration>
+	          Watch for changes and refresh output. Defaults to 2s.
 	      --sort
 	          Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending.
 	  -f, --field
@@ -326,8 +326,8 @@ stdout:
 	  status, status.ip, status.ping, status.online
 
 	Flags:
-	  -w, --watch
-	          Watch for changes and refresh output.
+	  -w, --watch=<duration>
+	          Watch for changes and refresh output. Defaults to 2s.
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
@@ -398,8 +398,8 @@ stdout:
 	Flags:
 	      --filter
 	          Filter output based on a field value (e.g. --filter state==running).
-	  -w, --watch
-	          Watch for changes and refresh output.
+	  -w, --watch=<duration>
+	          Watch for changes and refresh output. Defaults to 2s.
 	      --sort
 	          Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending.
 	  -f, --field
