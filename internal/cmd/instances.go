@@ -607,6 +607,13 @@ func (Instance) Delete(ctx context.Context, targets []resource.Resource) error {
 			}
 		}
 		instances, err := c.DeleteInstances(ctx, reqs)
+		if err != nil && strings.Contains(err.Error(), "timeout_s") && strings.Contains(err.Error(), "is not a valid member") {
+			// HACK: retry without timeout_s for metros that don't support it.
+			for i := range reqs {
+				reqs[i].TimeoutS = nil
+			}
+			instances, err = c.DeleteInstances(ctx, reqs)
+		}
 		if err != nil && !platform.ErrorContainsOnly(err, platform.APIHTTPErrorNotFound) {
 			return nil, err
 		}
