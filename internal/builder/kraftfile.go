@@ -8,8 +8,6 @@ package builder
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
@@ -59,14 +57,18 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 
 	if kf.Rootfs != nil {
 		opts.Rootfs.Format = kf.Rootfs.Format
-		base := filepath.Base(kf.Rootfs.Source)
-		if base == "Dockerfile" || slices.Contains(strings.Split(base, "."), "Dockerfile") {
-			opts.Rootfs.Path = filepath.Dir(kf.Rootfs.Source)
-		} else {
-			return BuildOpts{}, fmt.Errorf("unable to determine rootfs type for source %q", kf.Rootfs.Source)
+		sourcePath := filepath.Join(dir, kf.Rootfs.Source)
+		typ, err := DetectRootfsType(sourcePath)
+		if err != nil {
+			return BuildOpts{}, fmt.Errorf("detecting rootfs type for %q: %w", kf.Rootfs.Source, err)
 		}
-
-		opts.Rootfs.Path = filepath.Join(dir, opts.Rootfs.Path)
+		opts.Rootfs.Type = typ
+		switch typ {
+		case RootfsTypeDockerfile:
+			opts.Rootfs.Path = filepath.Dir(sourcePath)
+		default:
+			opts.Rootfs.Path = sourcePath
+		}
 	}
 
 	return opts, nil

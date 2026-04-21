@@ -40,6 +40,7 @@ func CreateFSFromDirectory(ctx context.Context, w io.Writer, source string, opts
 	}
 
 	cw := cpio.NewWriter(w)
+	defer cw.Close()
 
 	type hardlinkKey struct {
 		device int

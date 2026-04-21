@@ -8,19 +8,26 @@ package cmd
 import (
 	"cmp"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
+	"strconv"
 
 	"github.com/alecthomas/kong"
+	"github.com/docker/go-units"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
+	"unikraft.com/x/kraftfile"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
 
+	"unikraft.com/cli/internal/builder"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/mirror"
 	"unikraft.com/cli/internal/multimetro"
@@ -29,6 +36,7 @@ import (
 	"unikraft.com/cli/internal/resource/patch"
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
+	"unikraft.com/cli/internal/volimport"
 )
 
 type VolumesCmd struct {
@@ -42,7 +50,8 @@ type VolumesCmd struct {
 	Edit     VolumeEditCmd      `cmd:"" help:"Edit a volume."`
 	Template VolumeTemplatesCmd `cmd:"" group:"cmd-templates" help:"Manage volume templates." aliases:"templates" set:"name=volume-template" set:"names=volume-templates"`
 
-	Clone VolumesCloneCmd `cmd:"" help:"Clone a volume."`
+	Clone  VolumesCloneCmd `cmd:"" help:"Clone a volume."`
+	Import VolumeImportCmd `cmd:"" help:"Import data into a volume."`
 }
 
 // VolumeCreateCmd extends the generic resource create command with shortcut
@@ -609,4 +618,171 @@ func volumePatchSpec(path string, _ patchOp, value any) (platform.UpdateVolumesR
 	default:
 		return zero, nil
 	}
+}
+
+// VolumeImportCmd imports data from a local source into a volume by
+// temporarily spinning up a volimport instance, streaming a CPIO archive
+// over TLS, and cleaning up the instance afterwards.
+type VolumeImportCmd struct {
+	Volume  string `arg:"" completion-predictor:"resource-key-volume" help:"Name or UUID of the volume to import into." create:"set,required"`
+	Source  string `short:"s" help:"Data source: local directory, CPIO archive, or Dockerfile." placeholder:"path" create:"set,required"`
+	Force   bool   `short:"f" help:"Force import even if the data might exceed volume capacity."`
+	Port    int    `short:"p" default:"42069" help:"Port to connect to the volume import service on." placeholder:"port" hidden:"true"`
+	Image   string `default:"official/utils/volimport:1.0" help:"Volume import image to use." placeholder:"image" hidden:"true"`
+	Timeout uint64 `short:"t" default:"10" help:"Inactivity timeout in seconds for the import service." placeholder:"seconds" hidden:"true"`
+}
+
+func (VolumeImportCmd) Examples() []kingkong.Example {
+	return []kingkong.Example{
+		{
+			Description: "Import the current directory into a volume",
+			Commands:    []string{"unikraft volume import my-volume --source ."},
+		},
+		{
+			Description: "Import a local directory into a volume",
+			Commands:    []string{"unikraft volume import my-volume --source ./data"},
+		},
+		{
+			Description: "Import a CPIO archive into a volume",
+			Commands:    []string{"unikraft volume import my-volume --source rootfs.cpio"},
+		},
+		{
+			Description: "Import a Dockerfile context into a volume",
+			Commands:    []string{"unikraft volume import my-volume --source ./Dockerfile"},
+		},
+	}
+}
+
+func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	if c.Source == "" {
+		return fmt.Errorf("source path is required")
+	}
+
+	// Resolve source to an absolute path.
+	abs, err := filepath.Abs(c.Source)
+	if err != nil {
+		return fmt.Errorf("resolving source path: %w", err)
+	}
+	c.Source = abs
+
+	if c.Port < 1024 || c.Port > 65535 {
+		return fmt.Errorf("port must be between 1024 and 65535")
+	}
+
+	// Resolve the target volume.
+	gettable := sandbox.WrapGettable(Volume{})
+	resources, err := gettable.Get(ctx, []string{c.Volume})
+	if err != nil {
+		return err
+	}
+	if len(resources) == 0 {
+		return fmt.Errorf("volume not found: %s", c.Volume)
+	}
+	if len(resources) > 1 {
+		keys := make([]string, 0, len(resources))
+		for _, res := range resources {
+			keys = append(keys, res.Key().String())
+		}
+		return fmt.Errorf("ambiguous volume: %s (found %v)", c.Volume, keys)
+	}
+	vol, ok := resources[0].(Volume)
+	if !ok {
+		return fmt.Errorf("unexpected resource type %T", resources[0])
+	}
+
+	importOpts := &builder.BuildOpts{
+		Rootfs: builder.RootfsOpts{
+			Path: c.Source,
+			// Set format to CPIO as volimport expects a CPIO archive
+			Format: kraftfile.FsTypeCpio,
+		},
+		// Set platform as volimport makes sense only on UnikraftCloud
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
+	}
+
+	// Build an import archive from the data source.
+	log.G(ctx).Trace().Str("source", c.Source).Msg("packaging source as import archive")
+	images, err := builder.BuildRootfs(ctx, *importOpts)
+	if err != nil {
+		return fmt.Errorf("packaging source as import archive: %w", err)
+	}
+	if len(images) == 0 {
+		return fmt.Errorf("no images were built from the provided source")
+	}
+	if len(images) > 1 {
+		return fmt.Errorf("multiple images were built from the provided source; expected exactly one")
+	}
+	initrd := images[0].Initrd
+	if initrd == nil {
+		return fmt.Errorf("built image has no initrd")
+	}
+	defer func() {
+		if err := initrd.Cleanup(); err != nil {
+			log.G(ctx).Error().Err(err).Msg("cleaning up initrd")
+		}
+	}()
+
+	cpioReader, cpioSize, err := initrd.Open(ctx)
+	if err != nil {
+		return fmt.Errorf("opening import archive: %w", err)
+	}
+	defer cpioReader.Close()
+
+	authStr, err := volimport.GenRandAuth()
+	if err != nil {
+		return fmt.Errorf("generating authentication token: %w", err)
+	}
+
+	// Spawn a temporary volimport instance in the volume's metro.
+	g, err := multimetro.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	var instUUID, instFQDN string
+	if err := group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
+		var merr error
+		instUUID, instFQDN, merr = volimport.Start(ctx, mc, c.Image, vol.UUID, authStr, c.Timeout, c.Port)
+		return merr
+	}); err != nil {
+		return fmt.Errorf("spawning volume data import instance: %w", err)
+	}
+
+	defer func() {
+		if err := group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
+			return volimport.Terminate(ctx, mc, instUUID)
+		}); err != nil {
+			log.G(ctx).Error().Err(err).Msg("terminating volume data import instance")
+		}
+	}()
+
+	// Open a TLS connection to the instance and stream the CPIO archive.
+	instAddr := instFQDN + ":" + strconv.Itoa(c.Port)
+	log.G(ctx).Info().
+		Str("size", units.BytesSize(float64(cpioSize))).
+		Str("volume", c.Volume).
+		Msg("importing data into volume")
+
+	conn, err := tls.Dial("tcp", instAddr, &tls.Config{
+		InsecureSkipVerify: ptr.ZeroIfNil(vol.Metro.Insecure),
+	})
+	if err != nil {
+		return fmt.Errorf("connecting to volume import service at %s: %w", instAddr, err)
+	}
+	defer conn.Close()
+
+	freeSpace, totalSpace, err := volimport.Copy(ctx, conn, authStr, cpioReader, c.Force, uint64(cpioSize))
+	if err != nil {
+		return fmt.Errorf("importing data: %w", err)
+	}
+
+	log.G(ctx).Info().
+		Str("volume", c.Volume).
+		Str("free", units.BytesSize(float64(freeSpace))).
+		Str("total", units.BytesSize(float64(totalSpace))).
+		Msg("import complete")
+
+	// Wait for the import instance to stop; it auto-deletes via delete-on-stop.
+	return group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
+		return volimport.Wait(ctx, mc, instUUID)
+	})
 }

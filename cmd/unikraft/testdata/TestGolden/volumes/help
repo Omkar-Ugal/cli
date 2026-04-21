@@ -21,6 +21,8 @@ stdout:
 	          Edit a volume.
 	  clone
 	          Clone a volume.
+	  import
+	          Import data into a volume.
 
 	Templates:
 	  template, templates
@@ -358,6 +360,54 @@ stdout:
 	      --tags=<tag>
 	          Volume tags.
 	          [examples: env=prod, team=platform]
+
+$ unikraft volume import --help
+
+stdout:
+	Import data into a volume.
+
+	Usage:
+	  unikraft volumes import <volume> [flags]
+
+	Arguments:
+	  <volume>
+	          Name or UUID of the volume to import into.
+
+	Examples:
+	  # Import the current directory into a volume
+	  unikraft volume import my-volume --source .
+
+	  # Import a local directory into a volume
+	  unikraft volume import my-volume --source ./data
+
+	  # Import a CPIO archive into a volume
+	  unikraft volume import my-volume --source rootfs.cpio
+
+	  # Import a Dockerfile context into a volume
+	  unikraft volume import my-volume --source ./Dockerfile
+
+	Flags:
+	  -s, --source=<path>
+	          Data source: local directory, CPIO archive, or Dockerfile.
+	  -f, --force
+	          Force import even if the data might exceed volume capacity.
+
+	Global flags:
+	  -h, --help
+	          Show context-sensitive help.
+	      --config=<file> ($UNIKRAFT_CONFIG)
+	          Path to the configuration file.
+	      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
+	          Set the logging level.
+	          [default: info, choices: trace, debug, info, warn, error, fatal]
+	      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
+	          Set the log type.
+	          [default: text, choices: text, json]
+	      --profile=<name> ($UNIKRAFT_PROFILE)
+	          Set the current profile.
+	      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+	          Toggle anonymous usage analytics.
+	          [default: true]
 
 $ unikraft volume edit --help
 

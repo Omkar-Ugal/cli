@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -26,25 +27,174 @@ import (
 	"github.com/moby/buildkit/util/progress/progresswriter"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	imagespec "unikraft.com/x/image-spec"
-	"unikraft.com/x/log"
 
+	goerofs "github.com/unikraft/go-archivefs/erofs"
+	gocpio "github.com/unikraft/go-cpio"
 	"unikraft.com/cli/internal/builder/cpio"
 	"unikraft.com/cli/internal/builder/erofs"
 	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/images"
 	"unikraft.com/x/kraftfile"
+	"unikraft.com/x/log"
 )
 
-type Rootfs struct {
-	File *os.File
+// buildImageConfig constructs a minimal OCI image config from build options.
+// Used when a BuildKit solve is not performed.
+func buildImageConfig(opts BuildOpts) ocispec.ImageConfig {
+	var cfg ocispec.ImageConfig
+	if opts.Cmd != nil {
+		cfg.Cmd = opts.Cmd
+	}
+	if opts.Env != nil {
+		env := make([]string, 0, len(opts.Env))
+		for _, kv := range opts.Env {
+			env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+		}
+		cfg.Env = env
+	}
+	cfg.Labels = opts.Labels
+	return cfg
 }
 
+// DetectRootfsType inspects path and returns the detected RootfsType.
+func DetectRootfsType(path string) (RootfsType, error) {
+	if path == "" {
+		return "", fmt.Errorf("empty rootfs path")
+	}
+
+	base := filepath.Base(path)
+	if base == "Dockerfile" || slices.Contains(strings.Split(base, "."), "Dockerfile") {
+		return RootfsTypeDockerfile, nil
+	}
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("rootfs path does not exist")
+		}
+		return "", fmt.Errorf("checking rootfs source %q: %w", path, err)
+	}
+
+	switch {
+	case fi.IsDir():
+		return RootfsTypeDir, nil
+	case fi.Mode().IsRegular(), fi.Mode()&os.ModeSymlink != 0:
+		if gocpio.IsValidPath(path) {
+			return RootfsTypeCpio, nil
+		}
+		if goerofs.IsValidPath(path) {
+			return RootfsTypeErofs, nil
+		}
+		return "", fmt.Errorf("could not detect file rootfs type %q", path)
+	default:
+		return "", fmt.Errorf("could not detect rootfs type %q", path)
+	}
+}
+
+// BuildRootfs builds a rootfs for each platform in opts.Platform from the
+// source at opts.Rootfs.Path. The source is detected in this order:
+//
+//  1. A pre-packaged rootfs file - returned as-is.
+//  2. A directory - walked and archived.
+//  3. Anything else - treated as a Dockerfile context and built with BuildKit.
 func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
 	if len(opts.Platform) == 0 {
 		return nil, fmt.Errorf("at least one platform must be specified")
 	}
 
+	if opts.Rootfs.Type == "" {
+		typ, err := DetectRootfsType(opts.Rootfs.Path)
+		if err != nil {
+			return nil, err
+		}
+		opts.Rootfs.Type = typ
+	}
+
+	switch opts.Rootfs.Type {
+	case RootfsTypeCpio, RootfsTypeErofs:
+		return buildRootfsPackaged(ctx, opts)
+	case RootfsTypeDir:
+		return buildRootfsDirectory(ctx, opts)
+	case RootfsTypeDockerfile:
+		if f, err := os.Stat(opts.Rootfs.Path); err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("dockerfile does not exist")
+			}
+			return nil, fmt.Errorf("checking dockerfile path %q: %w", opts.Rootfs.Path, err)
+		} else if !f.IsDir() {
+			opts.Rootfs.Path = filepath.Dir(opts.Rootfs.Path)
+		}
+		return buildRootfsDockerfile(ctx, opts)
+	default:
+		return nil, fmt.Errorf("unknown rootfs type %q", opts.Rootfs.Type)
+	}
+}
+
+// buildRootfsFromPackaged returns images backed by an already-packaged rootfs
+// file. The file is opened read-only per platform.
+// The caller must not delete it.
+func buildRootfsPackaged(_ context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
+	cfg := buildImageConfig(opts)
+
+	var imgs []*imagespec.Image
+	for _, p := range opts.Platform {
+		f, err := os.Open(opts.Rootfs.Path)
+		if err != nil {
+			return nil, fmt.Errorf("opening pre-packaged rootfs: %w", err)
+		}
+		defer func() {
+			if rerr != nil {
+				f.Close()
+			}
+		}()
+
+		imgs = append(imgs, imagespec.NewImage(
+			imagespec.WithImageConfig(cfg),
+			imagespec.WithPlatform(p),
+			imagespec.WithInitrd(imagespec.NewOSFile(f)),
+		))
+	}
+	return imgs, nil
+}
+
+// buildRootfsFromDirectory archives the source directory into a temporary
+// rootfs file (CPIO or EroFS, based on opts.Rootfs.Format) for each platform.
+func buildRootfsDirectory(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
+	cfg := buildImageConfig(opts)
+
+	format := opts.Rootfs.Format
+	if format == "" {
+		format = kraftfile.FsTypeErofs
+	}
+
+	var imgs []*imagespec.Image
+	for _, p := range opts.Platform {
+		f, err := os.CreateTemp("", "unikraft-rootfs-*."+string(format))
+		if err != nil {
+			return nil, fmt.Errorf("could not create temporary file: %w", err)
+		}
+		defer func() {
+			if rerr != nil && f != nil {
+				f.Close()
+				os.Remove(f.Name())
+			}
+		}()
+
+		if err := packageRootfs(ctx, format, f, opts.Rootfs.Path, opts); err != nil {
+			return nil, err
+		}
+
+		imgs = append(imgs, imagespec.NewImage(
+			imagespec.WithImageConfig(cfg),
+			imagespec.WithPlatform(p),
+			imagespec.WithInitrd(imagespec.NewTempOSFile(f)),
+		))
+	}
+	return imgs, nil
+}
+
+func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
 	dockerConfig := dockerconfig.LoadDefaultConfigFile(os.Stderr)
 
 	profile, err := config.G(ctx).CurrentProfile()
@@ -164,44 +314,8 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 			}
 		}()
 
-		switch opts.Rootfs.Format {
-		case kraftfile.FsTypeCpio:
-			var gw *gzip.Writer
-			var w io.Writer = f
-			if opts.Rootfs.Compress {
-				gw = gzip.NewWriter(w)
-				w = gw
-			}
-
-			err = cpio.CreateFSFromDirectory(ctx, w, path,
-				cpio.WithAllRoot(!opts.Rootfs.KeepOwners),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("could not create CPIO archive: %w", err)
-			}
-
-			if gw != nil {
-				if err := gw.Close(); err != nil {
-					return nil, fmt.Errorf("could not close gzip writer: %w", err)
-				}
-			}
-		case kraftfile.FsTypeErofs:
-			if opts.Rootfs.Compress {
-				log.G(ctx).Warn().Msg("compression is not supported for EROFS, ignoring compress option")
-			}
-
-			err = erofs.CreateFSFromDirectory(ctx, f, path,
-				erofs.WithAllRoot(!opts.Rootfs.KeepOwners),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("could not create EroFS archive: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("unknown filesystem type %q", opts.Rootfs.Format)
-		}
-
-		if err := f.Sync(); err != nil {
-			return nil, fmt.Errorf("could not sync file: %w", err)
+		if err := packageRootfs(ctx, opts.Rootfs.Format, f, path, opts); err != nil {
+			return nil, err
 		}
 
 		if opts.Cmd != nil {
@@ -224,6 +338,48 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 	}
 
 	return imgs, nil
+}
+
+func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File, path string, opts BuildOpts) error {
+	switch format {
+	case kraftfile.FsTypeCpio:
+		var gw *gzip.Writer
+		var w io.Writer = rootfs
+		if opts.Rootfs.Compress {
+			gw = gzip.NewWriter(w)
+			w = gw
+		}
+
+		if err := cpio.CreateFSFromDirectory(ctx, w, path,
+			cpio.WithAllRoot(!opts.Rootfs.KeepOwners),
+		); err != nil {
+			return fmt.Errorf("could not create CPIO archive: %w", err)
+		}
+
+		if gw != nil {
+			if err := gw.Close(); err != nil {
+				return fmt.Errorf("could not close gzip writer: %w", err)
+			}
+		}
+	case kraftfile.FsTypeErofs:
+		if opts.Rootfs.Compress {
+			log.G(ctx).Warn().Msg("compression is not supported for EROFS, ignoring compress option")
+		}
+
+		if err := erofs.CreateFSFromDirectory(ctx, rootfs, path,
+			erofs.WithAllRoot(!opts.Rootfs.KeepOwners),
+		); err != nil {
+			return fmt.Errorf("could not create EroFS archive: %w", err)
+		}
+	default:
+		return fmt.Errorf("unknown filesystem type %q", format)
+	}
+
+	if err := rootfs.Sync(); err != nil {
+		return fmt.Errorf("could not sync file: %w", err)
+	}
+
+	return nil
 }
 
 func applyBuildOpts(attrs map[string]string, localDirs map[string]string, sessions *[]session.Attachable, opts BuildOpts) error {
