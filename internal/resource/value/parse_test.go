@@ -115,6 +115,60 @@ func TestParseJSON(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, testStruct{Name: "hello", Value: 42}, got)
 	})
+
+	t.Run("slice with escaped quotes", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`["say \"hello\"", "world"]`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{`say "hello"`, "world"}, got)
+	})
+
+	t.Run("slice with backslashes", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`["C:\\Users\\test", "foo\\bar"]`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{`C:\Users\test`, `foo\bar`}, got)
+	})
+
+	t.Run("slice with newlines and tabs", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`["line1\nline2", "col1\tcol2"]`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"line1\nline2", "col1\tcol2"}, got)
+	})
+
+	t.Run("slice with unicode escapes", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`["\u0048ello", "\u0057orld"]`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Hello", "World"}, got)
+	})
+
+	t.Run("slice with mixed escaped characters", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`["he said \"hi\\there\"\nok"]`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"he said \"hi\\there\"\nok"}, got)
+	})
+
+	t.Run("map with escaped quotes in keys and values", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{`{"k\"ey": "val\"ue"}`})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{`k"ey`: `val"ue`}, got)
+	})
+
+	t.Run("map with backslashes in values", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{`{"path": "C:\\Users\\test"}`})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"path": `C:\Users\test`}, got)
+	})
+
+	t.Run("map with newlines in values", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{`{"msg": "line1\nline2"}`})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"msg": "line1\nline2"}, got)
+	})
+
+	t.Run("struct with escaped quotes", func(t *testing.T) {
+		got, err := Parse[testStruct]([]string{`{"name": "say \"hi\"", "value": 1}`})
+		require.NoError(t, err)
+		assert.Equal(t, testStruct{Name: `say "hi"`, Value: 1}, got)
+	})
 }
 
 func TestParseCSV(t *testing.T) {
@@ -182,5 +236,65 @@ func TestParseCSV(t *testing.T) {
 		got, err := Parse[testStruct]([]string{"name=hello,value=42"})
 		require.NoError(t, err)
 		assert.Equal(t, testStruct{Name: "hello", Value: 42}, got)
+	})
+
+	t.Run("slice with quotes in values", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`say "hello"`, `it's fine`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{`say "hello"`, `it's fine`}, got)
+	})
+
+	t.Run("slice with backslashes", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{`C:\Users\test`})
+		require.NoError(t, err)
+		assert.Equal(t, []string{`C:\Users\test`}, got)
+	})
+
+	t.Run("slice with equals signs", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{"a=b,c=d"})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"a=b", "c=d"}, got)
+	})
+
+	t.Run("slice with only whitespace items", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{" , , "})
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("map value with equals signs", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"key=a=b=c"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": "a=b=c"}, got)
+	})
+
+	t.Run("map value with quotes", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{`key=say "hello"`})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": `say "hello"`}, got)
+	})
+
+	t.Run("map value with backslashes", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{`path=C:\Users\test`})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"path": `C:\Users\test`}, got)
+	})
+
+	t.Run("map key with no value", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"key="})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": ""}, got)
+	})
+
+	t.Run("map key with no equals", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"key"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": ""}, got)
+	})
+
+	t.Run("struct with spaces in value", func(t *testing.T) {
+		got, err := Parse[testStruct]([]string{"name=hello world,value=42"})
+		require.NoError(t, err)
+		assert.Equal(t, testStruct{Name: "hello world", Value: 42}, got)
 	})
 }
