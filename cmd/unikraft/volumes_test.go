@@ -7,7 +7,6 @@ package main
 
 import (
 	"regexp"
-	"slices"
 	"testing"
 )
 
@@ -91,15 +90,13 @@ func volumesTests(t *testing.T, r *testRunner) {
 		t.Run("dir", func(t *testing.T) {
 			r.
 				online().
-				withCleaners(
-					[]cleaner{
-						// free size differs on every run
-						{
-							pattern: regexp.MustCompile(`free=[0-9]+.?[0-9]*MiB`),
-							repl:    "free=10MiB",
-						},
+				withCleaners([]cleaner{
+					// free size differs on every run
+					{
+						pattern: regexp.MustCompile(`free=[0-9]+.?[0-9]*MiB`),
+						repl:    "free=10MiB",
 					},
-				).
+				}).
 				withContext(map[string]string{
 					"hello.txt": "hello from volume import\n",
 				}).
@@ -115,13 +112,14 @@ func volumesTests(t *testing.T, r *testRunner) {
 		t.Run("serve", func(t *testing.T) {
 			r.
 				online().
-				withCleaners(
-					append(slices.Clone(instanceCleaners), cleaner{
+				withCleaners(instanceCleaners).
+				withCleaners([]cleaner{
+					{
 						// free size differs on every run
 						pattern: regexp.MustCompile(`free=[0-9]+.?[0-9]*MiB`),
 						repl:    "free=50MiB",
-					}),
-				).
+					},
+				}).
 				withContext(map[string]string{
 					"index.html": "<html><body>hello from volume import</body></html>\n",
 				}).
