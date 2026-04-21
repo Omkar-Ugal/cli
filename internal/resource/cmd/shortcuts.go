@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"cmp"
+	"encoding"
 	"fmt"
 	"reflect"
 
@@ -49,8 +50,14 @@ func ApplyShortcutFlags(args *SetArgs, flags []*kong.Flag) error {
 			fv = fv.Elem()
 		}
 
-		// Slice fields produce one --set entry per element.
-		if fv.Kind() == reflect.Slice {
+		// Slice fields produce one --set entry per element, unless the
+		// type implements TextUnmarshaler (meaning the slice is a single
+		// logical value, like InstanceArgs).
+		isTextUnmarshaler := false
+		if fv.CanAddr() {
+			_, isTextUnmarshaler = fv.Addr().Interface().(encoding.TextUnmarshaler)
+		}
+		if fv.Kind() == reflect.Slice && !isTextUnmarshaler {
 			for j := range fv.Len() {
 				elem := fv.Index(j)
 				// If the element is addressable, take its address to allow

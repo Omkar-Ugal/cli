@@ -7,6 +7,7 @@ package value
 
 import (
 	"encoding"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -107,7 +108,21 @@ func parseReflect(input []string, value reflect.Value) error {
 	case reflect.Slice:
 		slice := reflect.MakeSlice(output.Type(), 0, 0)
 		for _, input := range input {
+			// Try JSON array syntax first.
+			trimmed := strings.TrimSpace(input)
+			if strings.HasPrefix(trimmed, "[") {
+				target := reflect.New(output.Type())
+				if err := json.Unmarshal([]byte(trimmed), target.Interface()); err == nil {
+					slice = reflect.AppendSlice(slice, target.Elem())
+					continue
+				}
+			}
+			// Fall back to comma-separated parsing.
 			for item := range strings.SplitSeq(input, ",") {
+				item = strings.TrimSpace(item)
+				if item == "" {
+					continue
+				}
 				val := reflect.New(output.Type().Elem()).Elem()
 				err := parseReflect([]string{item}, val)
 				if err != nil {
@@ -121,7 +136,21 @@ func parseReflect(input []string, value reflect.Value) error {
 	case reflect.Map:
 		mapp := reflect.MakeMap(output.Type())
 		for _, input := range input {
+			// Try JSON object syntax first.
+			trimmed := strings.TrimSpace(input)
+			if strings.HasPrefix(trimmed, "{") {
+				target := reflect.New(output.Type())
+				if err := json.Unmarshal([]byte(trimmed), target.Interface()); err == nil {
+					iter := target.Elem().MapRange()
+					for iter.Next() {
+						mapp.SetMapIndex(iter.Key(), iter.Value())
+					}
+					continue
+				}
+			}
+			// Fall back to comma-separated key=value parsing.
 			for item := range strings.SplitSeq(input, ",") {
+				item = strings.TrimSpace(item)
 				if item == "" {
 					continue
 				}
@@ -144,6 +173,19 @@ func parseReflect(input []string, value reflect.Value) error {
 	case reflect.Struct:
 		s := reflect.New(output.Type()).Elem()
 
+		// Try JSON object syntax if single input starting with {.
+		if len(input) == 1 {
+			trimmed := strings.TrimSpace(input[0])
+			if strings.HasPrefix(trimmed, "{") {
+				target := reflect.New(output.Type())
+				if err := json.Unmarshal([]byte(trimmed), target.Interface()); err == nil {
+					output.Set(target.Elem())
+					return nil
+				}
+			}
+		}
+
+		// Fall back to comma-separated key=value parsing.
 		notFound := make(map[string]struct{})
 		for _, input := range input {
 		process:

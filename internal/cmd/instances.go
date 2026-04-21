@@ -19,6 +19,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/distribution/reference"
 	"github.com/google/uuid"
+	"mvdan.cc/sh/v3/shell"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/cloud/sdk/platform/stop"
@@ -68,8 +69,8 @@ type InstanceCreateCmd struct {
 
 	Image string `group:"flag-create" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
 
-	Args []string `group:"flag-create" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
-	Env  []string `group:"flag-create" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
+	Args InstanceArgs `group:"flag-create" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
+	Env  []string     `group:"flag-create" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
 
 	Memory types.SizeMebibytes `group:"flag-create" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
 	Vcpus  int                 `group:"flag-create" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
@@ -107,8 +108,8 @@ type InstanceEditCmd struct {
 	// Shortcut flags - only fields that support editing.
 	Image string `group:"flag-edit" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
 
-	Args []string `group:"flag-edit" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
-	Env  []string `group:"flag-edit" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
+	Args InstanceArgs `group:"flag-edit" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
+	Env  []string     `group:"flag-edit" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
 
 	Memory types.SizeMebibytes `group:"flag-edit" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
 	Vcpus  int                 `group:"flag-edit" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
@@ -135,7 +136,7 @@ type Instance struct {
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short" create:"set" edit:"set"`
 
 	Runtime struct {
-		Args []string          `mirror:"instance.args" field:",short" create:"set" edit:"set"`
+		Args InstanceArgs      `mirror:"instance.args" field:",short" create:"set" edit:"set"`
 		Env  map[string]string `mirror:"instance.env" field:",long" create:"set" edit:"set,add,del=keys"`
 	}
 
@@ -393,6 +394,47 @@ func (s InstanceScaleToZero) MarshalText() ([]byte, error) {
 func (s InstanceScaleToZero) MarshalJSON() ([]byte, error) {
 	type scaleToZeroJSON InstanceScaleToZero
 	return json.Marshal(scaleToZeroJSON(s))
+}
+
+// InstanceArgs is a []string type that uses shell-style word splitting when
+// unmarshaling from a string.
+type InstanceArgs []string
+
+func (a *InstanceArgs) UnmarshalText(data []byte) error {
+	s := string(data)
+	if s == "" {
+		*a = nil
+		return nil
+	}
+	if data[0] == '[' {
+		var s []string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		*a = s
+		return nil
+	}
+	fields, err := shell.Fields(s, func(string) string { return "" })
+	if err != nil {
+		return fmt.Errorf("parsing args: %w", err)
+	}
+	*a = fields
+	return nil
+}
+
+func (a *InstanceArgs) UnmarshalJSON(data []byte) error {
+	// Try as JSON array first.
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*a = arr
+		return nil
+	}
+	// Fall back to JSON string → shell split.
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+	return a.UnmarshalText([]byte(s))
 }
 
 func (Instance) Type() resource.Type {
@@ -694,7 +736,7 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInsta
 	case "image":
 		return platform.UpdateInstancesRequestItemPropImage, value.(types.ImageRef[reference.Named]).Reference.String()
 	case "runtime.args":
-		return platform.UpdateInstancesRequestItemPropArgs, value.([]string)
+		return platform.UpdateInstancesRequestItemPropArgs, []string(value.(InstanceArgs))
 	case "runtime.env":
 		if op == patchOpDel {
 			return platform.UpdateInstancesRequestItemPropEnv, value.([]string)
@@ -743,7 +785,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "image":
 			req.Image = new(field.Create.Set.(types.ImageRef[reference.Named]).Reference.String())
 		case "runtime.args":
-			req.Args = field.Create.Set.([]string)
+			req.Args = []string(field.Create.Set.(InstanceArgs))
 		case "runtime.env":
 			req.Env = field.Create.Set.(map[string]string)
 		case "resources.memory":
