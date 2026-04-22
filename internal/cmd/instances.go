@@ -452,7 +452,8 @@ func (i Instance) Raw() any {
 	return i.Instance
 }
 
-func (i Instance) Fields() ([]resource.Field, error) {
+func (i Instance) Fields(ctx context.Context) ([]resource.Field, error) {
+	i.MetroName = defaultMetro(ctx, i.MetroName)
 	result, err := resource.FieldsFromStruct(i)
 	if err != nil {
 		return nil, err

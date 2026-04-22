@@ -80,7 +80,7 @@ type CreatableResourceCmd[R resource.CreatableResource] struct {
 func (cmd ResourceCmd[R]) HelpSections() []kingkong.HelpSection {
 	var r R
 
-	fields, err := r.Fields()
+	fields, err := r.Fields(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -397,7 +397,7 @@ func filterResources(ctx context.Context, resources []resource.Resource, filter 
 	}
 
 	for _, res := range resolved {
-		fields, _ := res.Fields()
+		fields, _ := res.Fields(ctx)
 		if filter.Match(filters.AdapterFunc(func(key []string) (string, bool) {
 			matched := resource.GetFieldByPath(fields, key)
 			if matched == nil {
@@ -695,7 +695,7 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 		}
 	}
 
-	fields, err := res.Fields()
+	fields, err := res.Fields(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get fields: %w", err)
 	}
@@ -806,7 +806,7 @@ func (cmd *ResourceCreateCmd[R]) RunResources(ctx context.Context, stdio config.
 			fieldsResource = typed.WithType(values[0])
 		}
 	}
-	fields, err := fieldsResource.Fields()
+	fields, err := fieldsResource.Fields(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fields: %w", err)
 	}
@@ -842,13 +842,13 @@ func (cmd *ResourceCreateCmd[R]) RunResources(ctx context.Context, stdio config.
 
 	patchedFields := patch.FilterCreateFields(patched)
 
-	if cmd.DryRun {
-		return nil, PrintPatches(stdio.Stdout, patchedFields, true)
-	}
-
-	// Validate required fields right before applying
+	// Validate required fields before printing/applying
 	if err := patch.ValidateRequired(fields, patched, true); err != nil {
 		return nil, err
+	}
+
+	if cmd.DryRun {
+		return nil, PrintPatches(stdio.Stdout, patchedFields, true)
 	}
 
 	resources, opErr := r.Create(ctx, patchedFields)

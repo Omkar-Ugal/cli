@@ -113,7 +113,7 @@ func (v VolumeTemplate) Raw() any {
 	return v.Volume
 }
 
-func (v VolumeTemplate) Fields() ([]resource.Field, error) {
+func (v VolumeTemplate) Fields(ctx context.Context) ([]resource.Field, error) {
 	result, err := resource.FieldsFromStruct(v)
 	if err != nil {
 		return nil, err

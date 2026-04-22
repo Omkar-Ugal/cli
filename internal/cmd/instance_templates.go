@@ -130,7 +130,7 @@ func (i InstanceTemplate) Raw() any {
 	return i.Instance
 }
 
-func (i InstanceTemplate) Fields() ([]resource.Field, error) {
+func (i InstanceTemplate) Fields(ctx context.Context) ([]resource.Field, error) {
 	result, err := resource.FieldsFromStruct(i)
 	if err != nil {
 		return nil, err
