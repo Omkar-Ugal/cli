@@ -209,11 +209,6 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 	}
 
 	attrs := map[string]string{}
-	// HACK: disabled multi-platform mode due to buildkit symlink bug.
-	// https://github.com/moby/buildkit/issues/6684
-	// if len(opts.Platform) > 0 {
-	// 	attrs["multi-platform"] = "true"
-	// }
 	localDirs := map[string]string{}
 	if err := applyBuildOpts(attrs, localDirs, &session, opts); err != nil {
 		return nil, err
