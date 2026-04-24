@@ -11,15 +11,16 @@ import (
 	"fmt"
 	"io"
 
+	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/logs"
+	"unikraft.com/x/kingkong"
+
 	"github.com/alecthomas/kong"
 	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/logs"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/muxreader"
 	"unikraft.com/cli/internal/resource"
 	resourcecmd "unikraft.com/cli/internal/resource/cmd"
-	"unikraft.com/cloud/sdk/platform/group"
-	"unikraft.com/x/kingkong"
 )
 
 // RunCmd is a convenience wrapper around `instance create` that adds log

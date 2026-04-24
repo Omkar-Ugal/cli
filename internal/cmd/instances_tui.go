@@ -14,8 +14,8 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/logs"
 
-	"unikraft.com/cli/internal/logs"
 	"unikraft.com/cli/internal/multimetro"
 	resourcetui "unikraft.com/cli/internal/resource/tui"
 )
