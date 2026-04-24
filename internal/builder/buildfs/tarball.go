@@ -14,21 +14,26 @@ import (
 	"github.com/unikraft/go-archivefs/tarfs"
 )
 
+type Readable interface {
+	io.Reader
+	io.ReaderAt
+}
+
 // TarballFS opens a tarball (optionally gzip-compressed) as an fs.FS.
 // Unsupported tar entry types such as device nodes and FIFOs are represented
 // in the filesystem but cannot be read as regular files. The returned
 // filesystem implements fs.ReadLinkFS.
-func TarballFS(source io.ReaderAt) (fs.FS, error) {
-	source, err := maybeGunzip(source)
+func TarballFS(source Readable) (fs.FS, error) {
+	source, err := MaybeGunzip(source)
 	if err != nil {
 		return nil, err
 	}
 	return tarfs.Open(source)
 }
 
-// maybeGunzip returns a ReaderAt over the decompressed content if source is
+// MaybeGunzip returns a ReaderAt over the decompressed content if source is
 // gzip-compressed, or the original source unchanged otherwise.
-func maybeGunzip(source io.ReaderAt) (io.ReaderAt, error) {
+func MaybeGunzip(source Readable) (Readable, error) {
 	// Read the first two bytes to check the gzip magic number.
 	var magic [2]byte
 	if _, err := source.ReadAt(magic[:], 0); err != nil {

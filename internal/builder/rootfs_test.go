@@ -6,6 +6,7 @@
 package builder
 
 import (
+	"archive/tar"
 	"context"
 	"errors"
 	"io"
@@ -79,6 +80,14 @@ func TestDetectSourceTypeErofs(t *testing.T) {
 	typ, err := DetectSourceType(erofsPath)
 	require.NoError(t, err)
 	require.Equal(t, kraftfile.SourceTypeErofs, typ)
+}
+
+func TestDetectSourceTypeTarball(t *testing.T) {
+	tarPath := writeTestTarballFile(t)
+
+	typ, err := DetectSourceType(tarPath)
+	require.NoError(t, err)
+	require.Equal(t, kraftfile.SourceTypeTarball, typ)
 }
 
 func TestDetectSourceTypeUnknown(t *testing.T) {
@@ -188,6 +197,39 @@ func TestRootfsDirectoryCpioFormat(t *testing.T) {
 	require.Equal(t, "hello\n", files["./hello.txt"])
 	require.Contains(t, files, "./subdir/nested.txt")
 	require.Equal(t, "nested\n", files["./subdir/nested.txt"])
+}
+
+func TestRootfsTarball(t *testing.T) {
+	tarPath := writeTestTarballFile(t)
+
+	for _, format := range []kraftfile.FsType{kraftfile.FsTypeCpio, kraftfile.FsTypeErofs} {
+		t.Run(string(format), func(t *testing.T) {
+			imgs := runBuildRootfs(t, BuildOpts{
+				Rootfs: RootfsOpts{
+					Path:   tarPath,
+					Type:   kraftfile.SourceTypeTarball,
+					Format: format,
+				},
+				Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+			})
+			require.Len(t, imgs, 1)
+
+			switch format {
+			case kraftfile.FsTypeCpio:
+				files := readCpioInitrd(t, imgs[0])
+				require.Contains(t, files, "./hello.txt")
+				require.Equal(t, "hello\n", files["./hello.txt"])
+				require.Contains(t, files, "./subdir/nested.txt")
+				require.Equal(t, "nested\n", files["./subdir/nested.txt"])
+			case kraftfile.FsTypeErofs:
+				files := readErofsInitrd(t, imgs[0])
+				require.Contains(t, files, "hello.txt")
+				require.Equal(t, "hello\n", files["hello.txt"])
+				require.Contains(t, files, "subdir/nested.txt")
+				require.Equal(t, "nested\n", files["subdir/nested.txt"])
+			}
+		})
+	}
 }
 
 func TestRootfsDockerfileCpioIntegration(t *testing.T) {
@@ -554,6 +596,57 @@ func writeTestErofsFile(t *testing.T) string {
 
 	require.NoError(t, buildfs.CreateEROFS(f, os.DirFS(srcDir)))
 	return erofsPath
+}
+
+// writeTestTarballFile creates a valid tarball from a temporary directory.
+func writeTestTarballFile(t *testing.T) string {
+	t.Helper()
+	srcDir := writeTestDirectory(t)
+
+	tarPath := filepath.Join(t.TempDir(), "test.tar")
+	f, err := os.Create(tarPath)
+	require.NoError(t, err)
+	defer f.Close()
+
+	tw := tar.NewWriter(f)
+	defer tw.Close()
+
+	err = filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(srcDir, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+
+		hdr, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return err
+		}
+		hdr.Name = filepath.ToSlash(rel)
+		if info.IsDir() {
+			hdr.Name += "/"
+		}
+		if err := tw.WriteHeader(hdr); err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		_, err = tw.Write(data)
+		return err
+	})
+	require.NoError(t, err)
+
+	return tarPath
 }
 
 // runBuildRootfs calls BuildRootfs and registers cleanup for the returned images.

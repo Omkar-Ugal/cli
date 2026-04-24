@@ -30,6 +30,7 @@ import (
 	imagespec "unikraft.com/x/image-spec"
 
 	goerofs "github.com/unikraft/go-archivefs/erofs"
+	gotar "github.com/unikraft/go-archivefs/tarfs"
 	gocpio "github.com/unikraft/go-cpio"
 	"unikraft.com/cli/internal/builder/buildfs"
 	"unikraft.com/cli/internal/buildkit"
@@ -86,6 +87,16 @@ func DetectSourceType(path string) (kraftfile.SourceType, error) {
 		if goerofs.IsValidPath(path) {
 			return kraftfile.SourceTypeErofs, nil
 		}
+		if f, err := os.Open(path); err == nil {
+			defer f.Close()
+			r, err := buildfs.MaybeGunzip(f)
+			if err != nil {
+				return "", nil
+			}
+			if gotar.IsValid(r) {
+				return kraftfile.SourceTypeTarball, nil
+			}
+		}
 		return "", fmt.Errorf("could not detect file rootfs type %q", path)
 	default:
 		return "", fmt.Errorf("could not detect rootfs type %q", path)
@@ -114,6 +125,8 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 		return buildRootfsPackaged(ctx, opts)
 	case kraftfile.SourceTypeDirectory:
 		return buildRootfsDirectory(ctx, opts)
+	case kraftfile.SourceTypeTarball:
+		return buildRootfsTarball(ctx, opts)
 	case kraftfile.SourceTypeDockerfile:
 		if f, err := os.Stat(opts.Rootfs.Path); err != nil {
 			if os.IsNotExist(err) {
@@ -180,6 +193,53 @@ func buildRootfsDirectory(ctx context.Context, opts BuildOpts) (_ []*imagespec.I
 		}()
 
 		if err := packageRootfs(ctx, format, f, os.DirFS(opts.Rootfs.Path), opts); err != nil {
+			return nil, err
+		}
+
+		imgs = append(imgs, imagespec.NewImage(
+			imagespec.WithImageConfig(cfg),
+			imagespec.WithPlatform(p),
+			imagespec.WithInitrd(imagespec.NewTempOSFile(f)),
+		))
+	}
+	return imgs, nil
+}
+
+// buildRootfsTarball opens the source tarball as an fs.FS and packages it
+// into the requested rootfs format (CPIO or EroFS) for each platform.
+func buildRootfsTarball(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
+	cfg := buildImageConfig(opts)
+
+	format := opts.Rootfs.Format
+	if format == "" {
+		format = kraftfile.FsTypeErofs
+	}
+
+	tarFile, err := os.Open(opts.Rootfs.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open tarball: %w", err)
+	}
+	defer tarFile.Close()
+
+	srcFS, err := buildfs.TarballFS(tarFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not open tarball as filesystem: %w", err)
+	}
+
+	var imgs []*imagespec.Image
+	for _, p := range opts.Platform {
+		f, err := os.CreateTemp("", "unikraft-rootfs-*."+string(format))
+		if err != nil {
+			return nil, fmt.Errorf("could not create temporary file: %w", err)
+		}
+		defer func() {
+			if rerr != nil && f != nil {
+				f.Close()
+				os.Remove(f.Name())
+			}
+		}()
+
+		if err := packageRootfs(ctx, format, f, srcFS, opts); err != nil {
 			return nil, err
 		}
 
