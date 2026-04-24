@@ -9,14 +9,14 @@ stderr:
 	│ importing data into volume size=300B volume=test-<VOL>
 	│ import complete free=50MiB total=50MiB volume=test-<VOL>
 
-$ unikraft instance create --set name=test-$UNIQ_INST --set metro=test --set image=test/nginx-compat:latest --set autostart=true --set resources.memory=256 --set resources.vcpus=1 --set volumes=test-$UNIQ_VOL:/wwwroot:ro --set service.services=443:8080/tls+http --set service.domains=name=$UNIQ_DOMAIN
+$ unikraft instance create --set name=test-$UNIQ_INST --set metro=test --set image=nginx:latest --set autostart=true --set resources.memory=256 --set resources.vcpus=1 --set volumes=test-$UNIQ_VOL:/wwwroot --set service.services=443:8080/tls+http --set service.domains=name=$UNIQ_DOMAIN
 
 stdout:
 	metro:        test
 	name:         test-<INST>
 	uuid:         12345678-1234-1234-1234-123456789abc
 	state:        running
-	image:        test/nginx-compat
+	image:        nginx
 	resources:
 	  memory:     256MiB
 	  vcpus:      1
@@ -26,7 +26,7 @@ stdout:
 	  domains:
 	  - fqdn:     <DOMAIN>.unikraft.internal
 	volumes:
-	- test-<VOL>:/wwwroot:ro
+	- test-<VOL>:/wwwroot
 	networks:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
@@ -43,7 +43,7 @@ stdout:
 	name:         test-<INST>
 	uuid:         12345678-1234-1234-1234-123456789abc
 	state:        running
-	image:        test/nginx-compat
+	image:        nginx
 	resources:
 	  memory:     256MiB
 	  vcpus:      1
@@ -53,7 +53,7 @@ stdout:
 	  domains:
 	  - fqdn:     <DOMAIN>.unikraft.internal
 	volumes:
-	- test-<VOL>:/wwwroot:ro
+	- test-<VOL>:/wwwroot
 	networks:
 	- uuid:       12345678-1234-1234-1234-123456789abc
 	  private-ip: 10.X.X.X
