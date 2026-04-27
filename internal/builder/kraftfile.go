@@ -54,12 +54,11 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 	}
 
 	if kf.Rootfs != nil {
-		opts.Rootfs.Path = kf.Rootfs.Source
+		opts.Rootfs.Path = filepath.Join(dir, kf.Rootfs.Source)
 		opts.Rootfs.Format = kf.Rootfs.Format
 		opts.Rootfs.Type = kf.Rootfs.Type
 		if opts.Rootfs.Type == "" {
-			sourcePath := filepath.Join(dir, kf.Rootfs.Source)
-			typ, err := DetectSourceType(sourcePath)
+			typ, err := DetectSourceType(opts.Rootfs.Path)
 			if err != nil {
 				return BuildOpts{}, fmt.Errorf("detecting rootfs type for %q: %w", kf.Rootfs.Source, err)
 			}
