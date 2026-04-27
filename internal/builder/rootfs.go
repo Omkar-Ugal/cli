@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -29,9 +30,9 @@ import (
 	imagespec "unikraft.com/x/image-spec"
 
 	goerofs "github.com/unikraft/go-archivefs/erofs"
+	gotar "github.com/unikraft/go-archivefs/tarfs"
 	gocpio "github.com/unikraft/go-cpio"
-	"unikraft.com/cli/internal/builder/cpio"
-	"unikraft.com/cli/internal/builder/erofs"
+	"unikraft.com/cli/internal/builder/buildfs"
 	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/images"
@@ -86,6 +87,16 @@ func DetectSourceType(path string) (kraftfile.SourceType, error) {
 		if goerofs.IsValidPath(path) {
 			return kraftfile.SourceTypeErofs, nil
 		}
+		if f, err := os.Open(path); err == nil {
+			defer f.Close()
+			r, err := buildfs.MaybeGunzip(f)
+			if err != nil {
+				return "", nil
+			}
+			if gotar.IsValid(r) {
+				return kraftfile.SourceTypeTarball, nil
+			}
+		}
 		return "", fmt.Errorf("could not detect file rootfs type %q", path)
 	default:
 		return "", fmt.Errorf("could not detect rootfs type %q", path)
@@ -114,6 +125,8 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 		return buildRootfsPackaged(ctx, opts)
 	case kraftfile.SourceTypeDirectory:
 		return buildRootfsDirectory(ctx, opts)
+	case kraftfile.SourceTypeTarball:
+		return buildRootfsTarball(ctx, opts)
 	case kraftfile.SourceTypeDockerfile:
 		if f, err := os.Stat(opts.Rootfs.Path); err != nil {
 			if os.IsNotExist(err) {
@@ -179,7 +192,54 @@ func buildRootfsDirectory(ctx context.Context, opts BuildOpts) (_ []*imagespec.I
 			}
 		}()
 
-		if err := packageRootfs(ctx, format, f, opts.Rootfs.Path, opts); err != nil {
+		if err := packageRootfs(ctx, format, f, os.DirFS(opts.Rootfs.Path), opts); err != nil {
+			return nil, err
+		}
+
+		imgs = append(imgs, imagespec.NewImage(
+			imagespec.WithImageConfig(cfg),
+			imagespec.WithPlatform(p),
+			imagespec.WithInitrd(imagespec.NewTempOSFile(f)),
+		))
+	}
+	return imgs, nil
+}
+
+// buildRootfsTarball opens the source tarball as an fs.FS and packages it
+// into the requested rootfs format (CPIO or EroFS) for each platform.
+func buildRootfsTarball(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
+	cfg := buildImageConfig(opts)
+
+	format := opts.Rootfs.Format
+	if format == "" {
+		format = kraftfile.FsTypeErofs
+	}
+
+	tarFile, err := os.Open(opts.Rootfs.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open tarball: %w", err)
+	}
+	defer tarFile.Close()
+
+	srcFS, err := buildfs.TarballFS(tarFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not open tarball as filesystem: %w", err)
+	}
+
+	var imgs []*imagespec.Image
+	for _, p := range opts.Platform {
+		f, err := os.CreateTemp("", "unikraft-rootfs-*."+string(format))
+		if err != nil {
+			return nil, fmt.Errorf("could not create temporary file: %w", err)
+		}
+		defer func() {
+			if rerr != nil && f != nil {
+				f.Close()
+				os.Remove(f.Name())
+			}
+		}()
+
+		if err := packageRootfs(ctx, format, f, srcFS, opts); err != nil {
 			return nil, err
 		}
 
@@ -212,19 +272,25 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 		return nil, err
 	}
 
-	localDest, err := os.MkdirTemp("", "unikraft-buildkit-*")
+	tarDest, err := os.CreateTemp("", "unikraft-buildkit-*.tar")
 	if err != nil {
-		return nil, fmt.Errorf("could not create temporary directory: %w", err)
+		return nil, fmt.Errorf("could not create temporary file: %w", err)
 	}
-	defer os.RemoveAll(localDest)
+	tarDestPath := tarDest.Name()
+	defer func() {
+		tarDest.Close()
+		os.Remove(tarDestPath)
+	}()
 
 	solveOpt := client.SolveOpt{
 		Ref:     identity.NewID(),
 		Session: session,
 		Exports: []client.ExportEntry{
 			{
-				Type:      client.ExporterLocal,
-				OutputDir: localDest,
+				Type: client.ExporterTar,
+				Output: func(map[string]string) (io.WriteCloser, error) {
+					return tarDest, nil
+				},
 			},
 		},
 		LocalDirs:     localDirs,
@@ -282,19 +348,27 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 		return nil, pw.Err()
 	}
 
+	// Reopen the tarball for reading.
+	tarFile, err := os.Open(tarDestPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not reopen tarball: %w", err)
+	}
+	defer tarFile.Close()
+
+	srcFS, err := buildfs.TarballFS(tarFile)
+	if err != nil {
+		return nil, fmt.Errorf("could not open tarball as filesystem: %w", err)
+	}
+
 	var imgs []*imagespec.Image
 
 	for i, p := range opts.Platform {
 		ep := expPlatforms[i]
 		config := configs[i]
 
-		path := localDest
 		_ = ep
 		// HACK: only valid with multi-platform enabled
-		// path := filepath.Join(
-		// 	localDest,
-		// 	strings.ReplaceAll(ep.ID, "/", "_"),
-		// )
+		// srcFS would need to be scoped to the platform subdirectory
 
 		f, err := os.CreateTemp("", "unikraft-rootfs-*."+string(opts.Rootfs.Format))
 		if err != nil {
@@ -307,7 +381,7 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 			}
 		}()
 
-		if err := packageRootfs(ctx, opts.Rootfs.Format, f, path, opts); err != nil {
+		if err := packageRootfs(ctx, opts.Rootfs.Format, f, srcFS, opts); err != nil {
 			return nil, err
 		}
 
@@ -333,7 +407,7 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 	return imgs, nil
 }
 
-func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File, path string, opts BuildOpts) error {
+func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File, srcFS fs.FS, opts BuildOpts) error {
 	switch format {
 	case kraftfile.FsTypeCpio:
 		var gw *gzip.Writer
@@ -343,8 +417,8 @@ func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File
 			w = gw
 		}
 
-		if err := cpio.CreateFSFromDirectory(ctx, w, path,
-			cpio.WithAllRoot(!opts.Rootfs.KeepOwners),
+		if err := buildfs.CreateCPIO(ctx, w, srcFS,
+			buildfs.WithAllRoot(!opts.Rootfs.KeepOwners),
 		); err != nil {
 			return fmt.Errorf("could not create CPIO archive: %w", err)
 		}
@@ -359,8 +433,8 @@ func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File
 			log.G(ctx).Warn().Msg("compression is not supported for EROFS, ignoring compress option")
 		}
 
-		if err := erofs.CreateFSFromDirectory(ctx, rootfs, path,
-			erofs.WithAllRoot(!opts.Rootfs.KeepOwners),
+		if err := buildfs.CreateEROFS(rootfs, srcFS,
+			buildfs.WithAllRoot(!opts.Rootfs.KeepOwners),
 		); err != nil {
 			return fmt.Errorf("could not create EroFS archive: %w", err)
 		}
