@@ -87,7 +87,7 @@ type Field struct {
 	Elem *Field `json:"elem,omitempty"`
 	// ElemMap indicates this field contains map elements, and subfields should
 	// be rendered as key-value pairs.
-	ElemMap bool `json:"elemMap,omitempty"`
+	ElemMap bool `json:"elem_map,omitempty"`
 
 	Links []Link `json:"links,omitempty"`
 
@@ -164,7 +164,7 @@ func (f Field) MarshalJSON() ([]byte, error) {
 		Value     any            `json:"value,omitempty"`
 		Subfields []Field        `json:"subfields,omitempty"`
 		Elem      *Field         `json:"elem,omitempty"`
-		ElemMap   bool           `json:"elemMap,omitempty"`
+		ElemMap   bool           `json:"elem_map,omitempty"`
 		Links     []linkJSON     `json:"links,omitempty"`
 		Verbosity FieldVerbosity `json:"verbosity"`
 		Hyperlink string         `json:"hyperlink,omitempty"`
