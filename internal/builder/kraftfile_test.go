@@ -46,7 +46,7 @@ func TestKraftfileToBuildOpts(t *testing.T) {
 	require.Equal(t, map[string]string{"label": "value"}, opts.Labels)
 	require.Equal(t, "unikraft.io/unikraft.org/base", opts.Runtime)
 	require.Equal(t, kraftfile.FsTypeErofs, opts.Rootfs.Format)
-	require.Equal(t, "Dockerfile", opts.Rootfs.Path)
+	require.Equal(t, rootfsDir+"/Dockerfile", opts.Rootfs.Path)
 	require.Equal(t, kraftfile.SourceTypeDockerfile, opts.Rootfs.Type)
 	require.Len(t, opts.Platform, 1)
 	require.Equal(t, "x86_64", opts.Platform[0].Architecture)
@@ -73,6 +73,24 @@ func TestKraftfileToBuildOptsRootfsSourceError(t *testing.T) {
 
 	_, err := KraftfileToBuildOpts(rootfsDir, kf)
 	require.Error(t, err)
+}
+
+func TestKraftfileToBuildOptsRootfsPathJoined(t *testing.T) {
+	rootfsDir := t.TempDir()
+
+	runtime := kraftfile.Runtime("unikraft.io/unikraft.org/base")
+	kf := &kraftfile.Kraftfile{
+		Runtime: &runtime,
+		Rootfs: &kraftfile.FS{
+			Format: kraftfile.FsTypeErofs,
+			Source: "Dockerfile",
+		},
+	}
+
+	opts, err := KraftfileToBuildOpts(rootfsDir, kf)
+	require.NoError(t, err)
+	require.Equal(t, rootfsDir+"/Dockerfile", opts.Rootfs.Path,
+		"rootfs path must be joined with the kraftfile directory")
 }
 
 func TestKraftfileToBuildOptsNoRootfs(t *testing.T) {
