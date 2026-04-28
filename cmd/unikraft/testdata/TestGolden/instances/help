@@ -191,11 +191,13 @@ stdout:
 
 	Flags:
 	      --filter
-	          Filter output based on a field value (e.g. --filter state==running).
+	          Filter output based on a field value.
+	          [examples: name==my-instance, metro==fra]
 	  -w, --watch=<duration>
 	          Watch for changes and refresh output. Defaults to 2s.
 	      --sort
-	          Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending.
+	          Sort output by field values. Use - prefix for descending, + for ascending.
+	          [examples: name, -timestamps.created-at]
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
@@ -259,7 +261,8 @@ stdout:
 
 	Flags:
 	      --until, --filter
-	          Filter expression to wait for (e.g. --until state==running).
+	          Filter expression to wait for.
+	          [examples: state==running, state!=stopped]
 	      --interval
 	          Polling interval.
 	          [default: 2s]
@@ -392,9 +395,9 @@ stdout:
 	      --vcpus=<n>
 	          Number of vCPUs.
 	          [examples: 1, 2, 4]
-	  -v, --volume=<name>:<path>[:<ro>]
+	  -v, --volume=<name>:<path>[:<options>]
 	          Attach volume.
-	          [examples: my-vol:/data, cache:/tmp:ro]
+	          [examples: my-vol:/data, cache:/tmp:ro, data:/mnt:size=10GiB]
 	      --service=<name>
 	          Service group name or key.
 	  -p, --publish=<src>:<dest>[/<handlers>]
@@ -405,7 +408,11 @@ stdout:
 	          [examples: example.com, api.example.com]
 	      --scale-to-zero=<key>=<value>
 	          Scale-to-zero options.
-	          [example: policy=on,cooldown-time=300]
+	            policy: on | off
+	            cooldown-time: cooldown in ms before scaling to zero
+	            notify-time: notification time in ms before scaling to zero
+	            stateful: true | false.
+	          [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
 	      --restart=<policy>
 	          Restart policy.
 	          [examples: always, on-failure, never]
@@ -516,7 +523,11 @@ stdout:
 	          [examples: 1, 2, 4]
 	      --scale-to-zero=<key>=<value>
 	          Scale-to-zero options.
-	          [example: policy=on,cooldown-time=300]
+	            policy: on | off
+	            cooldown-time: cooldown in ms before scaling to zero
+	            notify-time: notification time in ms before scaling to zero
+	            stateful: true | false.
+	          [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
 
 $ unikraft instance delete --help
 
@@ -565,7 +576,8 @@ stdout:
 	      --all
 	          Remove all instances. Prompts for confirmation.
 	      --filter
-	          Filter instances to remove (e.g. --filter state==running). Prompts for confirmation.
+	          Filter instances to remove. Prompts for confirmation.
+	          [examples: name==my-instance, metro==fra]
 	      --force
 	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field
@@ -734,11 +746,13 @@ stdout:
 
 	Flags:
 	      --filter
-	          Filter output based on a field value (e.g. --filter state==running).
+	          Filter output based on a field value.
+	          [examples: name==my-instance, metro==fra]
 	  -w, --watch=<duration>
 	          Watch for changes and refresh output. Defaults to 2s.
 	      --sort
-	          Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending.
+	          Sort output by field values. Use - prefix for descending, + for ascending.
+	          [examples: name, -timestamps.created-at]
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
@@ -938,7 +952,8 @@ stdout:
 	      --all
 	          Remove all instance-templates. Prompts for confirmation.
 	      --filter
-	          Filter instance-templates to remove (e.g. --filter state==running). Prompts for confirmation.
+	          Filter instance-templates to remove. Prompts for confirmation.
+	          [examples: name==my-instance, metro==fra]
 	      --force
 	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field

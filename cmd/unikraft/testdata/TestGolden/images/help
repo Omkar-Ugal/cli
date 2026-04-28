@@ -117,11 +117,13 @@ stdout:
 
 	Flags:
 	      --filter
-	          Filter output based on a field value (e.g. --filter state==running).
+	          Filter output based on a field value.
+	          [examples: name==my-instance, metro==fra]
 	  -w, --watch=<duration>
 	          Watch for changes and refresh output. Defaults to 2s.
 	      --sort
-	          Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending.
+	          Sort output by field values. Use - prefix for descending, + for ascending.
+	          [examples: name, -timestamps.created-at]
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
