@@ -6,6 +6,11 @@
 
 The official command-line interface for [Unikraft Cloud](https://unikraft.cloud) — deploy and manage unikernels globally in milliseconds.
 
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions, testing, and
+release process.
+
 ## Features
 
 - **Deploy Instantly** — Run unikernel images as serverless instances with `unikraft run`
@@ -314,69 +319,6 @@ unikraft instances get my-instance --fields name,state,image
 # Include verbose/detailed fields
 unikraft instances get my-instance -v
 ```
-
-## Development
-
-### Prerequisites
-
-- Go 1.25+
-- Git
-- GNU Make which transparently wraps [Task](https://taskfile.dev/)
-
-### Build
-
-```sh
-make cli
-```
-
-The binary is placed in `dist/unikraft`.
-
-### Test
-
-```sh
-# Run unit tests
-make test
-
-# Run linter
-make lint
-
-# Run integration tests (requires setup)
-make integration
-
-# Update integration test golden files
-make integration-update
-```
-
-### Documentation
-
-```sh
-# Generate all docs
-make docs
-
-# Generate man pages only
-make docs:man
-
-# Generate markdown docs only
-make docs:mdx
-```
-
-Output is placed in `dist/docs/`.
-
-## Architecture
-
-The CLI follows a resource-oriented architecture:
-
-- **Commands** (`internal/cmd/`) — Kong-based command definitions with subcommand routing
-- **Resources** (`internal/resource/`) — Unified interface for API objects with field introspection
-- **Multi-Metro** (`internal/multimetro/`) — Client abstraction for global infrastructure operations
-- **Configuration** (`internal/config/`) — Profile and credential management
-- **Telemetry** (`internal/telemetry/`) — Anonymous usage analytics (opt-out via `--no-telemetry`)
-
-### Key Dependencies
-
-- [Kong](https://github.com/alecthomas/kong) — CLI parsing and command wiring
-- [Bubble Tea](https://github.com/charmbracelet/bubbletea) — Terminal UI components
-- [Unikraft Cloud SDK](https://unikraft.com/cloud/sdk) — API client library
 
 ## Shell Completion
 
