@@ -59,7 +59,8 @@ stdout:
 	      --all
 	          Remove all resources. Prompts for confirmation.
 	      --filter
-	          Filter resources to remove (e.g. --filter state==running). Prompts for confirmation.
+	          Filter resources to remove. Prompts for confirmation.
+	          [examples: name==my-instance, metro==fra]
 	      --force
 	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field

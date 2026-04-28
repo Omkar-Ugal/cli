@@ -149,11 +149,13 @@ stdout:
 
 	Flags:
 	      --filter
-	          Filter output based on a field value (e.g. --filter state==running).
+	          Filter output based on a field value.
+	          [examples: name==my-instance, metro==fra]
 	  -w, --watch=<duration>
 	          Watch for changes and refresh output. Defaults to 2s.
 	      --sort
-	          Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending.
+	          Sort output by field values. Use - prefix for descending, + for ascending.
+	          [examples: name, -timestamps.created-at]
 	  -f, --field
 	          Specify which fields to include in the output.
 	  -o, --output
@@ -205,7 +207,8 @@ stdout:
 
 	Flags:
 	      --until, --filter
-	          Filter expression to wait for (e.g. --until state==running).
+	          Filter expression to wait for.
+	          [examples: state==running, state!=stopped]
 	      --interval
 	          Polling interval.
 	          [default: 2s]
@@ -520,7 +523,8 @@ stdout:
 	      --all
 	          Remove all volumes. Prompts for confirmation.
 	      --filter
-	          Filter volumes to remove (e.g. --filter state==running). Prompts for confirmation.
+	          Filter volumes to remove. Prompts for confirmation.
+	          [examples: name==my-instance, metro==fra]
 	      --force
 	          Do not prompt for confirmation when using --all or --filter.
 	  -f, --field

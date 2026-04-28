@@ -137,9 +137,9 @@ type FormatOpts struct {
 
 type ResourceListCmd[R resource.GettableListableResource] struct {
 	Targets []string            `arg:"" name:"target" optional:"" completion-predictor:"resource-key-${name}" help:"Target ${names} to list."`
-	Filter  []string            `help:"Filter output based on a field value (e.g. --filter state==running)." sep:"none"`
+	Filter  []string            `help:"Filter output based on a field value." example:"name==my-instance,metro==fra" sep:"none"`
 	Watch   *time.Duration      `short:"w" help:"Watch for changes and refresh output. Defaults to 2s." type:"optional" placeholder:"duration"`
-	Sort    xkong.GreedyStrings `help:"Sort output by field values (e.g. --sort name,-timestamps.created-at). Use - prefix for descending, + for ascending."`
+	Sort    xkong.GreedyStrings `help:"Sort output by field values. Use - prefix for descending, + for ascending." example:"name,-timestamps.created-at"`
 
 	FormatOpts
 
@@ -279,7 +279,7 @@ func (cmd *ResourceGetCmd[R]) Run(ctx context.Context, stdio config.Stdio, sandb
 
 type ResourceWaitCmd[R resource.GettableResource] struct {
 	Targets []string `arg:"" name:"target" completion-predictor:"resource-key-${name}" help:"Target ${names} to wait for."`
-	Until   []string `help:"Filter expression to wait for (e.g. --until state==running)." sep:"none" required:"" aliases:"filter"`
+	Until   []string `help:"Filter expression to wait for." example:"state==running,state!=stopped" sep:"none" required:"" aliases:"filter"`
 
 	Interval time.Duration `long:"interval" default:"2s" help:"Polling interval."`
 	Timeout  time.Duration `long:"timeout" default:"0" help:"Timeout before giving up."`
@@ -564,7 +564,7 @@ type ResourceBulkRemoveCmd[R interface {
 	Targets []string `arg:"" name:"target" optional:"" completion-predictor:"resource-key-${name}" help:"Target ${names} to remove."`
 
 	All    bool     `xor:"select" help:"Remove all ${names}. Prompts for confirmation."`
-	Filter []string `xor:"select" help:"Filter ${names} to remove (e.g. --filter state==running). Prompts for confirmation." sep:"none"`
+	Filter []string `xor:"select" help:"Filter ${names} to remove. Prompts for confirmation." example:"name==my-instance,metro==fra" sep:"none"`
 	Force  bool     `help:"Do not prompt for confirmation when using --all or --filter."`
 
 	FormatOpts
