@@ -125,9 +125,9 @@ func (c *InstanceEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 }
 
 type Instance struct {
-	MetroName string `mirror:"metro.name" field:"metro,short" create:"set,required"`
-	Name      string `mirror:"instance.name" field:",short" create:"set"`
-	UUID      string `mirror:"instance.uuid" field:",long"`
+	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short" create:"set,required"`
+	Name      string          `mirror:"instance.name" field:",short" create:"set"`
+	UUID      string          `mirror:"instance.uuid" field:",long"`
 
 	Tags []string `mirror:"instance.tags"`
 
@@ -197,9 +197,7 @@ type Instance struct {
 }
 
 type InstanceService struct {
-	Metro     string     `field:"-"`
-	UUID      string     `mirror:"uuid" field:",long"`
-	Name      string     `mirror:"name" field:",long"`
+	Link[ServiceGroup]
 	Services  []*Service `mirror:"services" field:",invisible,valueless" create:"set"`
 	Domains   []Domain   `mirror:"domains" field:",short,embed" create:"set"`
 	SoftLimit uint32     `field:"soft-limit,invisible,valueless" create:"set"`
@@ -240,8 +238,7 @@ func (i *InstanceService) UnmarshalJSON(data []byte) error {
 }
 
 type InstanceVolume struct {
-	UUID     string `name:"uuid" mirror:"uuid" json:"uuid,omitempty" field:",long"`
-	Name     string `name:"name" mirror:"name" json:"name,omitempty" field:",long"`
+	Link[Volume]
 	At       string `name:"at" mirror:"at" json:"at" field:",long"`
 	Readonly bool   `name:"readonly" mirror:"readonly" json:"readonly,omitempty" field:",long"`
 
@@ -453,61 +450,15 @@ func (i Instance) Raw() any {
 }
 
 func (i Instance) Fields(ctx context.Context) ([]resource.Field, error) {
-	i.MetroName = defaultMetro(ctx, i.MetroName)
+	i.MetroName = LinkName[Metro](defaultMetro(ctx, string(i.MetroName)))
 	result, err := resource.FieldsFromStruct(i)
 	if err != nil {
 		return nil, err
 	}
 
 	for key, field := range resource.IterFields(result) {
-		switch {
-		case key.String() == "name":
+		if key.String() == "name" {
 			field.Hyperlink = i.hyperlink()
-		case key.String() == "metro":
-			if i.MetroName != "" {
-				field.Links = append(field.Links, resource.Link{
-					Type: "metro",
-					Key:  i.MetroName,
-				})
-			}
-		case key.String() == "service":
-			nameField, _ := field.Get("name")
-			uuidField, _ := field.Get("uuid")
-			name, _ := nameField.Value.(string)
-			uuid, _ := uuidField.Value.(string)
-			if name != "" || uuid != "" {
-				field.Links = append(field.Links, resource.Link{
-					Type: "service",
-					Key: multimetro.Key{
-						Metro: i.Metro.Name,
-						Name:  name,
-						UUID:  uuid,
-					}.String(),
-				})
-			}
-		case key.MatchesString("volumes.*"):
-			// Add link to volume resource
-			nameField, _ := field.Get("name")
-			uuidField, _ := field.Get("uuid")
-			name, _ := nameField.Value.(string)
-			uuid, _ := uuidField.Value.(string)
-			if name != "" || uuid != "" {
-				field.Links = append(field.Links, resource.Link{
-					Type: "volume",
-					Key: multimetro.Key{
-						Metro: i.Metro.Name,
-						Name:  name,
-						UUID:  uuid,
-					}.String(),
-				})
-			}
-		case key.String() == "image":
-			if i.Image.Reference != nil {
-				field.Links = append(field.Links, resource.Link{
-					Type: "image",
-					Key:  i.Image.Reference.String(),
-				})
-			}
 		}
 	}
 
@@ -782,7 +733,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 			name := field.Create.Set.(string)
 			req.Name = &name
 		case "metro":
-			metro = field.Create.Set.(string)
+			metro = string(field.Create.Set.(LinkName[Metro]))
 		case "image":
 			req.Image = new(field.Create.Set.(types.ImageRef[reference.Named]).Reference.String())
 		case "runtime.args":
