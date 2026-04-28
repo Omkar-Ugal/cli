@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -38,6 +39,129 @@ func buildTests(t *testing.T, r *testRunner) {
 			},
 		}
 	}
+
+	// NOTE: only erofs is supported for ROM automounting by the Unikraft
+	// kernel currently. CPIO ROMs are not automounted (the kernel hardcodes
+	// erofs as the fs type for ROM mounts), so the CPIO variant omits
+	// the at= mount option.
+	for _, romFormat := range []string{"erofs", "cpio"} {
+		t.Run("rom-"+romFormat, func(t *testing.T) {
+			var romImage, baseImage string
+			if r.cfg != nil {
+				romImage = fmt.Sprintf("%s/rom-%s-e2e:$UNIQ_IMAGE", r.cfg.Profile.Organization, romFormat)
+				baseImage = fmt.Sprintf("%s/busybox-rom-%s-e2e:$UNIQ_IMAGE", r.cfg.Profile.Organization, romFormat)
+			}
+
+			// Only erofs ROMs support kernel automounting via at=.
+			// For CPIO, we extract manually from the block device.
+			romFlag := "image=" + romImage + ",name=myrom"
+			cmd := []string{"sh", "-c", "cd /tmp && cpio -id < /dev/ukp_rom_myrom && cat hello.txt"}
+			if romFormat == "erofs" {
+				romFlag += ",at=/rom"
+				cmd = []string{"cat", "/rom/hello.txt"}
+			}
+
+			r.
+				online().
+				withCleaners(buildCleaners).
+				withContext(map[string]string{
+					// Base image context: busybox with cat.
+					"base/Dockerfile": `FROM busybox:latest`,
+					"base/Kraftfile": fmt.Sprintf(`
+spec: v0.7
+name: busybox-rom-%s-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["%s"]
+`, romFormat, strings.Join(cmd, `", "`)),
+					// ROM-only image context: just a directory with a text file.
+					"rom/myrom/hello.txt": "Hello from ROM!\n",
+					"rom/Kraftfile": fmt.Sprintf(`
+spec: v0.7
+name: rom-%s-e2e
+roms:
+  - source: ./myrom
+    format: %s
+`, romFormat, romFormat),
+				}).
+				run(t, []command{
+					{args: []string{unikraftCmd, "build", "base", "--output", baseImage}},
+					{args: []string{unikraftCmd, "build", "rom", "--output", romImage}},
+					{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", baseImage, "--rom", romFlag}},
+					{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
+					{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
+					{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+				})
+		})
+	}
+
+	t.Run("rom-dir", func(t *testing.T) {
+		var baseImage string
+		if r.cfg != nil {
+			baseImage = fmt.Sprintf("%s/busybox-romdir-e2e:$UNIQ_IMAGE", r.cfg.Profile.Organization)
+		}
+
+		r.
+			online().
+			withCleaners(buildCleaners).
+			withContext(map[string]string{
+				// Base image context: busybox with cat.
+				"base/Dockerfile": `FROM busybox:latest`,
+				"base/Kraftfile": `
+spec: v0.7
+name: busybox-romdir-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["cat", "/rom/hello.txt"]
+`,
+				// ROM directory: same files as the rom test, but passed inline via dir=.
+				"romdata/hello.txt": "Hello from ROM!\n",
+			}).
+			run(t, []command{
+				{args: []string{unikraftCmd, "build", "base", "--output", baseImage}},
+				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", baseImage, "--rom", "dir=romdata,at=/rom"}},
+				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			})
+	})
+
+	t.Run("rom-file", func(t *testing.T) {
+		var baseImage string
+		if r.cfg != nil {
+			baseImage = fmt.Sprintf("%s/busybox-romfile-e2e:$UNIQ_IMAGE", r.cfg.Profile.Organization)
+		}
+
+		r.
+			online().
+			withCleaners(buildCleaners).
+			withContext(map[string]string{
+				// Base image context: busybox with cat.
+				"base/Dockerfile": `FROM busybox:latest`,
+				"base/Kraftfile": `
+spec: v0.7
+name: busybox-romfile-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["cat", "/etc/consoled/config.yaml"]
+`,
+				// Single file with a different name than the destination.
+				"console.yaml": "greeting: Hello from ROM file!\n",
+			}).
+			run(t, []command{
+				{args: []string{unikraftCmd, "build", "base", "--output", baseImage}},
+				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", baseImage, "--rom", "file=console.yaml,at=/etc/consoled/config.yaml"}},
+				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			})
+	})
 
 	t.Run("busybox", func(t *testing.T) {
 		if r.cfg == nil {

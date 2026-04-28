@@ -86,25 +86,23 @@ func (c *BuildCmd) Run(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
+	buildOpts.NoCache = c.NoCache
 	if len(c.BuildArg) > 0 {
-		buildOpts.Rootfs.BuildArg = append(buildOpts.Rootfs.BuildArg, c.BuildArg...)
-	}
-	if c.NoCache {
-		buildOpts.Rootfs.NoCache = true
+		buildOpts.BuildArg = append(buildOpts.BuildArg, c.BuildArg...)
 	}
 	if len(c.Secret) > 0 {
 		secrets, err := builder.ParseSecretSpecs(c.Secret)
 		if err != nil {
 			return err
 		}
-		buildOpts.Rootfs.Secrets = secrets
+		buildOpts.Secrets = secrets
 	}
 	if len(c.SSH) > 0 {
 		ssh, err := builder.ParseSSHSpecs(c.SSH)
 		if err != nil {
 			return err
 		}
-		buildOpts.Rootfs.SSH = ssh
+		buildOpts.SSH = ssh
 	}
 
 	imgs, err := builder.Build(ctx, buildOpts)

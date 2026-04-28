@@ -8,10 +8,15 @@ package cmd
 import (
 	"cmp"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
+	pathpkg "path"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -75,6 +80,7 @@ type InstanceCreateCmd struct {
 	Vcpus  int                 `group:"flag-create" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
 
 	Volume []InstanceVolume `group:"flag-create" shortcut:"volumes" short:"v" help:"Attach volume." placeholder:"<name>:<path>[:<options>]" example:"my-vol:/data,cache:/tmp:ro,data:/mnt:size=10GiB"`
+	Rom    []InstanceRom    `group:"flag-create" shortcut:"roms" sep:"none" help:"Attach ROM." placeholder:"image=<ref>,at=<path>" example:"image=myuser/my-rom:latest\\,at=/rom0\\,name=my-rom,dir=./mydata\\,at=/rom,file=./config.yaml\\,at=/etc/app/config.yaml"`
 
 	Service InstanceService `group:"flag-create" shortcut:"service" help:"Service group name or key." placeholder:"name"`
 	Publish []Service       `group:"flag-create" shortcut:"service.services" short:"p" help:"Publish port." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls,80:8080/http"`
@@ -113,6 +119,8 @@ type InstanceEditCmd struct {
 	Memory types.SizeMebibytes `group:"flag-edit" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
 	Vcpus  int                 `group:"flag-edit" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
 
+	Rom []InstanceRom `group:"flag-edit" shortcut:"roms" sep:"none" help:"Attach ROM." placeholder:"image=<ref>,at=<path>" example:"image=myuser/my-rom:latest\\,at=/rom0\\,name=my-rom,dir=./mydata\\,at=/rom,file=./config.yaml\\,at=/etc/app/config.yaml"`
+
 	ScaleToZero InstanceScaleToZero `group:"flag-edit" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 }
 
@@ -146,6 +154,7 @@ type Instance struct {
 
 	Service *InstanceService  `mirror:"instance.service_group" field:",embed" create:"set"`
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
+	Roms    []*InstanceRom    `mirror:"instance.roms" field:",embed" create:"set" edit:"set,add,del"`
 
 	Networks []struct {
 		UUID      string `mirror:"uuid" field:",long"`
@@ -321,6 +330,102 @@ func (v *InstanceVolume) UnmarshalText(data []byte) error {
 	v.Size = size
 
 	return nil
+}
+
+// InstanceRom represents a ROM blob attached to an instance.
+// Parsed via value.Parse as comma-separated key=value pairs:
+//
+//	image=<ref>,at=<path>[,name=<name>]
+//	dir=<localpath>,at=<path>[,name=<name>]
+//	file=<localpath>,at=<destpath>[,name=<name>]
+type InstanceRom struct {
+	Name  string `name:"name" mirror:"name" json:"name,omitempty" field:",long"`
+	Image string `name:"image" mirror:"image" json:"image,omitempty" field:",long"`
+	Dir   string `name:"dir" json:"-" field:"dir,invisible,long"`
+	File  string `name:"file" json:"-" field:"file,invisible,long"`
+	At    string `name:"at" mirror:"at" json:"at,omitempty" field:",long"`
+}
+
+func (r *InstanceRom) UnmarshalText(data []byte) error {
+	type alias InstanceRom
+	parsed, err := value.Parse[alias]([]string{string(data)})
+	if err != nil {
+		return err
+	}
+	*r = InstanceRom(parsed)
+	if r.Name == "" {
+		name := strings.TrimLeft(r.At, "/")
+		name = strings.ReplaceAll(name, "/", "-")
+		var b strings.Builder
+		for _, r := range name {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' {
+				b.WriteRune(r)
+			}
+		}
+		r.Name = b.String()
+	}
+	return nil
+}
+
+// inlineFilesFromDir walks a local directory and returns its contents as
+// base64-encoded InlineFile entries suitable for the platform API.
+func inlineFilesFromDir(dir string) ([]platform.InlineFile, error) {
+	var files []platform.InlineFile
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("non-regular file %q not allow in ROM directory", path)
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		enc := platform.InlineFileEncodingBase64
+		files = append(files, platform.InlineFile{
+			Path:     "/" + filepath.ToSlash(rel),
+			Encoding: &enc,
+			Data:     base64.StdEncoding.EncodeToString(data),
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("directory %q is empty", dir)
+	}
+	return files, nil
+}
+
+// inlineFileFromPath reads a single local file and returns it as a
+// base64-encoded InlineFile with the given destination path inside the ROM.
+func inlineFileFromPath(src string, destPath string) (platform.InlineFile, error) {
+	stat, err := os.Stat(src)
+	if err != nil {
+		return platform.InlineFile{}, err
+	}
+	if !stat.Mode().Type().IsRegular() {
+		return platform.InlineFile{}, fmt.Errorf("non-regular file %q not allow in ROM directory", src)
+	}
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return platform.InlineFile{}, err
+	}
+	enc := platform.InlineFileEncodingBase64
+	return platform.InlineFile{
+		Path:     destPath,
+		Encoding: &enc,
+		Data:     base64.StdEncoding.EncodeToString(data),
+	}, nil
 }
 
 type InstanceScaleToZero struct {
@@ -631,7 +736,31 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 		}
 	}
 
-	patches := patchRequests(fields, instancePatchSpec)
+	// Validate that file= ROMs have at= specified.
+	for _, field := range resource.GetFieldByPath(fields, resource.FieldPath{"roms"}) {
+		if field.Edit == nil {
+			continue
+		}
+		var romSets []any
+		if field.Edit.Set != nil {
+			romSets = append(romSets, field.Edit.Set)
+		}
+		if field.Edit.Add != nil {
+			romSets = append(romSets, field.Edit.Add)
+		}
+		for _, v := range romSets {
+			for _, rom := range v.([]*InstanceRom) {
+				if rom.File != "" && rom.At == "" {
+					return nil, fmt.Errorf("rom file=%q requires at= to specify the destination path", rom.File)
+				}
+			}
+		}
+	}
+
+	patches, err := patchRequests(fields, instancePatchSpec)
+	if err != nil {
+		return nil, err
+	}
 	reqs := make([]platform.UpdateInstancesRequestItem, 0, len(patches))
 	for _, patch := range patches {
 		reqs = append(reqs, platform.UpdateInstancesRequestItem{
@@ -675,22 +804,22 @@ func (Instance) Edit(ctx context.Context, target resource.Resource, fields []res
 	return results[0], nil
 }
 
-func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInstancesRequestItemProp, any) {
+func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInstancesRequestItemProp, any, error) {
 	var zero platform.UpdateInstancesRequestItemProp
 	switch path {
 	case "image":
-		return platform.UpdateInstancesRequestItemPropImage, value.(types.ImageRef[reference.Named]).Reference.String()
+		return platform.UpdateInstancesRequestItemPropImage, value.(types.ImageRef[reference.Named]).Reference.String(), nil
 	case "runtime.args":
-		return platform.UpdateInstancesRequestItemPropArgs, []string(value.(InstanceArgs))
+		return platform.UpdateInstancesRequestItemPropArgs, []string(value.(InstanceArgs)), nil
 	case "runtime.env":
 		if op == patchOpDel {
-			return platform.UpdateInstancesRequestItemPropEnv, value.([]string)
+			return platform.UpdateInstancesRequestItemPropEnv, value.([]string), nil
 		}
-		return platform.UpdateInstancesRequestItemPropEnv, value.(map[string]string)
+		return platform.UpdateInstancesRequestItemPropEnv, value.(map[string]string), nil
 	case "resources.memory":
-		return platform.UpdateInstancesRequestItemPropMemory_mb, int64(value.(types.SizeMebibytes))
+		return platform.UpdateInstancesRequestItemPropMemory_mb, int64(value.(types.SizeMebibytes)), nil
 	case "resources.vcpus":
-		return platform.UpdateInstancesRequestItemPropVcpus, value.(int)
+		return platform.UpdateInstancesRequestItemPropVcpus, value.(int), nil
 	case "scale-to-zero":
 		value := value.(InstanceScaleToZero)
 		req := map[string]any{}
@@ -706,11 +835,58 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.UpdateInsta
 		if value.NotifyTime > 0 {
 			req["notify_time_ms"] = int32(value.NotifyTime)
 		}
-		return platform.UpdateInstancesRequestItemPropScale_to_zero, req
+		return platform.UpdateInstancesRequestItemPropScale_to_zero, req, nil
 	case "vsock":
-		return "vsock", value.(bool)
+		return "vsock", value.(bool), nil
+	case "roms":
+		roms := value.([]*InstanceRom)
+		if op == patchOpDel {
+			var names []string
+			for _, rom := range roms {
+				if rom.Name != "" {
+					names = append(names, rom.Name)
+				}
+			}
+			return platform.UpdateInstancesRequestItemPropRoms, names, nil
+		}
+		var reqRoms []map[string]any
+		for _, rom := range roms {
+			if rom.Image == "" && rom.Dir == "" && rom.File == "" {
+				continue
+			}
+
+			romAt := rom.At
+			if rom.File != "" && romAt != "" {
+				romAt = pathpkg.Dir(romAt)
+			}
+
+			reqRom := map[string]any{}
+			if rom.File != "" {
+				file, err := inlineFileFromPath(rom.File, "/"+pathpkg.Base(rom.At))
+				if err != nil {
+					return zero, nil, fmt.Errorf("reading rom file %q: %w", rom.File, err)
+				}
+				reqRom["files"] = []platform.InlineFile{file}
+			} else if rom.Dir != "" {
+				files, err := inlineFilesFromDir(rom.Dir)
+				if err != nil {
+					return zero, nil, fmt.Errorf("reading rom dir %q: %w", rom.Dir, err)
+				}
+				reqRom["files"] = files
+			} else {
+				reqRom["image"] = rom.Image
+			}
+			if rom.Name != "" {
+				reqRom["name"] = rom.Name
+			}
+			if romAt != "" {
+				reqRom["at"] = romAt
+			}
+			reqRoms = append(reqRoms, reqRom)
+		}
+		return platform.UpdateInstancesRequestItemPropRoms, reqRoms, nil
 	default:
-		return zero, nil
+		return zero, nil, nil
 	}
 }
 
@@ -780,6 +956,63 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 					reqVol.Readonly = &vol.Readonly
 				}
 				req.Volumes = append(req.Volumes, reqVol)
+			}
+		case "roms":
+			for _, rom := range field.Create.Set.([]*InstanceRom) {
+				sources := 0
+				if rom.Image != "" {
+					sources++
+				}
+				if rom.Dir != "" {
+					sources++
+				}
+				if rom.File != "" {
+					sources++
+				}
+				if sources > 1 {
+					return nil, fmt.Errorf("cannot specify more than one of image=, dir=, or file= for a ROM")
+				}
+				if sources == 0 {
+					return nil, fmt.Errorf("must specify one of image=, dir=, or file= for a ROM")
+				}
+				if rom.File != "" && rom.At == "" {
+					return nil, fmt.Errorf("rom file=%q requires at= to specify the destination path", rom.File)
+				}
+
+				// For file= mode, the at= is the full destination path.
+				// We split it into the mountpoint (dir) and the filename.
+				romAt := rom.At
+				if rom.File != "" && romAt != "" {
+					romAt = pathpkg.Dir(romAt)
+				}
+
+				var reqRom platform.CreateInstanceRequestRom
+				if rom.File != "" {
+					file, err := inlineFileFromPath(rom.File, "/"+pathpkg.Base(rom.At))
+					if err != nil {
+						return nil, fmt.Errorf("reading rom file %q: %w", rom.File, err)
+					}
+					reqRom.Files = []platform.InlineFile{file}
+				} else if rom.Dir != "" {
+					files, err := inlineFilesFromDir(rom.Dir)
+					if err != nil {
+						return nil, fmt.Errorf("reading rom dir %q: %w", rom.Dir, err)
+					}
+					reqRom.Files = files
+				} else {
+					reqRom.Image = &rom.Image
+				}
+				if rom.Name != "" {
+					reqRom.Name = &rom.Name
+				}
+				if romAt != "" {
+					atJSON, _ := json.Marshal(romAt)
+					if reqRom.AdditionalProperties == nil {
+						reqRom.AdditionalProperties = make(map[string]json.RawMessage)
+					}
+					reqRom.AdditionalProperties["at"] = atJSON
+				}
+				req.Roms = append(req.Roms, reqRom)
 			}
 		case "service":
 			svc := field.Create.Set.(*InstanceService)
@@ -957,6 +1190,16 @@ func (Instance) Examples() map[cmd.CmdType][]kingkong.Example {
 	  --template my-template`,
 				},
 			},
+			{
+				Description: "Create an instance with a ROM file",
+				Commands: []string{
+					`unikraft instance create \
+	  --name demo-instance \
+	  --metro fra \
+	  --image my-app:latest \
+	  --rom file=./config.yaml,at=/etc/app/config.yaml`,
+				},
+			},
 		},
 		cmd.CmdTypeEdit: {
 			{
@@ -964,6 +1207,26 @@ func (Instance) Examples() map[cmd.CmdType][]kingkong.Example {
 				Commands: []string{
 					// "unikraft instance edit demo-instance --set resources.memory=256",
 					"unikraft instance edit demo-instance --memory 256",
+				},
+			},
+			{
+				Description: "Attach a ROM file to an instance",
+				Commands: []string{
+					`unikraft instance edit demo-instance \
+	  --set roms=file=./config.yaml,at=/etc/app/config.yaml`,
+				},
+			},
+			{
+				Description: "Add a ROM to an instance without replacing existing ones",
+				Commands: []string{
+					`unikraft instance edit demo-instance \
+	  --add roms=file=./extra.yaml,at=/etc/app/extra.yaml`,
+				},
+			},
+			{
+				Description: "Remove a ROM from an instance by name",
+				Commands: []string{
+					"unikraft instance edit demo-instance --del roms=name=my-rom",
 				},
 			},
 		},

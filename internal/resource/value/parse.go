@@ -107,6 +107,18 @@ func parseReflect(input []string, value reflect.Value) error {
 		return nil
 	case reflect.Slice:
 		slice := reflect.MakeSlice(output.Type(), 0, 0)
+
+		elemType := output.Type().Elem()
+
+		// Check if the element type implements TextUnmarshaler. If so, each
+		// input string is a complete element (don't comma-split), since the
+		// element's own encoding may use commas internally.
+		checkType := elemType
+		if checkType.Kind() == reflect.Pointer {
+			checkType = checkType.Elem()
+		}
+		_, elemIsTextUnmarshaler := reflect.New(checkType).Interface().(encoding.TextUnmarshaler)
+
 		for _, input := range input {
 			// Try JSON array syntax first.
 			trimmed := strings.TrimSpace(input)
@@ -117,13 +129,27 @@ func parseReflect(input []string, value reflect.Value) error {
 					continue
 				}
 			}
+
+			if elemIsTextUnmarshaler {
+				// Element handles its own parsing; pass the whole input
+				// as a single element since the element's encoding may
+				// use commas internally. Use repeated flags for multiple
+				// elements.
+				val := reflect.New(elemType).Elem()
+				if err := parseReflect([]string{input}, val); err != nil {
+					return err
+				}
+				slice = reflect.Append(slice, val)
+				continue
+			}
+
 			// Fall back to comma-separated parsing.
 			for item := range strings.SplitSeq(input, ",") {
 				item = strings.TrimSpace(item)
 				if item == "" {
 					continue
 				}
-				val := reflect.New(output.Type().Elem()).Elem()
+				val := reflect.New(elemType).Elem()
 				err := parseReflect([]string{item}, val)
 				if err != nil {
 					return err

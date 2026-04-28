@@ -6,6 +6,7 @@
 package builder
 
 import (
+	"cmp"
 	"fmt"
 	"path/filepath"
 
@@ -51,6 +52,27 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 			OSVersion:    version,
 			OSFeatures:   features,
 		})
+	}
+
+	for _, rom := range kf.Roms {
+		romPath := filepath.Join(dir, rom.Source)
+		romFormat := cmp.Or(rom.Format, kraftfile.FsTypeErofs)
+		romOpt := FSOpts{
+			Path:   romPath,
+			Format: romFormat,
+			Type:   rom.Type,
+			// Pad the file to page-size alignment. This is required by the platform
+			// which rejects ROM files that are not page-aligned.
+			Pad: 4096,
+		}
+		if romOpt.Type == "" {
+			typ, err := DetectSourceType(romPath)
+			if err != nil {
+				return BuildOpts{}, fmt.Errorf("detecting rom type for %q: %w", rom.Source, err)
+			}
+			romOpt.Type = typ
+		}
+		opts.Roms = append(opts.Roms, romOpt)
 	}
 
 	if kf.Rootfs != nil {

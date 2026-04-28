@@ -22,7 +22,7 @@ stdout:
 	- 443:8080/tls+http
 	- 80:443/http+redirect
 
-$ unikraft service create --set name=test-$UNIQ_SVC_B --set metro=test --set domains=fqdn=$UNIQ_DOMAIN_B.unikraft.example --set services=443:8080/tls+http,80:443/http+redirect
+$ unikraft service create --set name=test-$UNIQ_SVC_B --set metro=test --set domains=fqdn=$UNIQ_DOMAIN_B.unikraft.example --set services=443:8080/tls+http --set services=80:443/http+redirect
 
 stdout:
 	metro:         test
