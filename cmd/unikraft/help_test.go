@@ -10,7 +10,7 @@ import "testing"
 func helpTests(t *testing.T, r *testRunner) {
 	t.Run("empty", func(t *testing.T) {
 		r.run(t, []command{
-			{args: []string{unikraftCmd}, allowErr: true},
+			{args: []string{unikraftCmd}, err: errYes},
 		})
 	})
 	t.Run("version", func(t *testing.T) {
@@ -25,19 +25,19 @@ func helpTests(t *testing.T, r *testRunner) {
 	})
 	t.Run("invalid/arg", func(t *testing.T) {
 		r.run(t, []command{
-			{args: []string{unikraftCmd, "invalid"}, allowErr: true},
+			{args: []string{unikraftCmd, "invalid"}, err: errYes},
 		})
 	})
 	t.Run("invalid/help", func(t *testing.T) {
 		r.run(t, []command{
-			{args: []string{unikraftCmd, "--help", "--bad-flag"}, allowErr: true},
-			{args: []string{unikraftCmd, "--help", "bad-arg"}, allowErr: true},
+			{args: []string{unikraftCmd, "--help", "--bad-flag"}, err: errYes},
+			{args: []string{unikraftCmd, "--help", "bad-arg"}, err: errYes},
 		})
 	})
 	t.Run("invalid/logs", func(t *testing.T) {
 		r.run(t, []command{
-			{args: []string{unikraftCmd, "--log-type=json", "invalid"}, allowErr: true},
-			{args: []string{unikraftCmd, "--log-level=fatal", "invalid"}, allowErr: true},
+			{args: []string{unikraftCmd, "--log-type=json", "invalid"}, err: errYes},
+			{args: []string{unikraftCmd, "--log-level=fatal", "invalid"}, err: errYes},
 		})
 	})
 }

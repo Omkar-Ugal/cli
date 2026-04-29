@@ -68,21 +68,21 @@ func volumesTests(t *testing.T, r *testRunner) {
 		// Offline: missing --source errors before any network call.
 		t.Run("missing-source", func(t *testing.T) {
 			r.run(t, []command{
-				{args: []string{unikraftCmd, "volume", "import", "my-volume"}, allowErr: true},
+				{args: []string{unikraftCmd, "volume", "import", "my-volume"}, err: errYes},
 			})
 		})
 
 		// Offline: port below the allowed range errors before any network call.
 		t.Run("invalid-port", func(t *testing.T) {
 			r.run(t, []command{
-				{args: []string{unikraftCmd, "volume", "import", "my-volume", "--source", ".", "--port", "80"}, allowErr: true},
+				{args: []string{unikraftCmd, "volume", "import", "my-volume", "--source", ".", "--port", "80"}, err: errYes},
 			})
 		})
 
 		// Offline: port above the allowed range errors before any network call.
 		t.Run("invalid-port-high", func(t *testing.T) {
 			r.run(t, []command{
-				{args: []string{unikraftCmd, "volume", "import", "my-volume", "--source", ".", "--port", "99999"}, allowErr: true},
+				{args: []string{unikraftCmd, "volume", "import", "my-volume", "--source", ".", "--port", "99999"}, err: errYes},
 			})
 		})
 

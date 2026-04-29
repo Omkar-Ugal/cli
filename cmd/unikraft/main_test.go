@@ -56,9 +56,17 @@ type testRunner struct {
 // command represents a single command to execute in a test.
 type command struct {
 	args       []string
-	allowErr   bool
+	err        commandErr
 	captureEnv string
 }
+
+type commandErr int
+
+const (
+	errNo    commandErr = iota // command must succeed
+	errMaybe                   // command may fail (either outcome is acceptable)
+	errYes                     // command must fail
+)
 
 // testBuilder provides a fluent interface for configuring and running tests.
 type testBuilder struct {
@@ -235,9 +243,8 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 		}
 		var exitErr *exec.ExitError
 		var exitCode int
-		if errors.As(err, &exitErr) && command.allowErr {
+		if errors.As(err, &exitErr) && command.err >= errMaybe {
 			exitCode = exitErr.ExitCode()
-			// ignore exit errors for help commands
 			err = nil
 		}
 		require.NoError(t, err, "command %q failed\nstdout:\n%s\nstderr:\n%s",
@@ -245,6 +252,9 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 			stdout.String(),
 			stderr.String(),
 		)
+		if command.err == errYes {
+			require.NotZero(t, exitCode, "command %q was expected to fail but succeeded", strings.Join(args, " "))
+		}
 
 		report := report{
 			args:       command.args,
