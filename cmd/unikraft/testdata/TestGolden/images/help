@@ -7,12 +7,12 @@ stdout:
 	  unikraft images <command> [flags]
 
 	Resources:
+	  list, ls
+	          List images.
 	  get, inspect, show
 	          Inspect a image.
 	  delete, rm, remove
 	          Remove a image.
-	  list, ls
-	          List images.
 	  copy
 	          Copy images.
 

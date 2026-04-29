@@ -56,9 +56,17 @@ type testRunner struct {
 // command represents a single command to execute in a test.
 type command struct {
 	args       []string
-	allowErr   bool
+	err        commandErr
 	captureEnv string
 }
+
+type commandErr int
+
+const (
+	errNo    commandErr = iota // command must succeed
+	errMaybe                   // command may fail (either outcome is acceptable)
+	errYes                     // command must fail
+)
 
 // testBuilder provides a fluent interface for configuring and running tests.
 type testBuilder struct {
@@ -235,9 +243,8 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 		}
 		var exitErr *exec.ExitError
 		var exitCode int
-		if errors.As(err, &exitErr) && command.allowErr {
+		if errors.As(err, &exitErr) && command.err >= errMaybe {
 			exitCode = exitErr.ExitCode()
-			// ignore exit errors for help commands
 			err = nil
 		}
 		require.NoError(t, err, "command %q failed\nstdout:\n%s\nstderr:\n%s",
@@ -245,6 +252,9 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 			stdout.String(),
 			stderr.String(),
 		)
+		if command.err == errYes {
+			require.NotZero(t, exitCode, "command %q was expected to fail but succeeded", strings.Join(args, " "))
+		}
 
 		report := report{
 			args:       command.args,
@@ -410,6 +420,11 @@ var cleaners = []cleaner{
 		// datetimes like "2000-01-02T12:34:56+01:00" change between runs
 		pattern: regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|(\+\d{2}:\d{2}))?\b`),
 		repl:    "YYYY-MM-DDTHH:MM:SSZ",
+	},
+	{
+		// datetimes like "2000-01-02 12:34:56 +0100 BST" change between runs
+		pattern: regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+[+-]\d{4}\s+[A-Z]{1,5}\b`),
+		repl:    "YYYY-MM-DD HH:MM:SS +0000 UTC",
 	},
 	{
 		// kernel log timestamps like "[    0.065015]" change between runs

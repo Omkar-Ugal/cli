@@ -29,8 +29,8 @@ func authTests(t *testing.T, r *testRunner) {
 				{args: []string{unikraftCmd, "profile", "list"}},
 				{args: []string{unikraftCmd, "metro", "list"}},
 				{args: []string{unikraftCmd, "logout"}},
-				{args: []string{unikraftCmd, "profile", "list"}, allowErr: true},
-				{args: []string{unikraftCmd, "metro", "list"}, allowErr: true},
+				{args: []string{unikraftCmd, "profile", "list"}, err: errMaybe},
+				{args: []string{unikraftCmd, "metro", "list"}, err: errMaybe},
 			})
 	})
 }
