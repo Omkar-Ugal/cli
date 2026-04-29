@@ -422,6 +422,11 @@ var cleaners = []cleaner{
 		repl:    "YYYY-MM-DDTHH:MM:SSZ",
 	},
 	{
+		// datetimes like "2000-01-02 12:34:56 +0100 BST" change between runs
+		pattern: regexp.MustCompile(`\b\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+[+-]\d{4}\s+[A-Z]{1,5}\b`),
+		repl:    "YYYY-MM-DD HH:MM:SS +0000 UTC",
+	},
+	{
 		// kernel log timestamps like "[    0.065015]" change between runs
 		pattern: regexp.MustCompile(`\[\s*\d+\.\d+\]`),
 		repl:    "[    0.000000]",
