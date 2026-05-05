@@ -46,7 +46,7 @@ func ApplyShortcutFlags(args *SetArgs, flags []*kong.Flag) error {
 
 		fv := flag.Target
 		// Dereference pointers to get the underlying value.
-		for fv.Kind() == reflect.Ptr {
+		for fv.Kind() == reflect.Pointer {
 			fv = fv.Elem()
 		}
 
