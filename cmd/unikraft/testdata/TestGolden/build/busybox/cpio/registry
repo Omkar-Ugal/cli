@@ -96,7 +96,7 @@ stderr:
 
 exit code: 1
 
-$ unikraft image ls test/busybox-e2e:$UNIQ_IMAGE -okv
+$ unikraft image ls test/busybox-e2e:$UNIQ_IMAGE
 
 stderr:
 	│  

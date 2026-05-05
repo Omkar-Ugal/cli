@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -208,8 +209,8 @@ func (p *ReaderPanel) trailingEllipsis(view string) string {
 		lines = append(lines, make([]string, p.height-len(lines))...)
 	}
 	lastNonEmpty := -1
-	for i := len(lines) - 1; i >= 0; i-- {
-		if strings.TrimSpace(lines[i]) != "" {
+	for i, line := range slices.Backward(lines) {
+		if strings.TrimSpace(line) != "" {
 			lastNonEmpty = i
 			break
 		}

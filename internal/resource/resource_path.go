@@ -62,11 +62,11 @@ func (fp FieldPath) String() string {
 // Leaf returns the last non-wildcard segment of the path.
 // For example, "network.interfaces.*.ip" -> "ip".
 func (fp FieldPath) Leaf() string {
-	for i := len(fp) - 1; i >= 0; i-- {
-		if fp[i] == "*" {
+	for _, field := range slices.Backward(fp) {
+		if field == "*" {
 			continue
 		}
-		return fp[i]
+		return field
 	}
 	return ""
 }
