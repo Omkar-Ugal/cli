@@ -88,10 +88,7 @@ cmd: ["sh", "/entrypoint.sh"]
 								{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
 								{args: []string{unikraftCmd, "image", "delete", v.image}},
 								{args: []string{unikraftCmd, "image", "inspect", v.image}, err: errYes},
-								// HACK: image ls after delete should fail, but for direct-push
-								// the image-store still returns the image even after tag
-								// deletion: https://github.com/unikraft-cloud/agent/pull/521
-								{args: []string{unikraftCmd, "image", "ls", v.image, "-okv"}, err: errMaybe},
+								{args: []string{unikraftCmd, "image", "ls", v.image}, err: errYes},
 							})
 					})
 				}
