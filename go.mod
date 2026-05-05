@@ -61,13 +61,13 @@ require (
 	cyphar.com/go-pathrs v0.2.3 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
-	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+	github.com/Masterminds/semver/v3 v3.5.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/caarlos0/go-version v0.2.2 // indirect
-	github.com/caarlos0/svu/v3 v3.4.0 // indirect
+	github.com/caarlos0/svu/v3 v3.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260416155717-489999b90468 // indirect
@@ -197,9 +197,6 @@ tool github.com/caarlos0/svu/v3
 
 // HACK: hot-fix for https://github.com/charmbracelet/lipgloss/pull/636
 replace charm.land/lipgloss/v2 => github.com/jedevc/lipgloss/v2 v2.0.0-20260322175907-46dd1f11f91e
-
-// HACK: hot-fix for https://github.com/caarlos0/svu/pull/289
-replace github.com/caarlos0/svu/v3 => github.com/jedevc/svu/v3 v3.0.0-20260414140658-a7d4962c9e66
 
 // HACK: pin to rc.2 due to bug in rc.3, see https://github.com/moby/buildkit/pull/6616
 replace github.com/containerd/platforms => github.com/containerd/platforms v1.0.0-rc.2
