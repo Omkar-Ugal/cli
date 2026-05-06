@@ -28,9 +28,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Global flags:
 	  -h, --help
@@ -73,9 +75,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Flags:
 	  -w, --watch=<duration>
@@ -126,9 +130,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Flags:
 	      --filter
@@ -181,9 +187,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Flags:
 	      --until, --filter
@@ -241,9 +249,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Flags:
 	      --set=<name>=<value>, --set-file=<name>=<filename>
@@ -321,9 +331,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Flags:
 	      --set=<name>=<value>, --set-file=<name>=<filename>
@@ -400,9 +412,11 @@ stdout:
 	  autoscale
 	  limits, limits.soft, limits.hard
 	  timestamps, timestamps.created
-	  domains, domains.*, domains.*.fqdn, domains.*.certificate
-	  instances, instances.*
-	  services, services.*
+	  domains, domains.*, domains.*.fqdn, domains.*.certificate,
+	  domains.*.certificate.name, domains.*.certificate.uuid
+	  instances, instances.*, instances.*.name, instances.*.uuid
+	  services, services.*, services.*.source, services.*.destination,
+	  services.*.handlers
 
 	Flags:
 	      --all

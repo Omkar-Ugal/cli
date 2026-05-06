@@ -43,11 +43,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -100,11 +105,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -165,11 +175,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -232,11 +247,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -312,11 +332,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -436,11 +461,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -536,11 +566,16 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  service
-	  volumes, volumes.*
+	  service, service.name, service.uuid, service.services, service.domains,
+	  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+	  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+	  service.soft-limit, service.hard-limit
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
 	  timestamps, timestamps.created, timestamps.started, timestamps.stopped
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  timing, timing.uptime, timing.boot-time, timing.net-time
 	  restart, restart.policy, restart.start-count, restart.restart-count
 	  autostart
@@ -611,9 +646,11 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  timestamps, timestamps.created
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  restart, restart.policy
 	  instances
 
@@ -660,9 +697,11 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  timestamps, timestamps.created
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  restart, restart.policy
 	  instances
 
@@ -717,9 +756,11 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  timestamps, timestamps.created
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  restart, restart.policy
 	  instances
 
@@ -780,9 +821,11 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  timestamps, timestamps.created
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  restart, restart.policy
 	  instances
 
@@ -845,9 +888,11 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  timestamps, timestamps.created
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  restart, restart.policy
 	  instances
 
@@ -921,9 +966,11 @@ stdout:
 	  image
 	  runtime, runtime.args, runtime.env
 	  resources, resources.memory, resources.vcpus
-	  volumes, volumes.*
+	  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+	  volumes.*.readonly, volumes.*.size
 	  timestamps, timestamps.created
-	  scale-to-zero
+	  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+	  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
 	  restart, restart.policy
 	  instances
 
