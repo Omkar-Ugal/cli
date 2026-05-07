@@ -24,14 +24,19 @@ var defaultRegistries = []string{
 	"index.unikraft.io",
 }
 
-func Accessor(ctx context.Context) (*imagespec.Accessor, error) {
+func Accessor(ctx context.Context, opts ...AccessorOpt) (*imagespec.Accessor, error) {
+	var o accessorOpts
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	cfg := config.FromContextOrDefault(ctx)
 	profile, err := cfg.CurrentProfile()
 	if err != nil {
 		return nil, err
 	}
 
-	options := resolverOptions(profile)
+	options := resolverOptions(profile, o.insecureRegistries, o.allInsecure)
 	resolver := docker.NewResolver(options)
 	return imagespec.NewAccessor(
 		imagespec.WithResolver(resolver),
@@ -39,6 +44,26 @@ func Accessor(ctx context.Context) (*imagespec.Accessor, error) {
 		imagespec.WithRegistryHeaders(options.Headers),
 		imagespec.WithReferenceParser(ParseNormalizedNamed),
 	), nil
+}
+
+// AccessorOpt is a functional option for configuring an Accessor.
+type AccessorOpt func(*accessorOpts)
+
+type accessorOpts struct {
+	insecureRegistries []string
+	allInsecure        bool
+}
+
+func WithInsecureRegistry(hosts ...string) AccessorOpt {
+	return func(o *accessorOpts) {
+		o.insecureRegistries = hosts
+	}
+}
+
+func WithInsecureRegistries() AccessorOpt {
+	return func(o *accessorOpts) {
+		o.allInsecure = true
+	}
 }
 
 func ParseNormalizedNamed(key string) (reference.Named, error) {

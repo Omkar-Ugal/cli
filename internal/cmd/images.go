@@ -643,6 +643,8 @@ func (ImageEntry) loadFromPlatform(image platform.Image, metro *config.Metro) ([
 type ImagesCopyCmd struct {
 	Source string `arg:"" help:"Source image reference."`
 	Dest   string `arg:"" help:"Destination image reference."`
+
+	Insecure []string `help:"Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all." type:"optional"`
 }
 
 func (cmd ImagesCopyCmd) Examples() []kingkong.Example {
@@ -669,7 +671,16 @@ func (cmd ImagesCopyCmd) Examples() []kingkong.Example {
 }
 
 func (cmd ImagesCopyCmd) Run(ctx context.Context) error {
-	access, err := images.Accessor(ctx)
+	var opts []images.AccessorOpt
+	if cmd.Insecure != nil {
+		if len(cmd.Insecure) > 0 {
+			opts = append(opts, images.WithInsecureRegistry(cmd.Insecure...))
+		} else {
+			opts = append(opts, images.WithInsecureRegistries())
+		}
+	}
+
+	access, err := images.Accessor(ctx, opts...)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/containerd/containerd/v2/core/remotes"
 	"github.com/containerd/containerd/v2/core/remotes/docker"
 	dockerconfig "github.com/docker/cli/cli/config"
 
@@ -22,7 +21,7 @@ import (
 	"unikraft.com/cli/internal/version"
 )
 
-func resolverOptions(profile *config.Profile) docker.ResolverOptions {
+func resolverOptions(profile *config.Profile, insecureRegistries []string, allInsecure bool) docker.ResolverOptions {
 	headers := http.Header{}
 	headers.Set("User-Agent", version.UserAgent())
 
@@ -34,7 +33,17 @@ func resolverOptions(profile *config.Profile) docker.ResolverOptions {
 		}
 	}
 
+	isInsecureRegistry := func(host string) bool {
+		if allInsecure {
+			return true
+		}
+		return slices.Contains(insecureRegistries, host)
+	}
+
 	httpHost := func(host string) (bool, error) {
+		if isInsecureRegistry(host) {
+			return true, nil
+		}
 		for _, index := range indexes {
 			if host == index.Host {
 				return index.HTTP, nil
@@ -43,6 +52,9 @@ func resolverOptions(profile *config.Profile) docker.ResolverOptions {
 		return false, nil
 	}
 	insecureHost := func(host string) (bool, error) {
+		if isInsecureRegistry(host) {
+			return true, nil
+		}
 		for _, index := range indexes {
 			if host == index.Host {
 				return index.Insecure, nil
@@ -91,10 +103,6 @@ func resolverOptions(profile *config.Profile) docker.ResolverOptions {
 			}))...),
 		),
 	}
-}
-
-func Resolver(profile *config.Profile) remotes.Resolver {
-	return docker.NewResolver(resolverOptions(profile))
 }
 
 func fallbackHost(registryHosts ...docker.RegistryHosts) docker.RegistryHosts {

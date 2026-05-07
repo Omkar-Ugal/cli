@@ -38,6 +38,8 @@ stdout:
 	          Secret to expose to the build (format: "id=mysecret[,src=/local/secret]").
 	      --ssh
 	          SSH agent socket or keys to expose to the build (format: "default|<id>[=<socket>|<key>[,<key>]]").
+	      --insecure
+	          Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all.
 
 	Global flags:
 	  -h, --help

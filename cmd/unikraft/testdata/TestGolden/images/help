@@ -152,7 +152,7 @@ stdout:
 	Copy images.
 
 	Usage:
-	  unikraft images copy <source> <dest>
+	  unikraft images copy <source> <dest> [flags]
 
 	Arguments:
 	  <source>
@@ -170,6 +170,10 @@ stdout:
 
 	  # Download an image from a remote registry
 	  unikraft image copy unikraft.io/official/redis:latest ./my-redis-image.tar
+
+	Flags:
+	      --insecure
+	          Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all.
 
 	Global flags:
 	  -h, --help
