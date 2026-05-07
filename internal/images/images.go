@@ -24,7 +24,21 @@ var defaultRegistries = []string{
 	"index.unikraft.io",
 }
 
+type insecureContextKey struct{}
+
+// WithInsecureContext returns a context that carries insecure registry options,
+// which are picked up by Accessor.
+func WithInsecureContext(ctx context.Context, opts ...AccessorOpt) context.Context {
+	return context.WithValue(ctx, insecureContextKey{}, opts)
+}
+
 func Accessor(ctx context.Context, opts ...AccessorOpt) (*imagespec.Accessor, error) {
+	if len(opts) == 0 {
+		if ctxOpts, ok := ctx.Value(insecureContextKey{}).([]AccessorOpt); ok {
+			opts = ctxOpts
+		}
+	}
+
 	var o accessorOpts
 	for _, opt := range opts {
 		opt(&o)

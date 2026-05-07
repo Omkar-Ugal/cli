@@ -10,9 +10,9 @@ stdout:
 	  list, ls
 	          List images.
 	  get, inspect, show
-	          Inspect a image.
+	          Inspect an image.
 	  delete, rm, remove
-	          Remove a image.
+	          Remove an image.
 	  copy
 	          Copy images.
 
@@ -41,7 +41,7 @@ stdout:
 $ unikraft image get --help
 
 stdout:
-	Inspect a image.
+	Inspect an image.
 
 	Usage:
 	  unikraft images get [<target> ...] [flags]
@@ -73,6 +73,8 @@ stdout:
 	          Specify which fields to include in the output.
 	  -o, --output
 	          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+	      --insecure
+	          Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all.
 
 	Global flags:
 	  -h, --help
