@@ -16,21 +16,15 @@ func Optional() kong.MapperFunc {
 	// NOTE: this works with:
 	// --optional
 	// --optional=value
-	// --optional value
+	// -ovalue
 	// --optional --other-flag (does not consume --other-flag)
-	// but not with:
-	// --optional notvalue
-	// because the latter is ambiguous with positional arguments.
+	// but NOT with:
+	// --optional value
+	// -o value
+	// because the latter forms would be ambiguous with positional arguments.
 	return func(ctx *kong.DecodeContext, target reflect.Value) error {
 		switch tok := ctx.Scan.Peek(); tok.Type {
-		case kong.FlagValueToken:
-			r := kong.NewRegistry().RegisterDefaults()
-			return r.ForValue(target).Decode(ctx, target)
-		case kong.UntypedToken:
-			// Don't consume tokens that look like flags (e.g. --sort, -s).
-			if s, ok := tok.Value.(string); ok && len(s) > 0 && s[0] == '-' {
-				return nil
-			}
+		case kong.FlagValueToken, kong.ShortFlagTailToken:
 			r := kong.NewRegistry().RegisterDefaults()
 			return r.ForValue(target).Decode(ctx, target)
 		default:
