@@ -38,7 +38,7 @@ EOF
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
 		Runtime: "unikraft.io/unikraft.org/base",
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
@@ -63,7 +63,7 @@ EOF
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
 		Runtime: "unikraft.io/unikraft.org/base",
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeErofs,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
@@ -92,7 +92,7 @@ RUN ln -s /etc/passwd /another-test-link
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
 		Runtime: "unikraft.io/unikraft.org/base",
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
@@ -164,7 +164,7 @@ EOF
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
 		Runtime: "unikraft.io/unikraft.org/base",
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
@@ -193,12 +193,12 @@ RUN --mount=type=secret,id=api_key cat /run/secrets/api_key | grep -q s3cr3t
 
 	opts := BuildOpts{
 		Runtime: "unikraft.io/unikraft.org/base",
-		Rootfs: RootfsOpts{
-			Format:  kraftfile.FsTypeCpio,
-			Type:    kraftfile.SourceTypeDockerfile,
-			Path:    rootfsPath,
-			Secrets: secrets,
+		Rootfs: FSOpts{
+			Format: kraftfile.FsTypeCpio,
+			Type:   kraftfile.SourceTypeDockerfile,
+			Path:   rootfsPath,
 		},
+		Secrets:  secrets,
 		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
 	}
 	imgs := runBuild(t, ctx, opts)
@@ -217,7 +217,7 @@ CMD ["/dockerfile-cmd"]
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
 		Runtime: "unikraft.io/unikraft.org/base",
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,

@@ -294,6 +294,99 @@ func instancesTests(t *testing.T, r *testRunner) {
 			})
 	})
 
+	t.Run("rom-attach", func(t *testing.T) {
+		r.
+			online().
+			withCleaners(instanceCleaners).
+			withContext(map[string]string{
+				"romdata/hello.txt": "Hello from ROM!\n",
+			}).
+			run(t, []command{
+				// Create an instance without any ROMs
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=false",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+				}},
+				// Attach a ROM via inline dir to the stopped instance
+				{args: []string{
+					unikraftCmd, "instance", "edit", "test-$UNIQ_INST",
+					"--output", "quiet",
+					"--set", "roms=dir=romdata,at=/rom",
+				}},
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			})
+	})
+
+	t.Run("rom-add", func(t *testing.T) {
+		r.
+			online().
+			withCleaners(instanceCleaners).
+			withContext(map[string]string{
+				"romdata1/hello.txt":   "Hello from ROM 1!\n",
+				"romdata2/goodbye.txt": "Goodbye from ROM 2!\n",
+			}).
+			run(t, []command{
+				// Create a stopped instance with one ROM
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=false",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+					"--rom", "dir=romdata1,at=/rom1,name=rom1",
+				}},
+				// Add a second ROM without removing the first
+				{args: []string{
+					unikraftCmd, "instance", "edit", "test-$UNIQ_INST",
+					"--output", "quiet",
+					"--add", "roms=dir=romdata2,at=/rom2,name=rom2",
+				}},
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			})
+	})
+
+	t.Run("rom-detach", func(t *testing.T) {
+		r.
+			online().
+			withCleaners(instanceCleaners).
+			withContext(map[string]string{
+				"romdata/hello.txt": "Hello from ROM!\n",
+			}).
+			run(t, []command{
+				// Create a stopped instance with a ROM attached
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--output", "quiet",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=false",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+					"--rom", "dir=romdata,at=/rom,name=myrom",
+				}},
+				// Detach a specific ROM by name
+				{args: []string{
+					unikraftCmd, "instance", "edit", "test-$UNIQ_INST",
+					"--output", "quiet",
+					"--del", "roms=name=myrom",
+				}},
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
+				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			})
+	})
+
 	t.Run("autostart", func(t *testing.T) {
 		r.
 			online().

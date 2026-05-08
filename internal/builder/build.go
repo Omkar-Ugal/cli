@@ -13,12 +13,14 @@ import (
 	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	imagespec "unikraft.com/x/image-spec"
+	"unikraft.com/x/log"
 
 	"unikraft.com/x/kraftfile"
 )
 
 type BuildOpts struct {
-	Rootfs RootfsOpts
+	Rootfs FSOpts
+	Roms   []FSOpts
 
 	Runtime string
 
@@ -27,16 +29,6 @@ type BuildOpts struct {
 	Cmd    []string
 	Env    kraftfile.Map
 	Labels map[string]string
-}
-
-type RootfsOpts struct {
-	Path string
-	Type kraftfile.SourceType
-
-	// Output params
-	Format     kraftfile.FsType
-	Compress   bool
-	KeepOwners bool
 
 	// Buildkit params
 	// Dockerfile string
@@ -48,88 +40,157 @@ type RootfsOpts struct {
 	NoCache bool
 }
 
+type FSOpts struct {
+	Path string
+	Type kraftfile.SourceType
+
+	// Output params
+	Format     kraftfile.FsType
+	Pad        int64 // pad file to specified size
+	Compress   bool
+	KeepOwners bool
+}
+
+var DefaultPlatform = ocispec.Platform{
+	Architecture: "x86_64", OS: "kraftcloud",
+}
+
 // Build a unikraft image based on the provided build options.
 func Build(ctx context.Context, opts BuildOpts) ([]*imagespec.Image, error) {
-	kernels, err := BuildKernel(ctx, opts)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		for _, kernel := range kernels {
-			kernel.Close()
-		}
-	}()
-	opts.Platform = make([]ocispec.Platform, 0, len(kernels))
-	for _, kernel := range kernels {
-		opts.Platform = append(opts.Platform, kernel.Image.Platform)
+	if opts.Runtime == "" && opts.Rootfs.Path == "" && len(opts.Roms) == 0 {
+		return nil, fmt.Errorf("no runtime, rootfs, or roms specified: nothing to build")
 	}
 
 	meta := imagespec.ImageMetadata{
 		Created: new(time.Now()),
 	}
 
-	// If no rootfs path is set, build images with just the kernel.
-	if opts.Rootfs.Path == "" {
-		var cfg ocispec.ImageConfig
-		cfg.Cmd = opts.Cmd
-		cfg.Labels = opts.Labels
-		if opts.Env != nil {
-			env := make([]string, 0, len(opts.Env))
-			for _, kv := range opts.Env {
-				env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+	// Build kernel if a runtime is specified. This also determines the
+	// set of platforms we're building for.
+	var kernels []*imagespec.Image
+	if opts.Runtime != "" {
+		var err error
+		kernels, err = BuildKernel(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			for _, kernel := range kernels {
+				kernel.Close()
 			}
-			cfg.Env = env
-		}
-
-		images := make([]*imagespec.Image, 0, len(kernels))
+		}()
+		opts.Platform = make([]ocispec.Platform, 0, len(kernels))
 		for _, kernel := range kernels {
-			images = append(images, imagespec.NewImage(
-				imagespec.WithKernel(kernel.Kernel),
-				imagespec.WithImageConfig(cfg),
-				imagespec.WithImageMetadata(meta),
-				imagespec.WithPlatform(kernel.Image.Platform),
-			))
-			kernel.Kernel = nil
+			opts.Platform = append(opts.Platform, kernel.Image.Platform)
 		}
-		return images, nil
 	}
 
-	roots, err := BuildRootfs(ctx, opts)
+	// Without a kernel, use a default platform if none specified.
+	if len(opts.Platform) == 0 {
+		opts.Platform = []ocispec.Platform{DefaultPlatform}
+	}
+
+	// Build ROMs if any are specified.
+	romFiles, err := BuildRoms(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		for _, root := range roots {
-			root.Close()
-		}
-	}()
 
-	if len(kernels) != len(roots) {
-		panic(fmt.Sprintf("internal error: number of kernels (%d) does not match number of root filesystems (%d)", len(kernels), len(roots)))
+	// Build rootfs if a path is specified.
+	var roots []*imagespec.Image
+	if opts.Rootfs.Path != "" {
+		var err error
+		roots, err = BuildRootfs(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			for _, root := range roots {
+				root.Close()
+			}
+		}()
 	}
 
-	images := make([]*imagespec.Image, 0, len(kernels))
-	for i, kernel := range kernels {
-		root := roots[i]
+	// When we have both kernels and rootfs, they must match 1:1 by platform.
+	if len(kernels) > 0 && len(roots) > 0 && len(kernels) != len(roots) {
+		log.G(ctx).
+			Fatal().
+			Int("kernels", len(kernels)).
+			Int("roots", len(roots)).
+			Msg("internal error: number of kernels does not match number of root filesystems")
+	}
 
-		if platforms.Format(kernel.Image.Platform) != platforms.Format(root.Image.Platform) {
-			panic(fmt.Sprintf("internal error: kernel platform (%s) does not match rootfs platform (%s)",
-				platforms.Format(kernel.Image.Platform),
-				platforms.Format(root.Image.Platform)),
-			)
+	// Assemble images, one per platform.
+	images := make([]*imagespec.Image, 0, len(opts.Platform))
+	for i, p := range opts.Platform {
+		pID := platforms.Format(p)
+		imgOpts := []imagespec.NewImageOpt{
+			imagespec.WithImageMetadata(meta),
+			imagespec.WithPlatform(p),
 		}
 
-		images = append(images, imagespec.NewImage(
-			imagespec.WithKernel(kernel.Kernel),
-			imagespec.WithInitrd(root.Initrd),
-			imagespec.WithImageConfig(root.Image.Config),
-			imagespec.WithImageMetadata(meta),
-			imagespec.WithPlatform(root.Image.Platform),
-		))
+		// Attach kernel if available.
+		if i < len(kernels) {
+			kernelPlatformID := platforms.Format(kernels[i].Image.Platform)
+			if kernelPlatformID != pID {
+				log.G(ctx).
+					Fatal().
+					Str("got", kernelPlatformID).
+					Str("expected", pID).
+					Msg("internal error: kernel platform does not match expected platform")
+			}
+			imgOpts = append(imgOpts, imagespec.WithKernel(kernels[i].Kernel))
+			kernels[i].Kernel = nil
+		}
 
-		// ensure we don't cleanup the kernel and initrd files we use above
-		kernel.Kernel = nil
-		root.Initrd = nil
+		// Attach rootfs/initrd and use its config if available.
+		cfg := buildImageConfig(opts)
+		if i < len(roots) {
+			rootfsPlatformID := platforms.Format(roots[i].Image.Platform)
+			if rootfsPlatformID != pID {
+				log.G(ctx).
+					Fatal().
+					Str("got", rootfsPlatformID).
+					Str("expected", pID).
+					Msg("internal error: rootfs platform does not match expected platform")
+			}
+			imgOpts = append(imgOpts, imagespec.WithInitrd(roots[i].Initrd))
+			roots[i].Initrd = nil
+			// The rootfs build may have produced a richer config (e.g. from
+			// a Dockerfile). Use it as the base and layer our overrides on top.
+			cfg = roots[i].Image.Config
+			if opts.Cmd != nil {
+				cfg.Cmd = opts.Cmd
+			}
+			if opts.Env != nil {
+				env := make([]string, 0, len(opts.Env))
+				for _, kv := range opts.Env {
+					env = append(env, fmt.Sprintf("%s=%s", kv.Key, kv.Value))
+				}
+				cfg.Env = append(env, cfg.Env...)
+			}
+			cfg.Labels = opts.Labels
+		}
+		imgOpts = append(imgOpts, imagespec.WithImageConfig(cfg))
+
+		// Attach roms if available. ROMs are platform-independent so
+		// we attach them to every per-platform image. Each image gets
+		// its own file handle; the last platform receives the original
+		// handle that owns cleanup, earlier ones get a cloned handle.
+		for j, rom := range romFiles {
+			if i < len(opts.Platform)-1 {
+				clone, err := rom.Clone()
+				if err != nil {
+					return nil, fmt.Errorf("cloning rom file: %w", err)
+				}
+				imgOpts = append(imgOpts, imagespec.WithRom(clone))
+			} else {
+				imgOpts = append(imgOpts, imagespec.WithRom(rom))
+				romFiles[j] = nil
+			}
+		}
+
+		images = append(images, imagespec.NewImage(imgOpts...))
 	}
 
 	return images, nil

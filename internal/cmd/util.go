@@ -68,15 +68,18 @@ type patchReq[P ~string] struct {
 	Value any
 }
 
-func patchRequests[P ~string](fields []resource.Field, specFor func(path string, op patchOp, value any) (P, any)) []patchReq[P] {
+func patchRequests[P ~string](fields []resource.Field, specFor func(path string, op patchOp, value any) (P, any, error)) ([]patchReq[P], error) {
 	var reqs []patchReq[P]
-	addReq := func(op patchOp, path string, value any) {
+	addReq := func(op patchOp, path string, value any) error {
 		if value == nil {
-			return
+			return nil
 		}
-		prop, converted := specFor(path, op, value)
+		prop, converted, err := specFor(path, op, value)
+		if err != nil {
+			return err
+		}
 		if converted == nil {
-			return
+			return nil
 		}
 		// If the converted value is a map, try to merge it with an existing
 		// patch for the same prop/op. This allows multiple fields to be
@@ -86,12 +89,13 @@ func patchRequests[P ~string](fields []resource.Field, specFor func(path string,
 				if reqs[i].Prop == prop && reqs[i].Op == op {
 					if existing, ok := reqs[i].Value.(map[string]any); ok {
 						maps.Copy(existing, m)
-						return
+						return nil
 					}
 				}
 			}
 		}
 		reqs = append(reqs, patchReq[P]{Op: op, Prop: prop, Value: converted})
+		return nil
 	}
 
 	for key, field := range resource.IterFields(fields) {
@@ -99,9 +103,15 @@ func patchRequests[P ~string](fields []resource.Field, specFor func(path string,
 			continue
 		}
 		path := key.String()
-		addReq(patchOpSet, path, field.Edit.Set)
-		addReq(patchOpAdd, path, field.Edit.Add)
-		addReq(patchOpDel, path, field.Edit.Del)
+		if err := addReq(patchOpSet, path, field.Edit.Set); err != nil {
+			return nil, err
+		}
+		if err := addReq(patchOpAdd, path, field.Edit.Add); err != nil {
+			return nil, err
+		}
+		if err := addReq(patchOpDel, path, field.Edit.Del); err != nil {
+			return nil, err
+		}
 	}
-	return reqs
+	return reqs, nil
 }

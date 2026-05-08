@@ -102,7 +102,7 @@ func TestRootfsCpioArchive(t *testing.T) {
 	cpioPath := writeTestCpioFile(t)
 
 	imgs := runBuildRootfs(t, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path: cpioPath,
 			Type: kraftfile.SourceTypeCpio,
 		},
@@ -122,7 +122,7 @@ func TestRootfsErofsArchive(t *testing.T) {
 	erofsPath := writeTestErofsFile(t)
 
 	imgs := runBuildRootfs(t, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path: erofsPath,
 			Type: kraftfile.SourceTypeErofs,
 		},
@@ -142,7 +142,7 @@ func TestRootfsDirectory(t *testing.T) {
 	dir := writeTestDirectory(t)
 
 	imgs := runBuildRootfs(t, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path:   dir,
 			Type:   kraftfile.SourceTypeDirectory,
 			Format: kraftfile.FsTypeErofs,
@@ -163,7 +163,7 @@ func TestRootfsDirectoryCpioFormat(t *testing.T) {
 	dir := writeTestDirectory(t)
 
 	imgs := runBuildRootfs(t, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path:   dir,
 			Type:   kraftfile.SourceTypeDirectory,
 			Format: kraftfile.FsTypeCpio,
@@ -186,7 +186,7 @@ func TestRootfsTarball(t *testing.T) {
 	for _, format := range []kraftfile.FsType{kraftfile.FsTypeCpio, kraftfile.FsTypeErofs} {
 		t.Run(string(format), func(t *testing.T) {
 			imgs := runBuildRootfs(t, BuildOpts{
-				Rootfs: RootfsOpts{
+				Rootfs: FSOpts{
 					Path:   tarPath,
 					Type:   kraftfile.SourceTypeTarball,
 					Format: format,
@@ -224,7 +224,7 @@ EOF
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	imgs := runBuildRootfsIntegration(t, ctx, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Path:   rootfsPath,
 			Type:   kraftfile.SourceTypeDockerfile,
@@ -249,7 +249,7 @@ EOF
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	imgs := runBuildRootfsIntegration(t, ctx, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeErofs,
 			Path:   rootfsPath,
 			Type:   kraftfile.SourceTypeDockerfile,
@@ -281,7 +281,7 @@ EOF
 	for _, format := range []kraftfile.FsType{kraftfile.FsTypeCpio, kraftfile.FsTypeErofs} {
 		t.Run(string(format), func(t *testing.T) {
 			imgs := runBuildRootfsIntegration(t, ctx, BuildOpts{
-				Rootfs: RootfsOpts{
+				Rootfs: FSOpts{
 					Format: format,
 					Path:   rootfsPath,
 					Type:   kraftfile.SourceTypeDockerfile,
@@ -308,7 +308,7 @@ func TestRootfsMultiPlatform(t *testing.T) {
 	cpioPath := writeTestCpioFile(t)
 
 	imgs := runBuildRootfs(t, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path: cpioPath,
 			Type: kraftfile.SourceTypeCpio,
 		},
@@ -333,7 +333,7 @@ func TestRootfsNoPlatform(t *testing.T) {
 	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))
 
 	_, err := BuildRootfs(ctx, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path: cpioPath,
 			Type: kraftfile.SourceTypeCpio,
 		},
@@ -345,7 +345,7 @@ func TestRootfsPreservesConfig(t *testing.T) {
 	dir := writeTestDirectory(t)
 
 	imgs := runBuildRootfs(t, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path:   dir,
 			Type:   kraftfile.SourceTypeDirectory,
 			Format: kraftfile.FsTypeCpio,
@@ -374,7 +374,7 @@ func TestRootfsUnsupportedType(t *testing.T) {
 	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))
 
 	_, err := BuildRootfs(ctx, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path: "/some/path",
 			Type: kraftfile.SourceType("unsupported"),
 		},
@@ -389,7 +389,7 @@ func TestRootfsCpioSourceErofsFormatMismatch(t *testing.T) {
 	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))
 
 	_, err := BuildRootfs(ctx, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path:   cpioPath,
 			Type:   kraftfile.SourceTypeCpio,
 			Format: kraftfile.FsTypeErofs,
@@ -405,7 +405,7 @@ func TestRootfsErofsSourceCpioFormatMismatch(t *testing.T) {
 	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))
 
 	_, err := BuildRootfs(ctx, BuildOpts{
-		Rootfs: RootfsOpts{
+		Rootfs: FSOpts{
 			Path:   erofsPath,
 			Type:   kraftfile.SourceTypeErofs,
 			Format: kraftfile.FsTypeCpio,

@@ -481,7 +481,10 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 
 func (Volume) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	volume := target.(Volume)
-	patches := patchRequests(fields, volumePatchSpec)
+	patches, err := patchRequests(fields, volumePatchSpec)
+	if err != nil {
+		return nil, err
+	}
 	reqs := make([]platform.UpdateVolumesRequestItem, 0, len(patches))
 	for _, patch := range patches {
 		reqs = append(reqs, platform.UpdateVolumesRequestItem{
@@ -558,15 +561,15 @@ func (Volume) Examples() map[cmd.CmdType][]kingkong.Example {
 	}
 }
 
-func volumePatchSpec(path string, _ patchOp, value any) (platform.UpdateVolumesRequestItemProp, any) {
+func volumePatchSpec(path string, _ patchOp, value any) (platform.UpdateVolumesRequestItemProp, any, error) {
 	var zero platform.UpdateVolumesRequestItemProp
 	switch path {
 	case "size":
-		return platform.UpdateVolumesRequestItemPropSize_mb, int64(value.(types.SizeMebibytes))
+		return platform.UpdateVolumesRequestItemPropSize_mb, int64(value.(types.SizeMebibytes)), nil
 	case "quota-policy":
-		return platform.UpdateVolumesRequestItemPropQuota_policy, value.(string)
+		return platform.UpdateVolumesRequestItemPropQuota_policy, value.(string), nil
 	default:
-		return zero, nil
+		return zero, nil, nil
 	}
 }
 
@@ -645,14 +648,14 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		return fmt.Errorf("detecting source type for %q: %w", c.Source, err)
 	}
 	importOpts := &builder.BuildOpts{
-		Rootfs: builder.RootfsOpts{
+		Rootfs: builder.FSOpts{
 			Path: c.Source,
 			Type: sourceType,
 			// Set format to CPIO as volimport expects a CPIO archive
 			Format: kraftfile.FsTypeCpio,
 		},
 		// Set platform as volimport makes sense only on UnikraftCloud
-		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{builder.DefaultPlatform},
 	}
 
 	// Build an import archive from the data source.

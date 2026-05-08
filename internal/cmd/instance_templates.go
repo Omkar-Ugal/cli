@@ -262,7 +262,10 @@ func (InstanceTemplate) Delete(ctx context.Context, targets []resource.Resource)
 
 func (InstanceTemplate) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	template := target.(InstanceTemplate)
-	patches := patchRequests(fields, instanceTemplatePatchSpec)
+	patches, err := patchRequests(fields, instanceTemplatePatchSpec)
+	if err != nil {
+		return nil, err
+	}
 	reqs := make([]platform.UpdateTemplateInstancesRequestItem, 0, len(patches))
 	for _, patch := range patches {
 		reqs = append(reqs, platform.UpdateTemplateInstancesRequestItem{
@@ -292,24 +295,24 @@ func (InstanceTemplate) Edit(ctx context.Context, target resource.Resource, fiel
 	return results[0], nil
 }
 
-func instanceTemplatePatchSpec(path string, op patchOp, value any) (platform.UpdateTemplateInstancesRequestItemProp, any) {
+func instanceTemplatePatchSpec(path string, op patchOp, value any) (platform.UpdateTemplateInstancesRequestItemProp, any, error) {
 	var zero platform.UpdateTemplateInstancesRequestItemProp
 	switch path {
 	case "tags":
-		return platform.UpdateTemplateInstancesRequestItemPropTags, value.([]string)
+		return platform.UpdateTemplateInstancesRequestItemPropTags, value.([]string), nil
 	case "delete-lock":
 		if value == nil {
-			return zero, nil
+			return zero, nil, nil
 		}
 		switch v := value.(type) {
 		case bool:
-			return platform.UpdateTemplateInstancesRequestItemPropDelete_lock, v
+			return platform.UpdateTemplateInstancesRequestItemPropDelete_lock, v, nil
 		case *bool:
-			return platform.UpdateTemplateInstancesRequestItemPropDelete_lock, *v
+			return platform.UpdateTemplateInstancesRequestItemPropDelete_lock, *v, nil
 		}
-		return zero, nil
+		return zero, nil, nil
 	default:
-		return zero, nil
+		return zero, nil, nil
 	}
 }
 

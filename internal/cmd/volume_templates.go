@@ -245,7 +245,10 @@ func (VolumeTemplate) Delete(ctx context.Context, targets []resource.Resource) e
 
 func (VolumeTemplate) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	template := target.(VolumeTemplate)
-	patches := patchRequests(fields, volumeTemplatePatchSpec)
+	patches, err := patchRequests(fields, volumeTemplatePatchSpec)
+	if err != nil {
+		return nil, err
+	}
 	reqs := make([]platform.UpdateTemplateVolumesRequestItem, 0, len(patches))
 	for _, patch := range patches {
 		reqs = append(reqs, platform.UpdateTemplateVolumesRequestItem{
@@ -275,24 +278,24 @@ func (VolumeTemplate) Edit(ctx context.Context, target resource.Resource, fields
 	return results[0], nil
 }
 
-func volumeTemplatePatchSpec(path string, op patchOp, value any) (platform.UpdateTemplateVolumesRequestItemProp, any) {
+func volumeTemplatePatchSpec(path string, op patchOp, value any) (platform.UpdateTemplateVolumesRequestItemProp, any, error) {
 	var zero platform.UpdateTemplateVolumesRequestItemProp
 	switch path {
 	case "tags":
-		return platform.UpdateTemplateVolumesRequestItemPropTags, value.([]string)
+		return platform.UpdateTemplateVolumesRequestItemPropTags, value.([]string), nil
 	case "delete-lock":
 		if value == nil {
-			return zero, nil
+			return zero, nil, nil
 		}
 		switch v := value.(type) {
 		case bool:
-			return platform.UpdateTemplateVolumesRequestItemPropDelete_lock, v
+			return platform.UpdateTemplateVolumesRequestItemPropDelete_lock, v, nil
 		case *bool:
-			return platform.UpdateTemplateVolumesRequestItemPropDelete_lock, *v
+			return platform.UpdateTemplateVolumesRequestItemPropDelete_lock, *v, nil
 		}
-		return zero, nil
+		return zero, nil, nil
 	default:
-		return zero, nil
+		return zero, nil, nil
 	}
 }
 

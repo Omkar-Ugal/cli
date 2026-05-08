@@ -103,6 +103,45 @@ func DetectSourceType(path string) (kraftfile.SourceType, error) {
 	}
 }
 
+func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr error) {
+	var romFiles []imagespec.File
+	for _, rom := range opts.Roms {
+		romBuildOpts := BuildOpts{
+			Rootfs: FSOpts{
+				Path:   rom.Path,
+				Type:   rom.Type,
+				Format: rom.Format,
+				Pad:    rom.Pad,
+			},
+			// roms are platform independent
+			Platform: []ocispec.Platform{DefaultPlatform},
+			// propagate BuildKit options from the parent build
+			BuildArg: opts.BuildArg,
+			Target:   opts.Target,
+			Secrets:  opts.Secrets,
+			SSH:      opts.SSH,
+			NoCache:  opts.NoCache,
+		}
+
+		imgs, err := BuildRootfs(ctx, romBuildOpts)
+		if err != nil {
+			return nil, fmt.Errorf("building rom from %q: %w", rom.Path, err)
+		}
+		if len(imgs) == 0 || imgs[0].Initrd == nil {
+			return nil, fmt.Errorf("rom build from %q produced no output", rom.Path)
+		}
+
+		romFile := imgs[0].Initrd
+		imgs[0].Initrd = nil // detach so Close doesn't close it
+		for _, img := range imgs {
+			img.Close()
+		}
+
+		romFiles = append(romFiles, romFile)
+	}
+	return romFiles, nil
+}
+
 // BuildRootfs builds a rootfs for each platform in opts.Platform from the
 // source at opts.Rootfs.Path.
 func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rerr error) {
@@ -187,7 +226,7 @@ func buildRootfsDirectory(ctx context.Context, opts BuildOpts) (_ []*imagespec.I
 			}
 		}()
 
-		if err := packageRootfs(ctx, opts.Rootfs.Format, f, os.DirFS(opts.Rootfs.Path), opts); err != nil {
+		if err := packageFS(ctx, opts.Rootfs.Format, f, os.DirFS(opts.Rootfs.Path), opts.Rootfs); err != nil {
 			return nil, err
 		}
 
@@ -229,7 +268,7 @@ func buildRootfsTarball(ctx context.Context, opts BuildOpts) (_ []*imagespec.Ima
 			}
 		}()
 
-		if err := packageRootfs(ctx, opts.Rootfs.Format, f, srcFS, opts); err != nil {
+		if err := packageFS(ctx, opts.Rootfs.Format, f, srcFS, opts.Rootfs); err != nil {
 			return nil, err
 		}
 
@@ -371,7 +410,7 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 			}
 		}()
 
-		if err := packageRootfs(ctx, opts.Rootfs.Format, f, srcFS, opts); err != nil {
+		if err := packageFS(ctx, opts.Rootfs.Format, f, srcFS, opts.Rootfs); err != nil {
 			return nil, err
 		}
 
@@ -397,18 +436,23 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 	return imgs, nil
 }
 
-func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File, srcFS fs.FS, opts BuildOpts) error {
+func packageFS(ctx context.Context, format kraftfile.FsType, destFS *os.File, srcFS fs.FS, opts FSOpts) error {
+	log.G(ctx).
+		Debug().
+		Str("format", string(format)).
+		Msg("packaging rootfs")
+
 	switch format {
 	case kraftfile.FsTypeCpio:
 		var gw *gzip.Writer
-		var w io.Writer = rootfs
-		if opts.Rootfs.Compress {
+		var w io.Writer = destFS
+		if opts.Compress {
 			gw = gzip.NewWriter(w)
 			w = gw
 		}
 
 		if err := buildfs.CreateCPIO(ctx, w, srcFS,
-			buildfs.WithAllRoot(!opts.Rootfs.KeepOwners),
+			buildfs.WithAllRoot(!opts.KeepOwners),
 		); err != nil {
 			return fmt.Errorf("could not create CPIO archive: %w", err)
 		}
@@ -419,12 +463,12 @@ func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File
 			}
 		}
 	case kraftfile.FsTypeErofs:
-		if opts.Rootfs.Compress {
+		if opts.Compress {
 			log.G(ctx).Warn().Msg("compression is not supported for EROFS, ignoring compress option")
 		}
 
-		if err := buildfs.CreateEROFS(rootfs, srcFS,
-			buildfs.WithAllRoot(!opts.Rootfs.KeepOwners),
+		if err := buildfs.CreateEROFS(destFS, srcFS,
+			buildfs.WithAllRoot(!opts.KeepOwners),
 		); err != nil {
 			return fmt.Errorf("could not create EroFS archive: %w", err)
 		}
@@ -432,7 +476,20 @@ func packageRootfs(ctx context.Context, format kraftfile.FsType, rootfs *os.File
 		return fmt.Errorf("unknown filesystem type %q", format)
 	}
 
-	if err := rootfs.Sync(); err != nil {
+	if opts.Pad > 0 {
+		pos, err := destFS.Seek(0, io.SeekEnd)
+		if err != nil {
+			return fmt.Errorf("could not seek to end of file: %w", err)
+		}
+		if rem := pos % opts.Pad; rem != 0 {
+			pad := make([]byte, opts.Pad-rem)
+			if _, err := destFS.Write(pad); err != nil {
+				return fmt.Errorf("could not pad file to page alignment: %w", err)
+			}
+		}
+	}
+
+	if err := destFS.Sync(); err != nil {
 		return fmt.Errorf("could not sync file: %w", err)
 	}
 
@@ -457,15 +514,15 @@ func applyBuildOpts(attrs map[string]string, localDirs map[string]string, sessio
 
 	localDirs["context"] = opts.Rootfs.Path
 	localDirs["dockerfile"] = opts.Rootfs.Path
-	if opts.Rootfs.Target != "" {
-		attrs["target"] = opts.Rootfs.Target
+	if opts.Target != "" {
+		attrs["target"] = opts.Target
 	}
 
-	if opts.Rootfs.NoCache {
+	if opts.NoCache {
 		attrs["no-cache"] = ""
 	}
 
-	for _, buildArg := range opts.Rootfs.BuildArg {
+	for _, buildArg := range opts.BuildArg {
 		if buildArg == "" {
 			continue
 		}
@@ -479,15 +536,15 @@ func applyBuildOpts(attrs map[string]string, localDirs map[string]string, sessio
 		attrs["build-arg:"+key] = val
 	}
 
-	if len(opts.Rootfs.Secrets) > 0 {
-		provider, err := CreateSecrets(opts.Rootfs.Secrets)
+	if len(opts.Secrets) > 0 {
+		provider, err := CreateSecrets(opts.Secrets)
 		if err != nil {
 			return err
 		}
 		*sessions = append(*sessions, provider)
 	}
-	if len(opts.Rootfs.SSH) > 0 {
-		provider, err := CreateSSH(opts.Rootfs.SSH)
+	if len(opts.SSH) > 0 {
+		provider, err := CreateSSH(opts.SSH)
 		if err != nil {
 			return err
 		}

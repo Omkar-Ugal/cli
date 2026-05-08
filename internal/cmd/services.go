@@ -437,7 +437,10 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]reso
 
 func (ServiceGroup) Edit(ctx context.Context, target resource.Resource, fields []resource.Field) (resource.Resource, error) {
 	sg := target.(ServiceGroup)
-	patches := patchRequests(fields, serviceGroupPatchSpec)
+	patches, err := patchRequests(fields, serviceGroupPatchSpec)
+	if err != nil {
+		return nil, err
+	}
 	reqs := make([]platform.UpdateServiceGroupsRequestItem, 0, len(patches))
 	for _, patch := range patches {
 		reqs = append(reqs, platform.UpdateServiceGroupsRequestItem{
@@ -516,13 +519,13 @@ func (ServiceGroup) Examples() map[cmd.CmdType][]kingkong.Example {
 	}
 }
 
-func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.UpdateServiceGroupsRequestItemProp, any) {
+func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.UpdateServiceGroupsRequestItemProp, any, error) {
 	var zero platform.UpdateServiceGroupsRequestItemProp
 	switch path {
 	case "limits.soft":
-		return platform.UpdateServiceGroupsRequestItemPropSoft_limit, value.(uint64)
+		return platform.UpdateServiceGroupsRequestItemPropSoft_limit, value.(uint64), nil
 	case "limits.hard":
-		return platform.UpdateServiceGroupsRequestItemPropHard_limit, value.(uint64)
+		return platform.UpdateServiceGroupsRequestItemPropHard_limit, value.(uint64), nil
 	case "domains":
 		nvalue := []platform.CreateServiceGroupRequestDomain{}
 		for _, domain := range value.([]Domain) {
@@ -534,7 +537,7 @@ func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.UpdateSe
 				Name: name,
 			})
 		}
-		return platform.UpdateServiceGroupsRequestItemPropDomains, nvalue
+		return platform.UpdateServiceGroupsRequestItemPropDomains, nvalue, nil
 	case "services":
 		nvalue := []platform.Service{}
 		for _, svc := range value.([]*Service) {
@@ -544,8 +547,8 @@ func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.UpdateSe
 				Handlers:        svc.Handlers,
 			})
 		}
-		return platform.UpdateServiceGroupsRequestItemPropServices, nvalue
+		return platform.UpdateServiceGroupsRequestItemPropServices, nvalue, nil
 	default:
-		return zero, nil
+		return zero, nil, nil
 	}
 }
