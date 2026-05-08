@@ -27,6 +27,8 @@ type BuildCmd struct {
 	NoCache  bool     `help:"Do not use cache when building the image."`
 	Secret   []string `help:"Secret to expose to the build (format: \"id=mysecret[,src=/local/secret]\")."`
 	SSH      []string `help:"SSH agent socket or keys to expose to the build (format: \"default|<id>[=<socket>|<key>[,<key>]]\")."`
+
+	Insecure []string `help:"Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all." type:"optional"`
 }
 
 func (BuildCmd) Examples() []kingkong.Example {
@@ -123,7 +125,16 @@ func (c *BuildCmd) Run(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
-	access, err := images.Accessor(ctx)
+	var opts []images.AccessorOpt
+	if c.Insecure != nil {
+		if len(c.Insecure) > 0 {
+			opts = append(opts, images.WithInsecureRegistry(c.Insecure...))
+		} else {
+			opts = append(opts, images.WithInsecureRegistries())
+		}
+	}
+
+	access, err := images.Accessor(ctx, opts...)
 	if err != nil {
 		return err
 	}

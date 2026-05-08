@@ -38,10 +38,10 @@ import (
 type ImagesCmd struct {
 	cmd.ResourceCmd[ImageEntry]
 	cmd.ListableResourceCmd[ImageEntry]
-	cmd.GettableResourceCmd[Image]
-	cmd.DeletableResourceCmd[Image]
 
-	Copy ImagesCopyCmd `cmd:"" help:"Copy images."`
+	Get    ImagesGetCmd    `cmd:"" help:"Inspect an image." aliases:"inspect,show"`
+	Delete ImagesDeleteCmd `cmd:"" help:"Remove an image." aliases:"rm,remove"`
+	Copy   ImagesCopyCmd   `cmd:"" help:"Copy images."`
 }
 
 type Image struct {
@@ -640,9 +640,47 @@ func (ImageEntry) loadFromPlatform(image platform.Image, metro *config.Metro) ([
 	return results, nil
 }
 
+type ImagesGetCmd struct {
+	cmd.ResourceGetCmd[Image]
+	Insecure []string `help:"Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all." type:"optional"`
+}
+
+func (c *ImagesGetCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	if c.Insecure != nil {
+		var opts []images.AccessorOpt
+		if len(c.Insecure) > 0 {
+			opts = append(opts, images.WithInsecureRegistry(c.Insecure...))
+		} else {
+			opts = append(opts, images.WithInsecureRegistries())
+		}
+		ctx = images.WithInsecureContext(ctx, opts...)
+	}
+	return c.ResourceGetCmd.Run(ctx, stdio, sandbox)
+}
+
+type ImagesDeleteCmd struct {
+	cmd.ResourceRemoveCmd[Image]
+	Insecure []string `help:"Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all." type:"optional"`
+}
+
+func (c *ImagesDeleteCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	if c.Insecure != nil {
+		var opts []images.AccessorOpt
+		if len(c.Insecure) > 0 {
+			opts = append(opts, images.WithInsecureRegistry(c.Insecure...))
+		} else {
+			opts = append(opts, images.WithInsecureRegistries())
+		}
+		ctx = images.WithInsecureContext(ctx, opts...)
+	}
+	return c.ResourceRemoveCmd.Run(ctx, stdio, sandbox)
+}
+
 type ImagesCopyCmd struct {
 	Source string `arg:"" help:"Source image reference."`
 	Dest   string `arg:"" help:"Destination image reference."`
+
+	Insecure []string `help:"Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all." type:"optional"`
 }
 
 func (cmd ImagesCopyCmd) Examples() []kingkong.Example {
@@ -669,7 +707,16 @@ func (cmd ImagesCopyCmd) Examples() []kingkong.Example {
 }
 
 func (cmd ImagesCopyCmd) Run(ctx context.Context) error {
-	access, err := images.Accessor(ctx)
+	var opts []images.AccessorOpt
+	if cmd.Insecure != nil {
+		if len(cmd.Insecure) > 0 {
+			opts = append(opts, images.WithInsecureRegistry(cmd.Insecure...))
+		} else {
+			opts = append(opts, images.WithInsecureRegistries())
+		}
+	}
+
+	access, err := images.Accessor(ctx, opts...)
 	if err != nil {
 		return err
 	}

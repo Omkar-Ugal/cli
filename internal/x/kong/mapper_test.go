@@ -19,6 +19,7 @@ func TestOptional(t *testing.T) {
 	type CLI struct {
 		Watch *time.Duration `short:"w" long:"watch" type:"optional"`
 		Sort  string         `long:"sort"`
+		Arg   string         `arg:"" optional:""`
 	}
 
 	tests := []struct {
@@ -26,6 +27,7 @@ func TestOptional(t *testing.T) {
 		args      []string
 		wantWatch *time.Duration
 		wantSort  string
+		wantArg   string
 	}{
 		{
 			name:      "no flags",
@@ -40,8 +42,8 @@ func TestOptional(t *testing.T) {
 			wantSort:  "",
 		},
 		{
-			name:      "watch with value",
-			args:      []string{"-w", "5s"},
+			name:      "short watch with inline value",
+			args:      []string{"-w5s"},
 			wantWatch: new(5 * time.Second),
 			wantSort:  "",
 		},
@@ -69,6 +71,18 @@ func TestOptional(t *testing.T) {
 			wantWatch: new(5 * time.Second),
 			wantSort:  "name",
 		},
+		{
+			name:      "space-separated long does not consume value",
+			args:      []string{"--watch", "5s"},
+			wantWatch: new(time.Duration),
+			wantArg:   "5s",
+		},
+		{
+			name:      "space-separated short does not consume value",
+			args:      []string{"-w", "5s"},
+			wantWatch: new(time.Duration),
+			wantArg:   "5s",
+		},
 	}
 
 	for _, tt := range tests {
@@ -87,6 +101,7 @@ func TestOptional(t *testing.T) {
 				assert.Equal(t, *tt.wantWatch, *cli.Watch)
 			}
 			assert.Equal(t, tt.wantSort, cli.Sort)
+			assert.Equal(t, tt.wantArg, cli.Arg)
 		})
 	}
 }
