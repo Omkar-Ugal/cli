@@ -369,6 +369,69 @@ func TestRootfsPreservesConfig(t *testing.T) {
 	require.Contains(t, files, "./hello.txt")
 }
 
+func TestRootfsDirectoryDefaultFormat(t *testing.T) {
+	dir := writeTestDirectory(t)
+
+	imgs := runBuildRootfs(t, BuildOpts{
+		Rootfs: FSOpts{
+			Path: dir,
+			Type: kraftfile.SourceTypeDirectory,
+			// Format intentionally omitted; should default to cpio.
+		},
+		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+	})
+	require.Len(t, imgs, 1)
+
+	// Default format is CPIO.
+	files := readCpioInitrd(t, imgs[0])
+	require.Contains(t, files, "./hello.txt")
+	require.Equal(t, "hello\n", files["./hello.txt"])
+	require.Contains(t, files, "./subdir/nested.txt")
+	require.Equal(t, "nested\n", files["./subdir/nested.txt"])
+}
+
+func TestRomDefaultFormat(t *testing.T) {
+	dir := writeTestDirectory(t)
+
+	ctx := t.Context()
+	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))
+
+	romFiles, err := BuildRoms(ctx, BuildOpts{
+		Roms: []FSOpts{
+			{
+				Path: dir,
+				Type: kraftfile.SourceTypeDirectory,
+				// Format intentionally omitted; should default to erofs.
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, romFiles, 1)
+	t.Cleanup(func() { _ = romFiles[0].Cleanup() })
+
+	// Verify the rom was built as EROFS by reading it back.
+	rc, _, err := romFiles[0].Open(ctx)
+	require.NoError(t, err)
+	defer rc.Close()
+
+	tmp, err := os.CreateTemp(t.TempDir(), "rom-*.img")
+	require.NoError(t, err)
+	defer tmp.Close()
+
+	_, err = io.Copy(tmp, rc)
+	require.NoError(t, err)
+
+	fsys, err := goerofs.Open(tmp)
+	require.NoError(t, err)
+
+	files := make(map[string]string)
+	readErofsDir(t, fsys, ".", files)
+	require.Contains(t, files, "hello.txt")
+	require.Equal(t, "hello\n", files["hello.txt"])
+	require.Contains(t, files, "subdir/nested.txt")
+	require.Equal(t, "nested\n", files["subdir/nested.txt"])
+}
+
 func TestRootfsUnsupportedType(t *testing.T) {
 	ctx := t.Context()
 	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))

@@ -6,6 +6,7 @@
 package builder
 
 import (
+	"cmp"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -110,7 +111,7 @@ func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr er
 			Rootfs: FSOpts{
 				Path:   rom.Path,
 				Type:   rom.Type,
-				Format: rom.Format,
+				Format: cmp.Or(rom.Format, kraftfile.FsTypeErofs),
 				Pad:    rom.Pad,
 			},
 			// roms are platform independent
@@ -151,22 +152,27 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 
 	switch opts.Rootfs.Type {
 	case kraftfile.SourceTypeCpio, kraftfile.SourceTypeErofs:
+		expected := map[kraftfile.SourceType]kraftfile.FsType{
+			kraftfile.SourceTypeCpio:  kraftfile.FsTypeCpio,
+			kraftfile.SourceTypeErofs: kraftfile.FsTypeErofs,
+		}
 		if opts.Rootfs.Format != "" {
-			expected := map[kraftfile.SourceType]kraftfile.FsType{
-				kraftfile.SourceTypeCpio:  kraftfile.FsTypeCpio,
-				kraftfile.SourceTypeErofs: kraftfile.FsTypeErofs,
-			}
 			if exp, ok := expected[opts.Rootfs.Type]; ok && opts.Rootfs.Format != exp {
 				// TODO: maybe we could be smart and convert this
 				return nil, fmt.Errorf("unsupported rootfs format mismatch: source is %s but requested format is %s", opts.Rootfs.Type, opts.Rootfs.Format)
 			}
+		} else {
+			opts.Rootfs.Format = expected[opts.Rootfs.Type]
 		}
 		return buildRootfsPackaged(ctx, opts)
 	case kraftfile.SourceTypeDirectory:
+		opts.Rootfs.Format = cmp.Or(opts.Rootfs.Format, kraftfile.FsTypeCpio)
 		return buildRootfsDirectory(ctx, opts)
 	case kraftfile.SourceTypeTarball:
+		opts.Rootfs.Format = cmp.Or(opts.Rootfs.Format, kraftfile.FsTypeCpio)
 		return buildRootfsTarball(ctx, opts)
 	case kraftfile.SourceTypeDockerfile:
+		opts.Rootfs.Format = cmp.Or(opts.Rootfs.Format, kraftfile.FsTypeCpio)
 		if f, err := os.Stat(opts.Rootfs.Path); err != nil {
 			if os.IsNotExist(err) {
 				return nil, fmt.Errorf("dockerfile does not exist")
