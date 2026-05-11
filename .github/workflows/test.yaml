@@ -17,7 +17,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request_target' && github.head_ref || github.ref }}
 
 jobs:
-  unit:
+  test:
     runs-on: ubuntu-latest
     env:
       TASK_X_REMOTE_TASKFILES: 1
@@ -48,15 +48,28 @@ jobs:
             ${{ github.job }}-${{ runner.os }}-go-
 
       - name: Run unit tests
+        id: unit
+        continue-on-error: true
         shell: bash
         run: |
           task --yes unit-race
         env:
           CGO_ENABLED: 1 # needed for race checker
 
+      - name: Run golden tests
+        id: golden
+        continue-on-error: true
+        shell: bash
+        run: |
+          task --yes golden
+
+      - name: Check test results
+        if: steps.unit.outcome == 'failure' || steps.golden.outcome == 'failure'
+        run: exit 1
+
   integration:
     runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
-    needs: unit
+    needs: test
     env:
       TASK_X_REMOTE_TASKFILES: 1
     steps:

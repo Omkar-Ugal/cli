@@ -1,0 +1,41 @@
+$ unikraft build . --output test/busybox-custom-df-e2e:$UNIQ_IMAGE
+
+stderr:
+	│ found buildkit addr=<docker> version=vX.Y.Z
+
+$ unikraft run --name test-$UNIQ_INST --metro test --output quiet --image test/busybox-custom-df-e2e:$UNIQ_IMAGE
+
+stdout:
+	test/test-<INST>
+
+$ unikraft instance wait --until state==stopped --timeout 10s test-$UNIQ_INST
+
+stdout:
+	metro:        test
+	name:         test-<INST>
+	uuid:         12345678-1234-1234-1234-123456789abc
+	state:        stopped
+	image:        test/busybox-custom-df-e2e:<IMAGE>
+	resources:
+	  memory:     X.XXXMiB
+	  vcpus:      1
+	networks:
+	- uuid:       12345678-1234-1234-1234-123456789abc
+	  private-ip: 10.X.X.X
+	  mac:        aa:bb:cc:dd:ee:ff
+	timestamps:
+	  created:    RELATIVE_TIME
+	stop:
+	  reason:     platform stop: image pull failed
+
+$ unikraft instance logs test-$UNIQ_INST
+
+$ unikraft instance delete test-$UNIQ_INST
+
+stdout:
+	test-<INST>
+
+$ unikraft image delete test/busybox-custom-df-e2e:$UNIQ_IMAGE
+
+stdout:
+	unikraft.io/test/busybox-custom-df-e2e:<IMAGE>

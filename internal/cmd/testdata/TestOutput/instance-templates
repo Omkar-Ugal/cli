@@ -1,0 +1,232 @@
+====================================== kv ======================================
+metro:     fra
+name:      my-template
+uuid:      d4e5f6a7-b8c9-0123-def0-123456789abc
+state:     stopped
+image:     nginx
+resources:
+  memory:  128MiB
+  vcpus:   1
+
+==================================== kv-all ====================================
+metro:           fra
+name:            my-template
+uuid:            d4e5f6a7-b8c9-0123-def0-123456789abc
+tags:            ["env-staging"]
+delete-lock:     false
+state:           stopped
+image:           nginx
+runtime:
+  args:
+  env:
+resources:
+  memory:        128MiB
+  vcpus:         1
+volumes:
+timestamps:
+  created:       never
+scale-to-zero:
+  enabled:       false
+  policy:
+  stateful:      false
+  cooldown-time: 0s
+  notify-time:   0s
+restart:
+  policy:
+
+==================================== table =====================================
+METRO  NAME         STATE    IMAGE  ARGS  MEMORY  VCPUS  CREATED
+fra    my-template  stopped  nginx        128MiB  1      never
+
+==================================== debug =====================================
+[
+  {
+    "name": "metro",
+    "value": "fra",
+    "links": [
+      {
+        "type": "metro",
+        "key": "fra"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "name",
+    "value": "my-template",
+    "verbosity": "short"
+  },
+  {
+    "name": "uuid",
+    "value": "d4e5f6a7-b8c9-0123-def0-123456789abc",
+    "verbosity": "long"
+  },
+  {
+    "name": "tags",
+    "value": [
+      "env-staging"
+    ],
+    "verbosity": "hidden",
+    "edit": {
+      "set": [
+        "env-staging"
+      ],
+      "add": null,
+      "del": null
+    }
+  },
+  {
+    "name": "delete-lock",
+    "value": false,
+    "verbosity": "hidden",
+    "edit": {
+      "set": false
+    }
+  },
+  {
+    "name": "state",
+    "value": "stopped",
+    "verbosity": "short"
+  },
+  {
+    "name": "image",
+    "value": "nginx",
+    "links": [
+      {
+        "type": "image",
+        "key": "unikraft.io/official/nginx:latest"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "runtime",
+    "subfields": [
+      {
+        "name": "args",
+        "value": null,
+        "verbosity": "short"
+      },
+      {
+        "name": "env",
+        "value": null,
+        "verbosity": "long"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "resources",
+    "subfields": [
+      {
+        "name": "memory",
+        "value": "128MiB",
+        "verbosity": "short"
+      },
+      {
+        "name": "vcpus",
+        "value": 1,
+        "verbosity": "short"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "volumes",
+    "elem": {
+      "name": "",
+      "subfields": [
+        {
+          "name": "name",
+          "value": "",
+          "verbosity": "long"
+        },
+        {
+          "name": "uuid",
+          "value": "",
+          "verbosity": "long"
+        },
+        {
+          "name": "at",
+          "value": "",
+          "verbosity": "long"
+        },
+        {
+          "name": "readonly",
+          "value": false,
+          "verbosity": "long"
+        },
+        {
+          "name": "size",
+          "verbosity": "invisible",
+          "create": {
+            "set": "0B"
+          }
+        }
+      ],
+      "verbosity": "long"
+    },
+    "verbosity": "long"
+  },
+  {
+    "name": "timestamps",
+    "subfields": [
+      {
+        "name": "created",
+        "value": "never",
+        "verbosity": "short"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "scale-to-zero",
+    "subfields": [
+      {
+        "name": "enabled",
+        "value": false,
+        "verbosity": "long"
+      },
+      {
+        "name": "policy",
+        "value": "",
+        "verbosity": "long"
+      },
+      {
+        "name": "stateful",
+        "value": false,
+        "verbosity": "long"
+      },
+      {
+        "name": "cooldown-time",
+        "value": "0s",
+        "verbosity": "long"
+      },
+      {
+        "name": "notify-time",
+        "value": "0s",
+        "verbosity": "long"
+      }
+    ],
+    "verbosity": "long"
+  },
+  {
+    "name": "restart",
+    "subfields": [
+      {
+        "name": "policy",
+        "value": "",
+        "verbosity": "hidden"
+      }
+    ],
+    "verbosity": "hidden"
+  },
+  {
+    "name": "instances",
+    "verbosity": "invisible",
+    "create": {
+      "set": null,
+      "required": true
+    }
+  }
+]

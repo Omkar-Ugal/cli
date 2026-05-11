@@ -1,0 +1,111 @@
+====================================== kv ======================================
+metro:      fra
+name:       my-vol-template
+uuid:       e5f6a7b8-c9d0-1234-ef01-23456789abcd
+state:      available
+size:       20MiB
+filesystem: ext4
+persistent: true
+
+==================================== kv-all ====================================
+metro:       fra
+name:        my-vol-template
+uuid:        e5f6a7b8-c9d0-1234-ef01-23456789abcd
+tags:        ["env-staging"]
+delete-lock: false
+state:       available
+size:        20MiB
+filesystem:  ext4
+persistent:  true
+timestamps:
+  created:   never
+
+==================================== table =====================================
+METRO  NAME             STATE      SIZE   CREATED
+fra    my-vol-template  available  20MiB  never
+
+==================================== debug =====================================
+[
+  {
+    "name": "metro",
+    "value": "fra",
+    "links": [
+      {
+        "type": "metro",
+        "key": "fra"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "name",
+    "value": "my-vol-template",
+    "verbosity": "short"
+  },
+  {
+    "name": "uuid",
+    "value": "e5f6a7b8-c9d0-1234-ef01-23456789abcd",
+    "verbosity": "long"
+  },
+  {
+    "name": "tags",
+    "value": [
+      "env-staging"
+    ],
+    "verbosity": "hidden",
+    "edit": {
+      "set": [
+        "env-staging"
+      ],
+      "add": null,
+      "del": null
+    }
+  },
+  {
+    "name": "delete-lock",
+    "value": false,
+    "verbosity": "hidden",
+    "edit": {
+      "set": false
+    }
+  },
+  {
+    "name": "state",
+    "value": "available",
+    "verbosity": "short"
+  },
+  {
+    "name": "size",
+    "value": "20MiB",
+    "verbosity": "short"
+  },
+  {
+    "name": "filesystem",
+    "value": "ext4",
+    "verbosity": "long"
+  },
+  {
+    "name": "persistent",
+    "value": true,
+    "verbosity": "long"
+  },
+  {
+    "name": "timestamps",
+    "subfields": [
+      {
+        "name": "created",
+        "value": "never",
+        "verbosity": "short"
+      }
+    ],
+    "verbosity": "short"
+  },
+  {
+    "name": "volumes",
+    "verbosity": "invisible",
+    "create": {
+      "set": null,
+      "required": true
+    }
+  }
+]
