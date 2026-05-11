@@ -130,39 +130,6 @@ cmd: ["cat", "/rom/hello.txt"]
 			})
 	})
 
-	t.Run("rom-file", func(t *testing.T) {
-		var baseImage string
-		if r.cfg != nil {
-			baseImage = fmt.Sprintf("%s/busybox-romfile-e2e:$UNIQ_IMAGE", r.cfg.Profile.Organization)
-		}
-
-		r.
-			online().
-			withCleaners(buildCleaners).
-			withContext(map[string]string{
-				// Base image context: busybox with cat.
-				"base/Dockerfile": `FROM busybox:latest`,
-				"base/Kraftfile": `
-spec: v0.7
-name: busybox-romfile-e2e
-runtime: base-compat:latest
-rootfs:
-  format: erofs
-  source: ./Dockerfile
-cmd: ["cat", "/etc/consoled/config.yaml"]
-`,
-				// Single file with a different name than the destination.
-				"console.yaml": "greeting: Hello from ROM file!\n",
-			}).
-			run(t, []command{
-				{args: []string{unikraftCmd, "build", "base", "--output", baseImage}},
-				{args: []string{unikraftCmd, "run", "--name", "test-$UNIQ_INST", "--metro", metroName, "--output", "quiet", "--image", baseImage, "--rom", "file=console.yaml,at=/etc/consoled/config.yaml"}},
-				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-$UNIQ_INST"}},
-				{args: []string{unikraftCmd, "instance", "logs", "test-$UNIQ_INST"}},
-				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
-			})
-	})
-
 	t.Run("busybox", func(t *testing.T) {
 		if r.cfg == nil {
 			t.Skip("busybox tests require online config")

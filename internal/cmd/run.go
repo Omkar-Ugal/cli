@@ -95,12 +95,6 @@ func (RunCmd) Examples() []kingkong.Example {
 				"unikraft run --metro=dal --image=my-app:latest --restart=on-failure",
 			},
 		},
-		{
-			Description: "Deploy a new instance with a single config file as a ROM",
-			Commands: []string{
-				"unikraft run --metro=fra --image=my-app:latest --rom file=./config.yaml,at=/etc/app/config.yaml",
-			},
-		},
 	}
 }
 
