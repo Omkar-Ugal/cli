@@ -18,6 +18,8 @@ import (
 	"github.com/alecthomas/kong"
 	jujuerrors "github.com/juju/errors"
 
+	"github.com/charmbracelet/colorprofile"
+
 	"unikraft.com/cli/internal/cmd"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/logfmt"
@@ -39,8 +41,8 @@ func main() {
 		args  = os.Args[1:]
 		stdio = config.Stdio{
 			Stdin:  os.Stdin,
-			Stdout: os.Stdout,
-			Stderr: os.Stderr,
+			Stdout: colorprofile.NewWriter(os.Stdout, os.Environ()),
+			Stderr: colorprofile.NewWriter(os.Stderr, os.Environ()),
 		}
 	)
 
