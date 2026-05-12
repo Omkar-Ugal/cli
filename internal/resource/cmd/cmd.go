@@ -791,12 +791,12 @@ func (cmd *ResourceEditCmd[R]) Run(ctx context.Context, stdio config.Stdio, sand
 	var editor patch.EditorFunc
 	switch {
 	case cmd.Visual:
-		editor, err = patch.VisualCommandEditorFunc(stdio)
+		editor, err = patch.VisualCommandEditorFunc()
 		if err != nil {
 			return err
 		}
 	case cmd.Cmd != "":
-		editor = patch.CommandEditorFunc(stdio, cmd.Cmd)
+		editor = patch.CommandEditorFunc(cmd.Cmd)
 	case len(cmd.Load) > 0:
 		editor = patch.ContentEditorFunc(cmd.Load)
 	}
@@ -902,12 +902,12 @@ func (cmd *ResourceCreateCmd[R]) RunResources(ctx context.Context, stdio config.
 	var editor patch.EditorFunc
 	switch {
 	case cmd.Visual:
-		editor, err = patch.VisualCommandEditorFunc(stdio)
+		editor, err = patch.VisualCommandEditorFunc()
 		if err != nil {
 			return nil, err
 		}
 	case cmd.Cmd != "":
-		editor = patch.CommandEditorFunc(stdio, cmd.Cmd)
+		editor = patch.CommandEditorFunc(cmd.Cmd)
 	case len(cmd.Load) > 0:
 		editor = patch.ContentEditorFunc(cmd.Load)
 	}

@@ -17,7 +17,6 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 )
 
@@ -52,11 +51,11 @@ func SaveYAML(res resource.Resource, fields []resource.Field, patches []resource
 
 // CommandEditorFunc creates an EditorFunc that runs a shell command with YAML on stdin
 // and reads the edited YAML from stdout.
-func CommandEditorFunc(stdio config.Stdio, command string) EditorFunc {
+func CommandEditorFunc(command string) EditorFunc {
 	return func(ctx context.Context, input []byte) ([]byte, error) {
 		cmd := exec.CommandContext(ctx, "sh", "-c", command)
 		cmd.Stdin = bytes.NewReader(input)
-		cmd.Stderr = stdio.Stderr
+		cmd.Stderr = os.Stderr
 
 		output, err := cmd.Output()
 		if err != nil {
@@ -67,7 +66,7 @@ func CommandEditorFunc(stdio config.Stdio, command string) EditorFunc {
 }
 
 // VisualCommandEditorFunc creates an EditorFunc that uses a temp file and system editor.
-func VisualCommandEditorFunc(stdio config.Stdio) (EditorFunc, error) {
+func VisualCommandEditorFunc() (EditorFunc, error) {
 	editorCmd, err := getEditor()
 	if err != nil {
 		return nil, err
@@ -88,9 +87,9 @@ func VisualCommandEditorFunc(stdio config.Stdio) (EditorFunc, error) {
 		}
 
 		cmd := exec.CommandContext(ctx, editorCmd, tmpfile.Name())
-		cmd.Stdin = stdio.Stdin
-		cmd.Stdout = stdio.Stdout
-		cmd.Stderr = stdio.Stderr
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return nil, fmt.Errorf("editor exited with error: %w", err)
 		}
