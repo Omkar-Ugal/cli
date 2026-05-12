@@ -55,12 +55,15 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 	}
 
 	for _, rom := range kf.Roms {
-		romPath := filepath.Join(dir, rom.Source)
+		if rom.Source == nil || rom.Source.Path == "" {
+			return BuildOpts{}, fmt.Errorf("rom entry is missing a source path")
+		}
+		romPath := filepath.Join(dir, rom.Source.Path)
 		romFormat := cmp.Or(rom.Format, kraftfile.FsTypeErofs)
 		romOpt := FSOpts{
 			Path:   romPath,
 			Format: romFormat,
-			Type:   rom.Type,
+			Type:   rom.Source.Type,
 			// Pad the file to page-size alignment. This is required by the platform
 			// which rejects ROM files that are not page-aligned.
 			Pad: 4096,
@@ -68,7 +71,7 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 		if romOpt.Type == "" {
 			typ, err := DetectSourceType(romPath)
 			if err != nil {
-				return BuildOpts{}, fmt.Errorf("detecting rom type for %q: %w", rom.Source, err)
+				return BuildOpts{}, fmt.Errorf("detecting rom type for %q: %w", romPath, err)
 			}
 			romOpt.Type = typ
 		}
@@ -76,13 +79,19 @@ func KraftfileToBuildOpts(dir string, kf *kraftfile.Kraftfile) (BuildOpts, error
 	}
 
 	if kf.Rootfs != nil {
-		opts.Rootfs.Path = filepath.Join(dir, kf.Rootfs.Source)
+		if kf.Rootfs.Source == nil || kf.Rootfs.Source.Path == "" {
+			return BuildOpts{}, fmt.Errorf("rootfs entry is missing a source path")
+		}
+		opts.Rootfs.Path = filepath.Join(dir, kf.Rootfs.Source.Path)
 		opts.Rootfs.Format = kf.Rootfs.Format
-		opts.Rootfs.Type = kf.Rootfs.Type
-		if opts.Rootfs.Type == "" {
+		opts.Rootfs.Type = kf.Rootfs.Source.Type
+		opts.Rootfs.Dockerfile = kf.Rootfs.Source.Dockerfile
+		if opts.Rootfs.Dockerfile != "" && opts.Rootfs.Type == "" {
+			opts.Rootfs.Type = kraftfile.SourceTypeDockerfile
+		} else if opts.Rootfs.Type == "" {
 			typ, err := DetectSourceType(opts.Rootfs.Path)
 			if err != nil {
-				return BuildOpts{}, fmt.Errorf("detecting rootfs type for %q: %w", kf.Rootfs.Source, err)
+				return BuildOpts{}, fmt.Errorf("detecting rootfs type for %q: %w", opts.Rootfs.Path, err)
 			}
 			opts.Rootfs.Type = typ
 		}

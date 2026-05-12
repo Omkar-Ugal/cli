@@ -25,7 +25,9 @@ func TestKraftfileToBuildOpts(t *testing.T) {
 		Runtime: &runtime,
 		Rootfs: &kraftfile.FS{
 			Format: kraftfile.FsTypeErofs,
-			Source: rootfsPath,
+			Source: &kraftfile.FSSource{
+				Path: rootfsPath,
+			},
 		},
 		Targets: []kraftfile.Target{
 			{
@@ -67,7 +69,9 @@ func TestKraftfileToBuildOptsRootfsSourceError(t *testing.T) {
 		Runtime: &runtime,
 		Rootfs: &kraftfile.FS{
 			Format: kraftfile.FsTypeCpio,
-			Source: rootfsPath,
+			Source: &kraftfile.FSSource{
+				Path: rootfsPath,
+			},
 		},
 	}
 
@@ -83,7 +87,9 @@ func TestKraftfileToBuildOptsRootfsPathJoined(t *testing.T) {
 		Runtime: &runtime,
 		Rootfs: &kraftfile.FS{
 			Format: kraftfile.FsTypeErofs,
-			Source: "Dockerfile",
+			Source: &kraftfile.FSSource{
+				Path: "Dockerfile",
+			},
 		},
 	}
 
@@ -91,6 +97,54 @@ func TestKraftfileToBuildOptsRootfsPathJoined(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, rootfsDir+"/Dockerfile", opts.Rootfs.Path,
 		"rootfs path must be joined with the kraftfile directory")
+}
+
+func TestKraftfileToBuildOptsDockerfileWithType(t *testing.T) {
+	rootfsDir := t.TempDir()
+
+	runtime := kraftfile.Runtime("unikraft.io/unikraft.org/base")
+	kf := &kraftfile.Kraftfile{
+		Runtime: &runtime,
+		Rootfs: &kraftfile.FS{
+			Format: kraftfile.FsTypeErofs,
+			Source: &kraftfile.FSSource{
+				Path:       "context",
+				Dockerfile: "MyDockerfile",
+				Type:       kraftfile.SourceTypeDockerfile,
+			},
+		},
+	}
+
+	opts, err := KraftfileToBuildOpts(rootfsDir, kf)
+	require.NoError(t, err)
+	require.Equal(t, rootfsDir+"/context", opts.Rootfs.Path)
+	require.Equal(t, "MyDockerfile", opts.Rootfs.Dockerfile)
+	require.Equal(t, kraftfile.SourceTypeDockerfile, opts.Rootfs.Type)
+	require.Equal(t, kraftfile.FsTypeErofs, opts.Rootfs.Format)
+}
+
+func TestKraftfileToBuildOptsDockerfileWithoutType(t *testing.T) {
+	rootfsDir := t.TempDir()
+
+	runtime := kraftfile.Runtime("unikraft.io/unikraft.org/base")
+	kf := &kraftfile.Kraftfile{
+		Runtime: &runtime,
+		Rootfs: &kraftfile.FS{
+			Format: kraftfile.FsTypeErofs,
+			Source: &kraftfile.FSSource{
+				Path:       "context",
+				Dockerfile: "MyDockerfile",
+			},
+		},
+	}
+
+	opts, err := KraftfileToBuildOpts(rootfsDir, kf)
+	require.NoError(t, err)
+	require.Equal(t, rootfsDir+"/context", opts.Rootfs.Path)
+	require.Equal(t, "MyDockerfile", opts.Rootfs.Dockerfile)
+	require.Equal(t, kraftfile.SourceTypeDockerfile, opts.Rootfs.Type,
+		"type must be inferred as dockerfile when dockerfile field is set")
+	require.Equal(t, kraftfile.FsTypeErofs, opts.Rootfs.Format)
 }
 
 func TestKraftfileToBuildOptsNoRootfs(t *testing.T) {
