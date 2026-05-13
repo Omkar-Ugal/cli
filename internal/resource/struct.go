@@ -8,7 +8,6 @@ package resource
 import (
 	"cmp"
 	"context"
-	"encoding"
 	"fmt"
 	"reflect"
 	"slices"
@@ -101,8 +100,8 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 	}
 
 	var value any
-	if v, ok := v.Interface().(encoding.TextMarshaler); ok {
-		value = v
+	if v, ok := v.Interface().(Valued); ok {
+		value = v.Value()
 	}
 
 	verbosity := FieldVerbosity(0)
@@ -116,6 +115,12 @@ func fieldFromStruct(pf *ParsedField, v reflect.Value) (field *Field, err error)
 		Verbosity: verbosity,
 		Links:     links,
 	}, nil
+}
+
+type Valued interface {
+	// allows marking a type as a scalar, so it can be rendered in a nice
+	// compacted view, instead of as multiple subfields
+	Value() any
 }
 
 func fieldFromValue(pf *ParsedField, v reflect.Value) (*Field, error) {

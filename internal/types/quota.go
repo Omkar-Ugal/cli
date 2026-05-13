@@ -24,6 +24,10 @@ func (u Usage[T]) String() string {
 	return fmt.Sprintf("%v/%v", u.Used, u.Limit)
 }
 
+func (u Usage[T]) Value() any {
+	return u
+}
+
 // Range represents a min/max range for quota limits.
 // It marshals to text as "min...max".
 type Range[T any] struct {
@@ -37,4 +41,8 @@ func (r Range[T]) MarshalText() ([]byte, error) {
 
 func (r Range[T]) String() string {
 	return fmt.Sprintf("%v...%v", r.Min, r.Max)
+}
+
+func (r Range[T]) Value() any {
+	return r
 }

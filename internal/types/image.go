@@ -33,6 +33,10 @@ func (ir ImageRef[T]) MarshalText() ([]byte, error) {
 	return []byte(s), nil
 }
 
+func (ir ImageRef[T]) Value() any {
+	return ir
+}
+
 func (ir *ImageRef[T]) UnmarshalText(text []byte) error {
 	ref, err := images.ParseNormalizedNamed(string(text))
 	if err != nil {
