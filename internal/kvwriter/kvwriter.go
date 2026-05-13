@@ -12,6 +12,7 @@ import (
 	"slices"
 	"unicode"
 
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
 	"github.com/charmbracelet/x/ansi"
 
@@ -135,7 +136,7 @@ func (b *keyValueWriter) flush() error {
 		}
 	}
 
-	color := colorprofile.Detect(b.w, nil) != colorprofile.NoTTY
+	color := lipgloss.Writer.Profile != colorprofile.NoTTY
 
 	maxKeyLen := 0
 	for _, entry := range b.cells {
