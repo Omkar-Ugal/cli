@@ -149,6 +149,7 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 
 	result = field
 	result.Value = nil
+	result.ValueCallback = nil
 	result.Subfields = nil
 
 	for len(specs) > 0 {
@@ -158,10 +159,11 @@ func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Fie
 
 		// check for an exact match
 		if len(target[0]) == 0 {
-			if field.Value != nil {
+			if field.Value != nil || field.ValueCallback != nil {
 				// if we have a value, then include only that, don't include subfields
 				// (we'll go grab those later)
 				result.Value = field.Value
+				result.ValueCallback = field.ValueCallback
 			} else {
 				// if we don't, then recursively include all subfields
 				if !strict && field.Elem != nil {
