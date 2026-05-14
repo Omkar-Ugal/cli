@@ -16,6 +16,7 @@ import (
 	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	goerofs "github.com/unikraft/go-archivefs/erofs"
 	"github.com/unikraft/go-cpio"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/log"
@@ -310,4 +311,123 @@ func assertPlatforms(t *testing.T, imgs []*imagespec.Image, expected []string) {
 		platformsFound = append(platformsFound, platforms.Format(img.Image.Platform))
 	}
 	require.ElementsMatch(t, expected, platformsFound)
+}
+
+func TestBuildCharDeviceErofsIntegration(t *testing.T) {
+	ctx := integrationContext(t)
+	dockerfile := `
+FROM busybox:latest
+RUN mknod /testfile c 220 220
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	opts := BuildOpts{
+		Runtime: "unikraft.io/unikraft.org/base",
+		Rootfs: FSOpts{
+			Format: kraftfile.FsTypeErofs,
+			Type:   kraftfile.SourceTypeDockerfile,
+			Path:   rootfsPath,
+		},
+		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+	}
+
+	imgs := runBuild(t, ctx, opts)
+	require.Len(t, imgs, 1)
+	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+
+	erofsImg := openErofsInitrdImage(t, imgs[0])
+	inodes := walkErofsInodes(t, erofsImg)
+
+	require.Contains(t, inodes, "testfile")
+	ino := inodes["testfile"]
+	require.True(t, ino.IsCharDev(), "testfile should be a character device node")
+	require.Equal(t, uint32(220), ino.GetDevMajor(), "char device major number should be preserved")
+	require.Equal(t, uint32(220), ino.GetDevMinor(), "char device minor number should be preserved")
+}
+
+func TestBuildHiddenFileErofsIntegration(t *testing.T) {
+	ctx := integrationContext(t)
+	dockerfile := `
+FROM scratch
+COPY <<'EOF' /.hidden
+hidden content
+EOF
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	opts := BuildOpts{
+		Runtime: "unikraft.io/unikraft.org/base",
+		Rootfs: FSOpts{
+			Format: kraftfile.FsTypeErofs,
+			Type:   kraftfile.SourceTypeDockerfile,
+			Path:   rootfsPath,
+		},
+		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+	}
+
+	imgs := runBuild(t, ctx, opts)
+	require.Len(t, imgs, 1)
+	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+
+	files := readErofsInitrd(t, imgs[0])
+	require.Contains(t, files, ".hidden", "hidden file must be preserved with its leading dot")
+	require.Equal(t, "hidden content\n", files[".hidden"])
+}
+
+// openErofsInitrdImage opens the initrd from img as an erofs.Image.
+func openErofsInitrdImage(t *testing.T, img *imagespec.Image) *goerofs.Image {
+	t.Helper()
+	require.NotNil(t, img.Initrd)
+
+	ctx := t.Context()
+	rc, _, err := img.Initrd.Open(ctx)
+	require.NoError(t, err)
+	defer rc.Close()
+
+	tmp, err := os.CreateTemp(t.TempDir(), "erofs-*.img")
+	require.NoError(t, err)
+	t.Cleanup(func() { tmp.Close() })
+
+	_, err = io.Copy(tmp, rc)
+	require.NoError(t, err)
+
+	erofsImg, err := goerofs.OpenImage(tmp)
+	require.NoError(t, err)
+
+	return erofsImg
+}
+
+// walkErofsInodes walks inodes in erofsImg and returns a path -> Inode map.
+func walkErofsInodes(t *testing.T, erofsImg *goerofs.Image) map[string]goerofs.Inode {
+	t.Helper()
+	result := make(map[string]goerofs.Inode)
+
+	var walk func(prefix string, nid uint64)
+	walk = func(prefix string, nid uint64) {
+		ino, err := erofsImg.Inode(nid)
+		require.NoError(t, err)
+
+		err = ino.IterDirents(func(name string, _ uint8, childNid uint64) error {
+			if name == "." || name == ".." {
+				return nil
+			}
+
+			path := name
+			if prefix != "" {
+				path = prefix + "/" + name
+			}
+
+			childIno, err := erofsImg.Inode(childNid)
+			if err != nil {
+				return err
+			}
+			result[path] = childIno
+			if childIno.IsDir() {
+				walk(path, childNid)
+			}
+			return nil
+		})
+		require.NoError(t, err)
+	}
+
+	walk("", erofsImg.RootNid())
+	return result
 }
