@@ -27,6 +27,55 @@ import (
 	"unikraft.com/x/kraftfile"
 )
 
+func TestDefaultRootfsFormatNoPlatforms(t *testing.T) {
+	require.Equal(t, kraftfile.FsTypeCpio, DefaultRootfsFormat(nil))
+}
+
+func TestDefaultRootfsFormatAllErofsLibukfs(t *testing.T) {
+	ps := []ocispec.Platform{
+		{Architecture: "x86_64", OS: "fc", OSFeatures: []string{"CONFIG_LIBUKFS_EROFS=y"}},
+		{Architecture: "arm64", OS: "fc", OSFeatures: []string{"CONFIG_LIBUKFS_EROFS=y"}},
+	}
+	require.Equal(t, kraftfile.FsTypeErofs, DefaultRootfsFormat(ps))
+}
+
+func TestDefaultRootfsFormatAllErofsFS(t *testing.T) {
+	ps := []ocispec.Platform{
+		{Architecture: "x86_64", OS: "fc", OSFeatures: []string{"CONFIG_EROFS_FS=y"}},
+	}
+	require.Equal(t, kraftfile.FsTypeErofs, DefaultRootfsFormat(ps))
+}
+
+func TestDefaultRootfsFormatMixedSupport(t *testing.T) {
+	ps := []ocispec.Platform{
+		{Architecture: "x86_64", OS: "fc", OSFeatures: []string{"CONFIG_LIBUKFS_EROFS=y"}},
+		{Architecture: "arm64", OS: "fc", OSFeatures: []string{"CONFIG_OTHER=y"}},
+	}
+	require.Equal(t, kraftfile.FsTypeCpio, DefaultRootfsFormat(ps))
+}
+
+func TestDefaultRootfsFormatNoErofsFeatures(t *testing.T) {
+	ps := []ocispec.Platform{
+		{Architecture: "x86_64", OS: "fc", OSFeatures: []string{"CONFIG_OTHER=y"}},
+	}
+	require.Equal(t, kraftfile.FsTypeCpio, DefaultRootfsFormat(ps))
+}
+
+func TestDefaultRootfsFormatEmptyFeatures(t *testing.T) {
+	ps := []ocispec.Platform{
+		{Architecture: "x86_64", OS: "fc"},
+	}
+	require.Equal(t, kraftfile.FsTypeCpio, DefaultRootfsFormat(ps))
+}
+
+func TestDefaultRootfsFormatMixedErofsKeys(t *testing.T) {
+	ps := []ocispec.Platform{
+		{Architecture: "x86_64", OS: "fc", OSFeatures: []string{"CONFIG_LIBUKFS_EROFS=y"}},
+		{Architecture: "arm64", OS: "fc", OSFeatures: []string{"CONFIG_EROFS_FS=y"}},
+	}
+	require.Equal(t, kraftfile.FsTypeErofs, DefaultRootfsFormat(ps))
+}
+
 func TestBuildSinglePlatformIntegration(t *testing.T) {
 	ctx := integrationContext(t)
 	dockerfile := `
@@ -75,6 +124,34 @@ EOF
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
 	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+}
+
+func TestBuildDefaultErofsFormatBaseCompatIntegration(t *testing.T) {
+	ctx := integrationContext(t)
+	dockerfile := `
+FROM scratch
+
+COPY <<'EOF' /hello.txt
+hello
+EOF
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	opts := BuildOpts{
+		Runtime: "unikraft.io/official/base-compat",
+		Rootfs: FSOpts{
+			Type: kraftfile.SourceTypeDockerfile,
+			Path: rootfsPath,
+		},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
+	}
+
+	imgs := runBuild(t, ctx, opts)
+	require.Len(t, imgs, 1)
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
+
+	files := readErofsInitrd(t, imgs[0])
+	require.Contains(t, files, "hello.txt")
+	require.Equal(t, "hello\n", files["hello.txt"])
 }
 
 func TestBuildAbsoluteSymlinksIntegration(t *testing.T) {
