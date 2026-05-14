@@ -343,7 +343,21 @@ func (r sandboxedEditableResource) Get(ctx context.Context, keys []string) ([]Re
 }
 
 func (r sandboxedEditableResource) Edit(ctx context.Context, key string, fields []Field) error {
-	return r.EditableResource.Edit(ctx, key, fields)
+	if err := r.EditableResource.Edit(ctx, key, fields); err != nil {
+		return err
+	}
+	// re-fetch, since we may have found new strongly linked dependencies (e.g.
+	// by creating a certificate)
+	resources, err := r.EditableResource.Get(ctx, []string{key})
+	if err != nil {
+		return err
+	}
+	for _, res := range resources {
+		if err := r.sandbox.Add(ctx, res); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type sandboxedCreatableResource struct {
