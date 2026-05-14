@@ -30,10 +30,6 @@ func IsZero(v any) bool {
 // type-aware comparison, it falls back to comparing the string representations
 // of the values.
 func Compare(a, b any) int {
-	// Unwrap wrapped values
-	a = unwrap(a)
-	b = unwrap(b)
-
 	// Handle nil cases
 	if a == nil && b == nil {
 		return 0
@@ -148,18 +144,6 @@ func Compare(a, b any) int {
 		bStr = fmt.Sprint(b)
 	}
 	return cmp.Compare(aStr, bStr)
-}
-
-// unwrap recursively unwraps wrapped values.
-func unwrap(v any) any {
-	for {
-		wrapped, ok := v.(Wrapped)
-		if !ok {
-			break
-		}
-		v = wrapped.Unwrap()
-	}
-	return v
 }
 
 // compareReflect attempts to compare values using reflection.

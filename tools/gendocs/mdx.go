@@ -23,7 +23,6 @@ import (
 
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
-	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tablewriter"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
@@ -228,12 +227,6 @@ func printDocsFields(buf *bytes.Buffer, fields []resource.Field) {
 }
 
 func formatType(tp reflect.Type) string {
-	v := reflect.New(tp).Elem()
-	switch vv := v.Interface().(type) {
-	case value.Wrapped:
-		return formatType(reflect.TypeOf(vv.Unwrap()))
-	}
-
 	switch tp.Kind() {
 	case reflect.Pointer:
 		return formatType(tp.Elem())

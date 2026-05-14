@@ -16,19 +16,7 @@ import (
 	"github.com/ettle/strcase"
 )
 
-type Wrapped interface {
-	Unwrap() any
-}
-
 func Format(value any) (string, error) {
-	for {
-		unwrapped, ok := value.(Wrapped)
-		if !ok {
-			break
-		}
-		value = unwrapped.Unwrap()
-	}
-
 	if value == nil {
 		return "", nil
 	}
