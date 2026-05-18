@@ -58,6 +58,8 @@ type command struct {
 	args       []string
 	err        commandErr
 	captureEnv string
+	delay      time.Duration
+	skipOutput bool
 }
 
 type commandErr int
@@ -227,6 +229,9 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 			// get ready :(
 			time.Sleep(500 * time.Millisecond)
 		}
+		if command.delay > 0 {
+			time.Sleep(command.delay)
+		}
 
 		err := cmd.Run()
 		if command.captureEnv != "" {
@@ -262,6 +267,7 @@ func (b *testBuilder) run(t *testing.T, commands []command) {
 			stderr:     stderr.String(),
 			exitCode:   exitCode,
 			captureEnv: command.captureEnv,
+			skipOutput: command.skipOutput,
 		}
 
 		report.cleaners = append(report.cleaners, b.cleaners...)
@@ -317,6 +323,7 @@ type report struct {
 	stderr     string
 	exitCode   int
 	captureEnv string
+	skipOutput bool
 	cleaners   []cleaner
 }
 
@@ -329,7 +336,7 @@ func (report *report) String() string {
 		cmd = report.captureEnv + "=$(" + cmd + ")"
 	}
 	out.WriteString("$ " + cmd + "\n\n")
-	if report.captureEnv == "" {
+	if report.captureEnv == "" && !report.skipOutput {
 		stdout := report.cleanOutput(report.stdout)
 		if len(stdout) > 0 {
 			out.WriteString("stdout:\n" + indent(stdout, "\t") + "\n\n")

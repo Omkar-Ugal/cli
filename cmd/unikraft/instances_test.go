@@ -8,6 +8,7 @@ package main
 import (
 	"regexp"
 	"testing"
+	"time"
 )
 
 func instancesTests(t *testing.T, r *testRunner) {
@@ -437,6 +438,32 @@ func instancesTests(t *testing.T, r *testRunner) {
 				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}},
 
 				{args: []string{unikraftCmd, "instance", "delete", "test-$UNIQ_INST"}},
+			})
+	})
+
+	t.Run("rm", func(t *testing.T) {
+		r.
+			online().
+			withCleaners(instanceCleaners).
+			run(t, []command{
+				// Create a running instance with --rm so it is auto-deleted
+				// when stopped.
+				{args: []string{
+					unikraftCmd, "instance", "create",
+					"--output", "quiet",
+					"--rm",
+					"--set", "name=test-$UNIQ_INST",
+					"--set", "metro=" + metroName,
+					"--set", "image=nginx:latest",
+					"--set", "autostart=true",
+					"--set", "resources.memory=128",
+					"--set", "resources.vcpus=1",
+				}},
+				{args: []string{unikraftCmd, "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-$UNIQ_INST"}},
+				// Stop the instance so delete-on-stop removes it (deletion is async)
+				{args: []string{unikraftCmd, "instance", "stop", "test-$UNIQ_INST"}, skipOutput: true},
+				// Verify the instance no longer exists
+				{args: []string{unikraftCmd, "instance", "inspect", "test-$UNIQ_INST"}, err: errYes, delay: time.Second},
 			})
 	})
 
