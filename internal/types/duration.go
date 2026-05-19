@@ -94,7 +94,11 @@ func (d DurationMS) MarshalJSON() ([]byte, error) {
 }
 
 func (d DurationMS) String() string {
-	return (time.Duration(d) * time.Millisecond).String()
+	dur := time.Duration(d) * time.Millisecond
+	if d >= 1000 {
+		dur = dur.Round(10 * time.Millisecond)
+	}
+	return dur.String()
 }
 
 // DurationUS is a time wrapper that represents a duration in microseconds.
@@ -137,5 +141,12 @@ func (d DurationUS) MarshalJSON() ([]byte, error) {
 }
 
 func (d DurationUS) String() string {
-	return (time.Duration(d) * time.Microsecond).String()
+	dur := time.Duration(d) * time.Microsecond
+	switch {
+	case d >= 1_000_000: // >= 1s: round to 10 milliseconds
+		dur = dur.Round(10 * time.Millisecond)
+	case d >= 1000: // >= 1ms: round to 10 microseconds
+		dur = dur.Round(10 * time.Microsecond)
+	}
+	return dur.String()
 }
