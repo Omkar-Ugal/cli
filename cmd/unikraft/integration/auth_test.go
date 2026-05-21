@@ -9,27 +9,27 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	integ "unikraft.com/cli/internal/integration"
 )
 
 func TestAuth(t *testing.T) {
-	ir := newIntegrationRunner(t)
-
 	t.Run("flow", func(t *testing.T) {
-		r := ir.runner(t, true)
+		r := runner(t, true)
 
-		out := r.cli(t, []string{"unikraft", "login", "--check"})
+		out := r.Run(t, []string{"unikraft", "login", "--check"})
 		assert.Regexp(t, `authentication token found`, out)
 
-		out = r.cli(t, []string{"unikraft", "profile", "list"})
+		out = r.Run(t, []string{"unikraft", "profile", "list"})
 		assert.Regexp(t, `true`, out)
 
-		out = r.cli(t, []string{"unikraft", "metro", "list"})
+		out = r.Run(t, []string{"unikraft", "metro", "list"})
 		assert.Regexp(t, `https?://`, out)
 
-		out = r.cli(t, []string{"unikraft", "logout"})
+		out = r.Run(t, []string{"unikraft", "logout"})
 		assert.Regexp(t, `logout successful`, out)
 
-		r.cli(t, []string{"unikraft", "profile", "list"}, allowFail())
-		r.cli(t, []string{"unikraft", "metro", "list"}, allowFail())
+		r.Run(t, []string{"unikraft", "profile", "list"}, integ.AllowFail())
+		r.Run(t, []string{"unikraft", "metro", "list"}, integ.AllowFail())
 	})
 }

@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Copyright (c) 2025, Unikraft GmbH and The Unikraft CLI Authors.
+// Licensed under the BSD-3-Clause License (the "License").
+// You may not use this file except in compliance with the License.
+
+package integration
+
+import (
+	"bytes"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"sync"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	buildOnce       sync.Once
+	buildBinaryPath string
+	buildBinaryErr  error
+)
+
+// BuildUnikraft builds the unikraft CLI binary once and returns its path.
+// Subsequent calls return the cached path without rebuilding.
+func BuildUnikraft(t *testing.T) string {
+	t.Helper()
+	buildOnce.Do(func() {
+		binaryDir, err := os.MkdirTemp("", "unikraft-cli-test-*")
+		if err != nil {
+			buildBinaryErr = fmt.Errorf("create temp dir: %w", err)
+			return
+		}
+		binaryName := "unikraft"
+		if runtime.GOOS == "windows" {
+			binaryName += ".exe"
+		}
+		binaryPath := filepath.Join(binaryDir, binaryName)
+		cmd := exec.Command("go", "build", "-buildvcs=false", "-o", binaryPath, "unikraft.com/cli/cmd/unikraft")
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		if err := cmd.Run(); err != nil {
+			buildBinaryErr = fmt.Errorf("go build failed\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+			return
+		}
+		buildBinaryPath = binaryPath
+	})
+	require.NoError(t, buildBinaryErr)
+	return buildBinaryPath
+}

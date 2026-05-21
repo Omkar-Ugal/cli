@@ -11,20 +11,18 @@ import (
 )
 
 func TestConfig(t *testing.T) {
-	ir := newIntegrationRunner(t)
-
 	t.Run("get", func(t *testing.T) {
-		r := ir.runner(t, true)
+		r := runner(t, true)
 
-		out := r.cli(t, []string{"unikraft", "config", "get"})
+		out := r.Run(t, []string{"unikraft", "config", "get"})
 		assert.Regexp(t, `profile:\s+\S+`, out)
 		assert.Regexp(t, `token:`, out)
 
-		out = r.cli(t, []string{"unikraft", "config", "get", "-o", "json"})
+		out = r.Run(t, []string{"unikraft", "config", "get", "-o", "json"})
 		assert.Regexp(t, `"token":`, out)
 		assert.Regexp(t, `"profile":`, out)
 
-		out = r.cli(t, []string{"unikraft", "config", "get", "-o", "yaml"})
+		out = r.Run(t, []string{"unikraft", "config", "get", "-o", "yaml"})
 		assert.Regexp(t, `token:`, out)
 		assert.Regexp(t, `profile:`, out)
 	})

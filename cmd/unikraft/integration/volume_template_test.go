@@ -13,38 +13,36 @@ import (
 )
 
 func TestVolumeTemplates(t *testing.T) {
-	ir := newIntegrationRunner(t)
-
 	t.Run("template", func(t *testing.T) {
-		r := ir.runner(t, true)
+		r := runner(t, true)
 		volName := uniq()
 
-		r.cli(t, []string{
+		r.Run(t, []string{
 			"unikraft", "volume", "create",
 			"--output", "quiet",
 			"--set", "name=test-" + volName,
-			"--set", "metro=" + ir.cfg.MetroName,
+			"--set", "metro=" + r.Config.MetroName,
 			"--set", "size=10",
 		})
 
-		out := r.cli(t, []string{
+		out := r.Run(t, []string{
 			"unikraft", "volume", "template", "create", "test-" + volName,
 			"--output", "template={{ .name }}",
 		})
 		templateName := strings.TrimSpace(out)
 
-		out = r.cli(t, []string{"unikraft", "volume", "template", "list"})
+		out = r.Run(t, []string{"unikraft", "volume", "template", "list"})
 		assert.Regexp(t, `NAME`, out)
 
-		out = r.cli(t, []string{"unikraft", "volume", "template", "inspect", templateName})
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", templateName})
 		assert.Regexp(t, `state:\s+template`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
-		r.cli(t, []string{"unikraft", "volume", "template", "edit", templateName, "--set", "tags=env-dev"})
+		r.Run(t, []string{"unikraft", "volume", "template", "edit", templateName, "--set", "tags=env-dev"})
 
-		out = r.cli(t, []string{"unikraft", "volume", "template", "inspect", templateName})
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", templateName})
 		assert.Regexp(t, `state:\s+template`, out)
 
-		r.cli(t, []string{"unikraft", "volume", "template", "delete", templateName})
+		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
 	})
 }

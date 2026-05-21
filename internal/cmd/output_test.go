@@ -7,7 +7,6 @@ package cmd_test
 
 import (
 	"bytes"
-	"context"
 	"strings"
 	"testing"
 	"unicode"
@@ -38,7 +37,7 @@ func sectionHeader(name string) string {
 
 // dumpResource renders a resource using kv, kv-all, table, and debug printers
 // and returns the concatenated output.
-func dumpResource(ctx context.Context, t *testing.T, res resource.Resource) string {
+func dumpResource(t *testing.T, res resource.Resource) string {
 	t.Helper()
 	var output strings.Builder
 
@@ -59,7 +58,7 @@ func dumpResource(ctx context.Context, t *testing.T, res resource.Resource) stri
 		printer := resourcecmd.Printer{Type: s.format}
 
 		var buf bytes.Buffer
-		err := printer.Print(ctx, &buf, s.fieldSpecs, res, res)
+		err := printer.Print(t.Context(), &buf, s.fieldSpecs, res, res)
 		require.NoError(t, err)
 
 		rendered := ansi.Strip(buf.String())
@@ -147,7 +146,7 @@ func instancesOutputTests(t *testing.T) {
 	sample.Stop.ExitCode = &exitCode
 	require.NoError(t, sample.Image.UnmarshalText([]byte("nginx:latest")))
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }
 
 func instanceTemplatesOutputTests(t *testing.T) {
@@ -162,7 +161,7 @@ func instanceTemplatesOutputTests(t *testing.T) {
 	sample.Resources.VCPUs = 1
 	require.NoError(t, sample.Image.UnmarshalText([]byte("nginx:latest")))
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }
 
 func volumesOutputTests(t *testing.T) {
@@ -178,7 +177,7 @@ func volumesOutputTests(t *testing.T) {
 		Persistent:  true,
 	}
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }
 
 func volumeTemplatesOutputTests(t *testing.T) {
@@ -193,7 +192,7 @@ func volumeTemplatesOutputTests(t *testing.T) {
 		Persistent: true,
 	}
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }
 
 func servicesOutputTests(t *testing.T) {
@@ -222,7 +221,7 @@ func servicesOutputTests(t *testing.T) {
 	sample.Limits.Soft = 5
 	sample.Limits.Hard = 50
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }
 
 func certificatesOutputTests(t *testing.T) {
@@ -237,7 +236,7 @@ func certificatesOutputTests(t *testing.T) {
 		State:        types.CertificateState(platform.CertificateStateValid),
 	}
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }
 
 func imagesOutputTests(t *testing.T) {
@@ -276,5 +275,5 @@ func imagesOutputTests(t *testing.T) {
 	require.NoError(t, sample.Ref.UnmarshalText([]byte("nginx:latest")))
 	require.NoError(t, sample.Config.Platform.UnmarshalText([]byte("linux/amd64")))
 
-	integ.Gild[resource.Resource](t.Context(), t, dumpResource, sample)
+	integ.Gild[resource.Resource](t, dumpResource, sample)
 }

@@ -6,7 +6,6 @@
 package integration
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -15,14 +14,14 @@ import (
 
 // Gild runs a callback for each arg, concatenates the outputs, and asserts
 // against the golden file for the current test. Only use offline callbacks.
-func Gild[Arg any](ctx context.Context, t *testing.T, callback func(context.Context, *testing.T, Arg) string, args ...Arg) {
+func Gild[Arg any](t *testing.T, callback func(*testing.T, Arg) string, args ...Arg) {
 	t.Helper()
 	var output strings.Builder
 	for i, arg := range args {
 		if i > 0 {
 			output.WriteString("\n")
 		}
-		output.WriteString(callback(ctx, t, arg))
+		output.WriteString(callback(t, arg))
 	}
 	golden.Assert(t, output.String(), t.Name())
 }

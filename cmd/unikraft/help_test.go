@@ -6,16 +6,23 @@
 package main
 
 import (
+	"errors"
+	"os/exec"
+	"strconv"
+	"strings"
 	"testing"
+	"unicode"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	integ "unikraft.com/cli/internal/integration"
 )
 
 // TestHelp runs --help tests for all resource types.
 func TestHelp(t *testing.T) {
-	unikraftPath := integ.BuildUnikraftBinary(t)
+	unikraftPath := integ.BuildUnikraft(t)
 	t.Parallel()
 
 	run := func(name string, fn func(*testing.T, string)) {
@@ -42,9 +49,9 @@ func TestHelp(t *testing.T) {
 // environment-specific values (Go version, OS/arch, build time).
 func TestVersion(t *testing.T) {
 	t.Parallel()
-	unikraftPath := integ.BuildUnikraftBinary(t)
+	unikraftPath := integ.BuildUnikraft(t)
 	env := integ.NewTestEnv(t, unikraftPath)
-	out := env.CLI(t.Context(), t, []string{"unikraft", "version"})
+	out := env.Run(t, []string{"unikraft", "version"})
 
 	assert.Regexp(t, `version:\s+\S+`, out)
 	assert.Regexp(t, `commit:\s+\S+`, out)
@@ -58,7 +65,7 @@ func TestVersion(t *testing.T) {
 // Deterministic and offline.
 func generalHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft"},
 		[]string{"unikraft", "--help"},
 		[]string{"unikraft", "invalid"},
@@ -70,7 +77,7 @@ func generalHelpTests(t *testing.T, unikraftPath string) {
 
 func authHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "login", "--help"},
 		[]string{"unikraft", "logout", "--help"},
 		[]string{"unikraft", "profile", "--help"},
@@ -85,7 +92,7 @@ func authHelpTests(t *testing.T, unikraftPath string) {
 
 func instancesHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "instance", "--help"},
 		[]string{"unikraft", "instance", "get", "--help"},
 		[]string{"unikraft", "instance", "list", "--help"},
@@ -109,7 +116,7 @@ func instancesHelpTests(t *testing.T, unikraftPath string) {
 
 func volumesHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "volume", "--help"},
 		[]string{"unikraft", "volume", "get", "--help"},
 		[]string{"unikraft", "volume", "list", "--help"},
@@ -130,7 +137,7 @@ func volumesHelpTests(t *testing.T, unikraftPath string) {
 
 func servicesHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "service", "--help"},
 		[]string{"unikraft", "service", "get", "--help"},
 		[]string{"unikraft", "service", "list", "--help"},
@@ -143,7 +150,7 @@ func servicesHelpTests(t *testing.T, unikraftPath string) {
 
 func certificatesHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "certificate", "--help"},
 		[]string{"unikraft", "certificate", "get", "--help"},
 		[]string{"unikraft", "certificate", "list", "--help"},
@@ -155,7 +162,7 @@ func certificatesHelpTests(t *testing.T, unikraftPath string) {
 
 func imagesHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "image", "--help"},
 		[]string{"unikraft", "image", "get", "--help"},
 		[]string{"unikraft", "image", "list", "--help"},
@@ -165,7 +172,7 @@ func imagesHelpTests(t *testing.T, unikraftPath string) {
 
 func resourceHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "resource", "--help"},
 		[]string{"unikraft", "resource", "delete", "--help"},
 	)
@@ -173,15 +180,65 @@ func resourceHelpTests(t *testing.T, unikraftPath string) {
 
 func buildHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "build", "--help"},
 	)
 }
 
 func configHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
-	integ.Gild(t.Context(), t, r.CLI,
+	integ.Gild(t, cli(r),
 		[]string{"unikraft", "config", "--help"},
 		[]string{"unikraft", "config", "get", "--help"},
 	)
+}
+
+// cli returns a callback that runs a CLI command and formats its output for
+// golden comparison. It tolerates command failures and records the exit code.
+func cli(env *integ.TestEnv) func(*testing.T, []string) string {
+	return func(t *testing.T, args []string) string {
+		t.Helper()
+		out, err := env.RunRaw(t, args)
+
+		var exitCode int
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		} else if err != nil {
+			require.NoError(t, err, "command %q failed: %s", strings.Join(args, " "), out)
+		}
+
+		formatted := make([]string, 0, len(args))
+		for _, arg := range args {
+			formatted = append(formatted, quoteArg(arg))
+		}
+
+		var result strings.Builder
+		result.WriteString("$ " + strings.Join(formatted, " ") + "\n")
+		if normalized := normalizeOutput(out); normalized != "" {
+			result.WriteString("\n" + normalized + "\n")
+		}
+		if exitCode != 0 {
+			result.WriteString("\nexit code: " + strconv.Itoa(exitCode) + "\n")
+		}
+		return result.String()
+	}
+}
+
+func quoteArg(arg string) string {
+	if arg == "" {
+		return "''"
+	}
+	if strings.ContainsAny(arg, " \t\n{}()") {
+		return "'" + strings.ReplaceAll(arg, "'", "'\\''") + "'"
+	}
+	return arg
+}
+
+func normalizeOutput(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	s = ansi.Strip(s)
+	s = strings.TrimRightFunc(s, unicode.IsSpace)
+	return s
 }

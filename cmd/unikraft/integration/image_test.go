@@ -13,33 +13,29 @@ import (
 )
 
 func TestImages(t *testing.T) {
-	ir := newIntegrationRunner(t)
-
 	t.Run("inspect", func(t *testing.T) {
-		r := ir.runner(t, true)
-		out := r.cli(t, []string{"unikraft", "image", "inspect", "nginx:latest"})
-		assert.Regexp(t, `nginx`, out)
+		r := runner(t, true)
+		out := r.Run(t, []string{"unikraft", "image", "inspect", "nginx:latest"})
+		assert.Regexp(t, `ref:\s+nginx`, out)
 		assert.Regexp(t, `config:`, out)
 		assert.Regexp(t, `kernel:`, out)
+		assert.Regexp(t, `kernel.dbg:`, out)
 	})
 
 	t.Run("copy-inspect-delete", func(t *testing.T) {
-		if ir.cfg == nil {
-			t.Skip("online test requires config, but no config found")
-		}
+		r := runner(t, true)
 
 		imageTag := uniq()
-		imageName := ir.cfg.Profile.Organization + "/nginx-copy:" + imageTag
-		imageFull := fmt.Sprintf("%s/%s", ir.cfg.Metro.Index().Host, imageName)
+		imageName := r.Config.Profile.Organization + "/nginx-copy:" + imageTag
+		imageFull := fmt.Sprintf("%s/%s", r.Config.Metro.Index().Host, imageName)
 
-		r := ir.runner(t, true)
+		r.Run(t, []string{"unikraft", "image", "copy", "nginx:latest", imageFull})
 
-		r.cli(t, []string{"unikraft", "image", "copy", "nginx:latest", imageFull})
-
-		out := r.cli(t, []string{"unikraft", "image", "inspect", imageFull})
-		assert.Regexp(t, `nginx`, out)
+		out := r.Run(t, []string{"unikraft", "image", "inspect", imageFull})
+		assert.Regexp(t, `ref:\s+.*`+imageName, out)
 		assert.Regexp(t, `config:`, out)
 		assert.Regexp(t, `kernel:`, out)
-		r.cli(t, []string{"unikraft", "image", "delete", imageFull})
+		assert.Regexp(t, `kernel.dbg:`, out)
+		r.Run(t, []string{"unikraft", "image", "delete", imageFull})
 	})
 }
