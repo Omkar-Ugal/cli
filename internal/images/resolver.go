@@ -74,7 +74,12 @@ func resolverOptions(profile *config.Profile, insecureRegistries []string, allIn
 				return username, password, nil
 			}
 
-			auth, err := dockerConfig.GetAuthConfig(hostname)
+			// see https://github.com/moby/buildkit/blob/v0.29.0/session/auth/authprovider/authconfigprovider.go#L35-L38
+			authKey := hostname
+			if authKey == "registry-1.docker.io" {
+				authKey = "https://index.docker.io/v1/"
+			}
+			auth, err := dockerConfig.GetAuthConfig(authKey)
 			if err != nil {
 				return "", "", err
 			}
