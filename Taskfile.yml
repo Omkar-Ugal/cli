@@ -65,19 +65,24 @@ tasks:
         CLI_ARGS: "-race"
 
   integration:
-    desc: Run integration tests. Use TEST=<pattern> to filter (e.g., TEST=help).
+    desc: Run integration tests. Use TEST=<pattern> to filter (e.g., TEST=Instances).
     silent: true
     cmds:
     - task: go:test
       vars:
         go_tags: "integration"
-        package: ./cmd/unikraft ./internal/builder
-        CLI_ARGS: '{{if .TEST}}-run "TestGolden/{{.TEST}}"{{end}}'
+        package: ./cmd/unikraft/integration ./internal/builder
+        CLI_ARGS: '{{if .TEST}}-run "{{.TEST}}"{{end}}'
 
-  integration-update:
-    desc: Update integration test golden files. Use TEST=<pattern> to filter (e.g., TEST=help).
+  golden:
+    desc: Run offline golden tests.
     cmd: >-
-      {{.go_bin}} test -v ./cmd/unikraft -tags integration --update {{if .TEST}}-run "TestGolden/{{.TEST}}"{{end}}
+      {{.go_bin}} test -v ./cmd/unikraft ./internal/cmd -run "TestHelp|TestOutput"
+
+  golden-update:
+    desc: Update golden files for offline tests.
+    cmd: >-
+      {{.go_bin}} test -v ./cmd/unikraft ./internal/cmd --update -run "TestHelp|TestOutput"
 
   docs:
     desc: Generate all documentation.

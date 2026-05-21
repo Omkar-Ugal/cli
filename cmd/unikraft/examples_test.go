@@ -61,7 +61,7 @@ func TestExamples(t *testing.T) {
 					args, err := exampleFields(command)
 					require.NoError(t, err)
 					require.NotEmpty(t, args, "no args parsed for example")
-					if args[0] != unikraftCmd {
+					if args[0] != "unikraft" {
 						continue
 					}
 					args = args[1:]

@@ -159,11 +159,7 @@ type Instance struct {
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
 	Roms    []*InstanceRom    `mirror:"instance.roms" field:",embed" create:"set" edit:"set,add,del"`
 
-	Networks []struct {
-		UUID      string `mirror:"uuid" field:",long"`
-		PrivateIP string `mirror:"private_ip" field:",long"`
-		MAC       string `mirror:"mac" field:",long"`
-	} `mirror:"instance.network_interfaces"`
+	Networks []InstanceNetwork `mirror:"instance.network_interfaces"`
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
@@ -205,6 +201,12 @@ type Instance struct {
 	Profile  *config.Profile   `field:"-" json:"profile"`
 
 	key multimetro.Key
+}
+
+type InstanceNetwork struct {
+	UUID      string `mirror:"uuid" field:",long"`
+	PrivateIP string `mirror:"private_ip" field:",long"`
+	MAC       string `mirror:"mac" field:",long"`
 }
 
 type InstanceService struct {
