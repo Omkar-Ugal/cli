@@ -45,6 +45,7 @@ type UnikraftCLI struct {
 	TUI   TUICmd   `cmd:"" group:"cmd-commands" help:"Browse resources in a TUI."`
 
 	Metros       MetrosCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud metros." aliases:"metro,metros" set:"name=metro" set:"names=metros"`
+	Quotas       MetroQuotasCmd  `cmd:"" group:"cmd-resources" help:"Display quota usage for metros." aliases:"quota"`
 	Instances    InstancesCmd    `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms" set:"name=instance" set:"names=instances"`
 	Volumes      VolumesCmd      `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols" set:"name=volume" set:"names=volumes"`
 	Services     ServicesCmd     `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs" set:"name=service" set:"names=services"`

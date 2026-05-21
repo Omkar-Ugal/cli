@@ -88,6 +88,7 @@ func authHelpTests(t *testing.T, unikraftPath string) {
 		[]string{"unikraft", "metro", "--help"},
 		[]string{"unikraft", "metro", "get", "--help"},
 		[]string{"unikraft", "metro", "list", "--help"},
+		[]string{"unikraft", "quotas", "--help"},
 	)
 }
 
