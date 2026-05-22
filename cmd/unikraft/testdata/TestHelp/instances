@@ -421,7 +421,7 @@ Create flags:
           [examples: example.com, api.example.com]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
-            policy: on | off
+            policy: on | idle | off
             cooldown-time: cooldown in ms before scaling to zero
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
@@ -554,7 +554,7 @@ Edit flags:
           [examples: image=myuser/my-rom:latest,at=/rom0,name=my-rom, dir=./mydata,at=/rom]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
-            policy: on | off
+            policy: on | idle | off
             cooldown-time: cooldown in ms before scaling to zero
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
