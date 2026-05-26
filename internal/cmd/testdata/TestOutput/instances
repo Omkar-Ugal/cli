@@ -25,6 +25,10 @@ roms:
 - name:          my-rom
   image:         myuser/my-rom:latest
   at:            /rom
+networks:
+- uuid:          net-uuid-1234
+  private-ip:    192.168.1.10
+  mac:           aa:bb:cc:dd:ee:ff
 scale-to-zero:
   policy:        on
   stateful:      true
@@ -66,7 +70,10 @@ roms:
 - name:          my-rom
   image:         myuser/my-rom:latest
   at:            /rom
-networks:        [uuid=net-uuid-1234, private-ip=192.168.1.10, mac=aa:bb:cc:dd:ee:ff]
+networks:
+- uuid:          net-uuid-1234
+  private-ip:    192.168.1.10
+  mac:           aa:bb:cc:dd:ee:ff
 timestamps:
   created:       never
   started:       never
@@ -519,14 +526,51 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
   },
   {
     "name": "networks",
-    "value": [
+    "subfields": [
       {
-        "UUID": "net-uuid-1234",
-        "PrivateIP": "192.168.1.10",
-        "MAC": "aa:bb:cc:dd:ee:ff"
+        "name": "0",
+        "subfields": [
+          {
+            "name": "uuid",
+            "value": "net-uuid-1234",
+            "verbosity": "long"
+          },
+          {
+            "name": "private-ip",
+            "value": "192.168.1.10",
+            "verbosity": "long"
+          },
+          {
+            "name": "mac",
+            "value": "aa:bb:cc:dd:ee:ff",
+            "verbosity": "long"
+          }
+        ],
+        "verbosity": "long"
       }
     ],
-    "verbosity": "hidden"
+    "elem": {
+      "name": "",
+      "subfields": [
+        {
+          "name": "uuid",
+          "value": "",
+          "verbosity": "long"
+        },
+        {
+          "name": "private-ip",
+          "value": "",
+          "verbosity": "long"
+        },
+        {
+          "name": "mac",
+          "value": "",
+          "verbosity": "long"
+        }
+      ],
+      "verbosity": "long"
+    },
+    "verbosity": "long"
   },
   {
     "name": "timestamps",

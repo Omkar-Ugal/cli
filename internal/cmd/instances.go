@@ -159,7 +159,7 @@ type Instance struct {
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set"`
 	Roms    []*InstanceRom    `mirror:"instance.roms" field:",embed" create:"set" edit:"set,add,del"`
 
-	Networks []InstanceNetwork `mirror:"instance.network_interfaces"`
+	Networks []InstanceNetwork `mirror:"instance.network_interfaces" field:",embed"`
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
