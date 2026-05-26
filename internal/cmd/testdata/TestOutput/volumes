@@ -7,6 +7,7 @@ size:         50MiB
 filesystem:   ext4
 quota-policy: hard
 persistent:   true
+access-mode:  rwo
 
 ==================================== kv-all ====================================
 metro:        fra
@@ -18,6 +19,7 @@ size:         50MiB
 filesystem:   ext4
 quota-policy: hard
 persistent:   true
+access-mode:  rwo
 timestamps:
   created:    never
 attached-to:
@@ -104,6 +106,14 @@ fra    my-volume  available  50MiB  never
     "name": "persistent",
     "value": true,
     "verbosity": "long"
+  },
+  {
+    "name": "access-mode",
+    "value": "rwo",
+    "verbosity": "long",
+    "create": {
+      "set": "rwo"
+    }
   },
   {
     "name": "timestamps",
