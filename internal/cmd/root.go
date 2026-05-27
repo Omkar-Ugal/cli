@@ -15,6 +15,8 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/alecthomas/kong"
 	ctrdlog "github.com/containerd/log"
@@ -107,7 +109,8 @@ type globalFlags struct {
 
 	Profile string `group:"flag-global" name:"profile" env:"UNIKRAFT_PROFILE" help:"Set the current profile." placeholder:"name"`
 
-	Telemetry bool `group:"flag-global" name:"telemetry" env:"UNIKRAFT_TELEMETRY" help:"Toggle anonymous usage analytics." default:"true" negatable:""`
+	Telemetry bool          `group:"flag-global" name:"telemetry" env:"UNIKRAFT_TELEMETRY" help:"Toggle anonymous usage analytics." default:"true" negatable:""`
+	Timeout   time.Duration `group:"flag-global" name:"timeout" env:"UNIKRAFT_TIMEOUT" help:"Set a deadline for the command (e.g. 30s, 5m, 1h)." placeholder:"duration" optional:""`
 }
 
 func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context.Context, *kong.Context, *UnikraftCLI, func() error, error) {
@@ -209,10 +212,16 @@ func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context
 	ctx = config.WithConfig(ctx, cfg)
 	kctx.Bind(cfg)
 
+	cancelTimeout := func() {}
+	if cli.Timeout > 0 {
+		ctx, cancelTimeout = newTimedOutContext(ctx, cli.Timeout)
+	}
+
 	kctx.BindTo(ctx, (*context.Context)(nil))
 
 	sandbox, err := resource.LoadSandboxFromEnv(SandboxedResources...)
 	if err != nil {
+		cancelTimeout()
 		return ctx, nil, nil, nil, jujuerrors.Annotate(err, "loading sandbox from environment")
 	}
 	if sandbox != nil {
@@ -227,6 +236,7 @@ func NewRootCmd(ctx context.Context, args []string, stdio config.Stdio) (context
 	kctx.Bind(kctx)
 
 	cleanup := func() error {
+		cancelTimeout()
 		if err := sandbox.Save(); err != nil {
 			return jujuerrors.Annotate(err, "saving sandbox")
 		}
@@ -361,6 +371,75 @@ var SandboxedResources = []resource.Resource{
 	VolumeTemplate{},
 	ServiceGroup{},
 	Certificate{},
+}
+
+type timedOutContext struct {
+	context.Context // parent
+	done            chan struct{}
+	mu              sync.Mutex
+	ctxErr          error
+	deadline        time.Time
+}
+
+func (c *timedOutContext) Done() <-chan struct{} { return c.done }
+
+func (c *timedOutContext) Err() error {
+	select {
+	case <-c.done:
+	default:
+		return nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.ctxErr
+}
+
+func (c *timedOutContext) Deadline() (time.Time, bool) {
+	return c.deadline, true
+}
+
+func newTimedOutContext(parent context.Context, timeout time.Duration) (context.Context, func()) {
+	c := &timedOutContext{
+		Context:  parent,
+		done:     make(chan struct{}),
+		deadline: time.Now().Add(timeout),
+	}
+
+	stopCh := make(chan struct{}, 1)
+
+	var (
+		once     sync.Once
+		stopOnce sync.Once
+	)
+
+	closeWithErr := func(err error) {
+		once.Do(func() {
+			c.mu.Lock()
+			c.ctxErr = err
+			c.mu.Unlock()
+			close(c.done)
+		})
+	}
+
+	timer := time.NewTimer(timeout)
+	go func() {
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			closeWithErr(fmt.Errorf("timed out"))
+		case <-parent.Done():
+			closeWithErr(parent.Err())
+		case <-stopCh:
+			// cleanup canceled
+		}
+	}()
+
+	stopFn := func() {
+		once.Do(func() {})
+		stopOnce.Do(func() { stopCh <- struct{}{} }) // signal goroutine to exit
+	}
+
+	return c, stopFn
 }
 
 type staticKey string

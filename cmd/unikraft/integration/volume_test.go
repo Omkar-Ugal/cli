@@ -214,7 +214,7 @@ func TestVolumes(t *testing.T) {
 			})
 			fqdn := strings.TrimSpace(out)
 
-			r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+			r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==running", "test-" + instName})
 
 			body := integ.HTTPGet(t, "https://"+fqdn)
 			assert.Contains(t, body, "hello from volume import")

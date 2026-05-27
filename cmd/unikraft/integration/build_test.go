@@ -73,7 +73,7 @@ roms:
 			r.Run(t, []string{"unikraft", "build", "base", "--output", baseImage}, integ.WithWorkDir(dir))
 			r.Run(t, []string{"unikraft", "build", "rom", "--output", romImage}, integ.WithWorkDir(dir))
 			r.Run(t, []string{"unikraft", "run", "--name", "test-" + instName, "--metro", r.Config.MetroName, "--output", "quiet", "--image", baseImage, "--rom", romFlag})
-			r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-" + instName})
+			r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
 
 			out := r.Run(t, []string{"unikraft", "instance", "logs", "test-" + instName})
 			assert.Regexp(t, `Hello from ROM!`, out)
@@ -109,7 +109,7 @@ cmd: ["cat", "/rom/hello.txt"]
 
 		r.Run(t, []string{"unikraft", "build", "base", "--output", baseImage}, integ.WithWorkDir(dir))
 		r.Run(t, []string{"unikraft", "run", "--name", "test-" + instName, "--metro", r.Config.MetroName, "--output", "quiet", "--image", baseImage, "--rom", "dir=romdata,at=/rom"}, integ.WithWorkDir(dir))
-		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
 
 		out := r.Run(t, []string{"unikraft", "instance", "logs", "test-" + instName})
 		assert.Regexp(t, `Hello from ROM!`, out)
@@ -172,7 +172,7 @@ cmd: ["sh", "/entrypoint.sh"]
 
 						r.Run(t, []string{"unikraft", "image", "ls", image, "-okv"})
 						r.Run(t, []string{"unikraft", "run", "--name", "test-" + instName, "--metro", r.Config.MetroName, "--output", "quiet", "--image", image})
-						r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-" + instName})
+						r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
 
 						out = r.Run(t, []string{"unikraft", "instance", "logs", "test-" + instName})
 						assert.Regexp(t, `UNIKRAFT_E2E_OK`, out)
