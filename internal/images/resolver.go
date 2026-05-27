@@ -65,6 +65,7 @@ func resolverOptions(profile *config.Profile, insecureRegistries []string, allIn
 
 	dockerConfig := dockerconfig.LoadDefaultConfigFile(os.Stderr)
 	opts := []docker.RegistryOpt{
+		docker.WithClient(httpclient.DefaultHTTPClient),
 		docker.WithAuthorizer(docker.NewDockerAuthorizer(docker.WithAuthCreds(func(hostname string) (string, string, error) {
 			username, password, err := hostCreds(profile, hostname)
 			if err != nil {
