@@ -170,6 +170,11 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 		} else {
 			opts.Rootfs.Format = expected[opts.Rootfs.Type]
 		}
+		if opts.Rootfs.Type == kraftfile.SourceTypeCpio && !gocpio.IsValidPath(opts.Rootfs.Path) ||
+			opts.Rootfs.Type == kraftfile.SourceTypeErofs && !goerofs.IsValidPath(opts.Rootfs.Path) {
+			return nil, fmt.Errorf("malformed rootfs %s file %q", opts.Rootfs.Type, opts.Rootfs.Path)
+		}
+
 		return buildRootfsPackaged(ctx, opts)
 	case kraftfile.SourceTypeDirectory:
 		return buildRootfsDirectory(ctx, opts)
