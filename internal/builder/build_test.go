@@ -88,18 +88,18 @@ EOF
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 	}
 
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
-	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
 }
 
 func TestBuildSinglePlatformErofsIntegration(t *testing.T) {
@@ -113,18 +113,18 @@ EOF
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeErofs,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 	}
 
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
-	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
 }
 
 func TestBuildDefaultErofsFormatBaseCompatIntegration(t *testing.T) {
@@ -170,18 +170,18 @@ RUN ln -s /etc/passwd /another-test-link
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 	}
 
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
-	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
 
 	// Inspect the CPIO archive to verify symlink targets
 	initrd := imgs[0].Initrd
@@ -271,18 +271,18 @@ RUN --mount=type=secret,id=api_key cat /run/secrets/api_key | grep -q s3cr3t
 	require.NoError(t, err)
 
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
 		Secrets:  secrets,
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 	}
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
-	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
 }
 
 func TestBuildCmdEnvLabelsIntegration(t *testing.T) {
@@ -295,13 +295,13 @@ CMD ["/dockerfile-cmd"]
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeCpio,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 		Cmd:      []string{"/unikraft-cmd", "--from-opts"},
 		Env: kraftfile.Map{
 			{Key: "OPTS_ENV", Value: "from-opts"},
@@ -399,18 +399,18 @@ RUN mknod /testfile c 220 220
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeErofs,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 	}
 
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
-	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
 
 	erofsImg := openErofsInitrdImage(t, imgs[0])
 	inodes := walkErofsInodes(t, erofsImg)
@@ -432,22 +432,54 @@ EOF
 `
 	rootfsPath := writeDockerfile(t, dockerfile)
 	opts := BuildOpts{
-		Runtime: "unikraft.io/unikraft.org/base",
+		Runtime: "unikraft.io/official/base-compat",
 		Rootfs: FSOpts{
 			Format: kraftfile.FsTypeErofs,
 			Type:   kraftfile.SourceTypeDockerfile,
 			Path:   rootfsPath,
 		},
-		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
 	}
 
 	imgs := runBuild(t, ctx, opts)
 	require.Len(t, imgs, 1)
-	assertPlatforms(t, imgs, []string{"fc/x86_64"})
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
 
 	files := readErofsInitrd(t, imgs[0])
 	require.Contains(t, files, ".hidden", "hidden file must be preserved with its leading dot")
 	require.Equal(t, "hidden content\n", files[".hidden"])
+}
+
+func TestBuildCustomDockerfileNameViaPathIntegration(t *testing.T) {
+	ctx := integrationContext(t)
+	dockerfile := `
+FROM scratch
+
+COPY <<'EOF' /hello.txt
+hello
+EOF
+`
+	dir := t.TempDir()
+	dockerfilePath := filepath.Join(dir, "MyDockerfile")
+	require.NoError(t, os.WriteFile(dockerfilePath, []byte(dockerfile), 0o644))
+
+	opts := BuildOpts{
+		Runtime: "unikraft.io/official/base-compat",
+		Rootfs: FSOpts{
+			Format: kraftfile.FsTypeErofs,
+			Type:   kraftfile.SourceTypeDockerfile,
+			Path:   dockerfilePath,
+		},
+		Platform: []ocispec.Platform{{OS: "kraftcloud", Architecture: "x86_64"}},
+	}
+
+	imgs := runBuild(t, ctx, opts)
+	require.Len(t, imgs, 1)
+	assertPlatforms(t, imgs, []string{"kraftcloud/x86_64"})
+
+	files := readErofsInitrd(t, imgs[0])
+	require.Contains(t, files, "hello.txt")
+	require.Equal(t, "hello\n", files["hello.txt"])
 }
 
 // openErofsInitrdImage opens the initrd from img as an erofs.Image.

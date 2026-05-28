@@ -171,22 +171,31 @@ func BuildRootfs(ctx context.Context, opts BuildOpts) (_ []*imagespec.Image, rer
 		} else {
 			opts.Rootfs.Format = expected[opts.Rootfs.Type]
 		}
+		if opts.Rootfs.Type == kraftfile.SourceTypeCpio && !gocpio.IsValidPath(opts.Rootfs.Path) ||
+			opts.Rootfs.Type == kraftfile.SourceTypeErofs && !goerofs.IsValidPath(opts.Rootfs.Path) {
+			return nil, fmt.Errorf("malformed rootfs %s file %q", opts.Rootfs.Type, opts.Rootfs.Path)
+		}
+
 		return buildRootfsPackaged(ctx, opts)
 	case kraftfile.SourceTypeDirectory:
-		opts.Rootfs.Format = cmp.Or(opts.Rootfs.Format, kraftfile.FsTypeCpio)
 		return buildRootfsDirectory(ctx, opts)
 	case kraftfile.SourceTypeTarball:
-		opts.Rootfs.Format = cmp.Or(opts.Rootfs.Format, kraftfile.FsTypeCpio)
 		return buildRootfsTarball(ctx, opts)
 	case kraftfile.SourceTypeDockerfile:
-		opts.Rootfs.Format = cmp.Or(opts.Rootfs.Format, kraftfile.FsTypeCpio)
-		if f, err := os.Stat(opts.Rootfs.Path); err != nil {
+		if _, err := os.Stat(opts.Rootfs.Path); err != nil {
 			if os.IsNotExist(err) {
-				return nil, fmt.Errorf("dockerfile does not exist")
+				return nil, fmt.Errorf("dockerfile context does not exist")
 			}
-			return nil, fmt.Errorf("checking dockerfile path %q: %w", opts.Rootfs.Path, err)
-		} else if !f.IsDir() {
-			opts.Rootfs.Path = filepath.Dir(opts.Rootfs.Path)
+			return nil, fmt.Errorf("checking dockerfile context path %q: %w", opts.Rootfs.Path, err)
+		}
+		if opts.Rootfs.Dockerfile != "" {
+			dockerfilePath := filepath.Join(opts.Rootfs.Path, opts.Rootfs.Dockerfile)
+			if _, err := os.Stat(dockerfilePath); err != nil {
+				if os.IsNotExist(err) {
+					return nil, fmt.Errorf("dockerfile %q does not exist in context %q", opts.Rootfs.Dockerfile, opts.Rootfs.Path)
+				}
+				return nil, fmt.Errorf("checking dockerfile path %q: %w", dockerfilePath, err)
+			}
 		}
 		return buildRootfsDockerfile(ctx, opts)
 	default:
@@ -525,8 +534,15 @@ func applyBuildOpts(attrs map[string]string, localDirs map[string]string, sessio
 		attrs["platform"] = strings.Join(ps, ",")
 	}
 
-	localDirs["context"] = opts.Rootfs.Path
-	localDirs["dockerfile"] = opts.Rootfs.Path
+	if opts.Rootfs.Dockerfile != "" {
+		localDirs["context"] = opts.Rootfs.Path
+		localDirs["dockerfile"] = filepath.Join(opts.Rootfs.Path, filepath.Dir(opts.Rootfs.Dockerfile))
+		attrs["filename"] = filepath.Base(opts.Rootfs.Dockerfile)
+	} else {
+		localDirs["context"] = filepath.Dir(opts.Rootfs.Path)
+		localDirs["dockerfile"] = filepath.Dir(opts.Rootfs.Path)
+		attrs["filename"] = filepath.Base(opts.Rootfs.Path)
+	}
 	if opts.Target != "" {
 		attrs["target"] = opts.Target
 	}
