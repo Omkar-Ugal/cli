@@ -140,6 +140,8 @@ func instancesOutputTests(t *testing.T) {
 	sample.Restart.Policy = "always"
 	sample.Restart.StartCount = 3
 	sample.Restart.RestartCount = 1
+	schedPriority := platform.SchedPriorityHigh
+	sample.SchedPriority = &schedPriority
 	sample.Stop.Reason = "crashed"
 	sample.Stop.Origin = "kernel"
 	exitCode := uint32(1)
