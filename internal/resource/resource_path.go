@@ -251,13 +251,15 @@ func PruneFields(field Field) Field {
 }
 
 func mergeElem(field Field) Field {
-	if field.Elem != nil {
-		elem := mergeElem(*field.Elem)
-		elem.Name = "*"
-		field.Elem = nil
-		field.Subfields = append(field.Subfields, elem)
-	}
 	field.Subfields = slices.Clone(field.Subfields)
+	if field.Elem != nil {
+		if len(field.Subfields) == 0 {
+			elem := mergeElem(*field.Elem)
+			elem.Name = "*"
+			field.Subfields = append(field.Subfields, elem)
+		}
+		field.Elem = nil
+	}
 	for i := range field.Subfields {
 		field.Subfields[i] = mergeElem(field.Subfields[i])
 	}
