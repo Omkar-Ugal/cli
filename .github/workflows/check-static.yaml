@@ -53,18 +53,7 @@ jobs:
         restore-keys: |
           ${{ github.job }}-${{ runner.os }}-go-
 
-    - name: Check that go.mod is tidy
+    - name: Run checks
+      shell: bash
       run: |
-        go mod tidy
-        git diff --exit-code -- go.sum go.mod
-
-    - name: Golang CI Lint
-      uses: golangci/golangci-lint-action@v9
-      with:
-        version: latest
-        args: --timeout=5m
-        skip-cache: true
-
-    - name: Check licenses
-      run: |
-        task --yes license
+          task go:ci/check
