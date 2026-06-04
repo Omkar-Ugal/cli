@@ -61,7 +61,7 @@ Examples:
   unikraft instances list
 
   # Build and publish an image from a Kraftfile
-  unikraft build . --output my-org/my-app:latest
+  unikraft image build . --output my-org/my-app:latest
 
   # Deploy a new instance from an image
   unikraft run --metro=sfo --image=nginx:latest --autostart -p 443:8080/http+tls
@@ -159,7 +159,7 @@ Examples:
   unikraft instances list
 
   # Build and publish an image from a Kraftfile
-  unikraft build . --output my-org/my-app:latest
+  unikraft image build . --output my-org/my-app:latest
 
   # Deploy a new instance from an image
   unikraft run --metro=sfo --image=nginx:latest --autostart -p 443:8080/http+tls
@@ -259,7 +259,7 @@ Examples:
   unikraft instances list
 
   # Build and publish an image from a Kraftfile
-  unikraft build . --output my-org/my-app:latest
+  unikraft image build . --output my-org/my-app:latest
 
   # Deploy a new instance from an image
   unikraft run --metro=sfo --image=nginx:latest --autostart -p 443:8080/http+tls
@@ -356,7 +356,7 @@ Examples:
   unikraft instances list
 
   # Build and publish an image from a Kraftfile
-  unikraft build . --output my-org/my-app:latest
+  unikraft image build . --output my-org/my-app:latest
 
   # Deploy a new instance from an image
   unikraft run --metro=sfo --image=nginx:latest --autostart -p 443:8080/http+tls

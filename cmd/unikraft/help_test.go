@@ -165,6 +165,7 @@ func imagesHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
 	integ.Gild(t, cli(r),
 		[]string{"unikraft", "image", "--help"},
+		[]string{"unikraft", "image", "build", "--help"},
 		[]string{"unikraft", "image", "get", "--help"},
 		[]string{"unikraft", "image", "list", "--help"},
 		[]string{"unikraft", "image", "copy", "--help"},
