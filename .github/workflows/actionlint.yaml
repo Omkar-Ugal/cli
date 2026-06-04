@@ -2,8 +2,7 @@ name: actionlint
 
 on:
   pull_request:
-    branches:
-    - staging
+    branches: [staging, stable]
     paths:
     - '.github/workflows/**'
 
@@ -18,7 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v6
 
-    - name: Check workflow files
-      uses: docker://rhysd/actionlint:latest
-      with:
-        args: -color -verbose
+    - name: Run actionlint
+      uses: unikraft-cloud/x/.github/actions/actionlint@prod-staging
+
