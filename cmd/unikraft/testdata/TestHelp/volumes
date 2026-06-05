@@ -38,6 +38,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
@@ -86,6 +87,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
@@ -142,6 +144,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
@@ -200,6 +203,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
@@ -262,6 +266,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
@@ -318,6 +323,8 @@ Create flags:
       --access-mode=<access-mode>
           Volume access mode.
           [default: rwo, examples: rwo, rox, rwx]
+      --template=<name>
+          Create from volume template.
 
 $ unikraft volume clone --help
 
@@ -439,6 +446,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-
@@ -515,6 +523,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
   mounted-by, mounted-by.*, mounted-by.*.name, mounted-by.*.uuid, mounted-

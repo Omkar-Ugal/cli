@@ -1052,6 +1052,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "template":
 			template := field.Create.Set.(string)
 			key := multimetro.ParseKey(template)
+			if key.Metro != "" && metro != "" && key.Metro != metro {
+				return nil, fmt.Errorf("metro mismatch between template (%q) and volume (%q)", key.Metro, metro)
+			}
 			req.Template = &platform.CreateInstanceRequestTemplate{}
 			if key.UUID != "" {
 				req.Template.Uuid = &key.UUID

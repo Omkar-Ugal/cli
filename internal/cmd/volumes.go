@@ -9,7 +9,6 @@ import (
 	"cmp"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -67,6 +66,7 @@ type VolumeCreateCmd struct {
 	Filesystem  string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
 	QuotaPolicy string              `group:"flag-create" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 	AccessMode  types.AccessMode    `group:"flag-create" shortcut:"access-mode" help:"Volume access mode." placeholder:"access-mode" example:"rwo,rox,rwx" default:"rwo"`
+	Template    string              `group:"flag-create" shortcut:"template" help:"Create from volume template." placeholder:"name"`
 }
 
 func (c *VolumeCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -241,11 +241,12 @@ type Volume struct {
 	Tags []string `mirror:"volume.tags"`
 
 	State       types.VolumeState   `mirror:"volume.state" field:",short"`
-	Size        types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set,required" edit:"set"`
+	Size        types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set" edit:"set"`
 	Filesystem  string              `mirror:"volume.filesystem" field:",long" create:"set"`
 	QuotaPolicy string              `mirror:"volume.quota_policy" field:"quota-policy,long" create:"set" edit:"set"`
 	Persistent  bool                `mirror:"volume.persistent" field:",long"`
 	AccessMode  types.AccessMode    `mirror:"volume.access_mode" field:"access-mode,long" create:"set"`
+	Template    string              `field:"template,invisible,valueless" create:"set"`
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"volume.created_at" field:",short"`
@@ -415,35 +416,26 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 				req.SizeMb = &sizeMb
 			case "filesystem":
 				filesystem := field.Create.Set.(string)
-				if filesystem != "" {
-					data, err := json.Marshal(filesystem)
-					if err != nil {
-						return nil, err
-					}
-					// HACK: set on additional properties, since we need an updated SDK
-					if req.AdditionalProperties == nil {
-						req.AdditionalProperties = make(map[string]json.RawMessage)
-					}
-					req.AdditionalProperties["filesystem"] = data
-				}
+				req.Filesystem = &filesystem
 			case "quota-policy":
 				quotaPolicy := field.Create.Set.(string)
-				if quotaPolicy != "" {
-					data, err := json.Marshal(quotaPolicy)
-					if err != nil {
-						return nil, err
-					}
-					// HACK: set on additional properties, since we need an updated SDK
-					if req.AdditionalProperties == nil {
-						req.AdditionalProperties = make(map[string]json.RawMessage)
-					}
-					req.AdditionalProperties["quota_policy"] = data
-				}
+				req.QuotaPolicy = new(platform.VolumeQuotaPolicy(quotaPolicy))
 			case "access-mode":
 				accessMode := field.Create.Set.(types.AccessMode)
 				req.AccessMode = new(platform.VolumeAccessMode(accessMode))
+			case "template":
+				template := field.Create.Set.(string)
+				key := multimetro.ParseKey(template)
+				if key.Metro != "" && metro != "" && key.Metro != metro {
+					return nil, fmt.Errorf("metro mismatch between template (%q) and volume (%q)", key.Metro, metro)
+				}
+				req.Template = new(key.Ref().NameOrUUID())
 			}
 		}
+	}
+
+	if req.SizeMb == nil && req.Template == nil {
+		return nil, fmt.Errorf("either --size or --template must be specified")
 	}
 
 	g, err := multimetro.NewClient(ctx)
