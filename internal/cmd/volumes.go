@@ -11,9 +11,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"math"
 	"path/filepath"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/alecthomas/kong"
 	"github.com/docker/go-units"
@@ -575,12 +577,11 @@ func volumePatchSpec(path string, _ patchOp, value any) (platform.MutableVolumeP
 // temporarily spinning up a volimport instance, streaming a CPIO archive
 // over TLS, and cleaning up the instance afterwards.
 type VolumeImportCmd struct {
-	Volume  string `arg:"" completion-predictor:"resource-key-volume" help:"Name or UUID of the volume to import into." create:"set,required"`
-	Source  string `short:"s" help:"Data source: local directory, CPIO archive, or Dockerfile." placeholder:"path" create:"set,required"`
-	Force   bool   `short:"f" help:"Force import even if the data might exceed volume capacity."`
-	Port    int    `short:"p" default:"42069" help:"Port to connect to the volume import service on." placeholder:"port" hidden:"true"`
-	Image   string `default:"official/utils/volimport:1.0" help:"Volume import image to use." placeholder:"image" hidden:"true"`
-	Timeout uint64 `short:"t" default:"10" help:"Inactivity timeout in seconds for the import service." placeholder:"seconds" hidden:"true"`
+	Volume string `arg:"" completion-predictor:"resource-key-volume" help:"Name or UUID of the volume to import into." create:"set,required"`
+	Source string `short:"s" help:"Data source: local directory, CPIO archive, or Dockerfile." placeholder:"path" create:"set,required"`
+	Force  bool   `short:"f" help:"Force import even if the data might exceed volume capacity."`
+	Port   int    `short:"p" default:"42069" help:"Port to connect to the volume import service on." placeholder:"port" hidden:"true"`
+	Image  string `default:"official/utils/volimport:1.0" help:"Volume import image to use." placeholder:"image" hidden:"true"`
 }
 
 func (VolumeImportCmd) Examples() []kingkong.Example {
@@ -697,7 +698,17 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	var instUUID, instFQDN string
 	if err := group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
 		var merr error
-		instUUID, instFQDN, merr = volimport.Start(ctx, mc, c.Image, vol.UUID, authStr, c.Timeout, c.Port)
+		volimportTimeout := uint64(10)
+		if deadline, ok := ctx.Deadline(); ok {
+			t := max(
+				// don't run past deadline (+2s for tolerance)
+				time.Until(deadline)+2*time.Second,
+				// set reasonable max timeout
+				10*time.Second,
+			)
+			volimportTimeout = uint64(math.Ceil(t.Seconds()))
+		}
+		instUUID, instFQDN, merr = volimport.Start(ctx, mc, c.Image, vol.UUID, authStr, volimportTimeout, c.Port)
 		return merr
 	}); err != nil {
 		return fmt.Errorf("spawning volume data import instance: %w", err)

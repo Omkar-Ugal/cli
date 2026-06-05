@@ -1009,7 +1009,6 @@ func TestWait(t *testing.T) {
 		cmd := &ResourceWaitCmd[resourcet.TestResource]{
 			Targets:  []string{"test1", "test2"},
 			Until:    []string{"state==ready"},
-			Timeout:  time.Second,
 			Interval: 10 * time.Millisecond,
 		}
 		err := cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)
@@ -1019,11 +1018,12 @@ func TestWait(t *testing.T) {
 	t.Run("timeout", func(t *testing.T) {
 		env := setupTestEnv()
 		ctx := resourcet.WithTestEnv(context.Background(), env)
+		ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
 
 		cmd := &ResourceWaitCmd[resourcet.TestResource]{
 			Targets:  []string{"test1", "test2"},
 			Until:    []string{"state==ready"},
-			Timeout:  1 * time.Second,
 			Interval: 10 * time.Millisecond,
 		}
 		err := cmd.Run(ctx, testStdio(&bytes.Buffer{}), sandbox)

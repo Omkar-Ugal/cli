@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	jujuerrors "github.com/juju/errors"
 	"github.com/pkg/browser"
@@ -24,8 +23,7 @@ import (
 )
 
 type LoginCmd struct {
-	Check   bool          `name:"check" help:"Check if the user is already logged in."`
-	Timeout time.Duration `short:"t" name:"timeout" default:"5m" help:"Timeout for the login request."`
+	Check bool `name:"check" help:"Check if the user is already logged in."`
 
 	ControlPlane  string `name:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
 	AllowInsecure bool   `name:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
@@ -293,33 +291,6 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 		return nil, jujuerrors.Annotate(err, "checking authorization")
 	}
 
-	timeout := time.NewTimer(cmd.Timeout)
-	ctx, cancel := context.WithCancel(ctx)
-
-	var event *controlplane.Response[controlplane.CheckAuthorizationResponseData]
-	go func() {
-		defer cancel()
-		for {
-			select {
-			case <-timeout.C:
-				log.G(ctx).
-					Error().
-					Err(jujuerrors.New("login timed out, please try again"))
-				return
-			case event = <-checkResp:
-				if event == nil {
-					continue
-				}
-				return
-			case <-ctx.Done():
-				log.G(ctx).
-					Error().
-					Err(jujuerrors.Errorf("operation cancelled"))
-				return
-			}
-		}
-	}()
-
 	if !cmd.NoBrowser {
 		if err := browser.OpenURL(signinResp.Data.AuthorizationUrl); err != nil {
 			log.G(ctx).
@@ -330,17 +301,17 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 	}
 
 	// TODO: run a spinner here
-	log.G(ctx).
-		Info().
-		Str("timeout", cmd.Timeout.String()).
-		Msg("waiting for confirmation")
-	<-ctx.Done()
-
-	if event == nil {
-		return nil, jujuerrors.New("no event received, please try again")
+	for {
+		select {
+		case event := <-checkResp:
+			if event == nil {
+				continue
+			}
+			return event, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
-
-	return event, nil
 }
 
 func (cmd *LoginCmd) getOrg(ctx context.Context, profile *config.Profile) (string, error) {

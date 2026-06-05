@@ -71,7 +71,7 @@ func TestInstances(t *testing.T) {
 			"--set", "resources.vcpus=1",
 		})
 
-		out := r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "10s", "test-" + instName})
+		out := r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
 		assert.Regexp(t, `state:\s+stopped`, out)
 		assert.Regexp(t, `stop:`, out)
 		assert.Regexp(t, `reason:.*(page fault|out of memory)`, out)
@@ -102,7 +102,7 @@ func TestInstances(t *testing.T) {
 		})
 		fqdn := strings.TrimSpace(out)
 
-		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "10s", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==running", "test-" + instName})
 
 		body := integ.HTTPGet(t, "https://"+fqdn)
 		assert.Contains(t, body, "Welcome to nginx!")
@@ -416,18 +416,18 @@ func TestInstances(t *testing.T) {
 			"--set", "resources.vcpus=1",
 		})
 
-		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==running", "test-" + instName})
 
 		// No scale-to-zero so state will show as stopped.
 		r.Run(t, []string{"unikraft", "instance", "suspend", "test-" + instName})
-		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
 		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
 		assert.Regexp(t, `state:\s+stopped`, out)
 		assert.Regexp(t, `stop:`, out)
 		assert.Regexp(t, `reason:.*user stop`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "start", "test-" + instName})
-		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==running", "test-" + instName})
 		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
 		assert.Regexp(t, `state:\s+running`, out)
 		assert.NotRegexp(t, `stop:`, out)
@@ -453,7 +453,7 @@ func TestInstances(t *testing.T) {
 			"--set", "resources.vcpus=1",
 		})
 
-		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==running", "test-" + instName})
 
 		// Stop the instance so delete-on-stop removes it (deletion is async).
 		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
@@ -527,5 +527,27 @@ func TestInstances(t *testing.T) {
 		assert.Regexp(t, `sched-priority:\s+high`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	t.Run("watch-timeout", func(t *testing.T) {
+		r := runner(t, true)
+		r.Run(t, []string{"unikraft", "--timeout=1s", "instance", "ls", "-w"}, integ.AllowFail())
+	})
+
+	t.Run("watch-no-timeout", func(t *testing.T) {
+		r := runner(t, true)
+
+		done := make(chan error, 1)
+		go func() {
+			_, err := r.RunRaw(t, []string{"unikraft", "instance", "ls", "-w"}, integ.AllowFail())
+			done <- err
+		}()
+
+		select {
+		case err := <-done:
+			t.Fatalf("expected command to still be running after 10 seconds, got: %v", err)
+		case <-time.After(10 * time.Second):
+			// Command still running
+		}
 	})
 }
