@@ -426,6 +426,9 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 			case "template":
 				template := field.Create.Set.(string)
 				key := multimetro.ParseKey(template)
+				if key.Metro != "" && metro != "" && key.Metro != metro {
+					return nil, fmt.Errorf("metro mismatch between template (%q) and volume (%q)", key.Metro, metro)
+				}
 				req.Template = new(key.Ref().NameOrUUID())
 			}
 		}
