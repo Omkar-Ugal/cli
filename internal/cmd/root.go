@@ -81,7 +81,7 @@ func (cli UnikraftCLI) Examples() []kingkong.Example {
 		{
 			Description: "Build and publish an image from a Kraftfile",
 			Commands: []string{
-				"unikraft build . --output my-org/my-app:latest",
+				"unikraft image build . --output my-org/my-app:latest",
 			},
 		},
 		{
