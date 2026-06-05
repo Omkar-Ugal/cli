@@ -127,7 +127,8 @@ func (s *Service) MarshalText() ([]byte, error) {
 	for i, handler := range s.Handlers {
 		handlers[i] = string(handler)
 	}
-	return fmt.Appendf([]byte{}, "%d:%d/%s",
+	return fmt.Appendf(
+		[]byte{}, "%d:%d/%s",
 		s.Source,
 		s.Destination,
 		strings.Join(handlers, "+"),
@@ -379,9 +380,13 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]reso
 					if name == "" {
 						name = domain.FQDN + "."
 					}
-					req.Domains = append(req.Domains, platform.CreateServiceGroupRequestDomain{
+					d := platform.CreateServiceGroupRequestDomain{
 						Name: name,
-					})
+					}
+					if ref := domain.Certificate.Ref(); ref.Name != "" || ref.UUID != "" {
+						d.Certificate = new(ref.NameOrUUID())
+					}
+					req.Domains = append(req.Domains, d)
 				}
 			case "services":
 				for _, svc := range field.Create.Set.([]*Service) {
@@ -532,9 +537,13 @@ func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.MutableS
 			if name == "" {
 				name = domain.FQDN + "."
 			}
-			nvalue = append(nvalue, platform.CreateServiceGroupRequestDomain{
+			d := platform.CreateServiceGroupRequestDomain{
 				Name: name,
-			})
+			}
+			if ref := domain.Certificate.Ref(); ref.Name != "" || ref.UUID != "" {
+				d.Certificate = new(ref.NameOrUUID())
+			}
+			nvalue = append(nvalue, d)
 		}
 		return platform.MutableServiceGroupPropertyDomains, nvalue, nil
 	case "services":
