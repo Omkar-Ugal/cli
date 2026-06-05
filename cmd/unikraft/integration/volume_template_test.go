@@ -45,4 +45,38 @@ func TestVolumeTemplates(t *testing.T) {
 
 		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
 	})
+
+	t.Run("create-from-template", func(t *testing.T) {
+		r := runner(t, true)
+		volName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-base-" + volName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "size=10",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "volume", "template", "create", "test-base-" + volName,
+			"--output", "template={{ .name }}",
+		})
+		templateName := strings.TrimSpace(out)
+
+		out = r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--set", "name=test-from-template-" + volName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--template", templateName,
+		})
+		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `size:\s+10`, out)
+
+		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-from-template-" + volName})
+		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `size:\s+10`, out)
+
+		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
+	})
 }

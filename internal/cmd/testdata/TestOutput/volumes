@@ -76,8 +76,7 @@ fra    my-volume  available  50MiB  never
     "value": "50MiB",
     "verbosity": "short",
     "create": {
-      "set": "50MiB",
-      "required": true
+      "set": "50MiB"
     },
     "edit": {
       "set": "50MiB"
@@ -113,6 +112,13 @@ fra    my-volume  available  50MiB  never
     "verbosity": "long",
     "create": {
       "set": "rwo"
+    }
+  },
+  {
+    "name": "template",
+    "verbosity": "invisible",
+    "create": {
+      "set": ""
     }
   },
   {
