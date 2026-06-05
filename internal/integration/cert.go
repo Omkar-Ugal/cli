@@ -20,13 +20,16 @@ import (
 
 // Cert holds the generated certificate data for integration tests.
 type Cert struct {
-	CN    string
-	Chain string
-	Key   string
+	CN       string
+	Chain    string
+	Key      string
+	X509Cert *x509.Certificate
 }
 
 // GenerateCert creates a self-signed certificate for integration testing.
-func GenerateCert(t *testing.T) *Cert {
+// If cn is empty, a random CN of the form "test-<hex>.unikraft.io" is used.
+// The returned Cert.CN always has a trailing dot (FQDN form).
+func GenerateCert(t *testing.T, cn string) *Cert {
 	t.Helper()
 
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -34,11 +37,13 @@ func GenerateCert(t *testing.T) *Cert {
 		t.Fatal(err)
 	}
 
-	var b [6]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		t.Fatal(err)
+	if cn == "" {
+		var b [6]byte
+		if _, err := rand.Read(b[:]); err != nil {
+			t.Fatal(err)
+		}
+		cn = "test-" + hex.EncodeToString(b[:]) + ".unikraft.io"
 	}
-	cn := "test-" + hex.EncodeToString(b[:]) + ".unikraft.io"
 
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(1),
@@ -61,6 +66,11 @@ func GenerateCert(t *testing.T) *Cert {
 		Bytes: certDER,
 	})
 
+	parsed, err := x509.ParseCertificate(certDER)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	keyDER, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
 		t.Fatal(err)
@@ -71,8 +81,9 @@ func GenerateCert(t *testing.T) *Cert {
 	})
 
 	return &Cert{
-		CN:    cn + ".",
-		Chain: string(certPEM),
-		Key:   string(keyPEM),
+		CN:       cn + ".",
+		Chain:    string(certPEM),
+		Key:      string(keyPEM),
+		X509Cert: parsed,
 	}
 }
