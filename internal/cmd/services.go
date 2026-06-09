@@ -523,9 +523,9 @@ func serviceGroupPatchSpec(path string, _ patchOp, value any) (platform.MutableS
 	var zero platform.MutableServiceGroupProperty
 	switch path {
 	case "limits.soft":
-		return platform.MutableServiceGroupPropertySoft_limit, value.(uint64), nil
+		return platform.MutableServiceGroupPropertySoftLimit, value.(uint64), nil
 	case "limits.hard":
-		return platform.MutableServiceGroupPropertyHard_limit, value.(uint64), nil
+		return platform.MutableServiceGroupPropertyHardLimit, value.(uint64), nil
 	case "domains":
 		nvalue := []platform.CreateServiceGroupRequestDomain{}
 		for _, domain := range value.([]Domain) {

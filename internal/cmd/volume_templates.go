@@ -290,9 +290,9 @@ func volumeTemplatePatchSpec(path string, op patchOp, value any) (platform.Mutab
 		}
 		switch v := value.(type) {
 		case bool:
-			return platform.MutableTemplateVolumePropertyDelete_lock, v, nil
+			return platform.MutableTemplateVolumePropertyDeleteLock, v, nil
 		case *bool:
-			return platform.MutableTemplateVolumePropertyDelete_lock, *v, nil
+			return platform.MutableTemplateVolumePropertyDeleteLock, *v, nil
 		}
 		return zero, nil, nil
 	default:

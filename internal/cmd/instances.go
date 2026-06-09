@@ -22,6 +22,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/distribution/reference"
+	"github.com/go-json-experiment/json/jsontext"
 	"mvdan.cc/sh/v3/shell"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
@@ -102,7 +103,7 @@ func (c *InstanceCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox
 		return err
 	}
 	if c.DeleteOnStop {
-		c.Set = append(c.Set, map[string]string{"features": string(platform.CreateInstanceRequestFeaturesDelete_on_stop)})
+		c.Set = append(c.Set, map[string]string{"features": string(platform.CreateInstanceRequestFeaturesDeleteOnStop)})
 	}
 	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
 }
@@ -797,11 +798,11 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 		}
 		return platform.MutableInstancePropertyEnv, value.(map[string]string), nil
 	case "resources.memory":
-		return platform.MutableInstancePropertyMemory_mb, int64(value.(types.SizeMebibytes)), nil
+		return platform.MutableInstancePropertyMemoryMb, int64(value.(types.SizeMebibytes)), nil
 	case "resources.vcpus":
 		return platform.MutableInstancePropertyVcpus, value.(int), nil
 	case "sched-priority":
-		return platform.MutableInstancePropertySched_priority, string(*value.(*platform.SchedPriority)), nil
+		return platform.MutableInstancePropertySchedPriority, string(*value.(*platform.SchedPriority)), nil
 	case "scale-to-zero":
 		value := value.(InstanceScaleToZero)
 		req := map[string]any{}
@@ -817,7 +818,7 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 		if value.NotifyTime > 0 {
 			req["notify_time_ms"] = int32(value.NotifyTime)
 		}
-		return platform.MutableInstancePropertyScale_to_zero, req, nil
+		return platform.MutableInstancePropertyScaleToZero, req, nil
 	case "vsock":
 		return "vsock", value.(bool), nil
 	case "roms":
@@ -963,9 +964,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 				if rom.At != "" {
 					atJSON, _ := json.Marshal(rom.At)
 					if reqRom.AdditionalProperties == nil {
-						reqRom.AdditionalProperties = make(map[string]json.RawMessage)
+						reqRom.AdditionalProperties = make(map[string]jsontext.Value)
 					}
-					reqRom.AdditionalProperties["at"] = atJSON
+					reqRom.AdditionalProperties["at"] = jsontext.Value(atJSON)
 				}
 				req.Roms = append(req.Roms, reqRom)
 			}
@@ -1046,9 +1047,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 				return nil, err
 			}
 			if req.AdditionalProperties == nil {
-				req.AdditionalProperties = make(map[string]json.RawMessage)
+				req.AdditionalProperties = make(map[string]jsontext.Value)
 			}
-			req.AdditionalProperties["vsock"] = dt
+			req.AdditionalProperties["vsock"] = jsontext.Value(dt)
 		case "template":
 			template := field.Create.Set.(string)
 			key := multimetro.ParseKey(template)
@@ -1432,7 +1433,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 	started, startErr := startInstances(ctx, g, stopped)
 	if len(started) == 0 {
 		if _, ok := startErr.(group.ErrRefNotFound); ok {
-			return errors.Join(opErr, fmt.Errorf("cannot restart: instance(s) were deleted before they could be started (check if %q feature is enabled)", platform.CreateInstanceRequestFeaturesDelete_on_stop))
+			return errors.Join(opErr, fmt.Errorf("cannot restart: instance(s) were deleted before they could be started (check if %q feature is enabled)", platform.CreateInstanceRequestFeaturesDeleteOnStop))
 		}
 		opErr = errors.Join(opErr, startErr)
 		return opErr
