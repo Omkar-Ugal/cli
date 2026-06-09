@@ -179,7 +179,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if volume.UUID == "" {
 		return fmt.Errorf("volume %q is missing a UUID", volume.Name)
 	}
-	if volume.Metro == nil {
+	if volume.Metro == "" {
 		return fmt.Errorf("volume %q has no metro information", volume.Name)
 	}
 
@@ -191,7 +191,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if req.Uuid == nil {
 		req.Name = ptr.NilIfZero(volume.key.Name)
 	}
-	keys, opErr := group.CollectMetro(ctx, g, volume.Metro.Name, func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
+	keys, opErr := group.CollectMetro(ctx, g, string(volume.Metro), func(ctx context.Context, client multimetro.MetroClient) (multimetro.Keys, error) {
 		log.G(ctx).Trace().Msg("cloning volume")
 		resp, err := client.CloneVolumes(ctx, []platform.CloneVolumesRequestItem{req})
 		if err != nil {
@@ -236,9 +236,9 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 }
 
 type Volume struct {
-	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short" create:"set,required"`
-	Name      string          `mirror:"volume.name" field:",short" create:"set"`
-	UUID      string          `mirror:"volume.uuid" field:",long"`
+	Metro LinkName[Metro] `field:"metro,short" create:"set,required"`
+	Name  string          `mirror:"volume.name" field:",short" create:"set"`
+	UUID  string          `mirror:"volume.uuid" field:",long"`
 
 	Tags []string `mirror:"volume.tags"`
 
@@ -264,7 +264,6 @@ type Volume struct {
 	} `mirror:"volume.mounted_by"`
 
 	Volume platform.Volume `field:"-" json:"volume"`
-	Metro  *config.Metro   `field:"-" json:"metro"`
 
 	key multimetro.Key
 }
@@ -285,7 +284,7 @@ func (i Volume) Raw() any {
 }
 
 func (i Volume) Fields(ctx context.Context) ([]resource.Field, error) {
-	i.MetroName = LinkName[Metro](defaultMetro(ctx, string(i.MetroName)))
+	i.Metro = LinkName[Metro](defaultMetro(ctx, string(i.Metro)))
 	return resource.FieldsFromStruct(i)
 }
 
@@ -363,7 +362,7 @@ func (Volume) load(ref *group.Ref, volume platform.Volume, metro *config.Metro) 
 
 	result := Volume{
 		Volume: volume,
-		Metro:  metro,
+		Metro:  LinkName[Metro](metro.Name),
 		key:    multimetro.Key(*ref),
 	}
 	err := mirror.Mirror(result, &result)
@@ -696,7 +695,9 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		return err
 	}
 	var instUUID, instFQDN string
-	if err := group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
+	var metroInsecure bool
+	if err := group.DoMetro(ctx, g, string(vol.Metro), func(ctx context.Context, mc multimetro.MetroClient) error {
+		metroInsecure = ptr.ZeroIfNil(mc.Metro.Insecure)
 		var merr error
 		volimportTimeout := uint64(10)
 		if deadline, ok := ctx.Deadline(); ok {
@@ -715,7 +716,7 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	}
 
 	defer func() {
-		if err := group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
+		if err := group.DoMetro(ctx, g, string(vol.Metro), func(ctx context.Context, mc multimetro.MetroClient) error {
 			return volimport.Terminate(ctx, mc, instUUID)
 		}); err != nil {
 			log.G(ctx).Error().Err(err).Msg("terminating volume data import instance")
@@ -730,7 +731,7 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		Msg("importing data into volume")
 
 	conn, err := tls.Dial("tcp", instAddr, &tls.Config{
-		InsecureSkipVerify: ptr.ZeroIfNil(vol.Metro.Insecure),
+		InsecureSkipVerify: metroInsecure,
 	})
 	if err != nil {
 		return fmt.Errorf("connecting to volume import service at %s: %w", instAddr, err)
@@ -749,7 +750,7 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		Msg("import complete")
 
 	// Wait for the import instance to stop; it auto-deletes via delete-on-stop.
-	return group.DoMetro(ctx, g, vol.Metro.Name, func(ctx context.Context, mc multimetro.MetroClient) error {
+	return group.DoMetro(ctx, g, string(vol.Metro), func(ctx context.Context, mc multimetro.MetroClient) error {
 		return volimport.Wait(ctx, mc, instUUID)
 	})
 }

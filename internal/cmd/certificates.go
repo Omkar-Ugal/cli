@@ -59,9 +59,9 @@ func (c *CertificateCreateCmd) Run(ctx context.Context, stdio config.Stdio, sand
 }
 
 type Certificate struct {
-	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short" create:"set,required"`
-	Name      string          `mirror:"certificate.name" field:",short" create:"set"`
-	UUID      string          `mirror:"certificate.uuid" field:",long"`
+	Metro LinkName[Metro] `field:"metro,short" create:"set,required"`
+	Name  string          `mirror:"certificate.name" field:",short" create:"set"`
+	UUID  string          `mirror:"certificate.uuid" field:",long"`
 
 	CommonName   string `mirror:"certificate.common_name" field:",short"`
 	Subject      string `mirror:"certificate.subject" field:",long"`
@@ -81,7 +81,6 @@ type Certificate struct {
 	}
 
 	Certificate platform.Certificate `field:"-" json:"certificate"`
-	Metro       *config.Metro        `field:"-" json:"metro"`
 
 	key multimetro.Key
 }
@@ -102,7 +101,7 @@ func (c Certificate) Raw() any {
 }
 
 func (c Certificate) Fields(ctx context.Context) ([]resource.Field, error) {
-	c.MetroName = LinkName[Metro](defaultMetro(ctx, string(c.MetroName)))
+	c.Metro = LinkName[Metro](defaultMetro(ctx, string(c.Metro)))
 	return resource.FieldsFromStruct(c)
 }
 
@@ -176,7 +175,7 @@ func (Certificate) load(ref *group.Ref, certificate platform.Certificate, metro 
 
 	result := Certificate{
 		Certificate: certificate,
-		Metro:       metro,
+		Metro:       LinkName[Metro](metro.Name),
 		key:         multimetro.Key(*ref),
 	}
 	err := mirror.Mirror(result, &result)

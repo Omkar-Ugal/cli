@@ -96,11 +96,11 @@ func TestOutput(t *testing.T) {
 
 func instancesOutputTests(t *testing.T) {
 	sample := cmd.Instance{
-		MetroName: "fra",
-		Name:      "my-instance",
-		UUID:      "7b79b250-0658-4d10-8dc0-d854399d7e74",
-		Tags:      []string{"env-prod", "team-core"},
-		State:     types.InstanceState(platform.InstanceStateRunning),
+		Metro: "fra",
+		Name:  "my-instance",
+		UUID:  "7b79b250-0658-4d10-8dc0-d854399d7e74",
+		Tags:  []string{"env-prod", "team-core"},
+		State: types.InstanceState(platform.InstanceStateRunning),
 		Service: &cmd.InstanceService{
 			Link: cmd.Link[cmd.ServiceGroup]{
 				Name: "my-service",
@@ -153,11 +153,11 @@ func instancesOutputTests(t *testing.T) {
 
 func instanceTemplatesOutputTests(t *testing.T) {
 	sample := cmd.InstanceTemplate{
-		MetroName: "fra",
-		Name:      "my-template",
-		UUID:      "d4e5f6a7-b8c9-0123-def0-123456789abc",
-		Tags:      []string{"env-staging"},
-		State:     types.InstanceState(platform.InstanceStateStopped),
+		Metro: "fra",
+		Name:  "my-template",
+		UUID:  "d4e5f6a7-b8c9-0123-def0-123456789abc",
+		Tags:  []string{"env-staging"},
+		State: types.InstanceState(platform.InstanceStateStopped),
 	}
 	sample.Resources.Memory = 128
 	sample.Resources.VCPUs = 1
@@ -168,7 +168,7 @@ func instanceTemplatesOutputTests(t *testing.T) {
 
 func volumesOutputTests(t *testing.T) {
 	sample := cmd.Volume{
-		MetroName:   "fra",
+		Metro:       "fra",
 		Name:        "my-volume",
 		UUID:        "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
 		Tags:        []string{"env-prod"},
@@ -185,7 +185,7 @@ func volumesOutputTests(t *testing.T) {
 
 func volumeTemplatesOutputTests(t *testing.T) {
 	sample := cmd.VolumeTemplate{
-		MetroName:  "fra",
+		Metro:      "fra",
 		Name:       "my-vol-template",
 		UUID:       "e5f6a7b8-c9d0-1234-ef01-23456789abcd",
 		Tags:       []string{"env-staging"},
@@ -200,7 +200,7 @@ func volumeTemplatesOutputTests(t *testing.T) {
 
 func servicesOutputTests(t *testing.T) {
 	sample := cmd.ServiceGroup{
-		MetroName:  "fra",
+		Metro:      "fra",
 		Name:       "my-service",
 		UUID:       "b2c3d4e5-f6a7-8901-bcde-f12345678901",
 		Persistent: true,
@@ -229,7 +229,7 @@ func servicesOutputTests(t *testing.T) {
 
 func certificatesOutputTests(t *testing.T) {
 	sample := cmd.Certificate{
-		MetroName:    "fra",
+		Metro:        "fra",
 		Name:         "my-cert",
 		UUID:         "c3d4e5f6-a7b8-9012-cdef-123456789012",
 		CommonName:   "example.unikraft.app",

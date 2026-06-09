@@ -138,9 +138,9 @@ func (c *InstanceEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 }
 
 type Instance struct {
-	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short" create:"set,required"`
-	Name      string          `mirror:"instance.name" field:",short" create:"set"`
-	UUID      string          `mirror:"instance.uuid" field:",long"`
+	Metro LinkName[Metro] `field:"metro,short" create:"set,required"`
+	Name  string          `mirror:"instance.name" field:",short" create:"set"`
+	UUID  string          `mirror:"instance.uuid" field:",long"`
 
 	Tags []string `mirror:"instance.tags"`
 
@@ -201,7 +201,6 @@ type Instance struct {
 	} `field:",long"`
 
 	Instance platform.Instance `field:"-" json:"instance"`
-	Metro    *config.Metro     `field:"-" json:"metro"`
 	Profile  *config.Profile   `field:"-" json:"profile"`
 
 	key multimetro.Key
@@ -533,7 +532,7 @@ func (i Instance) Raw() any {
 }
 
 func (i Instance) Fields(ctx context.Context) ([]resource.Field, error) {
-	i.MetroName = LinkName[Metro](defaultMetro(ctx, string(i.MetroName)))
+	i.Metro = LinkName[Metro](defaultMetro(ctx, string(i.Metro)))
 	result, err := resource.FieldsFromStruct(i)
 	if err != nil {
 		return nil, err
@@ -558,7 +557,7 @@ func (i Instance) hyperlink() string {
 	return fmt.Sprintf(
 		"https://console.unikraft.cloud/org/%s/instances/%s/%s",
 		i.Profile.Organization,
-		i.MetroName,
+		i.Metro,
 		i.Name,
 	)
 }
@@ -644,7 +643,7 @@ func (Instance) load(ref *group.Ref, instance platform.Instance, metro *config.M
 
 	result := Instance{
 		Instance: instance,
-		Metro:    metro,
+		Metro:    LinkName[Metro](metro.Name),
 		Profile:  profile,
 		key:      multimetro.Key(*ref),
 	}
