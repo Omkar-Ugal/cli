@@ -177,7 +177,7 @@ func volumesOutputTests(t *testing.T) {
 		Filesystem:  "ext4",
 		QuotaPolicy: "hard",
 		Persistent:  true,
-		AccessMode:  types.AccessMode(platform.VolumeAccessModeRwo),
+		AccessMode:  new(types.AccessMode(platform.VolumeAccessModeRwo)),
 	}
 
 	integ.Gild[resource.Resource](t, dumpResource, sample)

@@ -329,7 +329,7 @@ Create flags:
           [examples: static, dynamic]
       --access-mode=<access-mode>
           Volume access mode.
-          [default: rwo, examples: rwo, rox, rwx]
+          [examples: rwo, rox, rwx]
       --template=<name>
           Create from volume template.
 
