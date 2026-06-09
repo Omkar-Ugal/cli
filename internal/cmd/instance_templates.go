@@ -307,9 +307,9 @@ func instanceTemplatePatchSpec(path string, op patchOp, value any) (platform.Mut
 		}
 		switch v := value.(type) {
 		case bool:
-			return platform.MutableTemplateInstancePropertyDelete_lock, v, nil
+			return platform.MutableTemplateInstancePropertyDeleteLock, v, nil
 		case *bool:
-			return platform.MutableTemplateInstancePropertyDelete_lock, *v, nil
+			return platform.MutableTemplateInstancePropertyDeleteLock, *v, nil
 		}
 		return zero, nil, nil
 	default:

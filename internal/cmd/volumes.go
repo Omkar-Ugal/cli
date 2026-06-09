@@ -565,9 +565,9 @@ func volumePatchSpec(path string, _ patchOp, value any) (platform.MutableVolumeP
 	var zero platform.MutableVolumeProperty
 	switch path {
 	case "size":
-		return platform.MutableVolumePropertySize_mb, int64(value.(types.SizeMebibytes)), nil
+		return platform.MutableVolumePropertySizeMb, int64(value.(types.SizeMebibytes)), nil
 	case "quota-policy":
-		return platform.MutableVolumePropertyQuota_policy, value.(string), nil
+		return platform.MutableVolumePropertyQuotaPolicy, value.(string), nil
 	default:
 		return zero, nil, nil
 	}

@@ -45,7 +45,7 @@ func Start(ctx context.Context, c multimetro.MetroClient, image, volUUID, authSt
 		Autostart:     new(true),
 		TimeoutS:      new(startTimeoutS),
 		RestartPolicy: new(platform.InstanceRestartPolicyNever),
-		Features:      []platform.InstanceFeature{platform.InstanceFeatureDelete_on_stop},
+		Features:      []platform.InstanceFeature{platform.InstanceFeatureDeleteOnStop},
 		Volumes: []platform.CreateInstanceRequestVolume{{
 			Uuid: &volUUID,
 			At:   "/mnt",
