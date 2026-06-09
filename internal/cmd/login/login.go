@@ -124,7 +124,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 	profile.Insecure = cmd.AllowInsecure
 
 	// Fetch and merge metros
-	newMetros, err := cmd.getMetros(ctx, profile)
+	newMetros, err := multimetro.GetMetros(ctx, profile)
 	if err != nil || len(newMetros) == 0 {
 		log.G(ctx).
 			Warn().
@@ -229,36 +229,15 @@ func (cmd *LoginCmd) generateUniqueProfileName(cfg *config.Config, organization 
 	}
 }
 
-func (cmd *LoginCmd) getMetros(ctx context.Context, profile *config.Profile) ([]config.Metro, error) {
-	client, err := multimetro.NewControlClientFromProfile(profile)
-	if err != nil {
-		return nil, err
-	}
-
-	metroResp, err := client.ListMetros(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if metroResp == nil || metroResp.Data == nil {
-		return nil, nil
-	}
-
-	var metros []config.Metro
-	for _, metro := range metroResp.Data.Metros {
-		metros = append(metros, config.Metro{
-			Name:     metro.Name,
-			Endpoint: metro.Endpoint,
-			Country:  metro.Country,
-		})
-	}
-	return metros, nil
-}
-
 func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.Response[controlplane.CheckAuthorizationResponseData], error) {
 	client, err := multimetro.NewControlClientFromProfile(profile)
 	if err != nil {
 		return nil, err
 	}
+
+	log.G(ctx).Trace().
+		Str("controlplane", profile.ControlPlane).
+		Msg("fetching authentication")
 
 	req, err := getFingerprint()
 	if err != nil {
@@ -315,6 +294,10 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 }
 
 func (cmd *LoginCmd) getOrg(ctx context.Context, profile *config.Profile) (string, error) {
+	log.G(ctx).Trace().
+		Str("controlplane", profile.ControlPlane).
+		Msg("fetching organization")
+
 	client, err := multimetro.NewControlClientFromProfile(profile)
 	if err != nil {
 		return "", err
