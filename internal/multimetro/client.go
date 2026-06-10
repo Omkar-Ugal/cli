@@ -28,10 +28,17 @@ func NewClient(ctx context.Context) (*group.Group[MetroClient], error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(profile.Metros) == 0 {
-		return nil, fmt.Errorf("profile %q has no metros configured", profile.Name)
-	}
+
 	metros := profile.Metros
+	if len(profile.Metros) == 0 {
+		if profile.ControlPlane == "" {
+			return nil, fmt.Errorf("profile %q has no metros configured", profile.Name)
+		}
+		metros, err = GetMetros(ctx, profile)
+		if err != nil {
+			return nil, err
+		}
+	}
 	metros = filterMetrosFromContext(ctx, metros)
 
 	metroNames := make([]string, 0, len(metros))
@@ -56,4 +63,33 @@ func NewClient(ctx context.Context) (*group.Group[MetroClient], error) {
 		)
 	}
 	return group, nil
+}
+
+func GetMetros(ctx context.Context, profile *config.Profile) ([]config.Metro, error) {
+	log.G(ctx).Trace().
+		Str("controlplane", profile.ControlPlane).
+		Msg("fetching metros")
+
+	client, err := NewControlClientFromProfile(profile)
+	if err != nil {
+		return nil, err
+	}
+
+	metroResp, err := client.ListMetros(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if metroResp == nil || metroResp.Data == nil {
+		return nil, nil
+	}
+
+	var metros []config.Metro
+	for _, metro := range metroResp.Data.Metros {
+		metros = append(metros, config.Metro{
+			Name:     metro.Name,
+			Endpoint: metro.Endpoint,
+			Country:  metro.Country,
+		})
+	}
+	return metros, nil
 }
