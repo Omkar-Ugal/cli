@@ -87,9 +87,9 @@ func (c *ServiceEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *r
 }
 
 type ServiceGroup struct {
-	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short" create:"set,required"`
-	Name      string          `mirror:"service_group.name" field:",short" create:"set"`
-	UUID      string          `mirror:"service_group.uuid" field:",long"`
+	Metro LinkName[Metro] `field:"metro,short" create:"set,required"`
+	Name  string          `mirror:"service_group.name" field:",short" create:"set"`
+	UUID  string          `mirror:"service_group.uuid" field:",long"`
 
 	Persistent bool `mirror:"service_group.persistent" field:",long"`
 	Autoscale  bool `mirror:"service_group.autoscale" field:",short"`
@@ -112,7 +112,6 @@ type ServiceGroup struct {
 	Services []*Service `mirror:"service_group.services" field:",embed" create:"set,required" edit:"set,add,del"`
 
 	ServiceGroup platform.ServiceGroup `field:"-" json:"service_group"`
-	Metro        *config.Metro         `field:"-" json:"metro"`
 
 	key multimetro.Key
 }
@@ -253,7 +252,7 @@ func (s ServiceGroup) Raw() any {
 }
 
 func (s ServiceGroup) Fields(ctx context.Context) ([]resource.Field, error) {
-	s.MetroName = LinkName[Metro](defaultMetro(ctx, string(s.MetroName)))
+	s.Metro = LinkName[Metro](defaultMetro(ctx, string(s.Metro)))
 	return resource.FieldsFromStruct(s)
 }
 
@@ -330,7 +329,7 @@ func (ServiceGroup) load(ref *group.Ref, serviceGroup platform.ServiceGroup, met
 
 	result := ServiceGroup{
 		ServiceGroup: serviceGroup,
-		Metro:        metro,
+		Metro:        LinkName[Metro](metro.Name),
 		key:          multimetro.Key(*ref),
 	}
 	err := mirror.Mirror(result, &result)

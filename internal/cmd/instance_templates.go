@@ -74,9 +74,9 @@ func (c *InstanceTemplateEditCmd) Run(ctx context.Context, stdio config.Stdio, s
 }
 
 type InstanceTemplate struct {
-	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short"`
-	Name      string          `mirror:"instance.name" field:",short"`
-	UUID      string          `mirror:"instance.uuid" field:",long"`
+	Metro LinkName[Metro] `field:"metro,short"`
+	Name  string          `mirror:"instance.name" field:",short"`
+	UUID  string          `mirror:"instance.uuid" field:",long"`
 
 	Tags       []string `mirror:"instance.tags" edit:"set,add,del"`
 	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,hidden" edit:"set"`
@@ -109,7 +109,6 @@ type InstanceTemplate struct {
 	Instances []string `field:"instances,invisible,valueless" create:"set,required"`
 
 	Instance platform.Instance `field:"-" json:"instance"`
-	Metro    *config.Metro     `field:"-" json:"metro"`
 	Profile  *config.Profile   `field:"-" json:"profile"`
 
 	key multimetro.Key
@@ -216,7 +215,7 @@ func (InstanceTemplate) load(ref *group.Ref, instance platform.Instance, metro *
 
 	result := InstanceTemplate{
 		Instance: instance,
-		Metro:    metro,
+		Metro:    LinkName[Metro](metro.Name),
 		Profile:  profile,
 		key:      multimetro.Key(*ref),
 	}

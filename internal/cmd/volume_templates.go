@@ -73,9 +73,9 @@ func (c *VolumeTemplateEditCmd) Run(ctx context.Context, stdio config.Stdio, san
 }
 
 type VolumeTemplate struct {
-	MetroName LinkName[Metro] `mirror:"metro.name" field:"metro,short"`
-	Name      string          `mirror:"volume.name" field:",short"`
-	UUID      string          `mirror:"volume.uuid" field:",long"`
+	Metro LinkName[Metro] `field:"metro,short"`
+	Name  string          `mirror:"volume.name" field:",short"`
+	UUID  string          `mirror:"volume.uuid" field:",long"`
 
 	Tags       []string `mirror:"volume.tags" edit:"set,add,del"`
 	DeleteLock bool     `mirror:"volume.delete_lock" field:"delete-lock,hidden" edit:"set"`
@@ -92,7 +92,6 @@ type VolumeTemplate struct {
 	Volumes []string `field:"volumes,invisible,valueless" create:"set,required"`
 
 	Volume  platform.Volume `field:"-" json:"volume"`
-	Metro   *config.Metro   `field:"-" json:"metro"`
 	Profile *config.Profile `field:"-" json:"profile"`
 
 	key multimetro.Key
@@ -199,7 +198,7 @@ func (VolumeTemplate) load(ref *group.Ref, volume platform.Volume, metro *config
 
 	result := VolumeTemplate{
 		Volume:  volume,
-		Metro:   metro,
+		Metro:   LinkName[Metro](metro.Name),
 		Profile: profile,
 		key:     multimetro.Key(*ref),
 	}
