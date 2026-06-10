@@ -187,13 +187,19 @@ builds:
   - #@ os
   goarch:
   - #@ arch
+  #@ if os == "linux":
+  env:
+  - CGO_ENABLED=0
+  #@ end
   flags:
   - -buildmode=pie
   ldflags:
   - -s
   - -w
+  #@ if os != "linux":
   - -extldflags
   - -static-pie
+  #@ end
   - -X unikraft.com/cli/internal/version.Version={{ .Version }}
   - -X unikraft.com/cli/internal/version.Commit={{ .Commit }}
   - -X unikraft.com/cli/internal/version.BuildTime={{ .Date }}
