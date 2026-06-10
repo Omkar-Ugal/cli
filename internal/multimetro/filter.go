@@ -10,40 +10,16 @@ import (
 
 	"unikraft.com/x/filters"
 
-	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 )
 
-func filterMetrosFromContext(ctx context.Context, metros []config.Metro) []config.Metro {
-	spec := resource.FilterFromContext(ctx)
-	return filterMetros(metros, spec)
+func filterMetrosFromCtx(ctx context.Context, names []string) []string {
+	return filterMetros(names, resource.FilterFromContext(ctx))
 }
 
-func filterMetros(metros []config.Metro, spec filters.Filter) []config.Metro {
+func filterMetros(names []string, spec filters.Filter) []string {
 	if spec == nil {
-		return metros
+		return names
 	}
-
-	// Extract metro names as candidates
-	candidates := make([]string, len(metros))
-	for i, m := range metros {
-		candidates[i] = m.Name
-	}
-
-	// Filter candidates based on the metro field
-	matched := filters.Restrict(spec, "metro", candidates)
-
-	// Build result preserving order
-	matchedSet := make(map[string]bool, len(matched))
-	for _, m := range matched {
-		matchedSet[m] = true
-	}
-
-	result := make([]config.Metro, 0, len(matched))
-	for _, metro := range metros {
-		if matchedSet[metro.Name] {
-			result = append(result, metro)
-		}
-	}
-	return result
+	return filters.Restrict(spec, "metro", names)
 }
