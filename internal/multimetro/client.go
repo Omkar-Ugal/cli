@@ -39,30 +39,26 @@ func NewClient(ctx context.Context) (*group.Group[MetroClient], error) {
 			return nil, err
 		}
 	}
-	metros = filterMetrosFromContext(ctx, metros)
-
-	metroNames := make([]string, 0, len(metros))
-	for _, metro := range metros {
-		metroNames = append(metroNames, metro.Name)
-	}
-	log.G(ctx).
-		Trace().
-		Strs("metros", metroNames).
-		Msg("initializing platform clients")
-
-	group := group.New[MetroClient]()
+	g := group.New[MetroClient]()
 	for _, metro := range metros {
 		client := platform.NewClient(
 			platform.WithHTTPClient(httpclient.GetClient(ptr.ZeroIfNil(metro.Insecure))),
 			platform.WithToken(profile.Token),
 			platform.WithDefaultMetro(metro.Endpoint),
 		)
-		group = group.WithClient(
+		g = g.WithClient(
 			metro.Name,
 			MetroClient{Client: client, Metro: metro},
 		)
 	}
-	return group, nil
+
+	g = g.Filter(filterMetrosFromCtx(ctx, g.Names()))
+	log.G(ctx).
+		Trace().
+		Strs("metros", g.Names()).
+		Msg("initializing platform clients")
+
+	return g, nil
 }
 
 func GetMetros(ctx context.Context, profile *config.Profile) ([]config.Metro, error) {

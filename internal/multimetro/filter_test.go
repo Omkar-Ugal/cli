@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"unikraft.com/x/filters"
-
-	"unikraft.com/cli/internal/config"
 )
 
 func TestFilterMetros(t *testing.T) {
@@ -45,7 +43,7 @@ func TestFilterMetros(t *testing.T) {
 			name:   "comma separated metro equals", // contradictory
 			filter: []string{"metro==metro2,metro==metro3"},
 			input:  metros,
-			output: []string(nil),
+			output: []string{},
 		},
 		{
 			name:   "single metro not equals",
@@ -57,7 +55,7 @@ func TestFilterMetros(t *testing.T) {
 			name:   "contradictory expressions metros",
 			filter: []string{"metro!=metro1,metro==metro1"},
 			input:  metros,
-			output: []string(nil),
+			output: []string{},
 		},
 		{
 			name:   "other fields",
@@ -81,21 +79,11 @@ func TestFilterMetros(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metros := make([]config.Metro, len(tt.input))
-			for i, name := range tt.input {
-				metros[i] = config.Metro{Name: name}
-			}
-
 			filter, err := filters.ParseAll(tt.filter...)
 			require.NoError(t, err)
 
-			result := filterMetros(metros, filter)
-
-			var resultNames []string
-			for _, metro := range result {
-				resultNames = append(resultNames, metro.Name)
-			}
-			assert.Equal(t, tt.output, resultNames)
+			result := filterMetros(tt.input, filter)
+			assert.Equal(t, tt.output, result)
 		})
 	}
 }
