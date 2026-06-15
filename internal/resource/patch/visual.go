@@ -211,13 +211,16 @@ func loadFieldPatches(fields []resource.Field, data []byte, create bool) ([]reso
 		} else {
 			patch = field.Edit
 		}
-		if patch == nil || patch.Set == nil {
+		if patch == nil {
 			continue
 		}
 
 		// Visual editing only supports Set operations - always clear Add/Del
 		patch.Add = nil
 		patch.Del = nil
+		if patch.Set == nil {
+			continue
+		}
 
 		// Get the value from the edited YAML
 		newValue, found := getNestedValue(obj, key)

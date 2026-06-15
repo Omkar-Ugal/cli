@@ -44,7 +44,8 @@ func FilterDisplayableEditFields(fields []resource.Field) []resource.Field {
 		if field.Edit == nil {
 			return resource.FilterPrune
 		}
-		if reflect.ValueOf(field.Edit.Set).IsZero() {
+		rv := reflect.ValueOf(field.Edit.Set)
+		if !rv.IsValid() || rv.IsZero() {
 			return resource.FilterPrune
 		}
 		return resource.FilterInclude

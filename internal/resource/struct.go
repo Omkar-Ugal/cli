@@ -399,6 +399,11 @@ func parsePatchEmpty(tp reflect.Type, tag string) (any, error) {
 	switch tag {
 	case "":
 		return reflect.Zero(tp).Interface(), nil
+	case "strings":
+		if tp.Kind() != reflect.Slice {
+			return nil, fmt.Errorf("strings patch value only valid for slice types")
+		}
+		return []string(nil), nil
 	case "keys":
 		if tp.Kind() != reflect.Map {
 			return nil, fmt.Errorf("keys patch value only valid for map types")
