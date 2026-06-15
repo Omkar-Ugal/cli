@@ -6,10 +6,12 @@
 package integration
 
 import (
+	"net"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	integ "unikraft.com/cli/internal/integration"
 )
@@ -19,8 +21,8 @@ func TestCertificates(t *testing.T) {
 		r := runner(t, true)
 		certNameA := uniq()
 		certNameB := uniq()
-		certA := integ.GenerateCert(t)
-		certB := integ.GenerateCert(t)
+		certA := integ.GenerateCert(t, "")
+		certB := integ.GenerateCert(t, "")
 
 		out := r.Run(t, []string{"unikraft", "certificate", "list", "--output", "quiet"})
 		assert.Empty(t, strings.TrimSpace(out))
@@ -42,5 +44,81 @@ func TestCertificates(t *testing.T) {
 
 		out = r.Run(t, []string{"unikraft", "certificate", "delete", "test-" + certNameA, "test-" + certNameB})
 		assert.Regexp(t, `test-`, out)
+	})
+
+	t.Run("serve", func(t *testing.T) {
+		r := runner(t, true)
+		certName := uniq()
+		domainName := uniq()
+		instName := uniq()
+
+		// Use a stable external FQDN whose CN we know up front, so we can
+		// generate the certificate before creating the instance and attach it
+		// inline. DNS for this name will not resolve, but we will dial the load
+		// balancer directly using the IP resolved from the internal FQDN.
+		externalFQDN := domainName + ".example.com"
+
+		// Upload the certificate to Unikraft Cloud.
+		cert := integ.GenerateCert(t, externalFQDN)
+		r.Run(t, []string{
+			"unikraft", "certificate", "create",
+			"--set", "name=test-" + certName,
+			"--set", "cn=" + cert.CN,
+			"--set", "chain=" + cert.Chain,
+			"--set", "pkey=" + cert.Key,
+			"--set", "metro=" + r.Config.MetroName,
+		})
+
+		// Create an nginx instance with both the external FQDN (for the cert)
+		// and a short-name domain (to get a resolvable internal address).
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=true",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + externalFQDN + ".,certificate=test-" + certName,
+			"--set", "service.domains=name=" + domainName,
+		})
+
+		// Retrieve the internal FQDN (short-name domain) and resolve it to an IP
+		// so we can dial the load balancer directly, bypassing DNS for example.com.
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", `template={{ range .service.domains }}{{ if not (hasSuffix .fqdn "example.com") }}{{ .fqdn }}{{ end }}{{ end }}`,
+		})
+		internalFQDN := strings.TrimSpace(out)
+		require.NotEmpty(t, internalFQDN, "expected a non-empty FQDN from the service domain")
+
+		addrs, err := net.LookupHost(internalFQDN)
+		require.NoError(t, err, "failed to resolve internal FQDN %s", internalFQDN)
+		require.NotEmpty(t, addrs, "no addresses for internal FQDN %s", internalFQDN)
+		dialAddr := net.JoinHostPort(addrs[0], "443")
+
+		r.Run(t, []string{
+			"unikraft", "instance", "wait",
+			"--until", "state==running",
+			"--timeout", "30s",
+			"test-" + instName,
+		})
+
+		// Dial the LB IP directly with ServerName set to the external FQDN so
+		// SNI selects the certificate we uploaded rather than the default one.
+		tlsCerts := integ.HTTPGetTLSCerts(t, "https://"+externalFQDN, dialAddr)
+		require.NotEmpty(t, tlsCerts, "TLS handshake returned no certificates")
+
+		served := tlsCerts[0]
+		expected := cert.X509Cert
+		assert.Equal(t, expected.Subject.CommonName, served.Subject.CommonName,
+			"served certificate CN should match uploaded certificate")
+		assert.Equal(t, expected.SerialNumber, served.SerialNumber,
+			"served certificate serial number should match uploaded certificate")
+		assert.Equal(t, expected.RawSubjectPublicKeyInfo, served.RawSubjectPublicKeyInfo,
+			"served certificate public key should match uploaded certificate")
+		assert.Equal(t, expected.Raw, served.Raw,
+			"served certificate should be byte-for-byte identical to the uploaded certificate")
 	})
 }
