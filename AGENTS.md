@@ -61,6 +61,7 @@ Use `--output=json` for machine-readable events including snapshots and errors. 
 
 - If modifying existing functionality that has tests, add new tests to cover the changes in behavior.
 - If wanting to explore Go documentation or inspect Go code, use the `go doc` command - don't explore the filesystem outside of the current directory for this.
+- For terminal/TUI color styling, use `unikraft.com/x/colors` tokens instead of arbitrary hard-coded color values.
 - If writing multi-line strings, use backticked strings.
 - Use the newest Go features you know about; do not worry about old Go versions. For example:
   - Use `errors.Join` for combining errors.
