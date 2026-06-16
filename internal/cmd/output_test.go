@@ -174,6 +174,7 @@ func volumesOutputTests(t *testing.T) {
 		Tags:        []string{"env-prod"},
 		State:       types.VolumeState(platform.VolumeStateAvailable),
 		Size:        50,
+		Free:        10,
 		Filesystem:  "ext4",
 		QuotaPolicy: "hard",
 		Persistent:  true,

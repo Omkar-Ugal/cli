@@ -246,10 +246,12 @@ type Volume struct {
 
 	State       types.VolumeState   `mirror:"volume.state" field:",short"`
 	Size        types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set" edit:"set"`
+	Free        types.SizeMebibytes `mirror:"volume.free_mb" field:"free,long"`
 	Filesystem  string              `mirror:"volume.filesystem" field:",long" create:"set"`
 	QuotaPolicy string              `mirror:"volume.quota_policy" field:"quota-policy,long" create:"set" edit:"set"`
 	Persistent  bool                `mirror:"volume.persistent" field:",long"`
 	AccessMode  *types.AccessMode   `mirror:"volume.access_mode" field:",long" create:"set"`
+	HostPath    *string             `mirror:"volume.host_path" field:"host-path,long"`
 	Template    string              `field:"template,invisible,valueless" create:"set"`
 
 	Timestamps struct {
