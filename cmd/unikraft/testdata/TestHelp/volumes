@@ -43,6 +43,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -95,6 +96,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -155,6 +157,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -217,6 +220,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -280,6 +284,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -559,6 +564,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid
@@ -639,6 +645,7 @@ Fields:
   quota-policy
   persistent
   access-mode
+  host-path
   template
   timestamps, timestamps.created
   attached-to, attached-to.*, attached-to.*.name, attached-to.*.uuid

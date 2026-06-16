@@ -22,6 +22,7 @@ filesystem:   ext4
 quota-policy: hard
 persistent:   true
 access-mode:  rwo
+host-path:
 timestamps:
   created:    never
 attached-to:
@@ -120,6 +121,11 @@ fra    my-volume  available  50MiB
     "create": {
       "set": "rwo"
     }
+  },
+  {
+    "name": "host-path",
+    "value": null,
+    "verbosity": "long"
   },
   {
     "name": "template",
