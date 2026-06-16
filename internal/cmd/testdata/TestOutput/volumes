@@ -4,6 +4,7 @@ name:         my-volume
 uuid:         a1b2c3d4-e5f6-7890-abcd-ef1234567890
 state:        available
 size:         50MiB
+free:         10MiB
 filesystem:   ext4
 quota-policy: hard
 persistent:   true
@@ -16,6 +17,7 @@ uuid:         a1b2c3d4-e5f6-7890-abcd-ef1234567890
 tags:         ["env-prod"]
 state:        available
 size:         50MiB
+free:         10MiB
 filesystem:   ext4
 quota-policy: hard
 persistent:   true
@@ -81,6 +83,11 @@ fra    my-volume  available  50MiB
     "edit": {
       "set": "50MiB"
     }
+  },
+  {
+    "name": "free",
+    "value": "10MiB",
+    "verbosity": "long"
   },
   {
     "name": "filesystem",

@@ -38,6 +38,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
@@ -89,6 +90,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
@@ -148,6 +150,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
@@ -209,6 +212,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
@@ -271,6 +275,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
@@ -549,6 +554,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
@@ -628,6 +634,7 @@ Fields:
   tags
   state
   size
+  free
   filesystem
   quota-policy
   persistent
