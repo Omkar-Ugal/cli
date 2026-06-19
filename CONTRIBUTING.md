@@ -60,10 +60,10 @@ task integration
 If integration test expectations change, update the golden files with:
 
 ```sh
-task integration-update
+task golden-update
 ```
 
-Never edit files in `testdata/` manually — always use `task integration-update`
+Never edit files in `testdata/` manually — always use `task golden-update`
 to regenerate them.
 
 Run tests and linting locally before pushing; CI also runs them.

@@ -10,7 +10,7 @@ This repo contains the Go-based Unikraft CLI. Use this file for contributor-faci
 - Build the CLI with `task cli`; the binary is placed in `dist/`, and called `unikraft`.
 - Build documentation with `task docs`; outputs include Markdown docs in `dist/docs/` and man pages in `dist/man/`.
 - Quality gates: `task lint`, `task test`. Run these after making changes to ensure code quality.
-- Integration tests: `task integration`. These tests cover end-to-end scenarios, don't run unless the user prompts you. You can update the expected outputs by running `task integration-update` - never update `testdata/` files manually.
+- Integration tests: `task integration`. These tests cover end-to-end scenarios, don't run unless the user prompts you. You can update the expected outputs by running `task golden-update` - never update `testdata/` files manually.
 - Run these locally before pushing; CI also runs them.
 
 ## Architecture overview
