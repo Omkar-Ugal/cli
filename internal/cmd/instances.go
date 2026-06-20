@@ -49,7 +49,7 @@ type InstancesCmd struct {
 	cmd.ListableResourceCmd[Instance]
 	cmd.BulkDeletableResourceCmd[Instance]
 
-	Create   InstanceCreateCmd    `cmd:"" help:"Create an instance."`
+	Create   InstanceCreateCmd    `cmd:"" aliases:"new" help:"Create an instance."`
 	Edit     InstanceEditCmd      `cmd:"" help:"Edit an instance."`
 	Template InstanceTemplatesCmd `cmd:"" group:"cmd-templates" help:"Manage instance templates." aliases:"templates" set:"name=instance-template" set:"names=instance-templates"`
 
