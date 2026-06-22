@@ -1330,6 +1330,11 @@ func (cmd InstancesLogsCmd) Examples() []kingkong.Example {
 func (cmd *InstancesLogsCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	keys := multimetro.ParseKeys(cmd.Targets)
 
+	_, err := Instance{}.Get(ctx, keys.Strings())
+	if err != nil {
+		return err
+	}
+
 	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return err
