@@ -34,6 +34,8 @@ scale-to-zero:
   stateful:      true
   cooldown-time: 500ms
   notify-time:   100ms
+timing:
+  boot-time:     250ms
 sched-priority:  high
 stop:
   reason:        crashed
@@ -657,7 +659,7 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
       {
         "name": "boot-time",
         "value": "250ms",
-        "verbosity": "hidden"
+        "verbosity": "long"
       },
       {
         "name": "net-time",
@@ -665,7 +667,7 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
         "verbosity": "hidden"
       }
     ],
-    "verbosity": "hidden"
+    "verbosity": "long"
   },
   {
     "name": "restart",
