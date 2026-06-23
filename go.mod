@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.6
-	charm.land/lipgloss/v2 v2.0.2
+	charm.land/lipgloss/v2 v2.0.4
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/kong v1.15.0
@@ -182,7 +182,7 @@ require (
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
 	golang.org/x/crypto v0.51.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
@@ -193,9 +193,3 @@ require (
 )
 
 tool github.com/caarlos0/svu/v3
-
-// HACK: hot-fix for https://github.com/charmbracelet/lipgloss/pull/636
-replace charm.land/lipgloss/v2 => github.com/jedevc/lipgloss/v2 v2.0.0-20260322175907-46dd1f11f91e
-
-// HACK: pin to rc.2 due to bug in rc.3, see https://github.com/moby/buildkit/pull/6616
-replace github.com/containerd/platforms => github.com/containerd/platforms v1.0.0-rc.2
