@@ -45,26 +45,32 @@ Run unit tests:
 task test
 ```
 
-Run the linter:
+Run offline golden (snapshot) tests:
 
 ```sh
-task lint
+task golden
 ```
 
-Run integration tests:
+If golden test expectations change, update them:
+
+```sh
+task golden-update
+```
+
+Never edit files in `testdata/` manually — always use `task golden-update`
+to regenerate them.
+
+Run integration tests (requires cloud credentials):
 
 ```sh
 task integration
 ```
 
-If integration test expectations change, update the golden files with:
+Run the linter:
 
 ```sh
-task integration-update
+task lint
 ```
-
-Never edit files in `testdata/` manually — always use `task integration-update`
-to regenerate them.
 
 Run tests and linting locally before pushing; CI also runs them.
 
