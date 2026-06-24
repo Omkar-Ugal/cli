@@ -2,6 +2,7 @@
 metro:     fra
 name:      my-template
 uuid:      d4e5f6a7-b8c9-0123-def0-123456789abc
+tags:      ["env-staging"]
 state:     stopped
 image:     nginx
 resources:
@@ -66,7 +67,7 @@ fra    my-template  stopped  nginx        128MiB  1
     "value": [
       "env-staging"
     ],
-    "verbosity": "hidden",
+    "verbosity": "long",
     "edit": {
       "set": [
         "env-staging"

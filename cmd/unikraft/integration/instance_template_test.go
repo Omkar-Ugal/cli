@@ -84,4 +84,68 @@ func TestInstanceTemplates(t *testing.T) {
 
 		r.Run(t, []string{"unikraft", "instance", "template", "delete", templateName})
 	})
+
+	t.Run("tags", func(t *testing.T) {
+		r := runner(t, true)
+		instName := uniq()
+
+		// Create a base instance for templating.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "template", "create", "test-" + instName,
+			"--output", "template={{ .name }}",
+		})
+		templateName := strings.TrimSpace(out)
+
+		// Edit: set tags on template.
+		r.Run(t, []string{
+			"unikraft", "instance", "template", "edit", templateName,
+			"--output", "quiet",
+			"--set", "tags=env-prod,team-core",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "template", "inspect", templateName})
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+
+		// Filter by tag.
+		out = r.Run(t, []string{"unikraft", "instance", "template", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, templateName)
+
+		out = r.Run(t, []string{"unikraft", "instance", "template", "list", "--filter", "tags.*==no-match"})
+		assert.NotContains(t, out, templateName)
+
+		// Edit: add a tag.
+		r.Run(t, []string{
+			"unikraft", "instance", "template", "edit", templateName,
+			"--output", "quiet",
+			"--add", "tags=added-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "template", "inspect", templateName})
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		// Edit: del a tag.
+		r.Run(t, []string{
+			"unikraft", "instance", "template", "edit", templateName,
+			"--output", "quiet",
+			"--del", "tags=env-prod",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "template", "inspect", templateName})
+		assert.NotRegexp(t, `env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "template", "delete", templateName})
+	})
 }

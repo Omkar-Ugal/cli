@@ -2,6 +2,7 @@
 metro:      fra
 name:       my-vol-template
 uuid:       e5f6a7b8-c9d0-1234-ef01-23456789abcd
+tags:       ["env-staging"]
 state:      available
 size:       20MiB
 filesystem: ext4
@@ -52,7 +53,7 @@ fra    my-vol-template  available  20MiB
     "value": [
       "env-staging"
     ],
-    "verbosity": "hidden",
+    "verbosity": "long",
     "edit": {
       "set": [
         "env-staging"

@@ -79,4 +79,65 @@ func TestVolumeTemplates(t *testing.T) {
 
 		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
 	})
+
+	t.Run("tags", func(t *testing.T) {
+		r := runner(t, true)
+		volName := uniq()
+
+		// Create a base volume for templating.
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + volName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "size=10",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "volume", "template", "create", "test-" + volName,
+			"--output", "template={{ .name }}",
+		})
+		templateName := strings.TrimSpace(out)
+
+		// Edit: set tags on template.
+		r.Run(t, []string{
+			"unikraft", "volume", "template", "edit", templateName,
+			"--output", "quiet",
+			"--set", "tags=env-prod,team-core",
+		})
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", templateName})
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+
+		// Filter by tag.
+		out = r.Run(t, []string{"unikraft", "volume", "template", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, templateName)
+
+		out = r.Run(t, []string{"unikraft", "volume", "template", "list", "--filter", "tags.*==no-match"})
+		assert.NotContains(t, out, templateName)
+
+		// Edit: add a tag.
+		r.Run(t, []string{
+			"unikraft", "volume", "template", "edit", templateName,
+			"--output", "quiet",
+			"--add", "tags=added-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", templateName})
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		// Edit: del a tag.
+		r.Run(t, []string{
+			"unikraft", "volume", "template", "edit", templateName,
+			"--output", "quiet",
+			"--del", "tags=env-prod",
+		})
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", templateName})
+		assert.NotRegexp(t, `env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
+	})
 }

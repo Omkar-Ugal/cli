@@ -274,4 +274,65 @@ func TestVolumes(t *testing.T) {
 			r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		})
 	})
+
+	t.Run("tags", func(t *testing.T) {
+		r := runner(t, true)
+		volName := uniq()
+
+		// Create volume with tags.
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + volName,
+			"--set", "size=10",
+			"--set", "metro=" + r.Config.MetroName,
+			"--tags", "env-prod",
+			"--tags", "team-core",
+		})
+
+		// Verify tags appear in inspect output.
+		out := r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+
+		// Filter by tag.
+		out = r.Run(t, []string{"unikraft", "volume", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, "test-"+volName)
+
+		out = r.Run(t, []string{"unikraft", "volume", "list", "--filter", "tags.*==no-match"})
+		assert.NotContains(t, out, "test-"+volName)
+
+		// Edit: set (replace all tags).
+		r.Run(t, []string{
+			"unikraft", "volume", "edit", "test-" + volName,
+			"--output", "quiet",
+			"--set", "tags=new-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
+		assert.Regexp(t, `tags:.*new-tag`, out)
+		assert.NotRegexp(t, `env-prod`, out)
+		assert.NotRegexp(t, `team-core`, out)
+
+		// Edit: add a tag.
+		r.Run(t, []string{
+			"unikraft", "volume", "edit", "test-" + volName,
+			"--output", "quiet",
+			"--add", "tags=added-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
+		assert.Regexp(t, `tags:.*new-tag`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		// Edit: del a tag.
+		r.Run(t, []string{
+			"unikraft", "volume", "edit", "test-" + volName,
+			"--output", "quiet",
+			"--del", "tags=new-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
+		assert.NotRegexp(t, `new-tag`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
+	})
 }
