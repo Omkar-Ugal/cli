@@ -740,6 +740,70 @@ cmd: ["cat", "/rom/hello.txt"]
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	t.Run("tags", func(t *testing.T) {
+		r := runner(t, true)
+		instName := uniq()
+
+		// Create instance with tags.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--tags", "env-prod",
+			"--tags", "team-core",
+		})
+
+		// Verify tags appear in inspect output.
+		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+
+		// Filter by tag.
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, "test-"+instName)
+
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==no-match"})
+		assert.NotContains(t, out, "test-"+instName)
+
+		// Edit: set (replace all tags).
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--set", "tags=new-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `tags:.*new-tag`, out)
+		assert.NotRegexp(t, `env-prod`, out)
+		assert.NotRegexp(t, `team-core`, out)
+
+		// Edit: add a tag.
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--add", "tags=added-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `tags:.*new-tag`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		// Edit: del a tag.
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--del", "tags=new-tag",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.NotRegexp(t, `new-tag`, out)
+		assert.Regexp(t, `tags:.*added-tag`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
 	t.Run("watch-timeout", func(t *testing.T) {
 		r := runner(t, true)
 		r.Run(t, []string{"unikraft", "--timeout=1s", "instance", "ls", "-w"}, integ.AllowFail())

@@ -78,7 +78,7 @@ type InstanceTemplate struct {
 	Name  string          `mirror:"instance.name" field:",short"`
 	UUID  string          `mirror:"instance.uuid" field:",long"`
 
-	Tags       []string `mirror:"instance.tags" edit:"set,add,del"`
+	Tags       []string `mirror:"instance.tags" field:",long" edit:"set,add,del"`
 	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,hidden" edit:"set"`
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`

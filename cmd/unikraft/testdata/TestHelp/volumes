@@ -335,6 +335,9 @@ Create flags:
       --size=<size>
           Volume size.
           [examples: 10GiB, 100MiB]
+      --tags=<tag>
+          Volume tags.
+          [examples: env-prod, team-platform]
       --filesystem=<filesystem>
           Volume filesystem.
           [example: ext4]
@@ -614,6 +617,9 @@ Edit flags:
       --size=<size>
           Volume size.
           [examples: 20GiB, 100MiB]
+      --tags=<tag>
+          Volume tags.
+          [examples: env-prod, team-platform]
       --quota-policy=<quota-policy>
           Volume quota policy.
           [examples: static, dynamic]

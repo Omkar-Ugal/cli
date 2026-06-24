@@ -89,6 +89,8 @@ type InstanceCreateCmd struct {
 
 	ScaleToZero InstanceScaleToZero `group:"flag-create" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 
+	Tags []string `group:"flag-create" shortcut:"tags" help:"Instance tags." placeholder:"tag" example:"env-prod,team-platform"`
+
 	Restart string `group:"flag-create" shortcut:"restart.policy" help:"Restart policy." placeholder:"policy" example:"always,on-failure,never"`
 
 	Autostart    *bool    `group:"flag-create" shortcut:"autostart" help:"Start instance automatically."`
@@ -135,6 +137,8 @@ type InstanceEditCmd struct {
 
 	Rom []InstanceRom `group:"flag-edit" shortcut:"roms" sep:"none" help:"Attach ROM." placeholder:"image=<ref>,at=<path>" example:"image=myuser/my-rom:latest\\,at=/rom0\\,name=my-rom,dir=./mydata\\,at=/rom"`
 
+	Tags []string `group:"flag-edit" shortcut:"tags" help:"Instance tags." placeholder:"tag" example:"env-prod,team-platform"`
+
 	ScaleToZero InstanceScaleToZero `group:"flag-edit" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 }
 
@@ -150,7 +154,7 @@ type Instance struct {
 	Name  string          `mirror:"instance.name" field:",short" create:"set"`
 	UUID  string          `mirror:"instance.uuid" field:",long"`
 
-	Tags []string `mirror:"instance.tags"`
+	Tags []string `mirror:"instance.tags" field:",long" create:"set" edit:"set,add,del"`
 
 	State types.InstanceState `mirror:"instance.state" field:",short" edit:"set"`
 
@@ -888,6 +892,8 @@ func (Instance) Edit(ctx context.Context, key string, fields []resource.Field) e
 func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInstanceProperty, any, error) {
 	var zero platform.MutableInstanceProperty
 	switch path {
+	case "tags":
+		return platform.MutableInstancePropertyTags, value.([]string), nil
 	case "image":
 		return platform.MutableInstancePropertyImage, value.(types.ImageRef[reference.Named]).Reference.String(), nil
 	case "runtime.args":
@@ -973,6 +979,8 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "name":
 			name := field.Create.Set.(string)
 			req.Name = &name
+		case "tags":
+			req.Tags = field.Create.Set.([]string)
 		case "metro":
 			metro = string(field.Create.Set.(LinkName[Metro]))
 		case "image":

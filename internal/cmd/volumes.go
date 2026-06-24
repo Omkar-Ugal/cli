@@ -67,6 +67,7 @@ type VolumeCreateCmd struct {
 	Metro       string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
 	Name        string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
 	Size        types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
+	Tags        []string            `group:"flag-create" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
 	Filesystem  string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
 	QuotaPolicy string              `group:"flag-create" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 	AccessMode  types.AccessMode    `group:"flag-create" shortcut:"access-mode" help:"Volume access mode." placeholder:"access-mode" example:"rwo,rox,rwx"`
@@ -88,6 +89,7 @@ type VolumeEditCmd struct {
 	cmd.ResourceEditCmd[Volume]
 
 	Size        types.SizeMebibytes `group:"flag-edit" shortcut:"size" help:"Volume size." placeholder:"size" example:"20GiB,100MiB"`
+	Tags        []string            `group:"flag-edit" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
 	QuotaPolicy string              `group:"flag-edit" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 }
 
@@ -242,7 +244,7 @@ type Volume struct {
 	Name  string          `mirror:"volume.name" field:",short" create:"set"`
 	UUID  string          `mirror:"volume.uuid" field:",long"`
 
-	Tags []string `mirror:"volume.tags"`
+	Tags []string `mirror:"volume.tags" field:",long" create:"set" edit:"set,add,del"`
 
 	State       types.VolumeState   `mirror:"volume.state" field:",short"`
 	Size        types.SizeMebibytes `mirror:"volume.size_mb" field:",short" create:"set" edit:"set"`
@@ -415,6 +417,8 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 				req.Name = &name
 			case "metro":
 				metro = string(field.Create.Set.(LinkName[Metro]))
+			case "tags":
+				req.Tags = field.Create.Set.([]string)
 			case "size":
 				size := field.Create.Set.(types.SizeMebibytes)
 				sizeMb := uint64(size)
@@ -569,6 +573,8 @@ func (Volume) Examples() map[cmd.CmdType][]kingkong.Example {
 func volumePatchSpec(path string, _ patchOp, value any) (platform.MutableVolumeProperty, any, error) {
 	var zero platform.MutableVolumeProperty
 	switch path {
+	case "tags":
+		return platform.MutableVolumePropertyTags, value.([]string), nil
 	case "size":
 		return platform.MutableVolumePropertySizeMb, int64(value.(types.SizeMebibytes)), nil
 	case "quota-policy":

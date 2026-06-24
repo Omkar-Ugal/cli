@@ -441,6 +441,9 @@ Create flags:
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
           [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
+      --tags=<tag>
+          Instance tags.
+          [examples: env-prod, team-platform]
       --restart=<policy>
           Restart policy.
           [examples: always, on-failure, never]
@@ -589,6 +592,9 @@ Create flags:
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
           [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
+      --tags=<tag>
+          Instance tags.
+          [examples: env-prod, team-platform]
       --restart=<policy>
           Restart policy.
           [examples: always, on-failure, never]
@@ -727,6 +733,9 @@ Edit flags:
       --rom=image=<ref>,at=<path>
           Attach ROM.
           [examples: image=myuser/my-rom:latest,at=/rom0,name=my-rom, dir=./mydata,at=/rom]
+      --tags=<tag>
+          Instance tags.
+          [examples: env-prod, team-platform]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
             policy: on | idle | off

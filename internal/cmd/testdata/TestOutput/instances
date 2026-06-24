@@ -2,6 +2,7 @@
 metro:           fra
 name:            my-instance
 uuid:            7b79b250-0658-4d10-8dc0-d854399d7e74
+tags:            ["env-prod", "team-core"]
 state:           running
 image:           nginx
 runtime:
@@ -142,7 +143,21 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
       "env-prod",
       "team-core"
     ],
-    "verbosity": "hidden"
+    "verbosity": "long",
+    "create": {
+      "set": [
+        "env-prod",
+        "team-core"
+      ]
+    },
+    "edit": {
+      "set": [
+        "env-prod",
+        "team-core"
+      ],
+      "add": null,
+      "del": null
+    }
   },
   {
     "name": "state",

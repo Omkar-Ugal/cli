@@ -2,6 +2,7 @@
 metro:        fra
 name:         my-volume
 uuid:         a1b2c3d4-e5f6-7890-abcd-ef1234567890
+tags:         ["env-prod"]
 state:        available
 size:         50MiB
 free:         10MiB
@@ -67,7 +68,19 @@ fra    my-volume  available  50MiB
     "value": [
       "env-prod"
     ],
-    "verbosity": "hidden"
+    "verbosity": "long",
+    "create": {
+      "set": [
+        "env-prod"
+      ]
+    },
+    "edit": {
+      "set": [
+        "env-prod"
+      ],
+      "add": null,
+      "del": null
+    }
   },
   {
     "name": "state",
