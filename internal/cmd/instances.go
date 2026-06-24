@@ -105,6 +105,14 @@ func (c *InstanceCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox
 	if c.DeleteOnStop {
 		c.Set = append(c.Set, map[string]string{"features": string(platform.CreateInstanceRequestFeaturesDeleteOnStop)})
 	}
+	if c.Service.Name != "" || c.Service.UUID != "" {
+		if len(c.Publish) > 0 {
+			return fmt.Errorf("--publish cannot be used with --service")
+		}
+		if len(c.Domain) > 0 {
+			return fmt.Errorf("--domain cannot be used with --service")
+		}
+	}
 	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
 }
 
