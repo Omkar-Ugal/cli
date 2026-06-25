@@ -150,6 +150,9 @@ func (InstanceTemplate) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, instance := range resp.Data.Instances {
 			result, err := InstanceTemplate{}.load(nil, instance, &c.Metro, profile)
 			if err != nil {
@@ -180,6 +183,9 @@ func (InstanceTemplate) Get(ctx context.Context, keys []string) ([]resource.Reso
 		var found []group.Ref
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for i, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue
@@ -373,7 +379,7 @@ func (InstanceTemplate) Create(ctx context.Context, fields []resource.Field) ([]
 					errs = append(errs, fmt.Errorf("failed to create template for %s: %w", refStr, err))
 					continue
 				}
-				if len(resp.Data.Instances) == 0 {
+				if resp == nil || resp.Data == nil || len(resp.Data.Instances) == 0 {
 					errs = append(errs, fmt.Errorf("no template created for %s", refStr))
 					continue
 				}

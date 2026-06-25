@@ -595,6 +595,9 @@ func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, instance := range resp.Data.Instances {
 			result, err := Instance{}.load(nil, instance, &c.Metro, profile)
 			if err != nil {
@@ -624,6 +627,9 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 		var found []group.Ref
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for i, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue
@@ -1194,7 +1200,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.Data.Instances) == 0 {
+		if resp == nil || resp.Data == nil || len(resp.Data.Instances) == 0 {
 			return nil, fmt.Errorf("no instances created")
 		}
 		created := make(multimetro.Keys, 0, len(resp.Data.Instances))
@@ -1691,6 +1697,9 @@ func startInstances(ctx context.Context, g *group.Group[multimetro.MetroClient],
 			return nil, nil, err
 		}
 		var started multimetro.Keys
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for _, instance := range resp.Data.Instances {
 			if instance.Status != platform.ResponseStatusSuccess {
 				continue
@@ -1718,6 +1727,9 @@ func stopInstances(ctx context.Context, g *group.Group[multimetro.MetroClient], 
 			return nil, nil, err
 		}
 		var stopped multimetro.Keys
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue
@@ -1816,6 +1828,9 @@ func suspendInstances(ctx context.Context, g *group.Group[multimetro.MetroClient
 			return nil, nil, err
 		}
 		var suspended multimetro.Keys
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue

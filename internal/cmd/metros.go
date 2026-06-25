@@ -305,7 +305,7 @@ func (q *metroQuotas) Lazy(ctx context.Context) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.Data == nil || len(resp.Data.Quotas) == 0 {
+	if resp == nil || resp.Data == nil || len(resp.Data.Quotas) == 0 {
 		return new(metroQuotas), nil
 	}
 

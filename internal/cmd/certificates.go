@@ -118,6 +118,9 @@ func (Certificate) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, certificate := range resp.Data.Certificates {
 			result, err := Certificate{}.load(nil, certificate, &c.Metro)
 			if err != nil {
@@ -143,6 +146,9 @@ func (Certificate) Get(ctx context.Context, keys []string) ([]resource.Resource,
 		var found []group.Ref
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for i, certificate := range resp.Data.Certificates {
 			result, err := Certificate{}.load(&refs[i], certificate, &c.Metro)
 			if err != nil {
@@ -199,6 +205,9 @@ func (Certificate) Delete(ctx context.Context, keys []string) error {
 			return nil, err
 		}
 		var deleted []group.Ref
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, certificate := range resp.Data.Certificates {
 			if certificate.Status != platform.ResponseStatusSuccess {
 				continue
@@ -244,7 +253,7 @@ func (Certificate) Create(ctx context.Context, fields []resource.Field) ([]resou
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.Data.Certificates) == 0 {
+		if resp == nil || resp.Data == nil || len(resp.Data.Certificates) == 0 {
 			return nil, fmt.Errorf("no certificates created")
 		}
 		created := make(multimetro.Keys, 0, len(resp.Data.Certificates))

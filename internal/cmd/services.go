@@ -270,6 +270,9 @@ func (ServiceGroup) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, serviceGroup := range resp.Data.ServiceGroups {
 			result, err := ServiceGroup{}.load(nil, serviceGroup, &c.Metro)
 			if err != nil {
@@ -295,6 +298,9 @@ func (ServiceGroup) Get(ctx context.Context, keys []string) ([]resource.Resource
 		var found []group.Ref
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for i, serviceGroup := range resp.Data.ServiceGroups {
 			if serviceGroup.Status == nil || *serviceGroup.Status != platform.ResponseStatusSuccess {
 				continue
@@ -410,7 +416,7 @@ func (ServiceGroup) Create(ctx context.Context, fields []resource.Field) ([]reso
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.Data.ServiceGroups) == 0 {
+		if resp == nil || resp.Data == nil || len(resp.Data.ServiceGroups) == 0 {
 			return nil, fmt.Errorf("no service groups created")
 		}
 		created := make(multimetro.Keys, 0, len(resp.Data.ServiceGroups))
