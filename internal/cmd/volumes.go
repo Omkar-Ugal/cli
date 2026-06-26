@@ -201,7 +201,7 @@ func (c *VolumesCloneCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.Data.Volumes) == 0 {
+		if resp == nil || resp.Data == nil || len(resp.Data.Volumes) == 0 {
 			return nil, fmt.Errorf("no volumes cloned")
 		}
 		created := make(multimetro.Keys, 0, len(resp.Data.Volumes))
@@ -305,6 +305,9 @@ func (Volume) List(ctx context.Context) ([]resource.Resource, error) {
 		if err != nil {
 			return nil, err
 		}
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		var results []resource.Resource
 		var errs []error
 		for _, volume := range resp.Data.Volumes {
@@ -333,6 +336,9 @@ func (Volume) Get(ctx context.Context, keys []string) ([]resource.Resource, erro
 		var found []group.Ref
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for i, volume := range resp.Data.Volumes {
 			if volume.Status == nil || *volume.Status != platform.ResponseStatusSuccess {
 				continue
@@ -392,6 +398,9 @@ func (Volume) Delete(ctx context.Context, keys []string) error {
 			return nil, err
 		}
 		var deleted []group.Ref
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, volume := range resp.Data.Volumes {
 			if volume.Status != platform.ResponseStatusSuccess {
 				continue
@@ -459,7 +468,7 @@ func (Volume) Create(ctx context.Context, fields []resource.Field) ([]resource.R
 		if err != nil {
 			return nil, err
 		}
-		if len(resp.Data.Volumes) == 0 {
+		if resp == nil || resp.Data == nil || len(resp.Data.Volumes) == 0 {
 			return nil, fmt.Errorf("no volumes created")
 		}
 		created := make(multimetro.Keys, 0, len(resp.Data.Volumes))

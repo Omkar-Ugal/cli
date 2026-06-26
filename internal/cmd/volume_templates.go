@@ -133,6 +133,9 @@ func (VolumeTemplate) List(ctx context.Context) ([]resource.Resource, error) {
 		}
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil
+		}
 		for _, volume := range resp.Data.Volumes {
 			result, err := VolumeTemplate{}.load(nil, volume, &c.Metro, profile)
 			if err != nil {
@@ -163,6 +166,9 @@ func (VolumeTemplate) Get(ctx context.Context, keys []string) ([]resource.Resour
 		var found []group.Ref
 		var results []resource.Resource
 		var errs []error
+		if resp == nil || resp.Data == nil {
+			return nil, nil, nil
+		}
 		for i, volume := range resp.Data.Volumes {
 			if volume.Status == nil || *volume.Status != platform.ResponseStatusSuccess {
 				continue
@@ -352,7 +358,7 @@ func (VolumeTemplate) Create(ctx context.Context, fields []resource.Field) ([]re
 					errs = append(errs, fmt.Errorf("failed to create template for %s: %w", refStr, err))
 					continue
 				}
-				if len(resp.Data.Volumes) == 0 {
+				if resp == nil || resp.Data == nil || len(resp.Data.Volumes) == 0 {
 					errs = append(errs, fmt.Errorf("no template created for %s", refStr))
 					continue
 				}
