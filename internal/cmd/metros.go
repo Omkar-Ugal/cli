@@ -310,8 +310,16 @@ func (q *metroQuotas) Lazy(ctx context.Context) (any, error) {
 	}
 
 	quotas := &resp.Data.Quotas[0]
+	result := metroQuotasFromPlatform(quotas)
+	return &result, nil
+}
 
-	result := new(metroQuotas)
+func metroQuotasFromPlatform(quotas *platform.Quotas) metroQuotas {
+	if quotas == nil {
+		return metroQuotas{}
+	}
+
+	result := metroQuotas{}
 	result.Instances.Active = types.Usage[int64]{
 		Used:  quotas.Used.LiveInstances,
 		Limit: quotas.Hard.LiveInstances,
@@ -362,5 +370,5 @@ func (q *metroQuotas) Lazy(ctx context.Context) (any, error) {
 		Max: quotas.Limits.MaxAutoscaleSize,
 	}
 
-	return result, nil
+	return result
 }

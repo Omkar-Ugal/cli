@@ -433,3 +433,35 @@ Global flags:
           [default: true]
       --timeout=<duration> ($UNIKRAFT_TIMEOUT)
           Set a deadline for the command (e.g. 30s, 5m, 1h).
+
+$ unikraft quotas --help
+
+Display quota usage for metros.
+
+Usage:
+  unikraft quotas [flags]
+
+Flags:
+  -m, --metro=<metro>
+          Show quotas for specific metros only.
+  -w, --watch=<duration>
+          Watch for changes and refresh output. Defaults to 2s.
+
+Global flags:
+  -h, --help
+          Show context-sensitive help.
+      --config=<file> ($UNIKRAFT_CONFIG)
+          Path to the configuration file.
+      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
+          Set the logging level.
+          [default: info, choices: trace, debug, info, warn, error, fatal]
+      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
+          Set the log type.
+          [default: text, choices: text, json]
+      --profile=<name> ($UNIKRAFT_PROFILE)
+          Set the current profile.
+      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+          Toggle anonymous usage analytics.
+          [default: true]
+      --timeout=<duration> ($UNIKRAFT_TIMEOUT)
+          Set a deadline for the command (e.g. 30s, 5m, 1h).
