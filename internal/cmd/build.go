@@ -27,10 +27,10 @@ type ImageBuildCmd struct {
 	Output string `short:"o" help:"Output destination"`
 
 	// similar to docker compose build
-	BuildArg []string `help:"Set build-time variables."`
+	BuildArg []string `sep:"none" help:"Set build-time variables."`
 	NoCache  bool     `help:"Do not use cache when building the image."`
-	Secret   []string `help:"Secret to expose to the build (format: \"id=mysecret[,src=/local/secret]\")."`
-	SSH      []string `help:"SSH agent socket or keys to expose to the build (format: \"default|<id>[=<socket>|<key>[,<key>]]\")."`
+	Secret   []string `sep:"none" help:"Secret to expose to the build (format: \"id=mysecret[,src=/local/secret]\")."`
+	SSH      []string `sep:"none" help:"SSH agent socket or keys to expose to the build (format: \"default|<id>[=<socket>|<key>[,<key>]]\")."`
 
 	Insecure []string `help:"Allow insecure (HTTP/unverified TLS) connections to registries. Specify hostnames to restrict, or omit to apply to all." type:"optional"`
 }
