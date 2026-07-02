@@ -178,6 +178,33 @@ brews:
     name: homebrew-tap
     token: "{{ .Env.GITHUB_TOKEN_UNIKRAFT }}"
 
+nix:
+- name: #@ "unikraft-cli-staging" if getattr(data.values, "PRERELEASE", "true") == "true" else "unikraft-cli"
+  ids:
+#@ for arch in oses["linux"]:
+  - #@ "archive-unikraft-cli-linux-{}".format(arch)
+#@ end
+#@ for arch in oses["darwin"]:
+  - #@ "archive-unikraft-cli-darwin-{}".format(arch)
+#@ end
+  url_template: "https://github.com/unikraft/cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  commit_author:
+    name: Unikraft Bot
+    email: monkey@unikraft.io
+  commit_msg_template: "Bump {{ .ProjectName }} to version {{ .Tag }}"
+  repository:
+    owner: unikraft
+    name: nur
+  homepage: "https://unikraft.com"
+  description: "The official CLI for Unikraft Cloud — deploy and manage unikernels globally in milliseconds."
+  path: pkgs/unikraft-cli/default.nix
+  license: bsd3
+  main_program: "unikraft"
+  install: |-
+    mkdir -p $out/bin
+    cp -vr $binary $out/bin/$binary
+    installManPage docs/man/*
+
 builds:
 #@ for os, archs in oses.items():
 #@ for arch in archs:
