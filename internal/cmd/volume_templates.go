@@ -78,7 +78,7 @@ type VolumeTemplate struct {
 	UUID  string          `mirror:"volume.uuid" field:",long"`
 
 	Tags       []string `mirror:"volume.tags" field:",long" edit:"set,add,del"`
-	DeleteLock bool     `mirror:"volume.delete_lock" field:"delete-lock,hidden" edit:"set"`
+	DeleteLock bool     `mirror:"volume.delete_lock" field:"delete-lock,long" edit:"set"`
 
 	State      types.VolumeState   `mirror:"volume.state" field:",short"`
 	Size       types.SizeMebibytes `mirror:"volume.size_mb" field:",short"`
