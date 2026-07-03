@@ -117,7 +117,7 @@ to install the CLI in your workflow:
 
 ```sh
 # Clone the repository
-git clone https://github.com/unikraft/cli.git
+git clone https://github.com/unikraft-cloud/cli.git
 cd cli
 
 # Build the CLI
@@ -363,5 +363,5 @@ Copyright (c) 2026, Unikraft GmbH and The Unikraft CLI Authors.
 ## Links
 
 - [Unikraft Cloud Documentation](https://unikraft.com/docs)
-- [Report Issues](https://github.com/unikraft/cli/issues)
+- [Report Issues](https://github.com/unikraft-cloud/cli/issues)
 - [Unikraft Website](https://unikraft.com)

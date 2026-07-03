@@ -26,7 +26,7 @@ func String() string {
 		  build time: %s
 		  go version: %s
 		  docs:       https://unikraft.com/docs
-		  issues:     https://github.com/unikraft/cli/issues`,
+		  issues:     https://github.com/unikraft-cloud/cli/issues`,
 		Version,
 		Commit,
 		runtime.GOOS,
