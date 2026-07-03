@@ -804,6 +804,48 @@ cmd: ["cat", "/rom/hello.txt"]
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	t.Run("delete-lock", func(t *testing.T) {
+		r := runner(t, true)
+		instName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+		})
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--set", "delete-lock=true",
+		})
+
+		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName, "-f", "+delete-lock"})
+		assert.Regexp(t, `delete-lock:\s+true`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName}, integ.ExpectFail())
+		assert.Regexp(t, `(?i)deletion protection`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `name:\s+test-`+instName, out)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--set", "delete-lock=false",
+		})
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName}, integ.ExpectFail())
+		assert.Regexp(t, `not found`, out)
+	})
+
 	t.Run("watch-timeout", func(t *testing.T) {
 		r := runner(t, true)
 		r.Run(t, []string{"unikraft", "--timeout=1s", "instance", "ls", "-w"}, integ.AllowFail())

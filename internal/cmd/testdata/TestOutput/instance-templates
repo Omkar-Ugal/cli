@@ -79,7 +79,7 @@ fra    my-template  stopped  nginx        128MiB  1
   {
     "name": "delete-lock",
     "value": false,
-    "verbosity": "hidden",
+    "verbosity": "long",
     "edit": {
       "set": false
     }

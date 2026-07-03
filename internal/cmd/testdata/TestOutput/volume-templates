@@ -65,7 +65,7 @@ fra    my-vol-template  available  20MiB
   {
     "name": "delete-lock",
     "value": false,
-    "verbosity": "hidden",
+    "verbosity": "long",
     "edit": {
       "set": false
     }
