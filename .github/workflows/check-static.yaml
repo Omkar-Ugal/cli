@@ -2,10 +2,10 @@ name: check/static
 
 on:
   push:
-    branches: [staging, stable]
+    branches: [prod-staging, prod-stable]
   pull_request:
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'

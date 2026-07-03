@@ -4,9 +4,9 @@ permissions:
 
 on:
   push:
-    branches: [staging, stable]
+    branches: [prod-staging, prod-stable]
   pull_request:
-    branches: [staging]
+    branches: [prod-staging]
     paths:
     - '**'
     - '!.github/**'

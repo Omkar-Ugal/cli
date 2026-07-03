@@ -2,7 +2,7 @@ name: actionlint
 
 on:
   pull_request:
-    branches: [staging, stable]
+    branches: [prod-staging, prod-stable]
     paths:
     - '.github/workflows/**'
 
