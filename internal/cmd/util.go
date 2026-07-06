@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"maps"
 
+	"unikraft.com/cloud/sdk/platform/group"
+
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 )
@@ -52,6 +54,34 @@ loop:
 		return nil, fmt.Errorf("%s not found: %s", listable.Type().Names, notFound)
 	}
 	return found, nil
+}
+
+// matchRef finds the best input ref corresponding to a returned resource.
+//
+// The API response order is not guaranteed to align with request key order,
+// and unsuccessful entries can be omitted. Because of that, indexing by the
+// request position can bind the wrong key to a result.
+//
+// UUID matching is preferred globally (first pass) to avoid choosing a weaker
+// name match when an exact UUID match exists later in refs.
+func matchRef(refs group.Refs, name, uuid string) *group.Ref {
+	if uuid != "" {
+		for i := range refs {
+			if refs[i].UUID != "" && refs[i].UUID == uuid {
+				return &refs[i]
+			}
+		}
+	}
+
+	if name != "" {
+		for i := range refs {
+			if refs[i].Name != "" && refs[i].Name == name {
+				return &refs[i]
+			}
+		}
+	}
+
+	return nil
 }
 
 type patchOp string

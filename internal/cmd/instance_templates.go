@@ -186,20 +186,21 @@ func (InstanceTemplate) Get(ctx context.Context, keys []string) ([]resource.Reso
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, instance := range resp.Data.Instances {
+		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := InstanceTemplate{}.load(&refs[i], instance, &c.Metro, profile)
+			matchedRef := matchRef(refs, instance.Name, instance.Uuid)
+			result, err := InstanceTemplate{}.load(matchedRef, instance, &c.Metro, profile)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)
