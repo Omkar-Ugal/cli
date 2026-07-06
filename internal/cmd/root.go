@@ -44,24 +44,24 @@ type UnikraftCLI struct {
 	Build BuildCmd `cmd:"" group:"cmd-commands" help:"Build a Unikraft project into a container image."`
 	TUI   TUICmd   `cmd:"" group:"cmd-commands" help:"Browse resources in a TUI."`
 
-	Metros       MetrosCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud metros." aliases:"metro,metros" set:"name=metro" set:"names=metros"`
-	Quotas       MetroQuotasCmd  `cmd:"" group:"cmd-resources" help:"Display quota usage for metros." aliases:"quota"`
-	Instances    InstancesCmd    `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms" set:"name=instance" set:"names=instances"`
-	Volumes      VolumesCmd      `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols" set:"name=volume" set:"names=volumes"`
-	Services     ServicesCmd     `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs" set:"name=service" set:"names=services"`
-	Certificates CertificatesCmd `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs" set:"name=certificate" set:"names=certificates"`
-	Images       ImagesCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs" set:"name=image" set:"names=images"`
-	Resources    AnyResourceCmd  `cmd:"" group:"cmd-resources" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources" set:"name=resource" set:"names=resources"`
+	Metros       MetrosCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud metros." aliases:"metro,metros" completion-enabled-command-alias:"false" set:"name=metro" set:"names=metros"`
+	Quotas       MetroQuotasCmd  `cmd:"" group:"cmd-resources" help:"Display quota usage for metros." aliases:"quota" completion-enabled-command-alias:"false"`
+	Instances    InstancesCmd    `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud instances." aliases:"instance,instances,vm,vms" completion-enabled-command-alias:"false" set:"name=instance" set:"names=instances"`
+	Volumes      VolumesCmd      `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud volumes." aliases:"volume,volumes,vol,vols" completion-enabled-command-alias:"false" set:"name=volume" set:"names=volumes"`
+	Services     ServicesCmd     `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud services." aliases:"service,services,svc,svcs" completion-enabled-command-alias:"false" set:"name=service" set:"names=services"`
+	Certificates CertificatesCmd `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud certificates." aliases:"certificate,certificates,crt,crts,cert,certs" completion-enabled-command-alias:"false" set:"name=certificate" set:"names=certificates"`
+	Images       ImagesCmd       `cmd:"" group:"cmd-resources" help:"Manage Unikraft Cloud images." aliases:"image,images,img,imgs" completion-enabled-command-alias:"false" set:"name=image" set:"names=images"`
+	Resources    AnyResourceCmd  `cmd:"" group:"cmd-resources" hidden:"" help:"Manage any Unikraft Cloud resource." aliases:"resource,resources" completion-enabled-command-alias:"false" set:"name=resource" set:"names=resources"`
 
 	API APICmd `cmd:"" group:"cmd-utilities" help:"Make an authenticated HTTP request to the Unikraft Cloud API."`
 
 	Login   login.LoginCmd  `cmd:"" group:"cmd-config" help:"Login to Unikraft Cloud."`
 	Logout  login.LogoutCmd `cmd:"" group:"cmd-config" help:"Logout from Unikraft Cloud."`
-	Profile ProfileCmd      `cmd:"" group:"cmd-config" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles" set:"name=profile" set:"names=profiles"`
-	Config  ConfigCmd       `cmd:"" group:"cmd-config" help:"Manage CLI configuration." aliases:"config,conf,cfg" set:"name=path" set:"names=paths"`
+	Profile ProfileCmd      `cmd:"" group:"cmd-config" help:"Manage Unikraft Cloud profiles." aliases:"profile,profiles" completion-enabled-command-alias:"false" set:"name=profile" set:"names=profiles"`
+	Config  ConfigCmd       `cmd:"" group:"cmd-config" help:"Manage CLI configuration." aliases:"config,conf,cfg" completion-enabled-command-alias:"false" set:"name=path" set:"names=paths"`
 
 	Completion kongcompletion.Completion `cmd:"" group:"cmd-utilities" completion-shell-default:"false" help:"Outputs shell code for initialising tab completions."`
-	Version    version.VersionCmd        `cmd:"" group:"cmd-utilities" help:"Show version information." aliases:"version,ver,v"`
+	Version    version.VersionCmd        `cmd:"" group:"cmd-utilities" help:"Show version information." aliases:"version,ver,v" completion-enabled-command-alias:"false"`
 	Upgrade    UpgradeCmd                `cmd:"" group:"cmd-utilities" help:"Upgrade the Unikraft CLI to the latest version."`
 
 	SendAnalytics SendAnalyticsCmd `cmd:"" group:"cmd-utilities" help:"Send analytics payload (used internally for detached analytics)." name:"_send_analytics" hidden:""`
