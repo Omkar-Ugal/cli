@@ -4,7 +4,7 @@ updates:
 
 - package-ecosystem: gomod
   directory: /
-  target-branch: staging
+  target-branch: prod-staging
   schedule:
     interval: weekly
     day: sunday

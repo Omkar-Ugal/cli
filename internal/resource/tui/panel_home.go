@@ -23,7 +23,7 @@ import (
 
 const (
 	homeWebsiteURL = "https://unikraft.com"
-	homeGitHubURL  = "https://github.com/unikraft/cli"
+	homeGitHubURL  = "https://github.com/unikraft-cloud/cli"
 )
 
 var homeArt = heredoc.Docf(`

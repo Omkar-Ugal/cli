@@ -3,7 +3,7 @@ $ unikraft
 The Unikraft Command-Line Interface.
     _
   c'3'o  .-.  Docs:   https://unikraft.com/docs/cli
-  (| |)_/     Issues: https://github.com/unikraft/cli/issues
+  (| |)_/     Issues: https://github.com/unikraft-cloud/cli/issues
 
 Usage:
   unikraft <command> [flags]
@@ -105,7 +105,7 @@ $ unikraft --help
 The Unikraft Command-Line Interface.
     _
   c'3'o  .-.  Docs:   https://unikraft.com/docs/cli
-  (| |)_/     Issues: https://github.com/unikraft/cli/issues
+  (| |)_/     Issues: https://github.com/unikraft-cloud/cli/issues
 
 Usage:
   unikraft <command> [flags]
@@ -209,7 +209,7 @@ $ unikraft --help --bad-flag
 The Unikraft Command-Line Interface.
     _
   c'3'o  .-.  Docs:   https://unikraft.com/docs/cli
-  (| |)_/     Issues: https://github.com/unikraft/cli/issues
+  (| |)_/     Issues: https://github.com/unikraft-cloud/cli/issues
 
 Usage:
   unikraft <command> [flags]
@@ -310,7 +310,7 @@ $ unikraft --help bad-arg
 The Unikraft Command-Line Interface.
     _
   c'3'o  .-.  Docs:   https://unikraft.com/docs/cli
-  (| |)_/     Issues: https://github.com/unikraft/cli/issues
+  (| |)_/     Issues: https://github.com/unikraft-cloud/cli/issues
 
 Usage:
   unikraft <command> [flags]

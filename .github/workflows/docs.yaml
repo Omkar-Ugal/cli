@@ -3,7 +3,7 @@ name: docs
 on:
   push:
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'
@@ -15,7 +15,7 @@ on:
     - synchronize
     - reopened
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'

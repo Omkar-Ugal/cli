@@ -7,7 +7,7 @@ on:
     - synchronize
     - reopened
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'

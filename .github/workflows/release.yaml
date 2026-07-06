@@ -3,8 +3,8 @@ name: release
 on:
   push:
     branches:
-    - staging
-    - stable
+    - prod-staging
+    - prod-stable
 
 permissions:
   contents: write
@@ -67,7 +67,7 @@ jobs:
           echo "last-stable=$(make --no-print-directory last-stable 2>/dev/null)"
         } >> "$GITHUB_OUTPUT"
 
-        if [[ "${{ github.ref }}" == "refs/heads/stable" ]]; then
+        if [[ "${{ github.ref }}" == "refs/heads/prod-stable" ]]; then
           echo "next-version=$(make --no-print-directory next-stable 2>/dev/null)" >> "$GITHUB_OUTPUT"
         else
           echo "next-version=$(make --no-print-directory next-staging 2>/dev/null)" >> "$GITHUB_OUTPUT"
@@ -85,7 +85,7 @@ jobs:
         YTT_DEB_RELEASE=""
         YTT_DEB_METADATA="$(git rev-parse --short HEAD)"
 
-        if [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+        if [[ "${{ github.ref }}" == "refs/heads/prod-staging" ]]; then
           YTT_PRERELEASE=true
           YTT_DEB_EPOCH=1
           YTT_DEB_PRERELEASE=$(echo "${{ steps.versions.outputs.next-version }}" | awk -F'staging\\.' '{print $2}')
@@ -111,7 +111,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v7
       env:
         GITHUB_TOKEN: ${{ secrets.GH_PAT }}
-        GORELEASER_PREVIOUS_TAG: ${{ github.ref == 'refs/heads/stable' && steps.versions.outputs.last-stable || steps.versions.outputs.last-version }}
+        GORELEASER_PREVIOUS_TAG: ${{ github.ref == 'refs/heads/prod-stable' && steps.versions.outputs.last-stable || steps.versions.outputs.last-version }}
         GORELEASER_CURRENT_TAG: ${{ steps.versions.outputs.next-version }}
         UNIKRAFT_POSTHOG_API_KEY: ${{ secrets.UNIKRAFT_POSTHOG_API_KEY }}
         UNIKRAFT_POSTHOG_HOST: ${{ secrets.UNIKRAFT_POSTHOG_HOST }}
