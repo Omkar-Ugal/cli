@@ -19,7 +19,7 @@ import (
 
 func TestInstances(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true, []string{staging, stable})
+		r := runner(t, true, []string{staging, stable, prod})
 		instName := uniq()
 
 		out := r.Run(t, []string{"unikraft", "instance", "list", "--output", "quiet"})
@@ -79,7 +79,7 @@ func TestInstances(t *testing.T) {
 	})
 
 	t.Run("connect", func(t *testing.T) {
-		r := runner(t, true, []string{staging, stable})
+		r := runner(t, true, []string{staging, stable, prod})
 		instName := uniq()
 		domainName := uniq()
 
@@ -97,6 +97,39 @@ func TestInstances(t *testing.T) {
 		})
 
 		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+
+		r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==running", "test-" + instName})
+
+		body := integ.HTTPGet(t, "https://"+fqdn)
+		assert.Contains(t, body, "Welcome to nginx!")
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	t.Run("getting-started", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable, prod})
+		instName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "run",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--publish", "443:8080/http+tls",
+			"--scale-to-zero", "policy=on,cooldown-time=1000",
+			"--image", "nginx:latest",
+		})
+
+		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `image:\s+nginx`, out)
+		assert.Regexp(t, `state:\s+(running|starting)`, out)
+		assert.Regexp(t, `scale-to-zero:\s+policy=on`, out)
+		assert.Regexp(t, `service:`, out)
+
+		out = r.Run(t, []string{
 			"unikraft", "instance", "inspect", "test-" + instName,
 			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
 		})
@@ -147,7 +180,7 @@ func TestInstances(t *testing.T) {
 	})
 
 	t.Run("start-follow", func(t *testing.T) {
-		r := runner(t, true, []string{staging, stable})
+		r := runner(t, true, []string{staging, stable, prod})
 		instName := uniq()
 		volName := uniq()
 		imageTag := uniq()

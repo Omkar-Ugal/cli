@@ -51,10 +51,10 @@ func uniq() string {
 	return fmt.Sprintf("%s%06x", uniqSeed, n)
 }
 
-func runner(t *testing.T, online bool, metros []string) *integ.TestEnv {
+func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	t.Helper()
 	integ.SkipUnlessIntegration(t)
-	integ.SkipUnlessSupportedMetroVersion(t, metros)
+	integ.SkipUnlessSupportedServer(t, servers)
 	t.Parallel()
 
 	unikraftPath := integ.BuildUnikraft(t)

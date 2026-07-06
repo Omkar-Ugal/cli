@@ -19,18 +19,18 @@ func SkipUnlessIntegration(t testing.TB) {
 	}
 }
 
-// SkipUnlessSupportedMetroVersion skips the test when the metro version is
+// SkipUnlessSupportedServer skips the test when the server is
 // not supported.
-func SkipUnlessSupportedMetroVersion(t testing.TB, metros []string) {
+func SkipUnlessSupportedServer(t testing.TB, servers []string) {
 	t.Helper()
-	metro := os.Getenv("CLI_TEST_SERVER")
-	if metro == "" {
+	server := os.Getenv("UNIKRAFT_X_TEST_SERVER")
+	if server == "" {
 		return
 	}
 
-	if slices.Contains(metros, metro) {
+	if slices.Contains(servers, server) {
 		return
 	}
 
-	t.Skip("skipping test (unsupported metro version)")
+	t.Skip("skipping test (unsupported server)")
 }
