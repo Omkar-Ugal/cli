@@ -1196,14 +1196,28 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		}
 	}
 
-	// Apply pull policy to the image spec if provided.
-	if pullPolicy != nil && req.Image != nil {
-		req.Image.PullPolicy = pullPolicy
-	}
-
 	// Validate that either image or template is provided
 	if req.Image == nil && req.Template == nil {
 		return nil, fmt.Errorf("either --image or --template must be specified")
+	}
+
+	if req.Image != nil {
+		if pullPolicy != nil {
+			// Apply pull policy to the image spec if provided.
+			req.Image.PullPolicy = pullPolicy
+		} else {
+			// HACK: old metros don't support the object type
+			// we should have this properly encoded in the sdk
+			img, err := json.Marshal(req.Image.Url)
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal url: %w", err)
+			}
+			if req.AdditionalProperties == nil {
+				req.AdditionalProperties = make(map[string]jsontext.Value)
+			}
+			req.AdditionalProperties["image"] = jsontext.Value(img)
+			req.Image = nil
+		}
 	}
 
 	g, err := multimetro.NewClient(ctx)
