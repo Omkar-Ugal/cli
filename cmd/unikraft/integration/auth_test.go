@@ -15,7 +15,7 @@ import (
 
 func TestAuth(t *testing.T) {
 	t.Run("flow", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		out := r.Run(t, []string{"unikraft", "login", "--check"})
 		assert.Regexp(t, `authentication token found`, out)

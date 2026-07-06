@@ -14,7 +14,7 @@ import (
 
 func TestInstanceTemplates(t *testing.T) {
 	t.Run("template", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -51,7 +51,7 @@ func TestInstanceTemplates(t *testing.T) {
 	})
 
 	t.Run("create-from-template", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -86,7 +86,7 @@ func TestInstanceTemplates(t *testing.T) {
 	})
 
 	t.Run("tags", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		// Create a base instance for templating.

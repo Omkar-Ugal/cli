@@ -14,7 +14,7 @@ import (
 
 func TestServices(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		svcNameA := uniq()
 		svcNameB := uniq()
 		domainA := uniq()
@@ -68,7 +68,7 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("edit", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		svcName := uniq()
 		domainName := uniq()
 		domainEdit := uniq()

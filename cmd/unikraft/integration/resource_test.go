@@ -13,7 +13,7 @@ import (
 
 func TestResources(t *testing.T) {
 	t.Run("volume-flow", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		out := r.Run(t, []string{"unikraft", "resource", "create", "--set", "type=volume", "--set", "name=test-" + volName, "--set", "size=10", "--set", "metro=" + r.Config.MetroName})

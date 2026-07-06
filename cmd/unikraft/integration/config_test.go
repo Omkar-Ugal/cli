@@ -12,7 +12,7 @@ import (
 
 func TestConfig(t *testing.T) {
 	t.Run("get", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		out := r.Run(t, []string{"unikraft", "config", "get"})
 		assert.Regexp(t, `profile:\s+\S+`, out)
