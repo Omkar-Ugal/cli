@@ -68,7 +68,7 @@ jobs:
         run: exit 1
 
   integration:
-    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-unikraft-cli-ubuntu24.04-standard' }}
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-ubuntu24.04-standard' }}
     needs: test
     strategy:
       fail-fast: false
