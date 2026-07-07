@@ -342,20 +342,22 @@ func (Volume) Get(ctx context.Context, keys []string) ([]resource.Resource, erro
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, volume := range resp.Data.Volumes {
+		for _, volume := range resp.Data.Volumes {
 			if volume.Status == nil || *volume.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := Volume{}.load(&refs[i], volume, &c.Metro)
+
+			matchedRef := matchRef(refs, volume.Name, volume.Uuid)
+			result, err := Volume{}.load(matchedRef, volume, &c.Metro)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)
