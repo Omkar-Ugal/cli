@@ -18,7 +18,7 @@ import (
 
 func TestAPI(t *testing.T) {
 	t.Run("healthz", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		out := r.Run(t, []string{"unikraft", "api", "--metro=" + r.Config.MetroName, "/v1/healthz"})
 		// Response should be valid JSON, pretty-printed (multi-line).
@@ -27,7 +27,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("quotas", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		out := r.Run(t, []string{"unikraft", "api", "--metro=" + r.Config.MetroName, "/v1/users/quotas"})
 		require.True(t, json.Valid([]byte(out)), "expected JSON response, got: %s", out)
@@ -36,14 +36,14 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("instances list", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		out := r.Run(t, []string{"unikraft", "api", "--metro=" + r.Config.MetroName, "/v1/instances"})
 		assert.True(t, json.Valid([]byte(out)), "expected JSON response, got: %s", out)
 	})
 
 	t.Run("full url with insecure", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		endpoint := strings.TrimRight(r.Config.Metro.Endpoint, "/") + "/v1/healthz"
 		out := r.Run(t, []string{"unikraft", "api", "-k", endpoint})
@@ -51,7 +51,7 @@ func TestAPI(t *testing.T) {
 	})
 
 	t.Run("missing endpoint fails", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		out := r.Run(t, []string{"unikraft", "api", "--metro=" + r.Config.MetroName, "/v1/this-endpoint-does-not-exist"}, integ.ExpectFail())
 		assert.Regexp(t, `HTTP 4\d\d`, out)

@@ -14,7 +14,7 @@ import (
 
 func TestImages(t *testing.T) {
 	t.Run("inspect", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		out := r.Run(t, []string{"unikraft", "image", "inspect", "nginx:latest"})
 		assert.Regexp(t, `ref:\s+nginx`, out)
 		assert.Regexp(t, `config:`, out)
@@ -23,7 +23,7 @@ func TestImages(t *testing.T) {
 	})
 
 	t.Run("copy-inspect-delete", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		imageTag := uniq()
 		imageName := r.Config.Profile.Organization + "/nginx-copy:" + imageTag

@@ -24,7 +24,7 @@ func TestBuild(t *testing.T) {
 	// the at= mount option.
 	for _, romFormat := range []string{"erofs", "cpio"} {
 		t.Run("rom-"+romFormat, func(t *testing.T) {
-			r := runner(t, true)
+			r := runner(t, true, []string{staging, stable})
 			romImagePrefix := r.Config.Profile.Organization + "/rom-" + romFormat + "-e2e"
 			baseImagePrefix := r.Config.Profile.Organization + "/busybox-rom-" + romFormat + "-e2e"
 
@@ -83,7 +83,7 @@ roms:
 	}
 
 	t.Run("rom-dir", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		baseImagePrefix := r.Config.Profile.Organization + "/busybox-romdir-e2e"
 
 		imageTag := uniq()
@@ -123,7 +123,7 @@ cmd: ["cat", "/rom/hello.txt"]
 			t.Run(format, func(t *testing.T) {
 				for _, name := range variants {
 					t.Run(name, func(t *testing.T) {
-						r := runner(t, true)
+						r := runner(t, true, []string{staging, stable})
 						var imagePrefix string
 						switch name {
 						case "registry":
@@ -195,7 +195,7 @@ cmd: ["sh", "/entrypoint.sh"]
 	})
 
 	t.Run("busybox-custom-dockerfile", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		imagePrefix := r.Config.Profile.Organization + "/busybox-custom-df-e2e"
 		imageTag := uniq()
 		instName := uniq()

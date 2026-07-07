@@ -18,7 +18,7 @@ import (
 
 func TestCertificates(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		certNameA := uniq()
 		certNameB := uniq()
 		certA := integ.GenerateCert(t, "")
@@ -47,7 +47,7 @@ func TestCertificates(t *testing.T) {
 	})
 
 	t.Run("serve", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		certName := uniq()
 		domainName := uniq()
 		instName := uniq()

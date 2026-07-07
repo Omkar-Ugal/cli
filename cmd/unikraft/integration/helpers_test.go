@@ -31,6 +31,13 @@ var (
 	uniqCounter atomic.Uint64
 )
 
+// Servers
+const (
+	staging = "staging"
+	stable  = "stable"
+	prod    = "prod"
+)
+
 func init() {
 	var b [3]byte
 	if _, err := rand.Read(b[:]); err != nil {
@@ -44,9 +51,10 @@ func uniq() string {
 	return fmt.Sprintf("%s%06x", uniqSeed, n)
 }
 
-func runner(t *testing.T, online bool) *integ.TestEnv {
+func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	t.Helper()
 	integ.SkipUnlessIntegration(t)
+	integ.SkipUnlessSupportedServer(t, servers)
 	t.Parallel()
 
 	unikraftPath := integ.BuildUnikraft(t)

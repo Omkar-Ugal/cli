@@ -14,7 +14,7 @@ import (
 
 func TestVolumeTemplates(t *testing.T) {
 	t.Run("template", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		r.Run(t, []string{
@@ -47,7 +47,7 @@ func TestVolumeTemplates(t *testing.T) {
 	})
 
 	t.Run("create-from-template", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		r.Run(t, []string{
@@ -81,7 +81,7 @@ func TestVolumeTemplates(t *testing.T) {
 	})
 
 	t.Run("tags", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		// Create a base volume for templating.

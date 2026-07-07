@@ -18,7 +18,7 @@ import (
 
 func TestVolumes(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		out := r.Run(t, []string{"unikraft", "volume", "list", "--output", "quiet"})
@@ -41,7 +41,7 @@ func TestVolumes(t *testing.T) {
 	})
 
 	t.Run("edit", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		r.Run(t, []string{"unikraft", "volume", "create", "--output", "quiet", "--set", "name=test-" + volName, "--set", "size=10", "--set", "metro=" + r.Config.MetroName})
@@ -54,7 +54,7 @@ func TestVolumes(t *testing.T) {
 	})
 
 	t.Run("clone", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 		cloneName := uniq()
 
@@ -70,7 +70,7 @@ func TestVolumes(t *testing.T) {
 	})
 
 	t.Run("access-mode-rwo", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		out := r.Run(t, []string{
@@ -90,7 +90,7 @@ func TestVolumes(t *testing.T) {
 	})
 
 	t.Run("access-mode-rox", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 		instName1 := uniq()
 		instName2 := uniq()
@@ -137,7 +137,7 @@ func TestVolumes(t *testing.T) {
 	})
 
 	t.Run("attach-detach", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 		instName := uniq()
 
@@ -189,25 +189,25 @@ func TestVolumes(t *testing.T) {
 
 	t.Run("import", func(t *testing.T) {
 		t.Run("missing-source", func(t *testing.T) {
-			r := runner(t, false)
+			r := runner(t, false, []string{staging, stable})
 			out := r.Run(t, []string{"unikraft", "volume", "import", "my-volume"}, integ.ExpectFail())
 			assert.Regexp(t, `source path is required`, out)
 		})
 
 		t.Run("invalid-port", func(t *testing.T) {
-			r := runner(t, false)
+			r := runner(t, false, []string{staging, stable})
 			out := r.Run(t, []string{"unikraft", "volume", "import", "my-volume", "--source", ".", "--port", "80"}, integ.ExpectFail())
 			assert.Regexp(t, `port must be between`, out)
 		})
 
 		t.Run("invalid-port-high", func(t *testing.T) {
-			r := runner(t, false)
+			r := runner(t, false, []string{staging, stable})
 			out := r.Run(t, []string{"unikraft", "volume", "import", "my-volume", "--source", ".", "--port", "99999"}, integ.ExpectFail())
 			assert.Regexp(t, `port must be between`, out)
 		})
 
 		t.Run("dir", func(t *testing.T) {
-			r := runner(t, true)
+			r := runner(t, true, []string{staging, stable})
 			volName := uniq()
 			dir := t.TempDir()
 			require.NoError(t, fstest.Apply(
@@ -226,7 +226,7 @@ func TestVolumes(t *testing.T) {
 		})
 
 		t.Run("serve", func(t *testing.T) {
-			r := runner(t, true)
+			r := runner(t, true, []string{staging, stable})
 			volName := uniq()
 			instName := uniq()
 			domainName := uniq()
@@ -276,7 +276,7 @@ func TestVolumes(t *testing.T) {
 	})
 
 	t.Run("tags", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		// Create volume with tags.
