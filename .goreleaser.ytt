@@ -34,7 +34,7 @@ changelog:
 
 release:
   github:
-    owner: unikraft
+    owner: unikraft-cloud
     name: cli
   draft: false
   prerelease: #@ getattr(data.values, "PRERELEASE", "true") == "true"
