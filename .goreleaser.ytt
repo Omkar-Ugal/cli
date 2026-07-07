@@ -198,7 +198,6 @@ nix:
     token: "{{ .Env.GITHUB_TOKEN_UNIKRAFT }}"
   homepage: "https://unikraft.com"
   description: "The official CLI for Unikraft Cloud — deploy and manage unikernels globally in milliseconds."
-  path: pkgs/unikraft-cli/default.nix
   license: bsd3
   main_program: "unikraft"
   install: |-
