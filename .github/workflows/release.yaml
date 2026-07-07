@@ -111,6 +111,7 @@ jobs:
       uses: goreleaser/goreleaser-action@v7
       env:
         GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+        GITHUB_TOKEN_UNIKRAFT: ${{ secrets.GH_MIRROR_PAT }}
         GORELEASER_PREVIOUS_TAG: ${{ github.ref == 'refs/heads/prod-stable' && steps.versions.outputs.last-stable || steps.versions.outputs.last-version }}
         GORELEASER_CURRENT_TAG: ${{ steps.versions.outputs.next-version }}
         UNIKRAFT_POSTHOG_API_KEY: ${{ secrets.UNIKRAFT_POSTHOG_API_KEY }}
