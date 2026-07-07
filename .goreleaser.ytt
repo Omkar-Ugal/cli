@@ -202,7 +202,7 @@ nix:
   main_program: "unikraft"
   install: |-
     mkdir -p $out/bin
-    cp -vr $binary $out/bin/$binary
+    cp -vr unikraft $out/bin/$binary
     installManPage docs/man/*
 
 builds:
