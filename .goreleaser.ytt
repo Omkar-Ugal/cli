@@ -187,7 +187,7 @@ nix:
 #@ for arch in oses["darwin"]:
   - #@ "archive-unikraft-cli-darwin-{}".format(arch)
 #@ end
-  url_template: "https://github.com/unikraft/cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+  url_template: "https://github.com/unikraft-cloud/cli/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
   commit_author:
     name: Unikraft Bot
     email: monkey@unikraft.io
