@@ -176,6 +176,7 @@ brews:
   repository:
     owner: unikraft
     name: homebrew-tap
+    token: "{{ .Env.GITHUB_TOKEN_UNIKRAFT }}"
 
 builds:
 #@ for os, archs in oses.items():
