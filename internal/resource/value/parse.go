@@ -174,25 +174,34 @@ func parseReflect(input []string, value reflect.Value) error {
 					continue
 				}
 			}
-			// Fall back to comma-separated key=value parsing.
-			for item := range strings.SplitSeq(input, ",") {
-				item = strings.TrimSpace(item)
-				if item == "" {
-					continue
-				}
-				k, v, _ := strings.Cut(item, "=")
-				key := reflect.New(output.Type().Key()).Elem()
-				err := parseReflect([]string{k}, key)
-				if err != nil {
-					return err
-				}
-				val := reflect.New(output.Type().Elem()).Elem()
-				err = parseReflect([]string{v}, val)
-				if err != nil {
-					return err
-				}
-				mapp.SetMapIndex(key, val)
+
+			// Each input string is a single key=value entry. Split on the
+			// first "=" only; the value is then parsed by parseReflect
+			// according to the map's element type. For string element types
+			// (e.g. map[string]string) the value is taken verbatim, so it may
+			// contain commas, "=", or any other characters. For non-string
+			// element types (e.g. slices, structs), parseReflect may still
+			// interpret commas per the element type's own parsing rules.
+			// Multiple entries are supplied via repeated --set flags (multiple
+			// input strings), not via commas within a single string.
+			//
+			// Skip empty/whitespace-only inputs so a bare "--set field=" can
+			// be used without creating a spurious empty-key entry, and trim
+			// the key only (values are kept verbatim).
+			k, v, _ := strings.Cut(input, "=")
+			k = strings.TrimSpace(k)
+			if k == "" {
+				continue
 			}
+			key := reflect.New(output.Type().Key()).Elem()
+			if err := parseReflect([]string{k}, key); err != nil {
+				return err
+			}
+			val := reflect.New(output.Type().Elem()).Elem()
+			if err := parseReflect([]string{v}, val); err != nil {
+				return err
+			}
+			mapp.SetMapIndex(key, val)
 		}
 		output.Set(mapp)
 		return nil

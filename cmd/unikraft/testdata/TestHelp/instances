@@ -456,7 +456,7 @@ Create flags:
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
           Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]
@@ -626,7 +626,7 @@ Create flags:
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
           Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]
@@ -989,7 +989,7 @@ Edit flags:
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
           Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]

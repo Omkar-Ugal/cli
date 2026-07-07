@@ -208,26 +208,8 @@ func TestParseCSV(t *testing.T) {
 		assert.Equal(t, map[string]string{"key": "value"}, got)
 	})
 
-	t.Run("map multiple pairs", func(t *testing.T) {
-		got, err := Parse[map[string]string]([]string{"a=1,b=2"})
-		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"a": "1", "b": "2"}, got)
-	})
-
 	t.Run("map multiple inputs", func(t *testing.T) {
 		got, err := Parse[map[string]string]([]string{"a=1", "b=2"})
-		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"a": "1", "b": "2"}, got)
-	})
-
-	t.Run("map spaces trimmed", func(t *testing.T) {
-		got, err := Parse[map[string]string]([]string{"a=1, b=2"})
-		require.NoError(t, err)
-		assert.Equal(t, map[string]string{"a": "1", "b": "2"}, got)
-	})
-
-	t.Run("map empty items skipped", func(t *testing.T) {
-		got, err := Parse[map[string]string]([]string{",a=1,,b=2,"})
 		require.NoError(t, err)
 		assert.Equal(t, map[string]string{"a": "1", "b": "2"}, got)
 	})
@@ -296,5 +278,71 @@ func TestParseCSV(t *testing.T) {
 		got, err := Parse[testStruct]([]string{"name=hello world,value=42"})
 		require.NoError(t, err)
 		assert.Equal(t, testStruct{Name: "hello world", Value: 42}, got)
+	})
+}
+
+// TestParseMapLiteralValues covers the behaviour that each --set input for a
+// map field is a single key=value entry: the value is taken verbatim after the
+// first "=", so commas and "=" signs in the value are preserved rather than
+// being interpreted as entry separators.
+func TestParseMapLiteralValues(t *testing.T) {
+	t.Run("value with comma", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"key=a,b,c"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": "a,b,c"}, got)
+	})
+
+	t.Run("value with comma and equals", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"VAR=key1=value1,key2=value2"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"VAR": "key1=value1,key2=value2"}, got)
+	})
+
+	t.Run("multiple entries with literal values", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"A=a,b", "B=c,d"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"A": "a,b", "B": "c,d"}, got)
+	})
+
+	t.Run("value with surrounding whitespace preserved", func(t *testing.T) {
+		// The key is trimmed but the value is kept verbatim, so internal and
+		// surrounding whitespace in the value is preserved.
+		got, err := Parse[map[string]string]([]string{"key=  a,b  "})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": "  a,b  "}, got)
+	})
+
+	t.Run("value with comma combined with other entries", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"A=1,2", "B=3,4"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"A": "1,2", "B": "3,4"}, got)
+	})
+
+	t.Run("empty input string skipped", func(t *testing.T) {
+		// Empty/whitespace-only inputs are skipped so a bare "--set field="
+		// does not create a spurious empty-key entry.
+		got, err := Parse[map[string]string]([]string{""})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{}, got)
+	})
+
+	t.Run("whitespace-only input skipped", func(t *testing.T) {
+		got, err := Parse[map[string]string]([]string{"   "})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{}, got)
+	})
+
+	t.Run("empty key with value skipped", func(t *testing.T) {
+		// "=value" trims to an empty key and is therefore skipped.
+		got, err := Parse[map[string]string]([]string{"=value"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{}, got)
+	})
+
+	t.Run("key trimmed, value preserved", func(t *testing.T) {
+		// Surrounding whitespace on the key is trimmed; the value is verbatim.
+		got, err := Parse[map[string]string]([]string{"  key  =a,b"})
+		require.NoError(t, err)
+		assert.Equal(t, map[string]string{"key": "a,b"}, got)
 	})
 }
