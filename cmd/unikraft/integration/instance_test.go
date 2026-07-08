@@ -191,7 +191,12 @@ func TestInstances(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
 			fstest.CreateDir("base", 0o755),
-			fstest.CreateFile("base/Dockerfile", []byte(`FROM busybox:latest`), 0o644),
+			fstest.CreateFile("base/Dockerfile", []byte(`
+FROM busybox:latest
+
+RUN echo 'n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30s' > /start.sh
+RUN chmod +x /start.sh
+`), 0o644),
 			fstest.CreateFile("base/Kraftfile", []byte(`
 spec: v0.7
 name: busybox-start-follow-e2e
@@ -199,7 +204,6 @@ runtime: base-compat:latest
 rootfs:
   format: erofs
   source: ./Dockerfile
-cmd: ["cat", "/rom/hello.txt"]
 `), 0o644),
 		).Apply(dir))
 
@@ -220,7 +224,6 @@ cmd: ["cat", "/rom/hello.txt"]
 		})
 
 		// On each boot, increment /data/n and echo "starting N".
-		script := `n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30`
 		r.Run(t, []string{
 			"unikraft", "instance", "create",
 			"--output", "quiet",
@@ -231,7 +234,7 @@ cmd: ["cat", "/rom/hello.txt"]
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
 			"--set", "volumes=test-" + volName + ":/data",
-			"--set", `runtime.args=["sh","-c","` + script + `"]`,
+			"--set", `runtime.args=["sh","-c","/start.sh"]`,
 		})
 
 		// First boot ("starting 1"): start, wait running, then stop.
@@ -265,7 +268,12 @@ cmd: ["cat", "/rom/hello.txt"]
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
 			fstest.CreateDir("base", 0o755),
-			fstest.CreateFile("base/Dockerfile", []byte(`FROM busybox:latest`), 0o644),
+			fstest.CreateFile("base/Dockerfile", []byte(`
+FROM busybox:latest
+
+RUN echo 'n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30s' > /start.sh
+RUN chmod +x /start.sh
+`), 0o644),
 			fstest.CreateFile("base/Kraftfile", []byte(`
 spec: v0.7
 name: busybox-restart-follow-e2e
@@ -273,7 +281,6 @@ runtime: base-compat:latest
 rootfs:
   format: erofs
   source: ./Dockerfile
-cmd: ["cat", "/rom/hello.txt"]
 `), 0o644),
 		).Apply(dir))
 
@@ -289,7 +296,6 @@ cmd: ["cat", "/rom/hello.txt"]
 		})
 
 		// On each boot, increment /data/n and echo "starting N".
-		script := `n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30`
 		r.Run(t, []string{
 			"unikraft", "instance", "create",
 			"--output", "quiet",
@@ -300,7 +306,7 @@ cmd: ["cat", "/rom/hello.txt"]
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
 			"--set", "volumes=test-" + volName + ":/data",
-			"--set", `runtime.args=["sh","-c","` + script + `"]`,
+			"--set", `runtime.args=["sh","-c","/start.sh"]`,
 		})
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
 
