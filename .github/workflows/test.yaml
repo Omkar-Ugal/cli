@@ -130,6 +130,7 @@ jobs:
                 - name: ${UNIKRAFT_X_TEST_SERVER}
                   endpoint: ${UNIKRAFT_ENDPOINT}
                   country: de
+                  insecure: true
           EOF
           task --yes integration
         env:
