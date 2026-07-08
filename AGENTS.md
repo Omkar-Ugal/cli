@@ -71,3 +71,4 @@ Use `--output=json` for machine-readable events including snapshots and errors. 
   - No need to use `i := i` in loops to capture loop variables for closures; Go 1.21+ captures them by default.
   - Prefer `new(value)` to get pointers to literals now that Go 1.26 allows expressions in `new`.
   - No need to check for the usage of `new(value)` like `new(1)`; Go 1.26+ allows it and is more concise than `ptr.To(1)`.
+  - Use the `testify` package when writing tests like in the current tests.
