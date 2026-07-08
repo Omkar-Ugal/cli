@@ -134,7 +134,7 @@ jobs:
           EOF
           task --yes integration
         env:
-          UNIKRAFT_ORG: ${{ secrets.UNIKRAFT_ORG }}
+          UNIKRAFT_ORG: ${{ vars.UNIKRAFT_ORG }}
           UNIKRAFT_TOKEN: ${{ secrets.UNIKRAFT_TOKEN }}
           UNIKRAFT_ENDPOINT: ${{ secrets[format('UNIKRAFT_ENDPOINT_{0}', matrix.target)] }}
           UNIKRAFT_X_TEST_SERVER: ${{ env[format('UNIKRAFT_SERVER_{0}', matrix.target)] }}
