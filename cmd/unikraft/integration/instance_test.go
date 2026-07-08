@@ -126,7 +126,7 @@ func TestInstances(t *testing.T) {
 		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
 		assert.Regexp(t, `image:\s+nginx`, out)
 		assert.Regexp(t, `state:\s+(running|starting)`, out)
-		assert.Regexp(t, `scale-to-zero:\s+policy=on`, out)
+		assert.Regexp(t, `policy:\s+on`, out)
 		assert.Regexp(t, `service:`, out)
 
 		out = r.Run(t, []string{
@@ -204,6 +204,11 @@ cmd: ["cat", "/rom/hello.txt"]
 		).Apply(dir))
 
 		r.Run(t, []string{"unikraft", "build", "base", "--output", baseImage}, integ.WithWorkDir(dir))
+
+		// HACK: wait for image propagation for prod nodes
+		if s := integ.GetTestServer([]string{prod}); s != nil && *s != "" {
+			time.Sleep(60 * time.Second)
+		}
 
 		// Volume provides persistent counter across boots.
 		r.Run(t, []string{
