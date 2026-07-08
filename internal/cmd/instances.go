@@ -49,9 +49,9 @@ type InstancesCmd struct {
 	cmd.ListableResourceCmd[Instance]
 	cmd.BulkDeletableResourceCmd[Instance]
 
-	Create   InstanceCreateCmd    `cmd:"" aliases:"new" help:"Create an instance."`
+	Create   InstanceCreateCmd    `cmd:"" aliases:"new" completion-enabled-command-alias:"false" help:"Create an instance."`
 	Edit     InstanceEditCmd      `cmd:"" help:"Edit an instance."`
-	Template InstanceTemplatesCmd `cmd:"" group:"cmd-templates" help:"Manage instance templates." aliases:"templates" set:"name=instance-template" set:"names=instance-templates"`
+	Template InstanceTemplatesCmd `cmd:"" group:"cmd-templates" help:"Manage instance templates." aliases:"templates" completion-enabled-command-alias:"false" set:"name=instance-template" set:"names=instance-templates"`
 
 	Logs    InstancesLogsCmd    `cmd:"" help:"Fetch and display instance logs."`
 	Start   InstancesStartCmd   `cmd:"" help:"Start one or more instances."`

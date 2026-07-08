@@ -326,16 +326,16 @@ Generate completion scripts for your shell:
 
 ```sh
 # Bash
-unikraft completion bash > /etc/bash_completion.d/unikraft
+unikraft completion -c bash > /etc/bash_completion.d/unikraft
 
 # Zsh
-unikraft completion zsh > "${fpath[1]}/_unikraft"
+unikraft completion -c zsh > "${fpath[1]}/_unikraft"
 
 # Fish
-unikraft completion fish > ~/.config/fish/completions/unikraft.fish
+unikraft completion -c fish > ~/.config/fish/completions/unikraft.fish
 
 # PowerShell
-unikraft completion powershell > unikraft.ps1
+unikraft completion -c powershell > unikraft.ps1
 ```
 
 ## Telemetry
