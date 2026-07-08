@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [STAGING, STABLE, PROD]
+        target: [STAGING, STABLE]
     env:
       TASK_X_REMOTE_TASKFILES: 1
       UNIKRAFT_SERVER_STAGING: staging
@@ -138,3 +138,69 @@ jobs:
           UNIKRAFT_TOKEN: ${{ secrets.UNIKRAFT_TOKEN }}
           UNIKRAFT_ENDPOINT: ${{ secrets[format('UNIKRAFT_ENDPOINT_{0}', matrix.target)] }}
           UNIKRAFT_X_TEST_SERVER: ${{ env[format('UNIKRAFT_SERVER_{0}', matrix.target)] }}
+
+  integration-prod:
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork && 'ubuntu-latest' || 'arc-ubuntu24.04-standard' }}
+    needs: integration
+    env:
+      TASK_X_REMOTE_TASKFILES: 1
+      UNIKRAFT_SERVER_PROD: prod
+    steps:
+      - uses: actions/checkout@v7
+      - uses: go-task/setup-task@v2
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Set Go variables
+        id: goenv
+        run: |
+          {
+            echo "cache=$(go env GOCACHE)"
+            echo "modcache=$(go env GOMODCACHE)"
+            echo "mod=$(go env GOMOD)"
+          } >>"$GITHUB_OUTPUT"
+
+      - name: Go caches
+        uses: actions/cache@v6
+        with:
+          path: |
+            ${{ steps.goenv.outputs.cache }}
+            ${{ steps.goenv.outputs.modcache }}
+          key: ${{ github.job }}-${{ runner.os }}-go-${{ hashFiles(steps.goenv.outputs.mod) }}
+          restore-keys: |
+            ${{ github.job }}-${{ runner.os }}-go-
+
+      - name: Run integration tests (without auth)
+        if: ${{ !(github.event_name == 'push' || !github.event.pull_request.head.repo.fork) }}
+        shell: bash
+        run: |
+          task --yes integration
+        env:
+          UNIKRAFT_X_TEST_SERVER: ${{ env['UNIKRAFT_CONFIG_PROD'] }}
+
+      - name: Run integration tests (with auth)
+        if: ${{ github.event_name == 'push' || !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        run: |
+          mkdir -p ~/.config/unikraft
+          cat <<EOF > ~/.config/unikraft/config.yaml
+          profile: default
+          profiles:
+            default:
+              type: cloud
+              name: default
+              organization: ${UNIKRAFT_ORG}
+              token: ${UNIKRAFT_TOKEN}
+              metros:
+                - name: ${UNIKRAFT_X_TEST_SERVER}
+                  endpoint: ${UNIKRAFT_ENDPOINT}
+                  country: de
+                  insecure: true
+          EOF
+          task --yes integration
+        env:
+          UNIKRAFT_ORG: ${{ vars.UNIKRAFT_ORG }}
+          UNIKRAFT_TOKEN: ${{ secrets.UNIKRAFT_TOKEN }}
+          UNIKRAFT_ENDPOINT: ${{ secrets.UNIKRAFT_ENDPOINT_PROD }}
+          UNIKRAFT_X_TEST_SERVER: ${{ env.UNIKRAFT_SERVER_PROD }}
