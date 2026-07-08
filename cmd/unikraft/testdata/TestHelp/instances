@@ -455,7 +455,7 @@ Create flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
+          Environment variable. Repeat the flag to set more than one.
           [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
@@ -625,7 +625,7 @@ Create flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
+          Environment variable. Repeat the flag to set more than one.
           [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
@@ -988,7 +988,7 @@ Edit flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
+          Environment variable. Repeat the flag to set more than one.
           [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
