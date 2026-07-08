@@ -253,6 +253,8 @@ rootfs:
 		assert.NotContains(t, out, "starting 1")
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -320,6 +322,7 @@ rootfs:
 		assert.NotContains(t, out, "starting 1")
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -388,6 +391,7 @@ rootfs:
 		assert.Regexp(t, `at:\s+/mnt`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -451,6 +455,7 @@ rootfs:
 		assert.Regexp(t, `service:`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		r.Run(t, []string{"unikraft", "service", "delete", "test-" + svcName})
 	})
@@ -591,6 +596,7 @@ rootfs:
 		assert.Regexp(t, `at:\s+/data`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -632,6 +638,7 @@ rootfs:
 		assert.NotRegexp(t, `at:\s+/data`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
