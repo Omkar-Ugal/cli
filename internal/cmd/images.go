@@ -40,8 +40,8 @@ type ImagesCmd struct {
 	cmd.ListableResourceCmd[ImageEntry]
 
 	Build  ImageBuildCmd   `cmd:"" help:"Build a Unikraft project into a container image."`
-	Get    ImagesGetCmd    `cmd:"" help:"Inspect an image." aliases:"inspect,show" completion-enabled-command-alias:"false"`
-	Delete ImagesDeleteCmd `cmd:"" help:"Remove an image." aliases:"rm,remove" completion-enabled-command-alias:"false"`
+	Get    ImagesGetCmd    `cmd:"" help:"Inspect an image." aliases:"inspect,show"`
+	Delete ImagesDeleteCmd `cmd:"" help:"Remove an image." aliases:"rm,remove"`
 	Copy   ImagesCopyCmd   `cmd:"" help:"Copy images."`
 }
 
