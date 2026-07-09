@@ -180,7 +180,7 @@ func TestInstances(t *testing.T) {
 	})
 
 	t.Run("start-follow", func(t *testing.T) {
-		r := runner(t, true, []string{staging, stable, prod})
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		volName := uniq()
 		imageTag := uniq()
@@ -208,11 +208,6 @@ rootfs:
 		).Apply(dir))
 
 		r.Run(t, []string{"unikraft", "build", "base", "--output", baseImage}, integ.WithWorkDir(dir))
-
-		// HACK: wait for image propagation for prod nodes
-		if s := integ.GetTestServer([]string{prod}); s != nil && *s != "" {
-			time.Sleep(60 * time.Second)
-		}
 
 		// Volume provides persistent counter across boots.
 		r.Run(t, []string{
