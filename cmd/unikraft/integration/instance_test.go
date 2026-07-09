@@ -135,7 +135,7 @@ func TestInstances(t *testing.T) {
 		})
 		fqdn := strings.TrimSpace(out)
 
-		r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==running", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==running", "--until", "state==standby", "test-" + instName})
 
 		body := integ.HTTPGet(t, "https://"+fqdn)
 		assert.Contains(t, body, "Welcome to nginx!")
