@@ -25,7 +25,7 @@ func TestVolumes(t *testing.T) {
 		assert.Empty(t, strings.TrimSpace(out))
 
 		out = r.Run(t, []string{"unikraft", "volume", "create", "--set", "name=test-" + volName, "--set", "size=10", "--set", "metro=" + r.Config.MetroName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 		assert.Regexp(t, `filesystem:`, out)
 
@@ -33,7 +33,7 @@ func TestVolumes(t *testing.T) {
 		assert.Regexp(t, `test-.*available`, out)
 
 		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
 		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
@@ -84,7 +84,7 @@ func TestVolumes(t *testing.T) {
 			"--set", "metro=" + r.Config.MetroName,
 			"--access-mode", "rwo",
 		})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `access-mode:\s+rwo`, out)
 
 		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
