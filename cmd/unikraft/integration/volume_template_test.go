@@ -70,11 +70,11 @@ func TestVolumeTemplates(t *testing.T) {
 			"--set", "metro=" + r.Config.MetroName,
 			"--template", templateName,
 		})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
 		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-from-template-" + volName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
 		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})

@@ -6,8 +6,6 @@
 package integration
 
 import (
-	"os"
-	"slices"
 	"testing"
 )
 
@@ -23,14 +21,8 @@ func SkipUnlessIntegration(t testing.TB) {
 // not supported.
 func SkipUnlessSupportedServer(t testing.TB, servers []string) {
 	t.Helper()
-	server := os.Getenv("UNIKRAFT_X_TEST_SERVER")
-	if server == "" {
-		return
-	}
 
-	if slices.Contains(servers, server) {
-		return
+	if GetTestServer(servers) == nil {
+		t.Skip("skipping test (unsupported server)")
 	}
-
-	t.Skip("skipping test (unsupported server)")
 }

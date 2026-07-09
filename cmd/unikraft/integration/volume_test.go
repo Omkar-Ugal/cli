@@ -25,7 +25,7 @@ func TestVolumes(t *testing.T) {
 		assert.Empty(t, strings.TrimSpace(out))
 
 		out = r.Run(t, []string{"unikraft", "volume", "create", "--set", "name=test-" + volName, "--set", "size=10", "--set", "metro=" + r.Config.MetroName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 		assert.Regexp(t, `filesystem:`, out)
 
@@ -33,9 +33,10 @@ func TestVolumes(t *testing.T) {
 		assert.Regexp(t, `test-.*available`, out)
 
 		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		out = r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		assert.Regexp(t, `test-`, out)
 	})
@@ -50,6 +51,7 @@ func TestVolumes(t *testing.T) {
 		out := r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
 		assert.Regexp(t, `size:\s+20`, out)
 
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -65,7 +67,9 @@ func TestVolumes(t *testing.T) {
 		assert.Regexp(t, `state:\s+available`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + cloneName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + cloneName})
 	})
 
@@ -80,12 +84,13 @@ func TestVolumes(t *testing.T) {
 			"--set", "metro=" + r.Config.MetroName,
 			"--access-mode", "rwo",
 		})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `access-mode:\s+rwo`, out)
 
 		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
 		assert.Regexp(t, `access-mode:\s+rwo`, out)
 
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -133,6 +138,7 @@ func TestVolumes(t *testing.T) {
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName1})
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName2})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -184,6 +190,7 @@ func TestVolumes(t *testing.T) {
 		assert.NotRegexp(t, `test-`+instName, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
@@ -207,6 +214,10 @@ func TestVolumes(t *testing.T) {
 		})
 
 		t.Run("dir", func(t *testing.T) {
+			// NOTE: Remove once mounting volumes works correctly on the kernel
+			// when used together with the latest platform.
+			t.Skip("mounting volumes to kernel not working on the latest platform")
+
 			r := runner(t, true, []string{staging, stable})
 			volName := uniq()
 			dir := t.TempDir()
@@ -222,10 +233,15 @@ func TestVolumes(t *testing.T) {
 			out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
 			assert.Regexp(t, `state:\s+available`, out)
 
+			r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 			r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		})
 
 		t.Run("serve", func(t *testing.T) {
+			// NOTE: Remove once mounting volumes works correctly on the kernel
+			// when used together with the latest platform.
+			t.Skip("mounting volumes to kernel not working on the latest platform")
+
 			r := runner(t, true, []string{staging, stable})
 			volName := uniq()
 			instName := uniq()
@@ -271,6 +287,7 @@ func TestVolumes(t *testing.T) {
 			assert.Contains(t, body, "hello from volume import")
 
 			r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+			r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 			r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		})
 	})
@@ -333,6 +350,7 @@ func TestVolumes(t *testing.T) {
 		assert.NotRegexp(t, `new-tag`, out)
 		assert.Regexp(t, `tags:.*added-tag`, out)
 
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 }

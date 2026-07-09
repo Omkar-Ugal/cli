@@ -17,7 +17,7 @@ func TestResources(t *testing.T) {
 		volName := uniq()
 
 		out := r.Run(t, []string{"unikraft", "resource", "create", "--set", "type=volume", "--set", "name=test-" + volName, "--set", "size=10", "--set", "metro=" + r.Config.MetroName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 
 		out = r.Run(t, []string{"unikraft", "resource", "get", "volume:" + r.Config.MetroName + "/test-" + volName})
 		assert.Regexp(t, `size:\s+10`, out)
