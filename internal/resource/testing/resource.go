@@ -76,8 +76,9 @@ var (
 )
 
 type TestSettings struct {
-	Foo int
-	Bar string
+	Foo   int
+	Bar   string
+	Score float64
 }
 
 type TestAuthor struct {
@@ -209,6 +210,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 					Edit: &resource.Patch{
 						Set: t.Settings.Bar, // Use actual value
 					},
+				},
+				{
+					Name:      "score",
+					Value:     t.Settings.Score,
+					Verbosity: resource.FieldVerbosityLong,
 				},
 			},
 		},
