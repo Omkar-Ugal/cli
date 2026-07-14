@@ -1005,6 +1005,34 @@ cmd: ["cat", "/marker.txt"]
 		r.Run(t, []string{"unikraft", "image", "delete", image})
 	})
 
+	t.Run("replicas", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "template={{ .name }}",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--replicas", "2",
+		})
+		instances := strings.Fields(out)
+		require.Len(t, instances, 3)
+		assert.Len(t, map[string]struct{}{
+			instances[0]: {},
+			instances[1]: {},
+			instances[2]: {},
+		}, 3)
+
+		out = r.Run(t, append([]string{"unikraft", "instance", "inspect"}, instances...))
+		assert.Regexp(t, `image:\s+nginx`, out)
+
+		r.Run(t, append([]string{"unikraft", "instance", "delete"}, instances...))
+	})
+
 	t.Run("watch-timeout", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		r.Run(t, []string{"unikraft", "--timeout=1s", "instance", "ls", "-w"}, integ.AllowFail())
