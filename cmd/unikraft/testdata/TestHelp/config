@@ -15,7 +15,7 @@ Fields:
   profiles, profiles.*, profiles.*.name, profiles.*.type, profiles.*.token,
   profiles.*.organization, profiles.*.control-plane, profiles.*.insecure,
   profiles.*.metros, profiles.*.metros.*, profiles.*.metros.*.name,
-  profiles.*.metros.*.endpoint, profiles.*.metros.*.country,
+  profiles.*.metros.*.endpoint, profiles.*.metros.*.location,
   profiles.*.metros.*.insecure, profiles.*.metro-default
 
 Global flags:
@@ -58,7 +58,7 @@ Fields:
   profiles, profiles.*, profiles.*.name, profiles.*.type, profiles.*.token,
   profiles.*.organization, profiles.*.control-plane, profiles.*.insecure,
   profiles.*.metros, profiles.*.metros.*, profiles.*.metros.*.name,
-  profiles.*.metros.*.endpoint, profiles.*.metros.*.country,
+  profiles.*.metros.*.endpoint, profiles.*.metros.*.location,
   profiles.*.metros.*.insecure, profiles.*.metro-default
 
 Flags:

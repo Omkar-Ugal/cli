@@ -63,7 +63,7 @@ func populate() (*Config, error) {
 		profile.ControlPlane = ""
 		profile.Metros = profile.Metros[:1]
 		profile.Metros[0].Name = "test"
-		profile.Metros[0].Country = "xx"
+		profile.Metros[0].Location = "xxx"
 		profile.Metros[0].Insecure = new(ptr.ZeroIfNil(profile.Metros[0].Insecure))
 
 		config := &config.Config{

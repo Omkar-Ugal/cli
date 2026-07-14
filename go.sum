@@ -494,6 +494,8 @@ unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679 h1:zdvJjNkjsriS8RM
 unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679/go.mod h1:FP7uOxux/W5PKqSRQsR4tyjNuLq4Cfio7mc5QVH1kW8=
 unikraft.com/x/guesstermwidth v0.0.0-20260708141520-0cbb0a92056b h1:/VC/nXdu6k0G+a9Lkd9P/sz1r1mrlh0rocNtr1M84V8=
 unikraft.com/x/guesstermwidth v0.0.0-20260708141520-0cbb0a92056b/go.mod h1:q3EH6bLqLAJ1PqZgHlCJPpvvP6scnjJJspBMyGQtMt4=
+unikraft.com/x/iata v0.0.0-20260713183529-fd34645687a0 h1:wpRYHKQbrcJM4xSb8MyumZkBYhaEnWpdvywMnYcvqjo=
+unikraft.com/x/iata v0.0.0-20260713183529-fd34645687a0/go.mod h1:M9v3TZKETfctR1aqFxM6UqYM+3DJ+nHKtqrxGb8X8oc=
 unikraft.com/x/image-spec v0.0.0-20260508142614-1049e0f32dfa h1:25EC2iwjODExpZNut39P1Isms1VpNUu2B2Y8Ou68TQo=
 unikraft.com/x/image-spec v0.0.0-20260508142614-1049e0f32dfa/go.mod h1:SY8fFr+TtSC01dObM0YxVDXGjH6nYl1ETpxESDGNQeI=
 unikraft.com/x/joinerrgroup v0.0.0-20260304162956-523940cab1de h1:cm4FnPvnahRIK0derbI+T4ds1LsD5CFeyyAvIqcOCek=

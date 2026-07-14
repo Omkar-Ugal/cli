@@ -111,6 +111,93 @@ profiles:
 	}
 }
 
+func TestCloudProfileParsesMetroLocation(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: test-token
+    metros:
+      - name: fra
+        endpoint: https://api.fra.unikraft.cloud
+        location: fra
+        insecure: true
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err)
+
+	profile := config.Profiles["default"]
+	require.Len(t, profile.Metros, 1)
+
+	metro := profile.Metros[0]
+	assert.Equal(t, "fra", metro.Name)
+	assert.Equal(t, "fra", metro.Location, "location should be the parsed IATA code")
+}
+
+// TestCloudProfileMissingLocation ensures a metro without a location field
+// loads without error and leaves Location empty.
+func TestCloudProfileMissingLocation(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: test-token
+    metros:
+      - name: fra
+        endpoint: https://api.fra.unikraft.cloud
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err)
+	require.Len(t, config.Profiles["default"].Metros, 1)
+	assert.Empty(t, config.Profiles["default"].Metros[0].Location, "missing location should default to empty")
+}
+
+// TestCloudProfileLegacyCountryIgnored ensures that a legacy `country:` key
+// on a metro is silently ignored rather than breaking config loading.
+func TestCloudProfileLegacyCountryIgnored(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: test-token
+    metros:
+      - name: fra
+        endpoint: https://api.fra.unikraft.cloud
+        country: de
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err, "legacy country key should not break loading")
+	require.Len(t, config.Profiles["default"].Metros, 1)
+
+	metro := config.Profiles["default"].Metros[0]
+	assert.Equal(t, "fra", metro.Name)
+	assert.Empty(t, metro.Location, "legacy country should not populate location")
+}
+
 func TestLegacyProfileSaveDoesNotPersistEnvVars(t *testing.T) {
 	t.Setenv("UKC_METRO", "https://api.fra.unikraft.cloud/v1")
 	t.Setenv("UKC_TOKEN", "test-token-secret")
