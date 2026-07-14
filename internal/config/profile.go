@@ -23,6 +23,11 @@ import (
 // any profiles yet.
 const DefaultProfile = "default"
 
+// EnvProfile is the name of the virtual profile created from the environment
+// variables UKC_TOKEN and UKC_METRO. It is used when the UNIKRAFT_PROFILE_ENV
+// environment variable is set to true.
+const EnvProfile = "env"
+
 // ErrNotSetup is returned when there are no profiles available in the
 // configuration.
 var ErrNotSetup = jujuerrors.New(heredoc.Docf(`
@@ -90,38 +95,50 @@ func (p Profile) GetDefaultMetro() string {
 
 func (p *Profile) populate() {
 	if p.Type == ProfileTypeLegacy {
-		np := Profile{
-			Name:  p.Name,
-			Type:  ProfileTypeLegacy,
-			Token: os.Getenv("UKC_TOKEN"),
-		}
+		*p = profileFromEnv(p.Name)
+	}
+}
 
-		endpoint := os.Getenv("UKC_METRO")
-		if endpoint != "" {
-			var name string
-			if strings.Contains(endpoint, "://") {
-				_, host, _ := strings.Cut(endpoint, "://")
-				host = strings.TrimPrefix(host, "api.")
-				name, _, _ = strings.Cut(host, ".")
-				endpoint = strings.TrimSuffix(strings.TrimSuffix(endpoint, "/"), "/v1")
-			} else {
-				name = endpoint
-				endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", endpoint)
-			}
+// profileFromEnv constructs a Profile from the UKC_TOKEN and UKC_METRO
+// environment variables. It is used both to hydrate legacy profiles from the
+// environment and to create a virtual profile when UNIKRAFT_PROFILE_ENV is set.
+func profileFromEnv(name string) Profile {
+	p := Profile{
+		Name:  name,
+		Type:  ProfileTypeLegacy,
+		Token: os.Getenv("UKC_TOKEN"),
+	}
 
-			var insecure *bool
-			if v := os.Getenv("UKC_ALLOW_INSECURE"); v != "" {
-				b, _ := strconv.ParseBool(v)
-				insecure = &b
-			}
-			metro := Metro{
-				Name:     name,
-				Endpoint: endpoint,
-				Insecure: insecure,
-			}
-			np.Metros = []Metro{metro}
+	if raw := os.Getenv("UKC_METRO"); raw != "" {
+		p.Metros = []Metro{metroFromEnv(raw)}
+	}
+	return p
+}
+
+// metroFromEnv parses the UKC_METRO environment variable into a Metro.
+func metroFromEnv(raw string) Metro {
+	endpoint := raw
+	var name string
+	if strings.Contains(endpoint, "://") {
+		_, host, _ := strings.Cut(endpoint, "://")
+		host = strings.TrimPrefix(host, "api.")
+		name, _, _ = strings.Cut(host, ".")
+		endpoint = strings.TrimSuffix(strings.TrimSuffix(endpoint, "/"), "/v1")
+	} else {
+		name = endpoint
+		endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", endpoint)
+	}
+
+	var insecure *bool
+	if v := os.Getenv("UKC_ALLOW_INSECURE"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			insecure = &b
 		}
-		*p = np
+	}
+	return Metro{
+		Name:     name,
+		Endpoint: endpoint,
+		Insecure: insecure,
 	}
 }
 
@@ -202,6 +219,11 @@ func (config *Config) ProfileList() []Profile {
 // CurrentProfile returns the currently selected profile from the configuration.
 // If the profile does not exist, it returns an error.
 func (config *Config) CurrentProfile() (*Profile, error) {
+	if b, _ := strconv.ParseBool(os.Getenv("UNIKRAFT_PROFILE_ENV")); b {
+		p := profileFromEnv(EnvProfile)
+		return &p, nil
+	}
+
 	if config == nil {
 		return nil, ErrNotSetup
 	}
@@ -218,6 +240,9 @@ func (config *Config) CurrentProfile() (*Profile, error) {
 }
 
 func (config *Config) CurrentProfileName() string {
+	if b, _ := strconv.ParseBool(os.Getenv("UNIKRAFT_PROFILE_ENV")); b {
+		return EnvProfile
+	}
 	if config == nil {
 		return DefaultProfile
 	}
