@@ -370,11 +370,18 @@ func (InstanceTemplate) Create(ctx context.Context, fields []resource.Field) ([]
 			// Create templates one at a time since the platform API only accepts single operations
 			for _, ref := range refs {
 				refStr := cmp.Or(ref.Name, ref.UUID)
+				var reqItem platform.CreateTemplateInstancesRequestItem
+				if ref.Name != "" {
+					reqItem.Name = new(ref.Name)
+				} else {
+					reqItem.Uuid = new(ref.UUID)
+				}
 				log.G(ctx).Trace().Str("ref", refStr).Msg("creating instance template")
 				resp, err := c.CreateTemplateInstances(
 					ctx,
-					[]platform.NameOrUUID{ref.NameOrUUID()},
-					platform.CreateTemplateInstancesOpts{},
+					[]platform.CreateTemplateInstancesRequestItem{
+						reqItem,
+					},
 				)
 				if err != nil {
 					errs = append(errs, fmt.Errorf("failed to create template for %s: %w", refStr, err))
