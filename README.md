@@ -94,6 +94,84 @@ yum install unikraft-cli
 </details>
 
 <details>
+<summary><strong>Nix (flake)</strong></summary>
+
+The CLI is packaged in the [Unikraft NUR](https://github.com/unikraft/nur)
+(Nix User Repository), so there are no release hashes to vendor by hand — each
+release is published there automatically. Supported systems:
+`x86_64-linux`, `aarch64-linux`, `x86_64-darwin`, and `aarch64-darwin`.
+
+The repository is consumed directly as a flake input or overlay, as shown
+below. It is not registered in the
+[nix-community NUR index](https://github.com/nix-community/NUR), so
+`nur.repos.unikraft.*` does not resolve.
+
+Run it once without installing:
+
+```sh
+nix run github:unikraft/nur#unikraft-cli -- version
+```
+
+Install it into your user profile (upgrade later with
+`nix profile upgrade unikraft-cli`):
+
+```sh
+nix profile add github:unikraft/nur#unikraft-cli
+```
+
+On Nix older than 2.30 the subcommand is `nix profile install`, which newer
+versions still accept as a deprecated alias for `add`.
+
+Add it to a flake dev shell as an input:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+    unikraft-nur.url = "github:unikraft/nur";
+    # Optional: reuse the nixpkgs above instead of evaluating a second one.
+    unikraft-nur.inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  outputs = { self, nixpkgs, flake-utils, unikraft-nur }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let pkgs = import nixpkgs { inherit system; };
+      in {
+        devShells.default = pkgs.mkShell {
+          packages = [ unikraft-nur.packages.${system}.unikraft-cli ];
+        };
+      });
+}
+```
+
+Or apply the overlay to expose the packages on `pkgs` directly — replace the
+`let ... in` body of the example above with:
+
+```nix
+let
+  pkgs = import nixpkgs {
+    inherit system;
+    overlays = [ unikraft-nur.overlays.default ];
+  };
+in {
+  devShells.default = pkgs.mkShell {
+    packages = [ pkgs.unikraft-cli ];
+  };
+}
+```
+
+The NUR exposes the following package attributes:
+
+| Attribute              | Description                                                 |
+| ---------------------- | ----------------------------------------------------------- |
+| `unikraft-cli`         | Latest **stable** release of the Unikraft CLI (recommended) |
+| `unikraft-cli-staging` | Latest **pre-release** (`-staging`) build                   |
+| `kraftkit`             | Legacy KraftKit, installed as `kraft`                       |
+
+</details>
+
+<details>
 <summary><strong>GitHub Actions</strong></summary>
 
 - Requires [GitHub Actions](https://docs.github.com/en/actions).
