@@ -288,7 +288,7 @@ func (v *InstanceVolume) MarshalText() ([]byte, error) {
 		parts = append(parts, "ro")
 	}
 	if v.Size > 0 {
-		s, err := value.Format(v.Size)
+		s, err := value.Render(v.Size, value.RenderOpts{})
 		if err != nil {
 			return nil, err
 		}
