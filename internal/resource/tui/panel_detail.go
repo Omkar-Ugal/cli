@@ -18,6 +18,7 @@ import (
 
 	"unikraft.com/cli/internal/resource"
 	resourcecmd "unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tui/uitui"
 )
 
@@ -289,7 +290,7 @@ func appendKVRows(rows *[]table.Row, links *[]resource.Link, parent *resource.Fi
 							return err
 						}
 					} else if subfield.Value != nil {
-						value, err := subfield.Render()
+						value, err := subfield.Render(value.RenderOpts{})
 						if err != nil {
 							return err
 						}
@@ -308,7 +309,7 @@ func appendKVRows(rows *[]table.Row, links *[]resource.Link, parent *resource.Fi
 					key = linkSeq + key + linkReset
 				}
 				if field.Value != nil {
-					value, err := field.Render()
+					value, err := field.Render(value.RenderOpts{})
 					if err != nil {
 						return err
 					}
@@ -335,7 +336,7 @@ func appendKVRows(rows *[]table.Row, links *[]resource.Link, parent *resource.Fi
 			}
 			continue
 		}
-		value, err := field.Render()
+		value, err := field.Render(value.RenderOpts{})
 		if err != nil {
 			return err
 		}

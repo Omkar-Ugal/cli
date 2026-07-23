@@ -68,7 +68,7 @@ func ApplyShortcutFlags(args *SetArgs, flags []*kong.Flag) error {
 				} else {
 					elemVal = elem.Interface()
 				}
-				s, err := value.Format(elemVal)
+				s, err := value.Render(elemVal, value.RenderOpts{})
 				if err != nil {
 					return fmt.Errorf("shortcut %q[%d]: %w", cmp.Or(key, fileKey), j, err)
 				}
@@ -81,7 +81,7 @@ func ApplyShortcutFlags(args *SetArgs, flags []*kong.Flag) error {
 			continue
 		}
 
-		s, err := value.Format(fv.Interface())
+		s, err := value.Render(fv.Interface(), value.RenderOpts{})
 		if err != nil {
 			return fmt.Errorf("shortcut %q: %w", cmp.Or(key, fileKey), err)
 		}

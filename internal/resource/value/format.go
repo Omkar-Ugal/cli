@@ -16,7 +16,24 @@ import (
 	"github.com/ettle/strcase"
 )
 
-func Format(value any) (string, error) {
+// RenderOpts controls how a value is rendered to a string via Render.
+type RenderOpts struct {
+	// Short indicates whether the value should be rendered in a more
+	// concise form suitable for table/short output (e.g. eliding an image
+	// digest), rather than with full detail. The zero value renders with
+	// full detail.
+	Short bool
+}
+
+// Renderer is implemented by types that want to customize their textual
+// representation based on the requested verbosity, e.g. hiding an image
+// digest when rendered in short/table form, but including it in long/detail
+// form.
+type Renderer interface {
+	Render(opts RenderOpts) (string, error)
+}
+
+func Render(value any, opt RenderOpts) (string, error) {
 	if value == nil {
 		return "", nil
 	}
@@ -29,6 +46,9 @@ func Format(value any) (string, error) {
 		return "", nil
 	}
 
+	if value, ok := value.(Renderer); ok {
+		return value.Render(opt)
+	}
 	if value, ok := value.(fmt.Stringer); ok {
 		return value.String(), nil
 	}
@@ -39,14 +59,14 @@ func Format(value any) (string, error) {
 
 	switch v.Kind() {
 	case reflect.Pointer:
-		return Format(v.Elem().Interface())
+		return Render(v.Elem().Interface(), opt)
 	case reflect.String:
 		return v.String(), nil
 	case reflect.Slice, reflect.Array:
 		var result []string
 		for i := range v.Len() {
 			val := v.Index(i)
-			valStr, err := Format(val.Interface())
+			valStr, err := Render(val.Interface(), opt)
 			if err != nil {
 				return "", err
 			}
@@ -63,11 +83,11 @@ func Format(value any) (string, error) {
 		var result []string
 		for _, key := range v.MapKeys() {
 			val := v.MapIndex(key)
-			keyStr, err := Format(key.Interface())
+			keyStr, err := Render(key.Interface(), opt)
 			if err != nil {
 				return "", err
 			}
-			valStr, err := Format(val.Interface())
+			valStr, err := Render(val.Interface(), opt)
 			if err != nil {
 				return "", err
 			}
@@ -83,7 +103,7 @@ func Format(value any) (string, error) {
 				continue
 			}
 			val := v.Field(i)
-			valStr, err := Format(val.Interface())
+			valStr, err := Render(val.Interface(), opt)
 			if err != nil {
 				return "", err
 			}

@@ -197,11 +197,15 @@ type Patch struct {
 	Required bool `json:"required,omitempty"`
 }
 
-func (f Field) Render() (string, error) {
+// Render renders the field's value to a string. Pass value.RenderOpts{} for
+// full/long detail (the default), or value.RenderOpts{Short: true} for a
+// more concise representation (e.g. eliding an image digest) for types that
+// implement value.Renderer.
+func (f Field) Render(opts value.RenderOpts) (string, error) {
 	if f.Value == nil && f.ValueCallback != nil {
 		return colors.InfoFg("<lazy>"), nil
 	}
-	return value.Format(f.Value)
+	return value.Render(f.Value, opts)
 }
 
 type FieldVerbosity int

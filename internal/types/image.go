@@ -13,6 +13,7 @@ import (
 	"unikraft.com/cli/internal/images"
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/resource/value"
 )
 
 // ImageRef is a generic wrapper around a Docker image reference.
@@ -29,8 +30,23 @@ func (ir ImageRef[T]) MarshalText() ([]byte, error) {
 		return []byte{}, nil
 	}
 	s := images.FamiliarString(ir.Reference)
-	s, _, _ = strings.Cut(s, "@")
 	return []byte(s), nil
+}
+
+// Render implements value.Renderer. In short form (e.g. table output), the
+// digest is elided to keep output concise; in long form (e.g. detail views,
+// JSON/YAML output via MarshalText) the full canonical reference, including
+// any digest, is shown.
+func (ir ImageRef[T]) Render(opts value.RenderOpts) (string, error) {
+	var zero T
+	if ir.Reference == zero {
+		return "", nil
+	}
+	s := images.FamiliarString(ir.Reference)
+	if opts.Short {
+		s, _, _ = strings.Cut(s, "@")
+	}
+	return s, nil
 }
 
 func (ir ImageRef[T]) Value() any {

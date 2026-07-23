@@ -198,7 +198,7 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 			nextCurrent = indent
 			nextIndent = indent
 			if field.Value != nil {
-				out, err := field.Render()
+				out, err := field.Render(value.RenderOpts{})
 				if err != nil {
 					return err
 				}
@@ -252,7 +252,7 @@ func printKVValue(out io.Writer, v any, indent int) error {
 		_, err = io.WriteString(out, strings.Join(lines, ""))
 		return err
 	default:
-		line, err := value.Format(v)
+		line, err := value.Render(v, value.RenderOpts{})
 		if err != nil {
 			return err
 		}
@@ -361,7 +361,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 					continue
 				}
 
-				value, err := field.Render()
+				value, err := field.Render(value.RenderOpts{Short: true})
 				if err != nil {
 					return err
 				}
@@ -441,7 +441,7 @@ func printQuiet(ctx context.Context, out io.Writer, specs []string, resources ..
 			if field.HasChildren() && field.Value == nil {
 				continue
 			}
-			s, err := field.Render()
+			s, err := field.Render(value.RenderOpts{})
 			if err != nil {
 				return err
 			}
@@ -588,7 +588,7 @@ func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 			continue
 		}
 		if patch.Set != nil {
-			out, err := value.Format(patch.Set)
+			out, err := value.Render(patch.Set, value.RenderOpts{})
 			if err != nil {
 				return err
 			}
@@ -597,7 +597,7 @@ func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 			}
 		}
 		if patch.Add != nil {
-			out, err := value.Format(patch.Add)
+			out, err := value.Render(patch.Add, value.RenderOpts{})
 			if err != nil {
 				return err
 			}
@@ -606,7 +606,7 @@ func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 			}
 		}
 		if patch.Del != nil {
-			out, err := value.Format(patch.Del)
+			out, err := value.Render(patch.Del, value.RenderOpts{})
 			if err != nil {
 				return err
 			}
