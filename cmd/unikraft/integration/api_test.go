@@ -79,7 +79,7 @@ func TestAPI(t *testing.T) {
 			"--data", "@" + payloadPath,
 		})
 		t.Cleanup(func() {
-			out, err := r.RunRaw(t, deleteArgs)
+			out, err := r.RunRaw(t, deleteArgs, integ.WithoutCancel())
 			assert.NoError(t, err, "deleting raw API-created volume: %s", out)
 		})
 		require.True(t, json.Valid([]byte(out)), "expected JSON response, got: %s", out)

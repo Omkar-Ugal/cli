@@ -56,10 +56,11 @@ func (env *TestEnv) WithSandboxPath(sandboxPath string) *TestEnv {
 type CmdOption func(*cmdConfig)
 
 type cmdConfig struct {
-	workDir    string
-	expectFail bool
-	allowFail  bool
-	timeout    time.Duration
+	workDir       string
+	expectFail    bool
+	allowFail     bool
+	timeout       time.Duration
+	withoutCancel bool
 }
 
 func WithWorkDir(dir string) CmdOption {
@@ -72,6 +73,10 @@ func ExpectFail() CmdOption {
 
 func AllowFail() CmdOption {
 	return func(c *cmdConfig) { c.allowFail = true }
+}
+
+func WithoutCancel() CmdOption {
+	return func(c *cmdConfig) { c.withoutCancel = true }
 }
 
 // WithTimeout kills the command after d. The caller is responsible for
@@ -91,6 +96,9 @@ func (env *TestEnv) RunRaw(t *testing.T, args []string, opts ...CmdOption) (stri
 	t.Logf("executing: %s", strings.Join(args, " "))
 
 	cmdCtx := t.Context()
+	if cfg.withoutCancel {
+		cmdCtx = context.WithoutCancel(cmdCtx)
+	}
 	if cfg.timeout > 0 {
 		var cancel context.CancelFunc
 		cmdCtx, cancel = context.WithTimeout(cmdCtx, cfg.timeout)
