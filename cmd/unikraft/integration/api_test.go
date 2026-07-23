@@ -7,6 +7,8 @@ package integration
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -48,6 +50,40 @@ func TestAPI(t *testing.T) {
 		endpoint := strings.TrimRight(r.Config.Metro.Endpoint, "/") + "/v1/healthz"
 		out := r.Run(t, []string{"unikraft", "api", "-k", endpoint})
 		assert.True(t, json.Valid([]byte(out)), "expected JSON response, got: %s", out)
+	})
+
+	t.Run("volume from data file", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		volName := uniq()
+		payload, err := json.Marshal(map[string]any{
+			"name":    "test-" + volName,
+			"size_mb": 10,
+		})
+		require.NoError(t, err)
+		payloadPath := filepath.Join(t.TempDir(), "volume.json")
+		require.NoError(t, os.WriteFile(payloadPath, payload, 0o600))
+		deletePayload, err := json.Marshal([]map[string]string{{"name": "test-" + volName}})
+		require.NoError(t, err)
+		deleteArgs := []string{
+			"unikraft", "api",
+			"--metro=" + r.Config.MetroName,
+			"/v1/volumes",
+			"--method", "DELETE",
+			"--data", string(deletePayload),
+		}
+
+		out := r.Run(t, []string{
+			"unikraft", "api",
+			"--metro=" + r.Config.MetroName,
+			"/v1/volumes",
+			"--data", "@" + payloadPath,
+		})
+		t.Cleanup(func() {
+			out, err := r.RunRaw(t, deleteArgs, integ.WithoutCancel())
+			assert.NoError(t, err, "deleting raw API-created volume: %s", out)
+		})
+		require.True(t, json.Valid([]byte(out)), "expected JSON response, got: %s", out)
+		assert.Contains(t, out, "test-"+volName)
 	})
 
 	t.Run("missing endpoint fails", func(t *testing.T) {

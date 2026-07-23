@@ -106,7 +106,7 @@ func (c *InstanceCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox
 		return err
 	}
 	if c.DeleteOnStop {
-		c.Set = append(c.Set, map[string]string{"features": string(platform.CreateInstanceRequestFeaturesDeleteOnStop)})
+		c.Set = append(c.Set, map[string]string{"features": string(platform.InstanceFeatureDeleteOnStop)})
 	}
 	if c.Service.Name != "" || c.Service.UUID != "" {
 		if len(c.Publish) > 0 {
@@ -1652,7 +1652,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 	started, startErr := startInstances(ctx, g, stopped)
 	if len(started) == 0 {
 		if _, ok := startErr.(group.ErrRefNotFound); ok {
-			return errors.Join(opErr, fmt.Errorf("cannot restart: instance(s) were deleted before they could be started (check if %q feature is enabled)", platform.CreateInstanceRequestFeaturesDeleteOnStop))
+			return errors.Join(opErr, fmt.Errorf("cannot restart: instance(s) were deleted before they could be started (check if %q feature is enabled)", platform.InstanceFeatureDeleteOnStop))
 		}
 		opErr = errors.Join(opErr, startErr)
 		return opErr
