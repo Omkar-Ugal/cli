@@ -32,7 +32,7 @@ type MetrosCmd struct {
 
 type Metro struct {
 	Name     string `field:",short" json:"name"`
-	Country  string `field:",short" json:"country"`
+	Location string `field:",short" json:"location"`
 	Endpoint string `field:",short" json:"endpoint"`
 	Insecure *bool  `field:",long" json:"insecure"`
 }
@@ -219,7 +219,7 @@ func (Metro) List(ctx context.Context) ([]resource.Resource, error) {
 	for _, metro := range profile.Metros {
 		result := Metro{
 			Name:     metro.Name,
-			Country:  metro.Country,
+			Location: metro.Location,
 			Endpoint: metro.Endpoint,
 			Insecure: metro.Insecure,
 		}

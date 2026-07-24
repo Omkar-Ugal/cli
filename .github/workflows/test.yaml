@@ -129,7 +129,7 @@ jobs:
               metros:
                 - name: ${UNIKRAFT_X_TEST_SERVER}
                   endpoint: ${UNIKRAFT_ENDPOINT}
-                  country: de
+                  location: fra
                   insecure: true
           EOF
           task --yes integration
@@ -195,7 +195,7 @@ jobs:
               metros:
                 - name: ${UNIKRAFT_X_TEST_SERVER}
                   endpoint: ${UNIKRAFT_ENDPOINT}
-                  country: de
+                  location: fra
                   insecure: true
           EOF
           task --yes integration

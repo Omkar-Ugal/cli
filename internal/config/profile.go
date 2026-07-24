@@ -156,8 +156,8 @@ type Metro struct {
 	Name string `json:"name" field:",short"`
 	// Endpoint for the metro.
 	Endpoint string `json:"endpoint" field:",long"`
-	// Country code for the metro.
-	Country string `json:"country" field:",short"`
+	// Location is the IATA code for where the metro is located.
+	Location string `json:"location" field:",short"`
 	// Allows insecure connections to the metro, skipping TLS verification.
 	Insecure *bool `json:"insecure,omitempty" field:",long"`
 }
