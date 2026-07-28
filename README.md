@@ -171,15 +171,10 @@ profiles:
         insecure: false # skip tls verification (avoid for production use)
 ```
 
-You can also easily migrate your old `UKC_METRO`/`UKC_TOKEN` environment variable setup to a profile:
+You can also use your old, already set, `UKC_METRO`/`UKC_TOKEN` by setting also this variable:
 
-```yaml
-# Linux: ~/.config/unikraft/config.yaml
-# MacOS: ~/Library/Application\ Support/unikraft/config.yaml
-profile: default
-profiles:
-  default:
-    type: legacy
+```sh
+export UNIKRAFT_PROFILE_ENV="true"
 ```
 
 ### 2. Deploy Your First Instance
@@ -279,13 +274,17 @@ The CLI stores configuration in `~/.config/unikraft/config.yaml` (or the path sp
 
 ### Environment Variables
 
-| Variable             | Description                                                        |
-| -------------------- | ------------------------------------------------------------------ |
-| `UNIKRAFT_CONFIG`    | Path to the configuration file                                     |
-| `UNIKRAFT_PROFILE`   | Override the current profile                                       |
-| `UNIKRAFT_LOG_LEVEL` | Set log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) |
-| `UNIKRAFT_LOG_TYPE`  | Set output format (`text`, `json`)                                 |
-| `UNIKRAFT_TELEMETRY` | Enable/disable anonymous telemetry (`true`, `false`)               |
+| Variable                | Description                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `UNIKRAFT_CONFIG`       | Path to the configuration file                                                                       |
+| `UNIKRAFT_PROFILE`      | Override the current profile                                                                         |
+| `UNIKRAFT_PROFILE_ENV`  | Use a virtual profile from `UKC_*` env vars instead of config (`true`, `false`)                      |
+| `UNIKRAFT_LOG_LEVEL`    | Set log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`)                                   |
+| `UNIKRAFT_LOG_TYPE`     | Set output format (`text`, `json`)                                                                   |
+| `UNIKRAFT_TELEMETRY`    | Enable/disable anonymous telemetry (`true`, `false`)                                                 |
+| `UKC_TOKEN`             | API token for legacy profiles / `UNIKRAFT_PROFILE_ENV`                                               |
+| `UKC_METRO`             | Metro name (e.g. `fra`) or full endpoint URL for legacy profiles / `UNIKRAFT_PROFILE_ENV`            |
+| `UKC_ALLOW_INSECURE`    | Skip TLS verification for the metro from `UKC_METRO` (`true`, `false`)                               |
 
 ### Profiles
 
