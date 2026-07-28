@@ -22,7 +22,7 @@ require (
 	github.com/docker/cli v29.4.2+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
-	github.com/go-json-experiment/json v0.0.0-20260601182631-00ed12fed2a6
+	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68
 	github.com/google/uuid v1.6.0
 	github.com/jotaen/kong-completion v0.0.14
 	github.com/juju/errors v1.0.0
@@ -49,7 +49,7 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.13.1
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.3.1-0.20260714112357-6a22be4cbe20
+	unikraft.com/cloud/sdk v0.3.1-0.20260728110550-71705d29fb73
 	unikraft.com/x/colors v0.0.0-20260710212606-b68ba398853d
 	unikraft.com/x/filters v0.0.0-20260416164455-ec39ae908f3f
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
