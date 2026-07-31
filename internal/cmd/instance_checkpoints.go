@@ -406,11 +406,10 @@ func (InstanceCheckpoint) Create(ctx context.Context, fields []resource.Field) (
 			}
 			return created, errors.Join(errs...)
 		})
+		created = append(created, keys...)
 		if err != nil {
 			errs = append(errs, err)
-			continue
 		}
-		created = append(created, keys...)
 	}
 
 	if len(created) == 0 {
