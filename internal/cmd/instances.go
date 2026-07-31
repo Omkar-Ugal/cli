@@ -1203,6 +1203,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 			}
 		case "branch":
 			branch := field.Create.Set.(multimetro.Key)
+			if branch.Metro != "" && branch.Metro != metro {
+				return nil, fmt.Errorf("cannot create instance: metro mismatch between branch (%q) and instance (%q)", branch.Metro, metro)
+			}
 			branchFrom := &platform.NameOrUUID{}
 			if branch.Name != "" {
 				branchFrom.Name = &branch.Name
@@ -1213,6 +1216,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 			req.BranchFrom = branchFrom
 		case "checkpoint":
 			cp := field.Create.Set.(multimetro.Key)
+			if cp.Metro != "" && cp.Metro != metro {
+				return nil, fmt.Errorf("cannot create instance: metro mismatch between checkpoint (%q) and instance (%q)", cp.Metro, metro)
+			}
 			cpRef := &platform.NameOrUUID{}
 			if cp.Name != "" {
 				cpRef.Name = &cp.Name
