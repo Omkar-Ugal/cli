@@ -515,7 +515,7 @@ func getInstanceHistory(ctx context.Context, targets []string, fetch func(ctx co
 			return nil, nil, nil
 		}
 		for _, inst := range resp.Data.Instances {
-			if inst.Status != nil && *inst.Status != platform.ResponseStatusSuccess {
+			if inst.Status == nil || *inst.Status != platform.ResponseStatusSuccess {
 				continue
 			}
 			found = append(found, group.Ref{
