@@ -1230,9 +1230,25 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		}
 	}
 
-	// Validate that either image, template, branch, or checkpoint is provided
-	if req.Image == nil && req.Template == nil && req.BranchFrom == nil && req.Checkpoint == nil {
+	// Validate that exactly one of image, template, branch, or checkpoint is provided
+	sources := 0
+	if req.Image != nil {
+		sources++
+	}
+	if req.Template != nil {
+		sources++
+	}
+	if req.BranchFrom != nil {
+		sources++
+	}
+	if req.Checkpoint != nil {
+		sources++
+	}
+	if sources == 0 {
 		return nil, fmt.Errorf("either --image, --template, --branch, or --checkpoint must be specified")
+	}
+	if sources > 1 {
+		return nil, fmt.Errorf("only one of --image, --template, --branch, or --checkpoint may be specified")
 	}
 
 	if req.Image != nil {
