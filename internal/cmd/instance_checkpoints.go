@@ -564,7 +564,7 @@ func (cmd InstanceCheckpointHistoryCmd) Examples() []kingkong.Example {
 
 func (c *InstanceCheckpointHistoryCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	entries, err := getInstanceHistory(ctx, c.Targets, func(ctx context.Context, mc multimetro.MetroClient, ids []platform.NameOrUUID) (*platform.Response[platform.GetCheckpointHistoryResponseData], error) {
-		return mc.GetCheckpointHistory(ctx, ids, platform.GetCheckpointHistoryOpts{})
+		return mc.GetCheckpointHistory(ctx, ids)
 	})
 	if err != nil && len(entries) == 0 {
 		return err

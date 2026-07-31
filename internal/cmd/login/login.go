@@ -77,7 +77,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		if err != nil {
 			return jujuerrors.Annotate(err, "getting authentication token")
 		}
-		if resp.Status == controlplane.ResponseStatusError {
+		if resp.Status == string(controlplane.ResponseStatusError) {
 			return jujuerrors.Annotate(jujuerrors.New(resp.Message), "authentication failed")
 		}
 		if resp.Data == nil {

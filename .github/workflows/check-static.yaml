@@ -27,6 +27,16 @@ jobs:
       TASK_X_REMOTE_TASKFILES: 1
     steps:
     - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+
+    - name: Configure git for private Go module (go-sdk-internal)
+      shell: bash
+      env:
+        GH_PAT: ${{ secrets.GH_PAT }}
+      run: |
+        git config --global url."https://x-access-token:${GH_PAT}@github.com/unikraft-cloud/go-sdk-internal".insteadOf "https://github.com/unikraft-cloud/go-sdk-internal"
+        echo "GOPRIVATE=github.com/unikraft-cloud/go-sdk-internal" >>"$GITHUB_ENV"
 
     - uses: go-task/setup-task@v2
 
