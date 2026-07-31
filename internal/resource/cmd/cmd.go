@@ -29,6 +29,7 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
+	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tui/watcher"
 	xkong "unikraft.com/cli/internal/x/kong"
 	"unikraft.com/cloud/sdk/platform/group"
@@ -453,7 +454,7 @@ func newFieldAdaptor(fields []resource.Field) filters.AdapterFunc {
 				return "", entries, true
 			}
 			// HACK: strip escape sequences from rendered output
-			out, _ := field.Render()
+			out, _ := field.Render(value.RenderOpts{})
 			return ansi.Strip(out), nil, true
 		}
 		// >1 fields = ambiguous match, return entries for wildcard support

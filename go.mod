@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.6
-	charm.land/lipgloss/v2 v2.0.2
+	charm.land/lipgloss/v2 v2.0.5
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/kong v1.15.0
@@ -22,7 +22,7 @@ require (
 	github.com/docker/cli v29.4.2+incompatible
 	github.com/docker/go-units v0.5.0
 	github.com/ettle/strcase v0.2.0
-	github.com/go-json-experiment/json v0.0.0-20260601182631-00ed12fed2a6
+	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68
 	github.com/google/uuid v1.6.0
 	github.com/jotaen/kong-completion v0.0.14
 	github.com/juju/errors v1.0.0
@@ -42,21 +42,22 @@ require (
 	github.com/tonistiigi/go-csvvalue v0.0.0-20240814133006-030d3b2625d0
 	github.com/unikraft/go-archivefs v0.0.0-20260513151619-de2950d0a646
 	github.com/unikraft/go-cpio v0.0.0-20260415131742-4f1984ca41f3
-	golang.org/x/mod v0.36.0
-	golang.org/x/net v0.54.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/mod v0.38.0
+	golang.org/x/net v0.57.0
+	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.13.1
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.0.0-20260610162742-d9f288f10c67
-	unikraft.com/x/colors v0.0.0-20260313145522-d793c36d706e
+	unikraft.com/cloud/sdk v0.3.1-0.20260730110715-92b5bae5afbe
+	unikraft.com/x/colors v0.0.0-20260710212606-b68ba398853d
 	unikraft.com/x/filters v0.0.0-20260416164455-ec39ae908f3f
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
-	unikraft.com/x/guesstermwidth v0.0.0-20260304162956-523940cab1de
+	unikraft.com/x/guesstermwidth v0.0.0-20260708141520-0cbb0a92056b
+	unikraft.com/x/iata v0.0.0-20260713183529-fd34645687a0
 	unikraft.com/x/image-spec v0.0.0-20260508142614-1049e0f32dfa
 	unikraft.com/x/joinerrgroup v0.0.0-20260304162956-523940cab1de
-	unikraft.com/x/kingkong v0.0.0-20260331102539-2c733927b46f
+	unikraft.com/x/kingkong v0.0.0-20260710212606-b68ba398853d
 	unikraft.com/x/kraftfile v0.0.0-20260522114044-e2da24d09716
 	unikraft.com/x/log v0.0.0-20260527070319-f904d21cd6ea
 	unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679
@@ -75,7 +76,7 @@ require (
 	github.com/caarlos0/svu/v3 v3.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/harmonica v0.2.0 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20260416155717-489999b90468 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7 // indirect
 	github.com/charmbracelet/x/exp/charmtone v0.0.0-20250603201427-c31516f43444 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -120,8 +121,8 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.23 // indirect
+	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
@@ -180,10 +181,10 @@ require (
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
-	golang.org/x/crypto v0.51.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
-	golang.org/x/sys v0.44.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260406210006-6f92a3bedf2d // indirect
@@ -193,11 +194,3 @@ require (
 )
 
 tool github.com/caarlos0/svu/v3
-
-// HACK: hot-fix for https://github.com/charmbracelet/lipgloss/pull/636
-replace charm.land/lipgloss/v2 => github.com/jedevc/lipgloss/v2 v2.0.0-20260322175907-46dd1f11f91e
-
-// HACK: pin to rc.2 due to bug in rc.3, see https://github.com/moby/buildkit/pull/6616
-replace github.com/containerd/platforms => github.com/containerd/platforms v1.0.0-rc.2
-
-replace unikraft.com/cloud/sdk => github.com/unikraft-cloud/go-sdk-internal v0.0.0-20260701090522-098b6112c563

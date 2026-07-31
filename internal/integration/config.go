@@ -7,6 +7,7 @@ package integration
 
 import (
 	"os"
+	"slices"
 	"sync"
 	"testing"
 
@@ -62,7 +63,7 @@ func populate() (*Config, error) {
 		profile.ControlPlane = ""
 		profile.Metros = profile.Metros[:1]
 		profile.Metros[0].Name = "test"
-		profile.Metros[0].Country = "xx"
+		profile.Metros[0].Location = "xxx"
 		profile.Metros[0].Insecure = new(ptr.ZeroIfNil(profile.Metros[0].Insecure))
 
 		config := &config.Config{
@@ -86,4 +87,20 @@ func populate() (*Config, error) {
 		return nil, err
 	}
 	return cloned.(*Config), nil
+}
+
+// GetTestServer returns nil only when UNIKRAFT_X_TEST_SERVER is set and not
+// present in servers. When the env var is unset/empty, it returns a pointer
+// to "" (meaning "no specific server selected").
+func GetTestServer(servers []string) *string {
+	server := os.Getenv("UNIKRAFT_X_TEST_SERVER")
+	if server == "" {
+		return new(string)
+	}
+
+	if slices.Contains(servers, server) {
+		return &server
+	}
+
+	return nil
 }

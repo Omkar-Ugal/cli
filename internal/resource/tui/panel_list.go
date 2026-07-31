@@ -14,6 +14,7 @@ import (
 
 	"unikraft.com/cli/internal/resource"
 	resourcecmd "unikraft.com/cli/internal/resource/cmd"
+	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tui/uitui"
 	xslices "unikraft.com/cli/internal/x/slices"
 )
@@ -253,7 +254,7 @@ func (p *listPanel) renderField(res resource.Resource, path resource.FieldPath) 
 		if field.Value == nil {
 			continue
 		}
-		value, err := field.Render()
+		value, err := field.Render(value.RenderOpts{Short: true})
 		if err != nil {
 			continue
 		}

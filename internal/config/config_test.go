@@ -111,6 +111,93 @@ profiles:
 	}
 }
 
+func TestCloudProfileParsesMetroLocation(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: test-token
+    metros:
+      - name: fra
+        endpoint: https://api.fra.unikraft.cloud
+        location: fra
+        insecure: true
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err)
+
+	profile := config.Profiles["default"]
+	require.Len(t, profile.Metros, 1)
+
+	metro := profile.Metros[0]
+	assert.Equal(t, "fra", metro.Name)
+	assert.Equal(t, "fra", metro.Location, "location should be the parsed IATA code")
+}
+
+// TestCloudProfileMissingLocation ensures a metro without a location field
+// loads without error and leaves Location empty.
+func TestCloudProfileMissingLocation(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: test-token
+    metros:
+      - name: fra
+        endpoint: https://api.fra.unikraft.cloud
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err)
+	require.Len(t, config.Profiles["default"].Metros, 1)
+	assert.Empty(t, config.Profiles["default"].Metros[0].Location, "missing location should default to empty")
+}
+
+// TestCloudProfileLegacyCountryIgnored ensures that a legacy `country:` key
+// on a metro is silently ignored rather than breaking config loading.
+func TestCloudProfileLegacyCountryIgnored(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: test-token
+    metros:
+      - name: fra
+        endpoint: https://api.fra.unikraft.cloud
+        country: de
+`) + "\n"
+
+	err := os.WriteFile(path, []byte(input), 0o600)
+	require.NoError(t, err)
+
+	config, err := Load(path)
+	require.NoError(t, err, "legacy country key should not break loading")
+	require.Len(t, config.Profiles["default"].Metros, 1)
+
+	metro := config.Profiles["default"].Metros[0]
+	assert.Equal(t, "fra", metro.Name)
+	assert.Empty(t, metro.Location, "legacy country should not populate location")
+}
+
 func TestLegacyProfileSaveDoesNotPersistEnvVars(t *testing.T) {
 	t.Setenv("UKC_METRO", "https://api.fra.unikraft.cloud/v1")
 	t.Setenv("UKC_TOKEN", "test-token-secret")
@@ -141,6 +228,100 @@ profiles:
 	assert.NotContains(t, content, "test-token-secret")
 	assert.NotContains(t, content, "metros")
 	assert.Contains(t, content, "type: legacy")
+}
+
+func TestEnvProfile(t *testing.T) {
+	tests := []struct {
+		name             string
+		profileEnv       string
+		metroEnv         string
+		expectedName     string
+		expectedEndpoint string
+	}{
+		{
+			name:             "truthy with full URL",
+			profileEnv:       "true",
+			metroEnv:         "https://api.fra.unikraft.cloud/v1",
+			expectedName:     "fra",
+			expectedEndpoint: "https://api.fra.unikraft.cloud",
+		},
+		{
+			name:             "truthy with short name",
+			profileEnv:       "1",
+			metroEnv:         "fra",
+			expectedName:     "fra",
+			expectedEndpoint: "https://api.fra.unikraft.cloud",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("UNIKRAFT_PROFILE_ENV", tt.profileEnv)
+			t.Setenv("UKC_METRO", tt.metroEnv)
+			t.Setenv("UKC_TOKEN", "env-token")
+
+			// No config file is needed; the virtual profile bypasses it.
+			config := &Config{}
+			profile, err := config.CurrentProfile()
+			require.NoError(t, err)
+
+			assert.Equal(t, EnvProfile, profile.Name)
+			assert.Equal(t, ProfileTypeLegacy, profile.Type)
+			assert.Equal(t, "env-token", profile.Token)
+			require.Len(t, profile.Metros, 1)
+			assert.Equal(t, tt.expectedName, profile.Metros[0].Name)
+			assert.Equal(t, tt.expectedEndpoint, profile.Metros[0].Endpoint)
+		})
+	}
+}
+
+func TestEnvProfileDisabled(t *testing.T) {
+	// Unset / falsy values must not synthesize a virtual profile.
+	for _, val := range []string{"", "false", "0", "no", "not-a-bool"} {
+		name := val
+		if name == "" {
+			name = "unset"
+		}
+
+		t.Run(name, func(t *testing.T) {
+			if val != "" {
+				t.Setenv("UNIKRAFT_PROFILE_ENV", val)
+			}
+			t.Setenv("UKC_TOKEN", "env-token")
+
+			config := &Config{}
+			_, err := config.CurrentProfile()
+			assert.ErrorIs(t, err, ErrNotSetup)
+		})
+	}
+}
+
+func TestEnvProfileBypassesConfigFile(t *testing.T) {
+	// When enabled, the env-derived profile takes precedence over on-disk profiles.
+	t.Setenv("UNIKRAFT_PROFILE_ENV", "true")
+	t.Setenv("UKC_METRO", "fra")
+	t.Setenv("UKC_TOKEN", "env-token")
+
+	root := t.TempDir()
+	path := filepath.Join(root, "config.yaml")
+	input := strings.TrimSpace(`
+profile: default
+profiles:
+  default:
+    type: cloud
+    token: on-disk-token
+`) + "\n"
+	require.NoError(t, os.WriteFile(path, []byte(input), 0o600))
+
+	config, err := Load(path)
+	require.NoError(t, err)
+
+	profile, err := config.CurrentProfile()
+	require.NoError(t, err)
+	assert.Equal(t, EnvProfile, profile.Name)
+	assert.Equal(t, EnvProfile, config.CurrentProfileName())
+	assert.Equal(t, "env-token", profile.Token)
+	assert.Equal(t, ProfileTypeLegacy, profile.Type)
 }
 
 func TestProfile_GetDefaultMetro(t *testing.T) {

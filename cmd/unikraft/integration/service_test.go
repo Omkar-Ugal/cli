@@ -14,7 +14,7 @@ import (
 
 func TestServices(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		svcNameA := uniq()
 		svcNameB := uniq()
 		domainA := uniq()
@@ -68,7 +68,7 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("edit", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		svcName := uniq()
 		domainName := uniq()
 		domainEdit := uniq()
@@ -97,6 +97,45 @@ func TestServices(t *testing.T) {
 		assert.Regexp(t, `source:\s+1000`, out)
 		assert.Regexp(t, `destination:\s+2000`, out)
 		assert.Regexp(t, `fqdn:`, out)
+
+		r.Run(t, []string{"unikraft", "service", "delete", "test-" + svcName})
+	})
+
+	t.Run("shortcuts-and-patches", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		svcName := uniq()
+		domainName := uniq()
+		addedDomainName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "service", "create",
+			"--output", "quiet",
+			"--name", "test-" + svcName,
+			"--metro", r.Config.MetroName,
+			"--domains", domainName + ".unikraft.example",
+			"--services", "443:8080/tls+http",
+		})
+
+		r.Run(t, []string{
+			"unikraft", "service", "edit", "test-" + svcName,
+			"--output", "quiet",
+			"--add", "domains=fqdn=" + addedDomainName + ".unikraft.example",
+			"--add", "services=8443:8080/tls",
+		})
+		out := r.Run(t, []string{"unikraft", "service", "inspect", "test-" + svcName})
+		assert.Contains(t, out, domainName+".unikraft.example")
+		assert.Contains(t, out, addedDomainName+".unikraft.example")
+		assert.Regexp(t, `source:\s+8443`, out)
+
+		r.Run(t, []string{
+			"unikraft", "service", "edit", "test-" + svcName,
+			"--output", "quiet",
+			"--del", "domains=fqdn=" + addedDomainName + ".unikraft.example",
+			"--del", "services=8443:8080/tls",
+		})
+		out = r.Run(t, []string{"unikraft", "service", "inspect", "test-" + svcName})
+		assert.NotContains(t, out, addedDomainName+".unikraft.example")
+		assert.NotRegexp(t, `source:\s+8443`, out)
 
 		r.Run(t, []string{"unikraft", "service", "delete", "test-" + svcName})
 	})

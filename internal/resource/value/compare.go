@@ -135,11 +135,11 @@ func Compare(a, b any) int {
 	}
 
 	// Fall back to string comparison
-	aStr, err := Format(a)
+	aStr, err := Render(a, RenderOpts{})
 	if err != nil {
 		aStr = fmt.Sprint(a)
 	}
-	bStr, err := Format(b)
+	bStr, err := Render(b, RenderOpts{})
 	if err != nil {
 		bStr = fmt.Sprint(b)
 	}

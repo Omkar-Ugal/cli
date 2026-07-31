@@ -7,6 +7,8 @@ package integration
 
 import (
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -18,7 +20,7 @@ import (
 
 func TestCertificates(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		certNameA := uniq()
 		certNameB := uniq()
 		certA := integ.GenerateCert(t, "")
@@ -46,8 +48,34 @@ func TestCertificates(t *testing.T) {
 		assert.Regexp(t, `test-`, out)
 	})
 
+	t.Run("create-shortcut-files", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		certName := uniq()
+		cert := integ.GenerateCert(t, "")
+		dir := t.TempDir()
+		chainPath := filepath.Join(dir, "chain.pem")
+		keyPath := filepath.Join(dir, "key.pem")
+		require.NoError(t, os.WriteFile(chainPath, []byte(cert.Chain), 0o600))
+		require.NoError(t, os.WriteFile(keyPath, []byte(cert.Key), 0o600))
+
+		out := r.Run(t, []string{
+			"unikraft", "certificate", "create",
+			"--set", "name=test-" + certName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--cn", cert.CN,
+			"--chain", chainPath,
+			"--pkey", keyPath,
+		})
+		assert.Regexp(t, `state:\s+valid`, out)
+
+		out = r.Run(t, []string{"unikraft", "certificate", "inspect", "test-" + certName})
+		assert.Regexp(t, `state:\s+valid`, out)
+
+		r.Run(t, []string{"unikraft", "certificate", "delete", "test-" + certName})
+	})
+
 	t.Run("serve", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		certName := uniq()
 		domainName := uniq()
 		instName := uniq()

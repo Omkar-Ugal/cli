@@ -7,6 +7,7 @@ package integration
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ import (
 
 func TestImages(t *testing.T) {
 	t.Run("inspect", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		out := r.Run(t, []string{"unikraft", "image", "inspect", "nginx:latest"})
 		assert.Regexp(t, `ref:\s+nginx`, out)
 		assert.Regexp(t, `config:`, out)
@@ -23,7 +24,7 @@ func TestImages(t *testing.T) {
 	})
 
 	t.Run("copy-inspect-delete", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		imageTag := uniq()
 		imageName := r.Config.Profile.Organization + "/nginx-copy:" + imageTag
@@ -36,6 +37,27 @@ func TestImages(t *testing.T) {
 		assert.Regexp(t, `config:`, out)
 		assert.Regexp(t, `kernel:`, out)
 		assert.Regexp(t, `kernel.dbg:`, out)
+		r.Run(t, []string{"unikraft", "image", "delete", imageFull})
+	})
+
+	t.Run("copy-local-archive", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		archive := filepath.Join(t.TempDir(), "nginx.oci.tar")
+		imageTag := uniq()
+		imageName := r.Config.Profile.Organization + "/nginx-archive:" + imageTag
+		imageFull := fmt.Sprintf("%s/%s", r.Config.Metro.Index().Host, imageName)
+
+		r.Run(t, []string{"unikraft", "image", "copy", "nginx:latest", archive})
+		assert.FileExists(t, archive)
+
+		out := r.Run(t, []string{"unikraft", "image", "inspect", archive})
+		assert.Regexp(t, `digest:\s+sha256:`, out)
+		assert.Regexp(t, `config:`, out)
+
+		r.Run(t, []string{"unikraft", "image", "copy", archive, imageFull})
+		out = r.Run(t, []string{"unikraft", "image", "inspect", imageFull})
+		assert.Regexp(t, `ref:\s+.*`+imageName, out)
+
 		r.Run(t, []string{"unikraft", "image", "delete", imageFull})
 	})
 }

@@ -19,7 +19,7 @@ import (
 
 func TestInstances(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable, prod})
 		instName := uniq()
 
 		out := r.Run(t, []string{"unikraft", "instance", "list", "--output", "quiet"})
@@ -57,7 +57,7 @@ func TestInstances(t *testing.T) {
 	})
 
 	t.Run("create-oom", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -79,7 +79,7 @@ func TestInstances(t *testing.T) {
 	})
 
 	t.Run("connect", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable, prod})
 		instName := uniq()
 		domainName := uniq()
 
@@ -110,8 +110,41 @@ func TestInstances(t *testing.T) {
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	t.Run("getting-started", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable, prod})
+		instName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "run",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--publish", "443:8080/http+tls",
+			"--scale-to-zero", "policy=on,cooldown-time=1000",
+			"--image", "nginx:latest",
+		})
+
+		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `image:\s+nginx`, out)
+		assert.Regexp(t, `state:\s+(running|starting)`, out)
+		assert.Regexp(t, `policy:\s+on`, out)
+		assert.Regexp(t, `service:`, out)
+
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+
+		r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==running", "--until", "state==standby", "test-" + instName})
+
+		body := integ.HTTPGet(t, "https://"+fqdn)
+		assert.Contains(t, body, "Welcome to nginx!")
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
 	t.Run("start-stop", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -147,7 +180,7 @@ func TestInstances(t *testing.T) {
 	})
 
 	t.Run("start-follow", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		volName := uniq()
 		imageTag := uniq()
@@ -158,7 +191,12 @@ func TestInstances(t *testing.T) {
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
 			fstest.CreateDir("base", 0o755),
-			fstest.CreateFile("base/Dockerfile", []byte(`FROM busybox:latest`), 0o644),
+			fstest.CreateFile("base/Dockerfile", []byte(`
+FROM busybox:latest
+
+RUN echo 'n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30s' > /start.sh
+RUN chmod +x /start.sh
+`), 0o644),
 			fstest.CreateFile("base/Kraftfile", []byte(`
 spec: v0.7
 name: busybox-start-follow-e2e
@@ -166,7 +204,6 @@ runtime: base-compat:latest
 rootfs:
   format: erofs
   source: ./Dockerfile
-cmd: ["cat", "/rom/hello.txt"]
 `), 0o644),
 		).Apply(dir))
 
@@ -182,7 +219,6 @@ cmd: ["cat", "/rom/hello.txt"]
 		})
 
 		// On each boot, increment /data/n and echo "starting N".
-		script := `n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30`
 		r.Run(t, []string{
 			"unikraft", "instance", "create",
 			"--output", "quiet",
@@ -193,7 +229,7 @@ cmd: ["cat", "/rom/hello.txt"]
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
 			"--set", "volumes=test-" + volName + ":/data",
-			"--set", `runtime.args=["sh","-c","` + script + `"]`,
+			"--set", `runtime.args=["sh","-c","/start.sh"]`,
 		})
 
 		// First boot ("starting 1"): start, wait running, then stop.
@@ -212,11 +248,13 @@ cmd: ["cat", "/rom/hello.txt"]
 		assert.NotContains(t, out, "starting 1")
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("restart-follow", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		volName := uniq()
 		imageTag := uniq()
@@ -227,7 +265,12 @@ cmd: ["cat", "/rom/hello.txt"]
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
 			fstest.CreateDir("base", 0o755),
-			fstest.CreateFile("base/Dockerfile", []byte(`FROM busybox:latest`), 0o644),
+			fstest.CreateFile("base/Dockerfile", []byte(`
+FROM busybox:latest
+
+RUN echo 'n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30s' > /start.sh
+RUN chmod +x /start.sh
+`), 0o644),
 			fstest.CreateFile("base/Kraftfile", []byte(`
 spec: v0.7
 name: busybox-restart-follow-e2e
@@ -235,7 +278,6 @@ runtime: base-compat:latest
 rootfs:
   format: erofs
   source: ./Dockerfile
-cmd: ["cat", "/rom/hello.txt"]
 `), 0o644),
 		).Apply(dir))
 
@@ -251,7 +293,6 @@ cmd: ["cat", "/rom/hello.txt"]
 		})
 
 		// On each boot, increment /data/n and echo "starting N".
-		script := `n=$(cat /data/n 2>/dev/null || echo 0); n=$((n+1)); echo $n > /data/n; echo starting $n; sleep 30`
 		r.Run(t, []string{
 			"unikraft", "instance", "create",
 			"--output", "quiet",
@@ -262,7 +303,7 @@ cmd: ["cat", "/rom/hello.txt"]
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
 			"--set", "volumes=test-" + volName + ":/data",
-			"--set", `runtime.args=["sh","-c","` + script + `"]`,
+			"--set", `runtime.args=["sh","-c","/start.sh"]`,
 		})
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
 
@@ -276,11 +317,12 @@ cmd: ["cat", "/rom/hello.txt"]
 		assert.NotContains(t, out, "starting 1")
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("edit", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -317,7 +359,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("volume", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		volName := uniq()
 
@@ -344,11 +386,12 @@ cmd: ["cat", "/rom/hello.txt"]
 		assert.Regexp(t, `at:\s+/mnt`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("volume-inline", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -369,7 +412,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("shortcut-service-volume", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		svcName := uniq()
 		volName := uniq()
@@ -407,12 +450,13 @@ cmd: ["cat", "/rom/hello.txt"]
 		assert.Regexp(t, `service:`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		r.Run(t, []string{"unikraft", "service", "delete", "test-" + svcName})
 	})
 
 	t.Run("rom-attach", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
@@ -444,7 +488,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("rom-add", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
@@ -480,7 +524,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("rom-detach", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		dir := t.TempDir()
 		require.NoError(t, fstest.Apply(
@@ -514,7 +558,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("volume-add", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		volName := uniq()
 
@@ -547,11 +591,12 @@ cmd: ["cat", "/rom/hello.txt"]
 		assert.Regexp(t, `at:\s+/data`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("volume-del", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		volName := uniq()
 
@@ -588,11 +633,12 @@ cmd: ["cat", "/rom/hello.txt"]
 		assert.NotRegexp(t, `at:\s+/data`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
 		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("autostart", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -613,7 +659,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("suspend", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -647,7 +693,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("rm", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		// Create a running instance with --rm so it is auto-deleted
@@ -676,7 +722,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("add-domain", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		domainName := uniq()
 
@@ -710,7 +756,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("sched-priority", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -741,7 +787,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("tags", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		// Create instance with tags.
@@ -804,13 +850,196 @@ cmd: ["cat", "/rom/hello.txt"]
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	t.Run("delete-lock", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+		})
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--set", "delete-lock=true",
+		})
+
+		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName, "-f", "+delete-lock"})
+		assert.Regexp(t, `delete-lock:\s+true`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName}, integ.ExpectFail())
+		assert.Regexp(t, `(?i)deletion protection`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `name:\s+test-`+instName, out)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--set", "delete-lock=false",
+		})
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName}, integ.ExpectFail())
+		assert.Regexp(t, `not found`, out)
+	})
+
+	t.Run("pull-policy", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		imageTag := "test-" + uniq()
+		warmName := uniq()
+		ifNotPresentName := uniq()
+		alwaysName := uniq()
+
+		image := r.Config.Profile.Organization + "/pull-policy-e2e:" + imageTag
+
+		dir := t.TempDir()
+
+		// Build and push v1: short-lived instance that prints a known marker.
+		require.NoError(t, fstest.Apply(
+			fstest.CreateDir("v1", 0o755),
+			fstest.CreateFile("v1/Dockerfile", []byte(`
+FROM busybox:latest
+RUN echo pull-policy-v1 > /marker.txt
+`), 0o644),
+			fstest.CreateFile("v1/Kraftfile", []byte(`
+spec: v0.7
+name: pull-policy-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["cat", "/marker.txt"]
+`), 0o644),
+		).Apply(dir))
+		r.Run(t, []string{"unikraft", "build", "v1", "--output", image}, integ.WithWorkDir(dir))
+
+		// Warm the node cache: run v1, wait for it to stop, check output.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + warmName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+		})
+		r.Run(t, []string{
+			"unikraft", "--timeout", "30s", "instance", "wait",
+			"--until", "state==stopped", "test-" + warmName,
+		})
+		out := r.Run(t, []string{"unikraft", "instance", "logs", "test-" + warmName})
+		assert.Contains(t, out, "pull-policy-v1")
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + warmName})
+
+		// Build and push v2 under the same tag: different marker.
+		require.NoError(t, fstest.Apply(
+			fstest.CreateDir("v2", 0o755),
+			fstest.CreateFile("v2/Dockerfile", []byte(`
+FROM busybox:latest
+RUN echo pull-policy-v2 > /marker.txt
+`), 0o644),
+			fstest.CreateFile("v2/Kraftfile", []byte(`
+spec: v0.7
+name: pull-policy-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["cat", "/marker.txt"]
+`), 0o644),
+		).Apply(dir))
+		r.Run(t, []string{"unikraft", "build", "v2", "--output", image}, integ.WithWorkDir(dir))
+
+		// if_not_present: node already has v1 cached under this tag; must NOT pull v2.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + ifNotPresentName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--pull-policy", "if_not_present",
+		})
+		r.Run(t, []string{
+			"unikraft", "--timeout", "30s", "instance", "wait",
+			"--until", "state==stopped", "test-" + ifNotPresentName,
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "logs", "test-" + ifNotPresentName})
+		assert.Contains(t, out, "pull-policy-v1")
+		assert.NotContains(t, out, "pull-policy-v2")
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + ifNotPresentName})
+
+		// always: must pull fresh v2 regardless of cache.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + alwaysName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--pull-policy", "always",
+		})
+		r.Run(t, []string{
+			"unikraft", "--timeout", "30s", "instance", "wait",
+			"--until", "state==stopped", "test-" + alwaysName,
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "logs", "test-" + alwaysName})
+		assert.Contains(t, out, "pull-policy-v2")
+		assert.NotContains(t, out, "pull-policy-v1")
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + alwaysName})
+
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	t.Run("replicas", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "template={{ .name }}",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--replicas", "2",
+		})
+		instances := strings.Fields(out)
+		require.Len(t, instances, 3)
+		assert.Len(t, map[string]struct{}{
+			instances[0]: {},
+			instances[1]: {},
+			instances[2]: {},
+		}, 3)
+
+		out = r.Run(t, append([]string{"unikraft", "instance", "inspect"}, instances...))
+		assert.Regexp(t, `image:\s+nginx`, out)
+
+		r.Run(t, append([]string{"unikraft", "instance", "delete"}, instances...))
+	})
+
 	t.Run("watch-timeout", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		r.Run(t, []string{"unikraft", "--timeout=1s", "instance", "ls", "-w"}, integ.AllowFail())
 	})
 
 	t.Run("watch-no-timeout", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 
 		done := make(chan error, 1)
 		go func() {
@@ -827,7 +1056,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	})
 
 	t.Run("branch", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		branchName := uniq()
 		domainName := uniq()
@@ -886,7 +1115,7 @@ cmd: ["cat", "/rom/hello.txt"]
 	// a counter HTTP server, increments to 5, branches, verifies the branched
 	// instance has counter=5, then mutates each independently.
 	t.Run("branch-state", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		branchName := uniq()
 		domainName := uniq()

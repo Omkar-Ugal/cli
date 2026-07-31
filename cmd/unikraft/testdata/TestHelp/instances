@@ -46,6 +46,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -71,6 +72,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Global flags:
   -h, --help
@@ -113,6 +115,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -138,6 +141,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
   -w, --watch=<duration>
@@ -188,6 +192,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -213,6 +218,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
       --filter
@@ -265,6 +271,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -290,6 +297,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
       --until, --filter
@@ -352,6 +360,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -377,6 +386,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -422,6 +432,9 @@ Create flags:
       --image=<name>:<tag>
           Image to deploy.
           [examples: nginx:latest, my-app:v1.2.3]
+      --pull-policy=<policy>
+          Image pull policy.
+          [examples: always, never, if_not_present]
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
@@ -509,6 +522,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -534,6 +548,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -579,6 +594,9 @@ Create flags:
       --image=<name>:<tag>
           Image to deploy.
           [examples: nginx:latest, my-app:v1.2.3]
+      --pull-policy=<policy>
+          Image pull policy.
+          [examples: always, never, if_not_present]
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
@@ -675,6 +693,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -700,6 +719,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -771,6 +791,8 @@ Edit flags:
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
           [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
+      --delete-lock
+          Prevent instance deletion until the lock is removed.
 
 $ unikraft instance delete --help
 
@@ -794,6 +816,7 @@ Fields:
   tags
   state
   image
+  pull-policy
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   service, service.name, service.uuid, service.services, service.domains,
@@ -819,6 +842,7 @@ Fields:
   branch
   checkpoint
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
 
 Flags:
       --all

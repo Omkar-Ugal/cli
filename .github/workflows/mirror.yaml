@@ -1,0 +1,32 @@
+name: mirror
+
+on:
+  push:
+    branches:
+    - prod-*
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Fetch all tags
+      shell: bash
+      run: git fetch --force --tags
+
+    - name: Push to public mirror
+      shell: bash
+      run: |
+        git remote add mirror https://x-access-token:${{ secrets.GH_MIRROR_PAT }}@github.com/unikraft/cli.git
+        git push --force mirror HEAD:refs/heads/${{ github.ref_name }} --tags

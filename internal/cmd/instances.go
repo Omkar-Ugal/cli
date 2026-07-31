@@ -73,7 +73,8 @@ type InstanceCreateCmd struct {
 	Metro string `group:"flag-create" shortcut:"metro" help:"Metro to deploy in." placeholder:"metro" example:"fra,sfo,nyc"`
 	Name  string `group:"flag-create" shortcut:"name" short:"n" help:"Instance name." placeholder:"name"`
 
-	Image string `group:"flag-create" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
+	Image      string               `group:"flag-create" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
+	PullPolicy *platform.PullPolicy `group:"flag-create" shortcut:"pull-policy" help:"Image pull policy." placeholder:"policy" example:"always,never,if_not_present"`
 
 	Args InstanceArgs `group:"flag-create" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
 	Env  []string     `group:"flag-create" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
@@ -109,7 +110,7 @@ func (c *InstanceCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox
 		return err
 	}
 	if c.DeleteOnStop {
-		c.Set = append(c.Set, map[string]string{"features": string(platform.CreateInstanceRequestFeaturesDeleteOnStop)})
+		c.Set = append(c.Set, map[string]string{"features": string(platform.InstanceFeatureDeleteOnStop)})
 	}
 	if c.Service.Name != "" || c.Service.UUID != "" {
 		if len(c.Publish) > 0 {
@@ -144,6 +145,8 @@ type InstanceEditCmd struct {
 	Tags []string `group:"flag-edit" shortcut:"tags" help:"Instance tags." placeholder:"tag" example:"env-prod,team-platform"`
 
 	ScaleToZero InstanceScaleToZero `group:"flag-edit" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
+
+	DeleteLock *bool `group:"flag-edit" shortcut:"delete-lock" help:"Prevent instance deletion until the lock is removed."`
 }
 
 func (c *InstanceEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -162,7 +165,8 @@ type Instance struct {
 
 	State types.InstanceState `mirror:"instance.state" field:",short" edit:"set"`
 
-	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short" create:"set" edit:"set"`
+	Image      types.ImageRef[reference.Named] `mirror:"instance.image" field:",short" create:"set" edit:"set"`
+	PullPolicy *platform.PullPolicy            `field:"pull-policy,invisible,valueless" create:"set"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short" create:"set" edit:"set"`
@@ -222,6 +226,8 @@ type Instance struct {
 	Profile  *config.Profile   `field:"-" json:"profile"`
 
 	key multimetro.Key
+
+	DeleteLock bool `mirror:"instance.delete_lock" field:"delete-lock,long" edit:"set"`
 }
 
 type InstanceNetwork struct {
@@ -288,7 +294,7 @@ func (v *InstanceVolume) MarshalText() ([]byte, error) {
 		parts = append(parts, "ro")
 	}
 	if v.Size > 0 {
-		s, err := value.Format(v.Size)
+		s, err := value.Render(v.Size, value.RenderOpts{})
 		if err != nil {
 			return nil, err
 		}
@@ -636,20 +642,22 @@ func (Instance) Get(ctx context.Context, keys []string) ([]resource.Resource, er
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, instance := range resp.Data.Instances {
+		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := Instance{}.load(&refs[i], instance, &c.Metro, profile)
+
+			matchedRef := matchRef(refs, instance.Name, instance.Uuid)
+			result, err := Instance{}.load(matchedRef, instance, &c.Metro, profile)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)
@@ -975,6 +983,8 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 			reqRoms = append(reqRoms, reqRom)
 		}
 		return platform.MutableInstancePropertyRoms, reqRoms, nil
+	case "delete-lock":
+		return platform.MutableInstancePropertyDeleteLock, value.(bool), nil
 	default:
 		return zero, nil, nil
 	}
@@ -983,6 +993,7 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	var req platform.CreateInstanceRequest
 	var metro string
+	var pullPolicy *platform.PullPolicy
 	for key, field := range resource.IterFields(fields) {
 		if field.Create == nil || field.Create.Set == nil {
 			continue
@@ -996,7 +1007,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "metro":
 			metro = string(field.Create.Set.(LinkName[Metro]))
 		case "image":
-			req.Image = new(field.Create.Set.(types.ImageRef[reference.Named]).Reference.String())
+			req.Image = &platform.ImageSpec{Url: field.Create.Set.(types.ImageRef[reference.Named]).Reference.String()}
+		case "pull-policy":
+			pullPolicy = field.Create.Set.(*platform.PullPolicy)
 		case "runtime.args":
 			req.Args = []string(field.Create.Set.(InstanceArgs))
 		case "runtime.env":
@@ -1214,6 +1227,25 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 	// Validate that either image, template, branch, or checkpoint is provided
 	if req.Image == nil && req.Template == nil && req.BranchFrom == nil && req.Checkpoint == nil {
 		return nil, fmt.Errorf("either --image, --template, --branch, or --checkpoint must be specified")
+	}
+
+	if req.Image != nil {
+		if pullPolicy != nil {
+			// Apply pull policy to the image spec if provided.
+			req.Image.PullPolicy = pullPolicy
+		} else {
+			// HACK: old metros don't support the object type
+			// we should have this properly encoded in the sdk
+			img, err := json.Marshal(req.Image.Url)
+			if err != nil {
+				return nil, fmt.Errorf("could not marshal url: %w", err)
+			}
+			if req.AdditionalProperties == nil {
+				req.AdditionalProperties = make(map[string]jsontext.Value)
+			}
+			req.AdditionalProperties["image"] = jsontext.Value(img)
+			req.Image = nil
+		}
 	}
 
 	g, err := multimetro.NewClient(ctx)
@@ -1646,7 +1678,7 @@ func (c *InstancesRestartCmd) Run(ctx context.Context, stdio config.Stdio) error
 	started, startErr := startInstances(ctx, g, stopped)
 	if len(started) == 0 {
 		if _, ok := startErr.(group.ErrRefNotFound); ok {
-			return errors.Join(opErr, fmt.Errorf("cannot restart: instance(s) were deleted before they could be started (check if %q feature is enabled)", platform.CreateInstanceRequestFeaturesDeleteOnStop))
+			return errors.Join(opErr, fmt.Errorf("cannot restart: instance(s) were deleted before they could be started (check if %q feature is enabled)", platform.InstanceFeatureDeleteOnStop))
 		}
 		opErr = errors.Join(opErr, startErr)
 		return opErr
@@ -1706,7 +1738,7 @@ func (cmd InstanceHistoryCmd) Examples() []kingkong.Example {
 
 func (c *InstanceHistoryCmd) Run(ctx context.Context, stdio config.Stdio) error {
 	entries, err := getInstanceHistory(ctx, c.Targets, func(ctx context.Context, mc multimetro.MetroClient, ids []platform.NameOrUUID) (*platform.Response[platform.GetCheckpointHistoryResponseData], error) {
-		return mc.GetInstanceHistory(ctx, ids)
+		return mc.GetInstanceHistory(ctx, ids, platform.GetInstanceHistoryOpts{})
 	})
 	if err != nil && len(entries) == 0 {
 		return err

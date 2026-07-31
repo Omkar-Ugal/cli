@@ -2,10 +2,10 @@ name: check/static
 
 on:
   push:
-    branches: [staging, stable]
+    branches: [prod-staging, prod-stable]
   pull_request:
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'
@@ -44,7 +44,7 @@ jobs:
         } >>"$GITHUB_OUTPUT"
 
     - name: Go caches
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           ${{ steps.goenv.outputs.cache }}

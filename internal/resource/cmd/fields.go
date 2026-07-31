@@ -11,6 +11,10 @@ import (
 	"unikraft.com/cli/internal/resource"
 )
 
+// FieldSpecAll is the special field spec value that selects all fields,
+// regardless of verbosity or emptiness.
+const FieldSpecAll = "all"
+
 func SelectFields(fields []resource.Field, header bool, verbosity resource.FieldVerbosity, fieldSpecs []string) ([]resource.Field, error) {
 	var base []resource.FieldPath
 	var include []resource.FieldPath
@@ -19,7 +23,7 @@ func SelectFields(fields []resource.Field, header bool, verbosity resource.Field
 		if len(field) == 0 {
 			continue
 		}
-		if field == "all" {
+		if field == FieldSpecAll {
 			if base == nil {
 				base = []resource.FieldPath{}
 			}

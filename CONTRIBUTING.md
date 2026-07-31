@@ -76,7 +76,7 @@ Run tests and linting locally before pushing; CI also runs them.
 
 ## Releasing
 
-Releases are performed by merging into the `stable` branch and pushing it. CI
+Releases are performed by merging into the `prod-stable` branch and pushing it. CI
 automatically determines the git tag — no manual tagging is needed.
 
 ## Architecture

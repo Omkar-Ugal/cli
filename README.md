@@ -117,7 +117,7 @@ to install the CLI in your workflow:
 
 ```sh
 # Clone the repository
-git clone https://github.com/unikraft/cli.git
+git clone https://github.com/unikraft-cloud/cli.git
 cd cli
 
 # Build the CLI
@@ -171,15 +171,10 @@ profiles:
         insecure: false # skip tls verification (avoid for production use)
 ```
 
-You can also easily migrate your old `UKC_METRO`/`UKC_TOKEN` environment variable setup to a profile:
+You can also use your old, already set, `UKC_METRO`/`UKC_TOKEN` by setting also this variable:
 
-```yaml
-# Linux: ~/.config/unikraft/config.yaml
-# MacOS: ~/Library/Application\ Support/unikraft/config.yaml
-profile: default
-profiles:
-  default:
-    type: legacy
+```sh
+export UNIKRAFT_PROFILE_ENV="true"
 ```
 
 ### 2. Deploy Your First Instance
@@ -279,13 +274,17 @@ The CLI stores configuration in `~/.config/unikraft/config.yaml` (or the path sp
 
 ### Environment Variables
 
-| Variable             | Description                                                        |
-| -------------------- | ------------------------------------------------------------------ |
-| `UNIKRAFT_CONFIG`    | Path to the configuration file                                     |
-| `UNIKRAFT_PROFILE`   | Override the current profile                                       |
-| `UNIKRAFT_LOG_LEVEL` | Set log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`) |
-| `UNIKRAFT_LOG_TYPE`  | Set output format (`text`, `json`)                                 |
-| `UNIKRAFT_TELEMETRY` | Enable/disable anonymous telemetry (`true`, `false`)               |
+| Variable                | Description                                                                                          |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `UNIKRAFT_CONFIG`       | Path to the configuration file                                                                       |
+| `UNIKRAFT_PROFILE`      | Override the current profile                                                                         |
+| `UNIKRAFT_PROFILE_ENV`  | Use a virtual profile from `UKC_*` env vars instead of config (`true`, `false`)                      |
+| `UNIKRAFT_LOG_LEVEL`    | Set log level (`trace`, `debug`, `info`, `warn`, `error`, `fatal`)                                   |
+| `UNIKRAFT_LOG_TYPE`     | Set output format (`text`, `json`)                                                                   |
+| `UNIKRAFT_TELEMETRY`    | Enable/disable anonymous telemetry (`true`, `false`)                                                 |
+| `UKC_TOKEN`             | API token for legacy profiles / `UNIKRAFT_PROFILE_ENV`                                               |
+| `UKC_METRO`             | Metro name (e.g. `fra`) or full endpoint URL for legacy profiles / `UNIKRAFT_PROFILE_ENV`            |
+| `UKC_ALLOW_INSECURE`    | Skip TLS verification for the metro from `UKC_METRO` (`true`, `false`)                               |
 
 ### Profiles
 
@@ -326,16 +325,16 @@ Generate completion scripts for your shell:
 
 ```sh
 # Bash
-unikraft completion bash > /etc/bash_completion.d/unikraft
+unikraft completion -c bash > /etc/bash_completion.d/unikraft
 
 # Zsh
-unikraft completion zsh > "${fpath[1]}/_unikraft"
+unikraft completion -c zsh > "${fpath[1]}/_unikraft"
 
 # Fish
-unikraft completion fish > ~/.config/fish/completions/unikraft.fish
+unikraft completion -c fish > ~/.config/fish/completions/unikraft.fish
 
 # PowerShell
-unikraft completion powershell > unikraft.ps1
+unikraft completion -c powershell > unikraft.ps1
 ```
 
 ## Telemetry
@@ -363,5 +362,5 @@ Copyright (c) 2026, Unikraft GmbH and The Unikraft CLI Authors.
 ## Links
 
 - [Unikraft Cloud Documentation](https://unikraft.com/docs)
-- [Report Issues](https://github.com/unikraft/cli/issues)
+- [Report Issues](https://github.com/unikraft-cloud/cli/issues)
 - [Unikraft Website](https://unikraft.com)

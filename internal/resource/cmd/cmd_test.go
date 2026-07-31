@@ -571,6 +571,32 @@ func TestListOutput(t *testing.T) {
 		assert.True(t, names["test2"])
 	})
 
+	t.Run("json field", func(t *testing.T) {
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeJSON}, Field: xkong.GreedyStrings{"id"}})
+		var resources []map[string]any
+		err := json.Unmarshal([]byte(output), &resources)
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+
+		for _, res := range resources {
+			assert.Contains(t, res, "id")
+			assert.NotContains(t, res, "name")
+		}
+	})
+
+	t.Run("yaml field", func(t *testing.T) {
+		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeYAML}, Field: xkong.GreedyStrings{"id"}})
+		var resources []map[string]any
+		err := yaml.Unmarshal([]byte(output), &resources)
+		require.NoError(t, err)
+		require.Len(t, resources, 2)
+
+		for _, res := range resources {
+			assert.Contains(t, res, "id")
+			assert.NotContains(t, res, "name")
+		}
+	})
+
 	t.Run("raw", func(t *testing.T) {
 		output := runList(t, FormatOpts{Output: Printer{Type: PrinterTypeRaw}})
 		var resources []resourcet.TestResource

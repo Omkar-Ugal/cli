@@ -128,13 +128,13 @@ func (p Printer) Print(ctx context.Context, out io.Writer, fieldSpecs []string, 
 		}
 		return bw.Flush()
 	case PrinterTypeJSON:
-		return printJSON(ctx, out, resources...)
+		return printJSON(ctx, out, fieldSpecs, resources...)
 	case PrinterTypeYAML:
-		return printYAML(ctx, out, resources...)
-	case PrinterTypeRaw:
-		return printRaw(out, resources...)
+		return printYAML(ctx, out, fieldSpecs, resources...)
 	case PrinterTypeQuiet:
 		return printQuiet(ctx, out, fieldSpecs, resources...)
+	case PrinterTypeRaw:
+		return printRaw(out, resources...)
 	case PrinterTypeTemplate:
 		return printTemplate(ctx, out, p.Value, resources...)
 	case PrintTypeDebug:
@@ -198,7 +198,7 @@ func printKVFields(out io.Writer, parent *resource.Field, fields []resource.Fiel
 			nextCurrent = indent
 			nextIndent = indent
 			if field.Value != nil {
-				out, err := field.Render()
+				out, err := field.Render(value.RenderOpts{})
 				if err != nil {
 					return err
 				}
@@ -252,7 +252,7 @@ func printKVValue(out io.Writer, v any, indent int) error {
 		_, err = io.WriteString(out, strings.Join(lines, ""))
 		return err
 	default:
-		line, err := value.Format(v)
+		line, err := value.Render(v, value.RenderOpts{})
 		if err != nil {
 			return err
 		}
@@ -361,7 +361,7 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 					continue
 				}
 
-				value, err := field.Render()
+				value, err := field.Render(value.RenderOpts{Short: true})
 				if err != nil {
 					return err
 				}
@@ -441,7 +441,7 @@ func printQuiet(ctx context.Context, out io.Writer, specs []string, resources ..
 			if field.HasChildren() && field.Value == nil {
 				continue
 			}
-			s, err := field.Render()
+			s, err := field.Render(value.RenderOpts{})
 			if err != nil {
 				return err
 			}
@@ -456,19 +456,10 @@ func printQuiet(ctx context.Context, out io.Writer, specs []string, resources ..
 	return nil
 }
 
-func printJSON(ctx context.Context, out io.Writer, resources ...resource.Resource) error {
-	resolved, err := resolveAllResources(ctx, resources)
+func printJSON(ctx context.Context, out io.Writer, specs []string, resources ...resource.Resource) error {
+	input, err := fieldsToInput(ctx, specs, resources)
 	if err != nil {
 		return err
-	}
-
-	input := make([]any, len(resolved))
-	for i, res := range resolved {
-		fields, err := res.Fields(ctx)
-		if err != nil {
-			return err
-		}
-		input[i] = resource.FieldsToMap(fields)
 	}
 	dt, err := json.MarshalIndent(input, "", "  ")
 	if err != nil {
@@ -478,19 +469,10 @@ func printJSON(ctx context.Context, out io.Writer, resources ...resource.Resourc
 	return err
 }
 
-func printYAML(ctx context.Context, out io.Writer, resources ...resource.Resource) error {
-	resolved, err := resolveAllResources(ctx, resources)
+func printYAML(ctx context.Context, out io.Writer, specs []string, resources ...resource.Resource) error {
+	input, err := fieldsToInput(ctx, specs, resources)
 	if err != nil {
 		return err
-	}
-
-	input := make([]any, len(resolved))
-	for i, res := range resolved {
-		fields, err := res.Fields(ctx)
-		if err != nil {
-			return err
-		}
-		input[i] = resource.FieldsToMap(fields)
 	}
 	dt, err := yaml.Marshal(input)
 	if err != nil {
@@ -498,6 +480,39 @@ func printYAML(ctx context.Context, out io.Writer, resources ...resource.Resourc
 	}
 	_, err = fmt.Fprint(out, string(dt))
 	return err
+}
+
+func fieldsToInput(ctx context.Context, specs []string, resources []resource.Resource) ([]any, error) {
+	if len(specs) == 0 {
+		// json/yaml historically included every field by default, so
+		// default to the equivalent of "-fall" rather than the
+		// verbosity-based defaults used by kv/table/quiet.
+		specs = []string{FieldSpecAll}
+	}
+
+	input := make([]any, len(resources))
+	eg := joinerrgroup.Group{}
+	for i, res := range resources {
+		eg.Go(func() error {
+			fields, err := res.Fields(ctx)
+			if err != nil {
+				return err
+			}
+			fields, err = SelectFields(fields, false, resource.FieldVerbosityLong, specs)
+			if err != nil {
+				return err
+			}
+			if err := resource.ResolveAllFields(ctx, fields); err != nil {
+				return err
+			}
+			input[i] = resource.FieldsToMap(fields)
+			return nil
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+	return input, nil
 }
 
 func printRaw(out io.Writer, resources ...resource.Resource) error {
@@ -588,7 +603,7 @@ func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 			continue
 		}
 		if patch.Set != nil {
-			out, err := value.Format(patch.Set)
+			out, err := value.Render(patch.Set, value.RenderOpts{})
 			if err != nil {
 				return err
 			}
@@ -597,7 +612,7 @@ func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 			}
 		}
 		if patch.Add != nil {
-			out, err := value.Format(patch.Add)
+			out, err := value.Render(patch.Add, value.RenderOpts{})
 			if err != nil {
 				return err
 			}
@@ -606,7 +621,7 @@ func PrintPatches(out io.Writer, fields []resource.Field, create bool) error {
 			}
 		}
 		if patch.Del != nil {
-			out, err := value.Format(patch.Del)
+			out, err := value.Render(patch.Del, value.RenderOpts{})
 			if err != nil {
 				return err
 			}

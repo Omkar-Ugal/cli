@@ -252,7 +252,7 @@ Resources:
 
 Fields:
   name
-  country
+  location
   endpoint
   insecure
   quotas, quotas.instances, quotas.instances.active,
@@ -309,7 +309,7 @@ Examples:
 
 Fields:
   name
-  country
+  location
   endpoint
   insecure
   quotas, quotas.instances, quotas.instances.active,
@@ -380,7 +380,7 @@ Examples:
 
 Fields:
   name
-  country
+  location
   endpoint
   insecure
   quotas, quotas.instances, quotas.instances.active,

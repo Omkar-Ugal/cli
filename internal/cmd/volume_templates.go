@@ -78,7 +78,7 @@ type VolumeTemplate struct {
 	UUID  string          `mirror:"volume.uuid" field:",long"`
 
 	Tags       []string `mirror:"volume.tags" field:",long" edit:"set,add,del"`
-	DeleteLock bool     `mirror:"volume.delete_lock" field:"delete-lock,hidden" edit:"set"`
+	DeleteLock bool     `mirror:"volume.delete_lock" field:"delete-lock,long" edit:"set"`
 
 	State      types.VolumeState   `mirror:"volume.state" field:",short"`
 	Size       types.SizeMebibytes `mirror:"volume.size_mb" field:",short"`
@@ -169,20 +169,21 @@ func (VolumeTemplate) Get(ctx context.Context, keys []string) ([]resource.Resour
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, volume := range resp.Data.Volumes {
+		for _, volume := range resp.Data.Volumes {
 			if volume.Status == nil || *volume.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := VolumeTemplate{}.load(&refs[i], volume, &c.Metro, profile)
+			matchedRef := matchRef(refs, volume.Name, volume.Uuid)
+			result, err := VolumeTemplate{}.load(matchedRef, volume, &c.Metro, profile)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)

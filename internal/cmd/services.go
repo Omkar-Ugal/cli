@@ -301,20 +301,22 @@ func (ServiceGroup) Get(ctx context.Context, keys []string) ([]resource.Resource
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, serviceGroup := range resp.Data.ServiceGroups {
+		for _, serviceGroup := range resp.Data.ServiceGroups {
 			if serviceGroup.Status == nil || *serviceGroup.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := ServiceGroup{}.load(&refs[i], serviceGroup, &c.Metro)
+
+			matchedRef := matchRef(refs, serviceGroup.Name, serviceGroup.Uuid)
+			result, err := ServiceGroup{}.load(matchedRef, serviceGroup, &c.Metro)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)

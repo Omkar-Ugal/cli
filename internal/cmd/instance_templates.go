@@ -79,7 +79,7 @@ type InstanceTemplate struct {
 	UUID  string          `mirror:"instance.uuid" field:",long"`
 
 	Tags       []string `mirror:"instance.tags" field:",long" edit:"set,add,del"`
-	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,hidden" edit:"set"`
+	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,long" edit:"set"`
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
@@ -186,20 +186,21 @@ func (InstanceTemplate) Get(ctx context.Context, keys []string) ([]resource.Reso
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, instance := range resp.Data.Instances {
+		for _, instance := range resp.Data.Instances {
 			if instance.Status == nil || *instance.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := InstanceTemplate{}.load(&refs[i], instance, &c.Metro, profile)
+			matchedRef := matchRef(refs, instance.Name, instance.Uuid)
+			result, err := InstanceTemplate{}.load(matchedRef, instance, &c.Metro, profile)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)
@@ -369,11 +370,18 @@ func (InstanceTemplate) Create(ctx context.Context, fields []resource.Field) ([]
 			// Create templates one at a time since the platform API only accepts single operations
 			for _, ref := range refs {
 				refStr := cmp.Or(ref.Name, ref.UUID)
+				var reqItem platform.CreateTemplateInstancesRequestItem
+				if ref.Name != "" {
+					reqItem.Name = new(ref.Name)
+				} else {
+					reqItem.Uuid = new(ref.UUID)
+				}
 				log.G(ctx).Trace().Str("ref", refStr).Msg("creating instance template")
 				resp, err := c.CreateTemplateInstances(
 					ctx,
-					[]platform.NameOrUUID{ref.NameOrUUID()},
-					platform.CreateTemplateInstancesOpts{},
+					[]platform.CreateTemplateInstancesRequestItem{
+						reqItem,
+					},
 				)
 				if err != nil {
 					errs = append(errs, fmt.Errorf("failed to create template for %s: %w", refStr, err))

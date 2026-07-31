@@ -91,6 +91,7 @@ type VolumeEditCmd struct {
 	Size        types.SizeMebibytes `group:"flag-edit" shortcut:"size" help:"Volume size." placeholder:"size" example:"20GiB,100MiB"`
 	Tags        []string            `group:"flag-edit" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
 	QuotaPolicy string              `group:"flag-edit" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
+	DeleteLock  *bool               `group:"flag-edit" shortcut:"delete-lock" help:"Prevent volume deletion until the lock is removed."`
 }
 
 func (c *VolumeEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -272,6 +273,8 @@ type Volume struct {
 	Volume platform.Volume `field:"-" json:"volume"`
 
 	key multimetro.Key
+
+	DeleteLock bool `mirror:"volume.delete_lock" field:"delete-lock,long" edit:"set"`
 }
 
 func (Volume) Type() resource.Type {
@@ -339,20 +342,22 @@ func (Volume) Get(ctx context.Context, keys []string) ([]resource.Resource, erro
 		if resp == nil || resp.Data == nil {
 			return nil, nil, nil
 		}
-		for i, volume := range resp.Data.Volumes {
+		for _, volume := range resp.Data.Volumes {
 			if volume.Status == nil || *volume.Status != platform.ResponseStatusSuccess {
 				continue
 			}
-			result, err := Volume{}.load(&refs[i], volume, &c.Metro)
+
+			matchedRef := matchRef(refs, volume.Name, volume.Uuid)
+			result, err := Volume{}.load(matchedRef, volume, &c.Metro)
 			if err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			found = append(found, group.Ref{
-				Metro: c.Metro.Name,
-				Name:  result.Name,
-				UUID:  result.UUID,
-			})
+			if matchedRef != nil {
+				found = append(found, *matchedRef)
+			} else {
+				found = append(found, group.Ref{Metro: c.Metro.Name, Name: result.Name, UUID: result.UUID})
+			}
 			results = append(results, result)
 		}
 		return results, found, errors.Join(errs...)
@@ -588,6 +593,8 @@ func volumePatchSpec(path string, _ patchOp, value any) (platform.MutableVolumeP
 		return platform.MutableVolumePropertySizeMb, int64(value.(types.SizeMebibytes)), nil
 	case "quota-policy":
 		return platform.MutableVolumePropertyQuotaPolicy, value.(string), nil
+	case "delete-lock":
+		return platform.MutableVolumePropertyDeleteLock, value.(bool), nil
 	default:
 		return zero, nil, nil
 	}

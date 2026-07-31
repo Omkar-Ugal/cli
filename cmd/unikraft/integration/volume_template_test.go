@@ -14,7 +14,7 @@ import (
 
 func TestVolumeTemplates(t *testing.T) {
 	t.Run("template", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		r.Run(t, []string{
@@ -47,7 +47,7 @@ func TestVolumeTemplates(t *testing.T) {
 	})
 
 	t.Run("create-from-template", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		r.Run(t, []string{
@@ -70,18 +70,18 @@ func TestVolumeTemplates(t *testing.T) {
 			"--set", "metro=" + r.Config.MetroName,
 			"--template", templateName,
 		})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
 		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-from-template-" + volName})
-		assert.Regexp(t, `state:\s+available`, out)
+		assert.Regexp(t, `state:\s+(available|initializing)`, out)
 		assert.Regexp(t, `size:\s+10`, out)
 
 		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
 	})
 
 	t.Run("tags", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		volName := uniq()
 
 		// Create a base volume for templating.

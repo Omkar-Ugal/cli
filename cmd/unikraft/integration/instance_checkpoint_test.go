@@ -17,7 +17,7 @@ import (
 
 func TestInstanceCheckpoints(t *testing.T) {
 	t.Run("checkpoint", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 
 		r.Run(t, []string{
@@ -69,7 +69,7 @@ func TestInstanceCheckpoints(t *testing.T) {
 	})
 
 	t.Run("create-from-checkpoint", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		baseName := uniq()
 		restoredName := uniq()
 
@@ -111,7 +111,7 @@ func TestInstanceCheckpoints(t *testing.T) {
 	// further to 5, restores from the checkpoint (counter=3), then increments
 	// each independently to prove isolation.
 	t.Run("checkpoint-state", func(t *testing.T) {
-		r := runner(t, true)
+		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		restoredName := uniq()
 		domainName := uniq()

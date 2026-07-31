@@ -5,12 +5,24 @@
 
 package integration
 
-import "testing"
+import (
+	"testing"
+)
 
 // SkipUnlessIntegration skips the test when the integration tag is not set.
 func SkipUnlessIntegration(t testing.TB) {
 	t.Helper()
 	if !integrationEnabled {
 		t.Skip("skipping integration test (missing integration build tag)")
+	}
+}
+
+// SkipUnlessSupportedServer skips the test when the server is
+// not supported.
+func SkipUnlessSupportedServer(t testing.TB, servers []string) {
+	t.Helper()
+
+	if GetTestServer(servers) == nil {
+		t.Skip("skipping test (unsupported server)")
 	}
 }

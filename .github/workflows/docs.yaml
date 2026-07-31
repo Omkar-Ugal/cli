@@ -3,7 +3,7 @@ name: docs
 on:
   push:
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'
@@ -15,7 +15,7 @@ on:
     - synchronize
     - reopened
     branches:
-    - staging
+    - prod-staging
     paths:
     - '**'
     - '!.github/**'
@@ -52,7 +52,7 @@ jobs:
         } >>"$GITHUB_OUTPUT"
 
     - name: Go caches
-      uses: actions/cache@v5
+      uses: actions/cache@v6
       with:
         path: |
           ${{ steps.goenv.outputs.cache }}
