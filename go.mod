@@ -194,5 +194,3 @@ require (
 )
 
 tool github.com/caarlos0/svu/v3
-
-replace unikraft.com/cloud/sdk => github.com/unikraft-cloud/go-sdk-internal v0.0.0-20260710175723-5b4422b293e5
