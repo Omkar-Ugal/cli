@@ -1308,6 +1308,7 @@ Fields:
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
   instances
+  wait-timeout
 
 Global flags:
   -h, --help
@@ -1360,6 +1361,7 @@ Fields:
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
   instances
+  wait-timeout
 
 Flags:
   -w, --watch=<duration>
@@ -1420,6 +1422,7 @@ Fields:
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
   instances
+  wait-timeout
 
 Flags:
       --filter
@@ -1486,6 +1489,7 @@ Fields:
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
   instances
+  wait-timeout
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -1554,6 +1558,7 @@ Fields:
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
   instances
+  wait-timeout
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -1633,6 +1638,7 @@ Fields:
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
   instances
+  wait-timeout
 
 Flags:
       --all

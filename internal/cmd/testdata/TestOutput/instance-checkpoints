@@ -293,5 +293,12 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2
       "set": null,
       "required": true
     }
+  },
+  {
+    "name": "wait-timeout",
+    "verbosity": "invisible",
+    "create": {
+      "set": "0s"
+    }
   }
 ]
