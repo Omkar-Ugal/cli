@@ -118,6 +118,57 @@ func TestInstanceCheckpoints(t *testing.T) {
 		r.Run(t, []string{"unikraft", "instance", "delete", name1, name2})
 	})
 
+	t.Run("delete-lock", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "create", "test-" + instName,
+			"--output", "template={{ .name }}",
+		})
+		checkpointName := strings.TrimSpace(out)
+		assert.NotEmpty(t, checkpointName)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "edit", checkpointName,
+			"--output", "quiet",
+			"--set", "delete-lock=true",
+		})
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "inspect", checkpointName, "-f", "+delete-lock"})
+		assert.Regexp(t, `delete-lock:\s+true`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "delete", checkpointName}, integ.ExpectFail())
+		assert.Regexp(t, `(?i)deletion protection`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "inspect", checkpointName})
+		assert.Contains(t, out, checkpointName)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "edit", checkpointName,
+			"--output", "quiet",
+			"--set", "delete-lock=false",
+		})
+
+		r.Run(t, []string{"unikraft", "instance", "checkpoint", "delete", checkpointName})
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "list", "--output", "quiet"})
+		assert.NotContains(t, out, checkpointName)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
 	t.Run("create-from-checkpoint", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		baseName := uniq()
