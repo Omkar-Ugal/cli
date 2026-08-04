@@ -1193,6 +1193,150 @@ cmd: ["cat", "/marker.txt"]
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
 		r.Run(t, []string{"unikraft", "image", "delete", image})
 	})
+
+	// branch-stopped verifies that --branch also works when the source
+	// instance is stopped rather than running, and that the branched
+	// instance carries over the state the source had when it was stopped.
+	t.Run("branch-stopped", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		branchName := uniq()
+		domainName := uniq()
+		domainBranch := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Increment counter to 5, then stop the instance.
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+
+		// Branch the stopped instance.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--branch", "test-" + instName,
+			"--set", "name=test-branch-" + branchName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "autostart=true",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainBranch,
+		})
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-branch-" + branchName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdnBranch := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
+
+		// Branched counter should carry over the state from when the source was stopped.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	// branch-template verifies that --branch also works when the source is a
+	// template (a stopped instance converted via `instance template create`),
+	// and that the branched instance carries over the state the source had
+	// when the template was created.
+	t.Run("branch-template", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		branchName := uniq()
+		domainName := uniq()
+		domainBranch := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Increment counter to 5, then stop the instance and convert it into a template.
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+
+		out = r.Run(t, []string{
+			"unikraft", "instance", "template", "create", "test-" + instName,
+			"--output", "template={{ .name }}",
+		})
+		templateName := strings.TrimSpace(out)
+
+		// Branch the template.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--branch", templateName,
+			"--set", "name=test-branch-" + branchName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "autostart=true",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainBranch,
+		})
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-branch-" + branchName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdnBranch := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
+
+		// Branched counter should carry over the state frozen in the template.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "instance", "template", "delete", templateName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
 }
 
 // applyCounterContext writes the build context for a minimal Python HTTP counter
