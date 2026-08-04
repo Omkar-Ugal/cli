@@ -68,6 +68,56 @@ func TestInstanceCheckpoints(t *testing.T) {
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	// checkpoint-bulk exercises "checkpoint create" with multiple instance
+	// targets in a single invocation, which drives the per-ref creation
+	// loop and the multi-ref matching in InstanceCheckpoint.Get.
+	t.Run("checkpoint-bulk", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		name1 := "test-" + uniq()
+		name2 := "test-" + uniq()
+
+		for _, name := range []string{name1, name2} {
+			r.Run(t, []string{
+				"unikraft", "instance", "create",
+				"--output", "quiet",
+				"--set", "name=" + name,
+				"--set", "metro=" + r.Config.MetroName,
+				"--set", "image=nginx:latest",
+				"--set", "autostart=false",
+				"--set", "resources.memory=128",
+				"--set", "resources.vcpus=1",
+			})
+		}
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "create", name1, name2,
+			"--output", "template={{ .name }}",
+		})
+		lines := strings.Fields(strings.TrimSpace(out))
+		require.Len(t, lines, 2)
+		checkpoint1, checkpoint2 := lines[0], lines[1]
+		assert.NotEmpty(t, checkpoint1)
+		assert.NotEmpty(t, checkpoint2)
+		assert.NotEqual(t, checkpoint1, checkpoint2)
+
+		// Get() must resolve both checkpoints when queried together by
+		// name, matching each result back to its requested ref.
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "get", checkpoint1, checkpoint2, "--output", "quiet"})
+		assert.Contains(t, out, checkpoint1)
+		assert.Contains(t, out, checkpoint2)
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "list", "--output", "quiet"})
+		assert.Contains(t, out, checkpoint1)
+		assert.Contains(t, out, checkpoint2)
+
+		r.Run(t, []string{"unikraft", "instance", "checkpoint", "delete", checkpoint1, checkpoint2})
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "list", "--output", "quiet"})
+		assert.NotContains(t, out, checkpoint1)
+		assert.NotContains(t, out, checkpoint2)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", name1, name2})
+	})
+
 	t.Run("create-from-checkpoint", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		baseName := uniq()
