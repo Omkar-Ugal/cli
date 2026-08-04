@@ -65,6 +65,7 @@ type TestResource struct {
 	Lazy      string // Computed via callback when requested
 	Settings  TestSettings
 	Authors   []TestAuthor
+	Tags      []string
 }
 
 var (
@@ -261,6 +262,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 				}
 				return fields
 			}(),
+		},
+		{
+			Name:      "tags",
+			Value:     t.Tags,
+			Verbosity: resource.FieldVerbosityLong,
 		},
 	}, nil
 }

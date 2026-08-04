@@ -51,6 +51,7 @@ func setupTestEnv() *resourcet.TestEnv {
 			{Name: "Alice", Email: "alice@example.com"},
 			{Name: "Bob", Email: "bob@example.com"},
 		},
+		Tags: []string{"prod", "web"},
 	})
 	env.Add(resourcet.TestResource{
 		ID:        "id-test2",
@@ -68,6 +69,7 @@ func setupTestEnv() *resourcet.TestEnv {
 			{Name: "Charlie", Email: "charlie@example.com"},
 			{Name: "Dana", Email: "dana@example.com"},
 		},
+		Tags: []string{"staging"},
 	})
 	return env
 }
@@ -2165,6 +2167,27 @@ func TestFilterComparisonOperators(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, output, "test1")
 		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("scalar_slice_indexed_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.0==prod")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("scalar_slice_wildcard_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.*==staging")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("scalar_slice_wildcard_not_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.*!=prod")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
 	})
 
 	t.Run("bool_field_ordering_disallowed", func(t *testing.T) {

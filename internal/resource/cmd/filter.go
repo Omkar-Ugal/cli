@@ -22,7 +22,6 @@ type fieldAdaptor struct {
 	children []resource.Field
 	field    *resource.Field
 	entries  []string
-	sliceVal *string
 }
 
 func newFieldAdaptor(fields []resource.Field) filters.Adaptor {
@@ -30,9 +29,10 @@ func newFieldAdaptor(fields []resource.Field) filters.Adaptor {
 }
 
 func (a *fieldAdaptor) Select(key []string) (filters.Adaptor, bool) {
-	if a.sliceVal != nil {
-		return nil, false
+	if len(key) == 0 && a.field != nil {
+		return a, true
 	}
+
 	matched := resource.GetFieldByPath(a.children, key)
 	if len(matched) == 0 {
 		if len(key) >= 1 {
@@ -47,8 +47,8 @@ func (a *fieldAdaptor) Select(key []string) (filters.Adaptor, bool) {
 				if slice, sok := getSliceValue(parent.Value); sok {
 					idx, err := strconv.Atoi(key[len(key)-1])
 					if err == nil && idx >= 0 && idx < len(slice) {
-						s := slice[idx]
-						return &fieldAdaptor{sliceVal: &s}, true
+						f := resource.Field{Name: key[len(key)-1], Value: slice[idx]}
+						return &fieldAdaptor{field: &f}, true
 					}
 				}
 			}
@@ -83,9 +83,6 @@ func (a *fieldAdaptor) Select(key []string) (filters.Adaptor, bool) {
 }
 
 func (a *fieldAdaptor) String() string {
-	if a.sliceVal != nil {
-		return *a.sliceVal
-	}
 	if a.field == nil {
 		return ""
 	}
@@ -94,9 +91,6 @@ func (a *fieldAdaptor) String() string {
 }
 
 func (a *fieldAdaptor) Value() any {
-	if a.sliceVal != nil {
-		return *a.sliceVal
-	}
 	if a.field == nil {
 		return nil
 	}
@@ -108,9 +102,6 @@ func (a *fieldAdaptor) Entries() []string {
 }
 
 func (a *fieldAdaptor) compareValue(other string) (int, bool) {
-	if a.sliceVal != nil {
-		return 0, false
-	}
 	if a.field == nil || a.field.Value == nil {
 		return 0, false
 	}
@@ -127,7 +118,7 @@ func (a *fieldAdaptor) Equals(other string) (bool, bool) {
 }
 
 func (a *fieldAdaptor) Compare(other string) (int, bool) {
-	if a.sliceVal != nil || a.field == nil || !isOrderable(a.field.Value) {
+	if a.field == nil || !isOrderable(a.field.Value) {
 		return 0, false
 	}
 	return a.compareValue(other)
