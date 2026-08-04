@@ -108,7 +108,8 @@ type InstanceCheckpoint struct {
 		Policy string `mirror:"instance.restart_policy"`
 	}
 
-	Instances []string `field:"instances,invisible,valueless" create:"set,required"`
+	Instances   []string        `field:"instances,invisible,valueless" create:"set,required"`
+	WaitTimeout types.DurationS `field:"wait-timeout,invisible,valueless" create:"set"`
 
 	Instance platform.Instance `field:"-" json:"instance"`
 	Metro    *config.Metro     `field:"-" json:"metro"`
@@ -328,12 +329,17 @@ func instanceCheckpointPatchSpec(path string, op patchOp, value any) (platform.M
 
 func (InstanceCheckpoint) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	var instances []string
+	var timeoutS *int64
 	for key, field := range resource.IterFields(fields) {
 		if field.Create == nil || field.Create.Set == nil {
 			continue
 		}
-		if key.String() == "instances" {
+		switch key.String() {
+		case "instances":
 			instances = field.Create.Set.([]string)
+		case "wait-timeout":
+			timeout := field.Create.Set.(types.DurationS)
+			timeoutS = new(int64(timeout))
 		}
 	}
 	if len(instances) == 0 {
@@ -375,7 +381,8 @@ func (InstanceCheckpoint) Create(ctx context.Context, fields []resource.Field) (
 				refStr := cmp.Or(ref.Name, ref.UUID)
 				log.G(ctx).Trace().Str("ref", refStr).Msg("creating instance checkpoint")
 				req := platform.CreateCheckpointInstancesRequestItem{
-					From: ref.NameOrUUID(),
+					From:     ref.NameOrUUID(),
+					TimeoutS: timeoutS,
 				}
 				resp, err := c.CreateCheckpointInstances(ctx, []platform.CreateCheckpointInstancesRequestItem{req})
 				if err != nil {

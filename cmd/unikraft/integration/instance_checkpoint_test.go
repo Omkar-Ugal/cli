@@ -86,6 +86,7 @@ func TestInstanceCheckpoints(t *testing.T) {
 
 		out := r.Run(t, []string{
 			"unikraft", "instance", "checkpoint", "create", "test-base-" + baseName,
+			"--set", "wait-timeout=30s",
 			"--output", "template={{ .name }}",
 		})
 		checkpointName := strings.TrimSpace(out)
@@ -151,6 +152,7 @@ func TestInstanceCheckpoints(t *testing.T) {
 		// Take a checkpoint (counter=3).
 		out = r.Run(t, []string{
 			"unikraft", "instance", "checkpoint", "create", "test-" + instName,
+			"--set", "wait-timeout=30s",
 			"--output", "template={{ .name }}",
 		})
 		checkpointName := strings.TrimSpace(out)
