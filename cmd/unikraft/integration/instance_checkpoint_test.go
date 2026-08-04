@@ -156,6 +156,58 @@ func TestInstanceCheckpoints(t *testing.T) {
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-base-" + baseName, "test-restored-" + restoredName})
 	})
 
+	// checkpoint-outlives-source proves a checkpoint's lifecycle is independent
+	// of its source instance: the source is deleted first, and the still-alive
+	// checkpoint is then used to restore a brand new instance.
+	t.Run("checkpoint-outlives-source", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		baseName := uniq()
+		restoredName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-base-" + baseName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "create", "test-base-" + baseName,
+			"--set", "wait-timeout=30s",
+			"--output", "template={{ .name }}",
+		})
+		checkpointName := strings.TrimSpace(out)
+		assert.NotEmpty(t, checkpointName)
+
+		// Delete the source instance. A cascade-delete regression would take
+		// the checkpoint down with it.
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-base-" + baseName})
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "list", "--output", "quiet"})
+		assert.Contains(t, out, checkpointName)
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "inspect", checkpointName})
+		assert.Regexp(t, `state:\s+(checkpoint|starting)`, out)
+
+		// Restore a new instance from the checkpoint after its source is gone.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--checkpoint", checkpointName,
+			"--set", "name=test-restored-" + restoredName,
+			"--set", "metro=" + r.Config.MetroName,
+		})
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-restored-" + restoredName})
+		assert.Regexp(t, `name:\s+test-restored-`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "checkpoint", "delete", checkpointName})
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-restored-" + restoredName})
+	})
+
 	// checkpoint-state verifies that a checkpoint preserves in-memory state and
 	// that the restored instance is independent of the original. It builds a
 	// counter HTTP server, increments to 3, takes a checkpoint, increments
