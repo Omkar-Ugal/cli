@@ -79,6 +79,7 @@ type TestSettings struct {
 	Foo   int
 	Bar   string
 	Score float64
+	Flag  bool
 }
 
 type TestAuthor struct {
@@ -214,6 +215,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 				{
 					Name:      "score",
 					Value:     t.Settings.Score,
+					Verbosity: resource.FieldVerbosityLong,
+				},
+				{
+					Name:      "flag",
+					Value:     t.Settings.Flag,
 					Verbosity: resource.FieldVerbosityLong,
 				},
 			},

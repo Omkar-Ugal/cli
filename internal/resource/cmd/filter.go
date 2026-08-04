@@ -107,14 +107,11 @@ func (a *fieldAdaptor) Entries() []string {
 	return a.entries
 }
 
-func (a *fieldAdaptor) Compare(other string) (int, bool) {
+func (a *fieldAdaptor) compareValue(other string) (int, bool) {
 	if a.sliceVal != nil {
 		return 0, false
 	}
 	if a.field == nil || a.field.Value == nil {
-		return 0, false
-	}
-	if !isOrderable(a.field.Value) {
 		return 0, false
 	}
 	parsed, err := value.ParseNew([]string{other}, a.field.Value)
@@ -124,7 +121,22 @@ func (a *fieldAdaptor) Compare(other string) (int, bool) {
 	return value.Compare(a.field.Value, parsed), true
 }
 
+func (a *fieldAdaptor) Equals(other string) (bool, bool) {
+	result, ok := a.compareValue(other)
+	return result == 0, ok
+}
+
+func (a *fieldAdaptor) Compare(other string) (int, bool) {
+	if a.sliceVal != nil || a.field == nil || !isOrderable(a.field.Value) {
+		return 0, false
+	}
+	return a.compareValue(other)
+}
+
 func isOrderable(v any) bool {
+	if v == nil {
+		return false
+	}
 	rv := reflect.ValueOf(v)
 	for rv.Kind() == reflect.Pointer {
 		if rv.IsNil() {
@@ -135,8 +147,7 @@ func isOrderable(v any) bool {
 	switch rv.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64,
-		reflect.Bool, reflect.String:
+		reflect.Float32, reflect.Float64:
 		return true
 	}
 	return rv.Type().ConvertibleTo(reflect.TypeFor[time.Time]())

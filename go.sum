@@ -488,6 +488,8 @@ unikraft.com/cloud/sdk v0.3.1-0.20260730110715-92b5bae5afbe h1:oupb6urtot/mVqphO
 unikraft.com/cloud/sdk v0.3.1-0.20260730110715-92b5bae5afbe/go.mod h1:m/TX4opCAcR4OFFP/X8TWAjtzzW0Z6FxuVYznw9UW2Q=
 unikraft.com/x/colors v0.0.0-20260710212606-b68ba398853d h1:xNtt0WCZRm/WIr3F48AnYc7m41W6TqgvsqprDbXi4/A=
 unikraft.com/x/colors v0.0.0-20260710212606-b68ba398853d/go.mod h1:4jHfTebx2ff1Gd5MbS/xMrGFKRQTuwvTdzmAzaJWlSM=
+unikraft.com/x/filters v0.0.0-20260804153219-d1b47a40e047 h1:ZeMtVwVhGtiEIwnHXbzp4NAtiZp2pCAhEro0qPN+Vgs=
+unikraft.com/x/filters v0.0.0-20260804153219-d1b47a40e047/go.mod h1:deba9Bu2u3ibYXGbsO1QRxFPuXHQXoiuY6eFmwTbuLU=
 unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679 h1:zdvJjNkjsriS8RM46FcdgcRoCh4EYM66PGjqVgi/ups=
 unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679/go.mod h1:FP7uOxux/W5PKqSRQsR4tyjNuLq4Cfio7mc5QVH1kW8=
 unikraft.com/x/guesstermwidth v0.0.0-20260708141520-0cbb0a92056b h1:/VC/nXdu6k0G+a9Lkd9P/sz1r1mrlh0rocNtr1M84V8=

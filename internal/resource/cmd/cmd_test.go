@@ -45,6 +45,7 @@ func setupTestEnv() *resourcet.TestEnv {
 			Foo:   42,
 			Bar:   "hello",
 			Score: 10.0,
+			Flag:  true,
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Alice", Email: "alice@example.com"},
@@ -2146,6 +2147,42 @@ func TestFilterComparisonOperators(t *testing.T) {
 		output, err := runFilter(t, "state>pending")
 		require.NoError(t, err)
 		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	t.Run("string_field_ordering_disallowed_even_with_differing_values", func(t *testing.T) {
+		for _, filter := range []string{
+			"settings.bar>hello",
+			"settings.bar>=hello",
+			"settings.bar<world",
+			"settings.bar<=world",
+		} {
+			output, err := runFilter(t, filter)
+			require.NoError(t, err)
+			assert.Empty(t, strings.TrimSpace(output), "filter %q should not match any resource", filter)
+		}
+
+		output, err := runFilter(t, "settings.bar==hello")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("bool_field_ordering_disallowed", func(t *testing.T) {
+		for _, filter := range []string{
+			"settings.flag>false",
+			"settings.flag>=false",
+			"settings.flag<true",
+			"settings.flag<=true",
+		} {
+			output, err := runFilter(t, filter)
+			require.NoError(t, err)
+			assert.Empty(t, strings.TrimSpace(output), "filter %q should not match any resource", filter)
+		}
+
+		output, err := runFilter(t, "settings.flag==true")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
 	})
 
 	t.Run("combined_with_equality", func(t *testing.T) {
