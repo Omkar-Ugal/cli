@@ -2,6 +2,7 @@ import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 counter = 0
+processed = {}
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -19,15 +20,22 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/increment":
             length = int(self.headers.get("Content-Length", 0))
             body = json.loads(self.rfile.read(length)) if length else {}
-            delta = body.get("delta", 1)
-            if delta == "reset":
-                counter = 0
+            key = self.headers.get("Idempotency-Key")
+            if key and key in processed:
+                response = processed[key]
             else:
-                counter += int(delta)
+                delta = body.get("delta", 1)
+                if delta == "reset":
+                    counter = 0
+                else:
+                    counter += int(delta)
+                response = json.dumps({"count": counter}).encode()
+                if key:
+                    processed[key] = response
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
-            self.wfile.write(json.dumps({"count": counter}).encode())
+            self.wfile.write(response)
         else:
             self.send_response(404)
             self.end_headers()

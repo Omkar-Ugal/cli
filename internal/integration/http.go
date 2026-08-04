@@ -6,8 +6,10 @@
 package integration
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -58,6 +60,11 @@ func HTTPGet(t *testing.T, url string) string {
 // HTTPPost sends a POST request with the given body and content type, retrying
 // up to 10 times, and returns the response body. TLS verification is skipped so
 // self-signed certificates work.
+//
+// Retries reuse the same Idempotency-Key header value so that a server-side
+// handler can detect and dedupe repeated deliveries of the same logical
+// request (e.g. after a response is lost in transit), rather than
+// double-applying a non-idempotent operation.
 func HTTPPost(t *testing.T, url, contentType, body string) string {
 	t.Helper()
 	client := &http.Client{
@@ -67,9 +74,23 @@ func HTTPPost(t *testing.T, url, contentType, body string) string {
 		Timeout: 10 * time.Second,
 	}
 
+	keyBytes := make([]byte, 16)
+	_, err := rand.Read(keyBytes)
+	require.NoError(t, err, "failed to generate idempotency key")
+	idempotencyKey := hex.EncodeToString(keyBytes)
+
 	var lastErr error
 	for range 10 {
-		resp, err := client.Post(url, contentType, strings.NewReader(body)) //#nosec G107 -- test code, URL from test
+		req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(body)) //#nosec G107 -- test code, URL from test
+		if err != nil {
+			lastErr = err
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Idempotency-Key", idempotencyKey)
+
+		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = err
 			time.Sleep(2 * time.Second)
