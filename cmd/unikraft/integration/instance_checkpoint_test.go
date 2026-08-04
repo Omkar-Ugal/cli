@@ -202,6 +202,9 @@ func TestInstanceCheckpoints(t *testing.T) {
 
 		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-restored-" + restoredName})
 		assert.Regexp(t, `name:\s+test-restored-`, out)
+		assert.Regexp(t, `image:\s+nginx`, out)
+		assert.Regexp(t, `memory:\s+128`, out)
+		assert.Regexp(t, `vcpus:\s+1`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "checkpoint", "delete", checkpointName})
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-base-" + baseName, "test-restored-" + restoredName})
