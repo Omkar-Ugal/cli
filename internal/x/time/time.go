@@ -3,14 +3,17 @@
 // Licensed under the BSD-3-Clause License (the "License").
 // You may not use this file except in compliance with the License.
 
-// Package time extends the standard library's duration parsing with
-// additional units.
+// Package time extends the standard library's duration and time parsing to
+// be more lenient about the input formats they accept.
 package time
 
 import (
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/araddon/dateparse"
 )
 
 // extendedUnitPattern matches the day/week/year units that time.ParseDuration
@@ -39,4 +42,12 @@ func ParseDuration(s string) (time.Duration, error) {
 		return strconv.FormatFloat(hours, 'f', -1, 64) + "h"
 	})
 	return time.ParseDuration(expanded)
+}
+
+// ParseTime parses a point in time without requiring the caller to know its
+// format in advance (RFC3339, a bare date, a date and time with or without a
+// zone offset, a Unix timestamp, and more). Inputs without a zone offset are
+// interpreted as UTC, matching time.Parse's own default.
+func ParseTime(s string) (time.Time, error) {
+	return dateparse.ParseAny(strings.TrimSpace(s))
 }

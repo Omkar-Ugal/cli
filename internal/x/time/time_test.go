@@ -6,6 +6,7 @@
 package time
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -38,6 +39,48 @@ func TestParseDuration(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 		_, err := ParseDuration("notaduration")
+		assert.Error(t, err)
+	})
+}
+
+func TestParseTime(t *testing.T) {
+	expected := time.Date(2024, 3, 5, 14, 30, 15, 0, time.UTC)
+
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"rfc3339", "2024-03-05T14:30:15Z"},
+		{"rfc3339_offset", "2024-03-05T16:30:15+02:00"},
+		{"rfc3339_nano", "2024-03-05T14:30:15.000000000Z"},
+		{"no_zone", "2024-03-05T14:30:15"},
+		{"date_time_space", "2024-03-05 14:30:15"},
+		{"whitespace", "  2024-03-05T14:30:15Z  "},
+		{"slash_date", "2024/03/05 14:30:15"},
+		{"go_string", "2024-03-05 14:30:15 +0000 UTC"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTime(tt.input)
+			require.NoError(t, err)
+			assert.True(t, expected.Equal(got), "expected %v, got %v", expected, got)
+		})
+	}
+
+	t.Run("date_only", func(t *testing.T) {
+		got, err := ParseTime("2024-03-05")
+		require.NoError(t, err)
+		assert.True(t, time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC).Equal(got))
+	})
+
+	t.Run("unix_seconds", func(t *testing.T) {
+		got, err := ParseTime(strconv.FormatInt(expected.Unix(), 10))
+		require.NoError(t, err)
+		assert.True(t, expected.Equal(got))
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := ParseTime("notatime")
 		assert.Error(t, err)
 	})
 }

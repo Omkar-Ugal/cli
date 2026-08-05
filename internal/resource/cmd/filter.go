@@ -106,15 +106,20 @@ func (a *fieldAdaptor) compareValue(other string) (int, bool) {
 	if a.field == nil || a.field.Value == nil {
 		return 0, false
 	}
-	if parsed, err := value.ParseNew([]string{other}, a.field.Value); err == nil {
-		return value.Compare(a.field.Value, parsed), true
-	}
 	if t, ok := asTime(a.field.Value); ok {
+		if parsed, err := xtime.ParseTime(other); err == nil {
+			return value.Compare(t, parsed), true
+		}
 		if d, err := xtime.ParseDuration(other); err == nil {
 			return value.Compare(time.Since(t), d), true
 		}
+		return 0, false
 	}
-	return 0, false
+	parsed, err := value.ParseNew([]string{other}, a.field.Value)
+	if err != nil {
+		return 0, false
+	}
+	return value.Compare(a.field.Value, parsed), true
 }
 
 func (a *fieldAdaptor) Equals(other string) (bool, bool) {

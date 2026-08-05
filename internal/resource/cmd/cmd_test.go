@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -2248,6 +2249,54 @@ func TestFilterComparisonOperators(t *testing.T) {
 
 	t.Run("relative_time_invalid_no_match_no_error", func(t *testing.T) {
 		output, err := runFilter(t, "created<notaduration")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	// cutoff sits between test1's creation time (3 days ago) and test2's (40
+	// days ago), so it splits the two resources regardless of when the test
+	// runs.
+	cutoff := time.Now().Add(-10 * 24 * time.Hour).UTC()
+
+	t.Run("absolute_time_rfc3339", func(t *testing.T) {
+		output, err := runFilter(t, "created>"+cutoff.Format(time.RFC3339))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("absolute_time_date_time_no_zone", func(t *testing.T) {
+		output, err := runFilter(t, "created<"+cutoff.Format("2006-01-02T15:04:05"))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("absolute_time_date_time_space", func(t *testing.T) {
+		// The space needs quoting: the filter grammar splits unquoted
+		// values on whitespace.
+		output, err := runFilter(t, `created>="`+cutoff.Format("2006-01-02 15:04:05")+`"`)
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("absolute_time_date_only", func(t *testing.T) {
+		output, err := runFilter(t, "created<="+cutoff.Format("2006-01-02"))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("absolute_time_unix_seconds", func(t *testing.T) {
+		output, err := runFilter(t, "created>"+strconv.FormatInt(cutoff.Unix(), 10))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("absolute_time_invalid_no_match_no_error", func(t *testing.T) {
+		output, err := runFilter(t, "created<notatimestamp")
 		require.NoError(t, err)
 		assert.Empty(t, strings.TrimSpace(output))
 	})
