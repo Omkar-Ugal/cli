@@ -35,7 +35,7 @@ Templates:
   template, templates
           Manage instance templates.
 
-cmd-checkpoints
+Checkpoints:
   checkpoint, checkpoints
           Manage instance checkpoints.
 
@@ -1277,7 +1277,7 @@ Manage instance checkpoints.
 Usage:
   unikraft instances checkpoint <command>
 
-cmd-checkpoints
+Checkpoints:
   get, inspect, show
           Inspect a instance-checkpoint.
   list, ls

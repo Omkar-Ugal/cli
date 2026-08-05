@@ -353,6 +353,10 @@ func NewParser(cli *UnikraftCLI) (*kong.Kong, error) {
 				Title: kingkong.Underline("Templates") + ":",
 			},
 			{
+				Key:   "cmd-checkpoints",
+				Title: kingkong.Underline("Checkpoints") + ":",
+			},
+			{
 				Key:   "cmd-config",
 				Title: kingkong.Underline("Config") + ":",
 			},
