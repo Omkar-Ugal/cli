@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"unikraft.com/cli/internal/resource"
 )
@@ -63,6 +64,7 @@ type TestResource struct {
 	Hidden    string
 	Invisible string
 	Lazy      string // Computed via callback when requested
+	Created   time.Time
 	Settings  TestSettings
 	Authors   []TestAuthor
 	Tags      []string
@@ -146,6 +148,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 			Name:      "url",
 			Value:     t.URL,
 			Verbosity: resource.FieldVerbosityShort,
+		},
+		{
+			Name:      "created",
+			Value:     t.Created,
+			Verbosity: resource.FieldVerbosityLong,
 		},
 		{
 			Name:      "hidden",

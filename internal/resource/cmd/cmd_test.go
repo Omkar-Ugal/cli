@@ -41,6 +41,7 @@ func setupTestEnv() *resourcet.TestEnv {
 		URL:       "https://example.com",
 		Hidden:    "hidden-test1",
 		Invisible: "invisible-test1",
+		Created:   time.Now().Add(-3 * 24 * time.Hour),
 		Settings: resourcet.TestSettings{
 			Foo:   42,
 			Bar:   "hello",
@@ -60,6 +61,7 @@ func setupTestEnv() *resourcet.TestEnv {
 		URL:       "https://example.org",
 		Hidden:    "hidden-test2",
 		Invisible: "invisible-test2",
+		Created:   time.Now().Add(-40 * 24 * time.Hour),
 		Settings: resourcet.TestSettings{
 			Foo:   7,
 			Bar:   "world",
@@ -2213,5 +2215,40 @@ func TestFilterComparisonOperators(t *testing.T) {
 		require.NoError(t, err)
 		assert.Contains(t, output, "test1")
 		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("relative_time_less_than", func(t *testing.T) {
+		// test1 was created 3 days ago, test2 40 days ago.
+		output, err := runFilter(t, "created<7d")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("relative_time_greater_than", func(t *testing.T) {
+		output, err := runFilter(t, "created>7d")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("relative_time_greater_equal_weeks", func(t *testing.T) {
+		output, err := runFilter(t, "created>=5w")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("relative_time_less_equal_compound_units", func(t *testing.T) {
+		output, err := runFilter(t, "created<=3d1h")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("relative_time_invalid_no_match_no_error", func(t *testing.T) {
+		output, err := runFilter(t, "created<notaduration")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
 	})
 }

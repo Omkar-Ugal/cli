@@ -15,6 +15,7 @@ import (
 
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/value"
+	xtime "unikraft.com/cli/internal/x/time"
 	"unikraft.com/x/filters"
 )
 
@@ -105,11 +106,15 @@ func (a *fieldAdaptor) compareValue(other string) (int, bool) {
 	if a.field == nil || a.field.Value == nil {
 		return 0, false
 	}
-	parsed, err := value.ParseNew([]string{other}, a.field.Value)
-	if err != nil {
-		return 0, false
+	if parsed, err := value.ParseNew([]string{other}, a.field.Value); err == nil {
+		return value.Compare(a.field.Value, parsed), true
 	}
-	return value.Compare(a.field.Value, parsed), true
+	if t, ok := asTime(a.field.Value); ok {
+		if d, err := xtime.ParseDuration(other); err == nil {
+			return value.Compare(time.Since(t), d), true
+		}
+	}
+	return 0, false
 }
 
 func (a *fieldAdaptor) Equals(other string) (bool, bool) {
@@ -164,4 +169,18 @@ func getSliceValue(value any) ([]string, bool) {
 		}
 	}
 	return result, true
+}
+
+func asTime(v any) (time.Time, bool) {
+	rv := reflect.ValueOf(v)
+	for rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return time.Time{}, false
+		}
+		rv = rv.Elem()
+	}
+	if !rv.IsValid() || !rv.Type().ConvertibleTo(reflect.TypeFor[time.Time]()) {
+		return time.Time{}, false
+	}
+	return rv.Convert(reflect.TypeFor[time.Time]()).Interface().(time.Time), true
 }
