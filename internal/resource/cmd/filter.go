@@ -151,7 +151,14 @@ func isOrderable(v any) bool {
 		reflect.Float32, reflect.Float64:
 		return true
 	}
-	return rv.Type().ConvertibleTo(reflect.TypeFor[time.Time]())
+	if rv.Type().ConvertibleTo(reflect.TypeFor[time.Time]()) {
+		return true
+	}
+	// A type with its own "Compare(T) int" method (matching the cmp.Compare
+	// contract) already knows how to order itself, e.g. types.MeterUsage
+	// orders by used/total ratio. value.Compare dispatches to it when
+	// sorting; reuse that same detection here so filtering does too.
+	return value.HasSelfCompare(rv.Interface())
 }
 
 func getSliceValue(value any) ([]string, bool) {

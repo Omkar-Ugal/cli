@@ -158,21 +158,34 @@ func compareSelf(a, b any) (int, bool) {
 	if av.Type() != bv.Type() {
 		return 0, false
 	}
+	if !hasSelfCompareMethod(av) {
+		return 0, false
+	}
 
 	method := av.MethodByName("Compare")
-	if !method.IsValid() {
-		return 0, false
-	}
-
-	mt := method.Type()
-	if mt.NumIn() != 1 || mt.In(0) != av.Type() {
-		return 0, false
-	}
-	if mt.NumOut() != 1 || mt.Out(0).Kind() != reflect.Int {
-		return 0, false
-	}
-
 	return int(method.Call([]reflect.Value{bv})[0].Int()), true
+}
+
+// HasSelfCompare reports whether v has a "Compare(T) int" method where T is
+// v's own type, matching the cmp.Compare contract. Compare uses this same
+// detection internally (see compareSelf) to dispatch to a type's own
+// ordering; callers that need to know upfront whether such ordering exists
+// (e.g. to decide whether a value can be used with an ordering filter) can
+// check it directly.
+func HasSelfCompare(v any) bool {
+	if v == nil {
+		return false
+	}
+	return hasSelfCompareMethod(reflect.ValueOf(v))
+}
+
+func hasSelfCompareMethod(rv reflect.Value) bool {
+	method := rv.MethodByName("Compare")
+	if !method.IsValid() {
+		return false
+	}
+	mt := method.Type()
+	return mt.NumIn() == 1 && mt.In(0) == rv.Type() && mt.NumOut() == 1 && mt.Out(0).Kind() == reflect.Int
 }
 
 // compareReflect attempts to compare values using reflection.

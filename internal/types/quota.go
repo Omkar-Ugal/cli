@@ -8,6 +8,9 @@ package types
 import (
 	"cmp"
 	"fmt"
+	"math"
+	"strconv"
+	"strings"
 
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tui/meter"
@@ -64,10 +67,13 @@ type MeterUsage[T numeric] struct {
 	Total T `field:",long"`
 }
 
-// Compare compares two MeterUsage values by their used/total ratio,
-// returning -1, 0, or 1 per the same contract as cmp.Compare.
+// Compare compares two MeterUsage values by their used/total ratio, rounded
+// to the same whole-percent resolution String renders (so sorting and
+// filtering agree with what's displayed; e.g. "usage==69%" matches any
+// value that displays as "69%", not just an exact 69/100 ratio), returning
+// -1, 0, or 1 per the same contract as cmp.Compare.
 func (u MeterUsage[T]) Compare(other MeterUsage[T]) int {
-	return cmp.Compare(u.ratio(), other.ratio())
+	return cmp.Compare(u.roundedRatio(), other.roundedRatio())
 }
 
 // ratio returns the used/total ratio, or 0 if Total is 0.
@@ -76,6 +82,12 @@ func (u MeterUsage[T]) ratio() float64 {
 		return 0
 	}
 	return float64(u.Used) / float64(u.Total)
+}
+
+// roundedRatio returns the used/total ratio rounded to the nearest
+// percentage point, matching the resolution String displays.
+func (u MeterUsage[T]) roundedRatio() float64 {
+	return math.Round(u.ratio()*100) / 100
 }
 
 // clampedRatio returns the used/total ratio clamped to [0, 1], or 0 if Total
@@ -125,4 +137,51 @@ func (u MeterUsage[T]) MarshalText() ([]byte, error) {
 		return []byte("N/A"), nil
 	}
 	return fmt.Appendf(nil, "%v/%v", u.Used, u.Total), nil
+}
+
+// UnmarshalText parses MeterUsage back from the "used/total" or "N/A" form
+// MarshalText produces, round-tripping it. As a convenience for ordering
+// filters (e.g. --filter "usage>0.5"), it also accepts a bare ratio (e.g.
+// "0.5") or percentage (e.g. "50%"), building a used/total pair with a
+// matching ratio at the same 1% resolution String renders at.
+func (u *MeterUsage[T]) UnmarshalText(text []byte) error {
+	s := strings.TrimSpace(string(text))
+	if s == "" || s == "N/A" {
+		u.Used, u.Total = 0, 0
+		return nil
+	}
+
+	if used, total, ok := strings.Cut(s, "/"); ok {
+		usedVal, err := parseMeterUsagePart[T](used)
+		if err != nil {
+			return err
+		}
+		totalVal, err := parseMeterUsagePart[T](total)
+		if err != nil {
+			return err
+		}
+		u.Used, u.Total = usedVal, totalVal
+		return nil
+	}
+
+	trimmed, isPercent := strings.CutSuffix(s, "%")
+	ratio, err := strconv.ParseFloat(trimmed, 64)
+	if err != nil {
+		return err
+	}
+	if isPercent {
+		ratio /= 100
+	}
+	const scale = 100
+	u.Used = T(math.Round(ratio * scale))
+	u.Total = T(scale)
+	return nil
+}
+
+func parseMeterUsagePart[T numeric](s string) (T, error) {
+	v, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil {
+		return 0, err
+	}
+	return T(v), nil
 }
