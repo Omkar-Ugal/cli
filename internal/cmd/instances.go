@@ -71,14 +71,16 @@ type InstanceCreateCmd struct {
 	Metro string `group:"flag-create" shortcut:"metro" help:"Metro to deploy in." placeholder:"metro" example:"fra,sfo,nyc"`
 	Name  string `group:"flag-create" shortcut:"name" short:"n" help:"Instance name." placeholder:"name"`
 
-	Image      string               `group:"flag-create" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
-	PullPolicy *platform.PullPolicy `group:"flag-create" shortcut:"pull-policy" help:"Image pull policy." placeholder:"policy" example:"always,never,if_not_present"`
+	Image      string                 `group:"flag-create" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
+	PullPolicy *platform.PullPolicy   `group:"flag-create" shortcut:"pull-policy" help:"Image pull policy." placeholder:"policy" example:"always,never,if_not_present"`
+	Type       *platform.InstanceType `group:"flag-create" shortcut:"type" help:"Type of virtual machine to run. \"full\" requires a plan with full VM support." placeholder:"type" example:"micro,full"`
 
 	Args InstanceArgs `group:"flag-create" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
 	Env  []string     `group:"flag-create" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
 
 	Memory        types.SizeMebibytes     `group:"flag-create" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
 	Vcpus         int                     `group:"flag-create" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
+	Gpus          int                     `group:"flag-create" shortcut:"resources.gpus" help:"Number of GPUs to attach. Requires type \"full\" and a plan with GPU support. Currently limited to 1." placeholder:"n" example:"0,1"`
 	SchedPriority *platform.SchedPriority `group:"flag-create" shortcut:"sched-priority" help:"Scheduling priority for the instance." placeholder:"priority" example:"normal,medium,high,admin"`
 
 	Volume []InstanceVolume `group:"flag-create" shortcut:"volumes" short:"v" help:"Attach volume." placeholder:"<name>:<path>[:<options>]" example:"my-vol:/data,cache:/tmp:ro,data:/mnt:size=10GiB"`
@@ -163,6 +165,7 @@ type Instance struct {
 
 	Image      types.ImageRef[reference.Named] `mirror:"instance.image" field:",short" create:"set" edit:"set"`
 	PullPolicy *platform.PullPolicy            `field:"pull-policy,invisible,valueless" create:"set"`
+	Type_      *platform.InstanceType          `mirror:"instance.type" field:"type,long" create:"set"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short" create:"set" edit:"set"`
@@ -172,6 +175,7 @@ type Instance struct {
 	Resources struct {
 		Memory types.SizeMebibytes `mirror:"instance.memory_mb" field:",short" create:"set" edit:"set"`
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short" create:"set" edit:"set"`
+		GPUs   int                 `field:"gpus,long" create:"set"`
 	}
 
 	Service *InstanceService  `mirror:"instance.service_group" field:",embed" create:"set"`
@@ -179,6 +183,7 @@ type Instance struct {
 	Roms    []*InstanceRom    `mirror:"instance.roms" field:",embed" create:"set" edit:"set,add,del"`
 
 	Networks []InstanceNetwork `mirror:"instance.network_interfaces" field:",embed"`
+	Gpus     []InstanceGpu     `mirror:"instance.gpus" field:"gpus,embed"`
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
@@ -228,6 +233,11 @@ type InstanceNetwork struct {
 	UUID      string `mirror:"uuid" field:",long"`
 	PrivateIP string `mirror:"private_ip" field:",long"`
 	MAC       string `mirror:"mac" field:",long"`
+}
+
+type InstanceGpu struct {
+	UUID  string `mirror:"uuid" field:",long"`
+	Model string `mirror:"model" field:",long"`
 }
 
 type InstanceService struct {
@@ -681,6 +691,7 @@ func (Instance) load(ref *group.Ref, instance platform.Instance, metro *config.M
 	if err != nil {
 		return Instance{}, fmt.Errorf("could not mirror instance data: %w", err)
 	}
+	result.Resources.GPUs = len(result.Gpus)
 	if s := instance.Stop(); s != nil {
 		result.Stop.Reason = s.String()
 		result.Stop.Origin = s.Origin()
@@ -1004,6 +1015,8 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 			req.Image = &platform.ImageSpec{Url: field.Create.Set.(types.ImageRef[reference.Named]).Reference.String()}
 		case "pull-policy":
 			pullPolicy = field.Create.Set.(*platform.PullPolicy)
+		case "type":
+			req.Type = field.Create.Set.(*platform.InstanceType)
 		case "runtime.args":
 			req.Args = []string(field.Create.Set.(InstanceArgs))
 		case "runtime.env":
@@ -1014,6 +1027,9 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "resources.vcpus":
 			vcpus := int32(field.Create.Set.(int))
 			req.Vcpus = &vcpus
+		case "resources.gpus":
+			gpus := int32(field.Create.Set.(int))
+			req.Gpus = &gpus
 		case "sched-priority":
 			v := field.Create.Set.(*platform.SchedPriority)
 			req.SchedPriority = v
