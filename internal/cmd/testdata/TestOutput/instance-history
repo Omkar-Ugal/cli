@@ -13,7 +13,7 @@ created: never
 
 ==================================== table =====================================
 METRO  TARGET           NAME           CREATED
-fra    fra/my-instance  my-checkpoint
+fra    fra/my-instance  my-checkpoint  never
 
 ==================================== debug =====================================
 [

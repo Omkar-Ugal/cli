@@ -23,7 +23,7 @@ timestamps:
 
 ==================================== table =====================================
 METRO  NAME             STATE      SIZE   CREATED
-fra    my-vol-template  available  20MiB
+fra    my-vol-template  available  20MiB  never
 
 ==================================== debug =====================================
 [

@@ -52,7 +52,7 @@ restart:
 
 ==================================== table =====================================
 METRO  NAME           STATE       IMAGE  ARGS              MEMORY  VCPUS  CREATED
-fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2
+fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
 
 ==================================== debug =====================================
 [

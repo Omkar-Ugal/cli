@@ -44,7 +44,7 @@ services:
 
 ==================================== table =====================================
 METRO  NAME        AUTOSCALE  CREATED  FQDN                  SOURCE  DESTINATION  HANDLERS         SOURCE  DESTINATION  HANDLERS
-fra    my-service  true                example.unikraft.app  443     8080         ["tls", "http"]  80      443          ["http", "redirect"]
+fra    my-service  true       never    example.unikraft.app  443     8080         ["tls", "http"]  80      443          ["http", "redirect"]
 
 ==================================== debug =====================================
 [
