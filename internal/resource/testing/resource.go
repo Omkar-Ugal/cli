@@ -65,6 +65,7 @@ type TestResource struct {
 	Lazy      string // Computed via callback when requested
 	Settings  TestSettings
 	Authors   []TestAuthor
+	Tags      []string
 }
 
 var (
@@ -76,8 +77,10 @@ var (
 )
 
 type TestSettings struct {
-	Foo int
-	Bar string
+	Foo   int
+	Bar   string
+	Score float64
+	Flag  bool
 }
 
 type TestAuthor struct {
@@ -210,6 +213,16 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 						Set: t.Settings.Bar, // Use actual value
 					},
 				},
+				{
+					Name:      "score",
+					Value:     t.Settings.Score,
+					Verbosity: resource.FieldVerbosityLong,
+				},
+				{
+					Name:      "flag",
+					Value:     t.Settings.Flag,
+					Verbosity: resource.FieldVerbosityLong,
+				},
 			},
 		},
 		{
@@ -249,6 +262,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 				}
 				return fields
 			}(),
+		},
+		{
+			Name:      "tags",
+			Value:     t.Tags,
+			Verbosity: resource.FieldVerbosityLong,
 		},
 	}, nil
 }

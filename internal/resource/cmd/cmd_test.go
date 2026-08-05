@@ -42,13 +42,16 @@ func setupTestEnv() *resourcet.TestEnv {
 		Hidden:    "hidden-test1",
 		Invisible: "invisible-test1",
 		Settings: resourcet.TestSettings{
-			Foo: 42,
-			Bar: "hello",
+			Foo:   42,
+			Bar:   "hello",
+			Score: 10.0,
+			Flag:  true,
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Alice", Email: "alice@example.com"},
 			{Name: "Bob", Email: "bob@example.com"},
 		},
+		Tags: []string{"prod", "web"},
 	})
 	env.Add(resourcet.TestResource{
 		ID:        "id-test2",
@@ -58,13 +61,15 @@ func setupTestEnv() *resourcet.TestEnv {
 		Hidden:    "hidden-test2",
 		Invisible: "invisible-test2",
 		Settings: resourcet.TestSettings{
-			Foo: 7,
-			Bar: "world",
+			Foo:   7,
+			Bar:   "world",
+			Score: 1.2,
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Charlie", Email: "charlie@example.com"},
 			{Name: "Dana", Email: "dana@example.com"},
 		},
+		Tags: []string{"staging"},
 	})
 	return env
 }
@@ -2064,5 +2069,149 @@ func TestDeleteBulk(t *testing.T) {
 		// Only test1 should be deleted
 		assert.NotContains(t, env.Store, "test1")
 		assert.Contains(t, env.Store, "test2")
+	})
+}
+
+func TestFilterComparisonOperators(t *testing.T) {
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
+
+	runFilter := func(t *testing.T, filter string) (string, error) {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{filter},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		return out.String(), err
+	}
+
+	t.Run("equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo==7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("greater", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo>7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("greater_equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo>=7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("less", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo<42")
+		require.NoError(t, err)
+		assert.NotContains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("less_equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo<=7")
+		require.NoError(t, err)
+		assert.NotContains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("float_field_vs_int_literal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.score<5")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("float_field_greater_equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.score>=10")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("invalid_literal_no_match_no_error", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo>notanumber")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	t.Run("string_field_ordering_no_op", func(t *testing.T) {
+		output, err := runFilter(t, "state>pending")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	t.Run("string_field_ordering_disallowed_even_with_differing_values", func(t *testing.T) {
+		for _, filter := range []string{
+			"settings.bar>hello",
+			"settings.bar>=hello",
+			"settings.bar<world",
+			"settings.bar<=world",
+		} {
+			output, err := runFilter(t, filter)
+			require.NoError(t, err)
+			assert.Empty(t, strings.TrimSpace(output), "filter %q should not match any resource", filter)
+		}
+
+		output, err := runFilter(t, "settings.bar==hello")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("scalar_slice_indexed_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.0==prod")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("scalar_slice_wildcard_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.*==staging")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("scalar_slice_wildcard_not_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.*!=prod")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("bool_field_ordering_disallowed", func(t *testing.T) {
+		for _, filter := range []string{
+			"settings.flag>false",
+			"settings.flag>=false",
+			"settings.flag<true",
+			"settings.flag<=true",
+		} {
+			output, err := runFilter(t, filter)
+			require.NoError(t, err)
+			assert.Empty(t, strings.TrimSpace(output), "filter %q should not match any resource", filter)
+		}
+
+		output, err := runFilter(t, "settings.flag==true")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("combined_with_equality", func(t *testing.T) {
+		output, err := runFilter(t, "state==pending,settings.foo>7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
 	})
 }
