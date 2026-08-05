@@ -1282,6 +1282,8 @@ Checkpoints:
           Inspect a instance-checkpoint.
   list, ls
           List instance-checkpoints.
+  wait
+          Wait for instance-checkpoints to match a filter.
   delete, rm, remove
           Remove a instance-checkpoint.
   create
@@ -1433,6 +1435,67 @@ Flags:
       --sort
           Sort output by field values. Use - prefix for descending, + for ascending.
           [examples: name, -timestamps.created-at]
+  -f, --field
+          Specify which fields to include in the output.
+  -o, --output
+          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+Global flags:
+  -h, --help
+          Show context-sensitive help.
+      --config=<file> ($UNIKRAFT_CONFIG)
+          Path to the configuration file.
+      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
+          Set the logging level.
+          [default: info, choices: trace, debug, info, warn, error, fatal]
+      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
+          Set the log type.
+          [default: text, choices: text, json]
+      --profile=<name> ($UNIKRAFT_PROFILE)
+          Set the current profile.
+      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+          Toggle anonymous usage analytics.
+          [default: true]
+      --timeout=<duration> ($UNIKRAFT_TIMEOUT)
+          Set a deadline for the command (e.g. 30s, 5m, 1h).
+
+$ unikraft instance checkpoint wait --help
+
+Wait for instance-checkpoints to match a filter.
+
+Usage:
+  unikraft instances checkpoint wait --until=UNTIL <target> ... [flags]
+
+Arguments:
+  <target> ...
+          Target instance-checkpoints to wait for.
+
+Fields:
+  metro
+  name
+  uuid
+  tags
+  delete-lock
+  state
+  image
+  runtime, runtime.args, runtime.env
+  resources, resources.memory, resources.vcpus
+  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+  volumes.*.readonly, volumes.*.size
+  timestamps, timestamps.created
+  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
+  restart, restart.policy
+  instances
+  wait-timeout
+
+Flags:
+      --until, --filter
+          Filter expression to wait for.
+          [examples: state==running, state!=stopped]
+      --interval
+          Polling interval.
+          [default: 2s]
   -f, --field
           Specify which fields to include in the output.
   -o, --output

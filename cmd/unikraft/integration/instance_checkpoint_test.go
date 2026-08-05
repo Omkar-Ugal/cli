@@ -41,10 +41,9 @@ func TestInstanceCheckpoints(t *testing.T) {
 		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "list"})
 		assert.Contains(t, out, checkpointName)
 
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "checkpoint", "wait", "--until", "state==checkpoint", checkpointName})
 		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "inspect", checkpointName})
-		// A freshly-created checkpoint may briefly report "starting" before it
-		// settles into the terminal "checkpoint" state.
-		assert.Regexp(t, `state:\s+(checkpoint|starting)`, out)
+		assert.Regexp(t, `state:\s+checkpoint`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "checkpoint", "edit", checkpointName, "--set", "tags=env-dev"})
 		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "inspect", checkpointName, "-f", "all"})

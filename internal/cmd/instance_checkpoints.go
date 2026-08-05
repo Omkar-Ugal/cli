@@ -34,6 +34,7 @@ type InstanceCheckpointsCmd struct {
 	cmd.ResourceCmd[InstanceCheckpoint]
 	cmd.GettableResourceCmd[InstanceCheckpoint]
 	cmd.ListableResourceCmd[InstanceCheckpoint]
+	cmd.WaitableResourceCmd[InstanceCheckpoint]
 	cmd.BulkDeletableResourceCmd[InstanceCheckpoint]
 
 	Create  InstanceCheckpointCreateCmd  `cmd:"" help:"Create a checkpoint from an instance."`
