@@ -37,12 +37,12 @@ import (
 
 type ImagesCmd struct {
 	cmd.ResourceCmd[ImageEntry]
-	cmd.ListableResourceCmd[ImageEntry]
 
 	Build  ImageBuildCmd   `cmd:"" help:"Build a Unikraft project into a container image."`
 	Get    ImagesGetCmd    `cmd:"" help:"Inspect an image." aliases:"inspect,show"`
 	Delete ImagesDeleteCmd `cmd:"" help:"Remove an image." aliases:"rm,remove"`
 	Copy   ImagesCopyCmd   `cmd:"" help:"Copy images."`
+	List   ImagesListCmd   `cmd:"" help:"List images." aliases:"ls"`
 }
 
 type Image struct {
@@ -66,6 +66,8 @@ type ImageConfig struct {
 	Cmd []string          `field:",long"`
 	Env map[string]string `field:",long"`
 }
+
+type imageNamespacesKey struct{}
 
 type ImageMetadata struct {
 	Author  string     `field:",long"`
@@ -300,7 +302,11 @@ func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
 	eg, ctx := joinerrgroup.WithContext(ctx)
 	eg.Go(func() error {
 		log.G(ctx).Trace().Msg("listing images from controlplane")
-		resp, err := client.ListImages(ctx, controlplane.ListImagesOpts{Details: new(true)})
+		namespaces, _ := ctx.Value(imageNamespacesKey{}).([]string)
+		resp, err := client.ListImages(ctx, controlplane.ListImagesOpts{
+			Details:   new(true),
+			Namespace: namespaces,
+		})
 		if err != nil {
 			return err
 		}
@@ -348,6 +354,7 @@ func listPlatformImages(ctx context.Context) ([]resource.Resource, error) {
 	if err != nil {
 		return nil, err
 	}
+	namespaces, _ := ctx.Value(imageNamespacesKey{}).([]string)
 
 	return group.CollectAllSlices(ctx, g, func(ctx context.Context, c multimetro.MetroClient) ([]resource.Resource, error) {
 		log.G(ctx).Trace().Msg("listing images from image-store")
@@ -373,6 +380,9 @@ func listPlatformImages(ctx context.Context) ([]resource.Resource, error) {
 					continue
 				}
 				for _, entry := range entries {
+					if len(namespaces) > 0 && !slices.Contains(namespaces, entry.Namespace) {
+						continue
+					}
 					results = append(results, entry)
 				}
 			}
@@ -764,6 +774,16 @@ func (cmd ImagesCopyCmd) Run(ctx context.Context, sandbox *resource.Sandbox) err
 	}
 
 	return nil
+}
+
+type ImagesListCmd struct {
+	cmd.ResourceListCmd[ImageEntry]
+
+	Namespace []string `help:"Only list images in this namespace."`
+}
+
+func (c *ImagesListCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
+	return c.ResourceListCmd.Run(context.WithValue(ctx, imageNamespacesKey{}, c.Namespace), stdio, sandbox)
 }
 
 // addImageToSandbox registers an image reference with the sandbox so it gets

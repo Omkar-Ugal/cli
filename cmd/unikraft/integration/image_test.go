@@ -40,6 +40,37 @@ func TestImages(t *testing.T) {
 		r.Run(t, []string{"unikraft", "image", "delete", imageFull})
 	})
 
+	t.Run("list-namespace", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		namespace := r.Config.Profile.Organization
+		imageName := namespace + "/nginx-ns:" + uniq()
+		imageFull := fmt.Sprintf("%s/%s", r.Config.Metro.Index().Host, imageName)
+		r.Run(t, []string{"unikraft", "image", "copy", "nginx:latest", imageFull})
+
+		out := r.Run(t, []string{"unikraft", "image", "list"})
+		assert.Contains(t, out, imageName, "unfiltered listing should include the image")
+
+		out = r.Run(t, []string{"unikraft", "image", "list", "--namespace", namespace})
+		assert.Contains(t, out, imageName)
+
+		// A different namespace excludes it.
+		out = r.Run(t, []string{"unikraft", "image", "list", "--namespace", "official"})
+		assert.NotContains(t, out, imageName)
+
+		// The match is exact rather than a prefix, so a namespace that
+		// merely extends ours must not select the image either.
+		out = r.Run(t, []string{"unikraft", "image", "list", "--namespace", namespace + "x"})
+		assert.NotContains(t, out, imageName)
+
+		// The flag is repeatable and unions its values.
+		out = r.Run(t, []string{
+			"unikraft", "image", "list",
+			"--namespace", "official",
+			"--namespace", namespace,
+		})
+		assert.Contains(t, out, imageName)
+	})
+
 	t.Run("copy-local-archive", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		archive := filepath.Join(t.TempDir(), "nginx.oci.tar")
