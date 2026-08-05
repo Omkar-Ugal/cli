@@ -98,6 +98,10 @@ type Field struct {
 	// display settings
 	Verbosity FieldVerbosity `json:"verbosity"`
 	Hyperlink string         `json:"hyperlink,omitempty"`
+	// KeepZero indicates the field's zero value is meaningful (e.g. "0B"
+	// free space) and should not be treated as empty/omittable the way an
+	// unset value normally is.
+	KeepZero bool `json:"keep_zero,omitempty"`
 
 	// settings for creating or patching resources
 	Create *Patch `json:"create,omitempty"`
@@ -110,7 +114,7 @@ func (f Field) HasChildren() bool {
 
 func (f Field) IsEmpty() bool {
 	if f.Value != nil {
-		if reflect.ValueOf(f.Value).IsZero() {
+		if reflect.ValueOf(f.Value).IsZero() && !f.KeepZero {
 			return true
 		}
 		if s, ok := f.Value.(fmt.Stringer); ok && s.String() == "" {

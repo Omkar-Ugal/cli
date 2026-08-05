@@ -41,6 +41,10 @@ func Compare(a, b any) int {
 		return 1
 	}
 
+	if result, ok := compareSelf(a, b); ok {
+		return result
+	}
+
 	// Try type-specific comparisons
 	switch av := a.(type) {
 	case time.Time:
@@ -144,6 +148,31 @@ func Compare(a, b any) int {
 		bStr = fmt.Sprint(b)
 	}
 	return cmp.Compare(aStr, bStr)
+}
+
+// compareSelf detects and invokes a "Compare(T) int" method on a's type,
+// where T is the same type as a, matching the cmp.Compare contract.
+func compareSelf(a, b any) (int, bool) {
+	av := reflect.ValueOf(a)
+	bv := reflect.ValueOf(b)
+	if av.Type() != bv.Type() {
+		return 0, false
+	}
+
+	method := av.MethodByName("Compare")
+	if !method.IsValid() {
+		return 0, false
+	}
+
+	mt := method.Type()
+	if mt.NumIn() != 1 || mt.In(0) != av.Type() {
+		return 0, false
+	}
+	if mt.NumOut() != 1 || mt.Out(0).Kind() != reflect.Int {
+		return 0, false
+	}
+
+	return int(method.Call([]reflect.Value{bv})[0].Int()), true
 }
 
 // compareReflect attempts to compare values using reflection.
