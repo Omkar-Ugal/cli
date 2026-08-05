@@ -1,7 +1,23 @@
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-counter = 0
+COUNTER_FILE = "/counter.txt"
+
+def load_counter():
+    try:
+        with open(COUNTER_FILE) as f:
+            return int(f.read().strip())
+    except (FileNotFoundError, ValueError):
+        return 0
+
+def save_counter(value):
+    with open(COUNTER_FILE, "w") as f:
+        f.write(str(value))
+
+# Seeded from disk on boot so the counter survives a process restart as long
+# as the underlying rootfs does (unlike an in-memory-only value, which is
+# always lost on restart regardless of whether the disk was preserved).
+counter = load_counter()
 processed = {}
 
 class Handler(BaseHTTPRequestHandler):
@@ -29,6 +45,7 @@ class Handler(BaseHTTPRequestHandler):
                     counter = 0
                 else:
                     counter += int(delta)
+                save_counter(counter)
                 response = json.dumps({"count": counter}).encode()
                 if key:
                     processed[key] = response

@@ -1197,15 +1197,11 @@ cmd: ["cat", "/marker.txt"]
 	})
 
 	// branch-stopped verifies that --branch also works when the source
-	// instance is stopped rather than running, and that the branched
-	// instance carries over the state the source had when it was stopped.
+	// instance is stopped rather than running. Stopping an instance does not
+	// preserve a memory snapshot, so the branched instance always boots the
+	// application fresh; what carries over is the source's disk, so this
+	// checks the counter's on-disk value rather than its in-guest memory.
 	t.Run("branch-stopped", func(t *testing.T) {
-		// NOTE: Remove once branching from a stopped source carries over its
-		// application-level (in-guest memory) state on the backend. Verified
-		// live against staging: the branched instance always boots fresh
-		// (count resets to 0) because stopping an instance does not currently
-		// preserve a memory snapshot to restore from.
-		t.Skip("stopped-instance branch does not carry over application state on the backend yet")
 		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		branchName := uniq()
@@ -1263,7 +1259,8 @@ cmd: ["cat", "/marker.txt"]
 		fqdnBranch := strings.TrimSpace(out)
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
 
-		// Branched counter should carry over the state from when the source was stopped.
+		// The branch boots the application fresh, but its counter is seeded
+		// from the on-disk value the source wrote before it stopped.
 		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
