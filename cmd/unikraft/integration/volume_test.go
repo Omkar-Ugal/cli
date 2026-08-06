@@ -255,11 +255,11 @@ func TestVolumes(t *testing.T) {
 		})
 
 		t.Run("dir", func(t *testing.T) {
-			// NOTE: Remove once mounting volumes works correctly on the kernel
-			// when used together with the latest platform.
-			t.Skip("mounting volumes to kernel not working on the latest platform")
+			// NOTE: re-enable on stable once mounting volumes works correctly on the
+			// kernel when used together with the latest platform.
+			// r := runner(t, true, []string{staging, stable})
+			r := runner(t, true, []string{staging})
 
-			r := runner(t, true, []string{staging, stable})
 			volName := uniq()
 			dir := t.TempDir()
 			require.NoError(t, fstest.Apply(
@@ -279,11 +279,11 @@ func TestVolumes(t *testing.T) {
 		})
 
 		t.Run("serve", func(t *testing.T) {
-			// NOTE: Remove once mounting volumes works correctly on the kernel
-			// when used together with the latest platform.
-			t.Skip("mounting volumes to kernel not working on the latest platform")
+			// NOTE: re-enable on stable once mounting volumes works correctly on the
+			// kernel when used together with the latest platform.
+			// r := runner(t, true, []string{staging, stable})
+			r := runner(t, true, []string{staging})
 
-			r := runner(t, true, []string{staging, stable})
 			volName := uniq()
 			instName := uniq()
 			domainName := uniq()
