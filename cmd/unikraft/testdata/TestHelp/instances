@@ -41,8 +41,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -51,6 +52,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -108,8 +110,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -118,6 +121,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -183,8 +187,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -193,6 +198,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -260,8 +266,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -270,6 +277,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -347,8 +355,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -357,6 +366,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -419,6 +429,9 @@ Create flags:
       --pull-policy=<policy>
           Image pull policy.
           [examples: always, never, if_not_present]
+      --type=<type>
+          Type of virtual machine to run. "full" requires a plan with full VM support.
+          [examples: micro, full]
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
@@ -430,6 +443,9 @@ Create flags:
       --vcpus=<n>
           Number of vCPUs.
           [examples: 1, 2, 4]
+      --gpus=<n>
+          Number of GPUs to attach. Requires type "full" and a plan with GPU support. Currently limited to 1.
+          [examples: 0, 1]
       --sched-priority=<priority>
           Scheduling priority for the instance.
           [examples: normal, medium, high, admin]
@@ -503,8 +519,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -513,6 +530,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -575,6 +593,9 @@ Create flags:
       --pull-policy=<policy>
           Image pull policy.
           [examples: always, never, if_not_present]
+      --type=<type>
+          Type of virtual machine to run. "full" requires a plan with full VM support.
+          [examples: micro, full]
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
@@ -586,6 +607,9 @@ Create flags:
       --vcpus=<n>
           Number of vCPUs.
           [examples: 1, 2, 4]
+      --gpus=<n>
+          Number of GPUs to attach. Requires type "full" and a plan with GPU support. Currently limited to 1.
+          [examples: 0, 1]
       --sched-priority=<priority>
           Scheduling priority for the instance.
           [examples: normal, medium, high, admin]
@@ -668,8 +692,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -678,6 +703,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -789,8 +815,9 @@ Fields:
   state
   image
   pull-policy
+  type
   runtime, runtime.args, runtime.env
-  resources, resources.memory, resources.vcpus
+  resources, resources.memory, resources.vcpus, resources.gpus
   service, service.name, service.uuid, service.services, service.domains,
   service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
   service.domains.*.certificate.name, service.domains.*.certificate.uuid,
@@ -799,6 +826,7 @@ Fields:
   volumes.*.readonly, volumes.*.size
   roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
   networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
   timestamps, timestamps.created, timestamps.started, timestamps.stopped
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time

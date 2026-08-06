@@ -5,6 +5,7 @@ uuid:            7b79b250-0658-4d10-8dc0-d854399d7e74
 tags:            ["env-prod", "team-core"]
 state:           running
 image:           nginx
+type:            full
 runtime:
   args:          ["arg1", "arg2"]
   env:
@@ -13,6 +14,7 @@ runtime:
 resources:
   memory:        256MiB
   vcpus:         2
+  gpus:          1
 service:
   name:          my-service
   uuid:          a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -30,6 +32,9 @@ networks:
 - uuid:          net-uuid-1234
   private-ip:    192.168.1.10
   mac:           aa:bb:cc:dd:ee:ff
+gpus:
+- uuid:          gpu-uuid-1234
+  model:         10de:1eb8
 scale-to-zero:
   policy:        on
   stateful:      true
@@ -49,6 +54,7 @@ uuid:            7b79b250-0658-4d10-8dc0-d854399d7e74
 tags:            ["env-prod", "team-core"]
 state:           running
 image:           nginx
+type:            full
 runtime:
   args:          ["arg1", "arg2"]
   env:
@@ -57,6 +63,7 @@ runtime:
 resources:
   memory:        256MiB
   vcpus:         2
+  gpus:          1
 service:
   name:          my-service
   uuid:          a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -78,6 +85,9 @@ networks:
 - uuid:          net-uuid-1234
   private-ip:    192.168.1.10
   mac:           aa:bb:cc:dd:ee:ff
+gpus:
+- uuid:          gpu-uuid-1234
+  model:         10de:1eb8
 timestamps:
   created:       never
   started:       never
@@ -193,6 +203,14 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
     }
   },
   {
+    "name": "type",
+    "value": "full",
+    "verbosity": "long",
+    "create": {
+      "set": "full"
+    }
+  },
+  {
     "name": "runtime",
     "subfields": [
       {
@@ -263,6 +281,14 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
         },
         "edit": {
           "set": 2
+        }
+      },
+      {
+        "name": "gpus",
+        "value": 1,
+        "verbosity": "long",
+        "create": {
+          "set": 1
         }
       }
     ],
@@ -595,6 +621,44 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
         },
         {
           "name": "mac",
+          "value": "",
+          "verbosity": "long"
+        }
+      ],
+      "verbosity": "long"
+    },
+    "verbosity": "long"
+  },
+  {
+    "name": "gpus",
+    "subfields": [
+      {
+        "name": "0",
+        "subfields": [
+          {
+            "name": "uuid",
+            "value": "gpu-uuid-1234",
+            "verbosity": "long"
+          },
+          {
+            "name": "model",
+            "value": "10de:1eb8",
+            "verbosity": "long"
+          }
+        ],
+        "verbosity": "long"
+      }
+    ],
+    "elem": {
+      "name": "",
+      "subfields": [
+        {
+          "name": "uuid",
+          "value": "",
+          "verbosity": "long"
+        },
+        {
+          "name": "model",
           "value": "",
           "verbosity": "long"
         }
