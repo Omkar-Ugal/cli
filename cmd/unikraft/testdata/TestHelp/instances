@@ -911,7 +911,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
 
 Global flags:
   -h, --help
@@ -963,7 +963,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
 
 Flags:
   -w, --watch=<duration>
@@ -1023,7 +1023,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
 
 Flags:
       --filter
@@ -1063,11 +1063,11 @@ $ unikraft instance template create --help
 Create an instance template.
 
 Usage:
-  unikraft instances template create [<instance> ...] [flags]
+  unikraft instances template create [<instance>] [flags]
 
 Arguments:
-  [<instance> ...]
-          Instances to convert into templates.
+  [<instance>]
+          Instance to convert into a template.
 
 Examples:
   # Convert a stopped instance into a template
@@ -1089,7 +1089,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -1157,7 +1157,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -1236,7 +1236,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
 
 Flags:
       --all
@@ -1309,7 +1309,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Global flags:
@@ -1362,7 +1362,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Flags:
@@ -1423,7 +1423,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Flags:
@@ -1486,7 +1486,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Flags:
@@ -1525,11 +1525,11 @@ $ unikraft instance checkpoint create --help
 Create a checkpoint from an instance.
 
 Usage:
-  unikraft instances checkpoint create [<instance> ...] [flags]
+  unikraft instances checkpoint create [<instance>] [flags]
 
 Arguments:
-  [<instance> ...]
-          Instances to create checkpoints from.
+  [<instance>]
+          Instance to create a checkpoint from.
 
 Examples:
   # Create a checkpoint from a running instance
@@ -1551,7 +1551,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Flags:
@@ -1620,7 +1620,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Flags:
@@ -1700,7 +1700,7 @@ Fields:
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
   restart, restart.policy
-  instances
+  instance
   wait-timeout
 
 Flags:

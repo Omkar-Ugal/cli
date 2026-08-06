@@ -287,10 +287,10 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
     "verbosity": "hidden"
   },
   {
-    "name": "instances",
+    "name": "instance",
     "verbosity": "invisible",
     "create": {
-      "set": null,
+      "set": "",
       "required": true
     }
   },

@@ -223,10 +223,10 @@ fra    my-template  stopped  nginx        128MiB  1      never
     "verbosity": "hidden"
   },
   {
-    "name": "instances",
+    "name": "instance",
     "verbosity": "invisible",
     "create": {
-      "set": null,
+      "set": "",
       "required": true
     }
   }

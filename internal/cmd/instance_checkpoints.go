@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/alecthomas/kong"
 	"github.com/distribution/reference"
@@ -47,15 +46,15 @@ type InstanceCheckpointsCmd struct {
 type InstanceCheckpointCreateCmd struct {
 	cmd.ResourceCreateCmd[InstanceCheckpoint]
 
-	Targets []string `arg:"" name:"instance" optional:"" completion-predictor:"resource-key-instance" help:"Instances to create checkpoints from."`
+	Target string `arg:"" name:"instance" optional:"" completion-predictor:"resource-key-instance" help:"Instance to create a checkpoint from."`
 }
 
 func (c *InstanceCheckpointCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
 	if err := cmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
 		return err
 	}
-	if len(c.Targets) > 0 {
-		c.Set = append(c.Set, map[string]string{"instances": strings.Join(c.Targets, ",")})
+	if c.Target != "" {
+		c.Set = append(c.Set, map[string]string{"instance": c.Target})
 	}
 	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
 }
@@ -109,7 +108,7 @@ type InstanceCheckpoint struct {
 		Policy string `mirror:"instance.restart_policy"`
 	}
 
-	Instances   []string        `field:"instances,invisible,valueless" create:"set,required"`
+	InstanceRef string          `field:"instance,invisible,valueless" create:"set,required"`
 	WaitTimeout types.DurationS `field:"wait-timeout,invisible,valueless" create:"set"`
 
 	Instance platform.Instance `field:"-" json:"instance"`
@@ -329,106 +328,87 @@ func instanceCheckpointPatchSpec(path string, op patchOp, value any) (platform.M
 }
 
 func (InstanceCheckpoint) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
-	var instances []string
+	var instance string
 	var timeoutS *int64
 	for key, field := range resource.IterFields(fields) {
 		if field.Create == nil || field.Create.Set == nil {
 			continue
 		}
 		switch key.String() {
-		case "instances":
-			instances = field.Create.Set.([]string)
+		case "instance":
+			instance = field.Create.Set.(string)
 		case "wait-timeout":
 			timeout := field.Create.Set.(types.DurationS)
 			timeoutS = new(int64(timeout))
 		}
 	}
-	if len(instances) == 0 {
-		return nil, fmt.Errorf("no instances provided")
+	if instance == "" {
+		return nil, fmt.Errorf("no instance provided")
 	}
 
-	// First, get the instances to verify they exist and to fully resolve their keys
-	foundInstances, getErr := Instance{}.Get(ctx, instances)
+	// First, get the instance to verify it exists and to fully resolve its key
+	foundInstances, getErr := Instance{}.Get(ctx, []string{instance})
 	if getErr != nil && len(foundInstances) == 0 {
 		return nil, getErr
 	}
 	if len(foundInstances) == 0 {
-		return nil, fmt.Errorf("no instances found")
+		return nil, fmt.Errorf("no instance found")
 	}
 
-	// Build refs grouped by metro from the found instances
-	refsByMetro := make(map[string][]group.Ref)
-	for _, res := range foundInstances {
-		inst := res.(Instance)
-		if inst.key.Metro == "" {
-			return nil, fmt.Errorf("instance key %q not fully resolved", inst.key.String())
-		}
-		refsByMetro[inst.key.Metro] = append(refsByMetro[inst.key.Metro], inst.key.Ref())
+	inst := foundInstances[0].(Instance)
+	if inst.key.Metro == "" {
+		return nil, fmt.Errorf("instance key %q not fully resolved", inst.key.String())
 	}
+	ref := inst.key.Ref()
+	refStr := cmp.Or(ref.Name, ref.UUID)
 
 	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var created multimetro.Keys
-	var errs []error
-	for metroName, refs := range refsByMetro {
-		keys, err := group.CollectMetro(ctx, g, metroName, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
-			var created multimetro.Keys
-			var errs []error
-			// Create checkpoints one at a time since the platform API only accepts single operations
-			for _, ref := range refs {
-				refStr := cmp.Or(ref.Name, ref.UUID)
-				log.G(ctx).Trace().Str("ref", refStr).Msg("creating instance checkpoint")
-				req := platform.CreateCheckpointInstancesRequestItem{
-					From:     ref.NameOrUUID(),
-					TimeoutS: timeoutS,
-				}
-				resp, err := c.CreateCheckpointInstances(ctx, []platform.CreateCheckpointInstancesRequestItem{req})
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to create checkpoint for %s: %w", refStr, err))
-					continue
-				}
-				if resp == nil || resp.Data == nil || len(resp.Data.Instances) == 0 {
-					errs = append(errs, fmt.Errorf("no checkpoint created for %s", refStr))
-					continue
-				}
-				for _, cp := range resp.Data.Instances {
-					status := cp.Status
-					if status != "" && status != platform.ResponseStatusSuccess {
-						name := cmp.Or(cp.Name, cp.Uuid)
-						message := ptr.ZeroIfNil(cp.Message)
-						if message == "" {
-							message = "unknown error"
-						}
-						errs = append(errs, fmt.Errorf("checkpoint create failed for %s: %s", name, message))
-						continue
-					}
-					created = append(created, multimetro.Key{
-						Metro: c.Metro.Name,
-						UUID:  cp.Uuid,
-						Name:  cp.Name,
-					})
-				}
-			}
-			return created, errors.Join(errs...)
-		})
-		created = append(created, keys...)
-		if err != nil {
-			errs = append(errs, err)
+	created, err := group.CollectMetro(ctx, g, inst.key.Metro, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
+		log.G(ctx).Trace().Str("ref", refStr).Msg("creating instance checkpoint")
+		req := platform.CreateCheckpointInstancesRequestItem{
+			From:     ref.NameOrUUID(),
+			TimeoutS: timeoutS,
 		}
-	}
-
-	if len(created) == 0 {
-		return nil, errors.Join(errs...)
-	}
-
-	results, err := InstanceCheckpoint{}.Get(ctx, created.Strings())
+		resp, err := c.CreateCheckpointInstances(ctx, []platform.CreateCheckpointInstancesRequestItem{req})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create checkpoint for %s: %w", refStr, err)
+		}
+		if resp == nil || resp.Data == nil || len(resp.Data.Instances) == 0 {
+			return nil, fmt.Errorf("no checkpoint created for %s", refStr)
+		}
+		var created multimetro.Keys
+		var errs []error
+		for _, cp := range resp.Data.Instances {
+			status := cp.Status
+			if status != "" && status != platform.ResponseStatusSuccess {
+				name := cmp.Or(cp.Name, cp.Uuid)
+				message := ptr.ZeroIfNil(cp.Message)
+				if message == "" {
+					message = "unknown error"
+				}
+				errs = append(errs, fmt.Errorf("checkpoint create failed for %s: %s", name, message))
+				continue
+			}
+			created = append(created, multimetro.Key{
+				Metro: c.Metro.Name,
+				UUID:  cp.Uuid,
+				Name:  cp.Name,
+			})
+		}
+		return created, errors.Join(errs...)
+	})
 	if err != nil {
-		errs = append(errs, err)
+		return nil, err
 	}
-	return results, errors.Join(errs...)
+	if len(created) == 0 {
+		return nil, fmt.Errorf("no checkpoint created for %s", refStr)
+	}
+
+	return InstanceCheckpoint{}.Get(ctx, created.Strings())
 }
 
 func (InstanceCheckpoint) Examples() map[cmd.CmdType][]kingkong.Example {

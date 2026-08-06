@@ -67,9 +67,8 @@ func TestInstanceCheckpoints(t *testing.T) {
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
-	// checkpoint-bulk exercises "checkpoint create" with multiple instance
-	// targets in a single invocation, which drives the per-ref creation
-	// loop and the multi-ref matching in InstanceCheckpoint.Get.
+	// checkpoint-bulk exercises multi-ref matching in InstanceCheckpoint.Get
+	// and bulk delete across checkpoints created from different instances.
 	t.Run("checkpoint-bulk", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		name1 := "test-" + uniq()
@@ -88,20 +87,22 @@ func TestInstanceCheckpoints(t *testing.T) {
 			})
 		}
 
-		out := r.Run(t, []string{
-			"unikraft", "instance", "checkpoint", "create", name1, name2,
+		out1 := r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "create", name1,
 			"--output", "template={{ .name }}",
 		})
-		lines := strings.Fields(strings.TrimSpace(out))
-		require.Len(t, lines, 2)
-		checkpoint1, checkpoint2 := lines[0], lines[1]
+		out2 := r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "create", name2,
+			"--output", "template={{ .name }}",
+		})
+		checkpoint1, checkpoint2 := strings.TrimSpace(out1), strings.TrimSpace(out2)
 		assert.NotEmpty(t, checkpoint1)
 		assert.NotEmpty(t, checkpoint2)
 		assert.NotEqual(t, checkpoint1, checkpoint2)
 
 		// Get() must resolve both checkpoints when queried together by
 		// name, matching each result back to its requested ref.
-		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "get", checkpoint1, checkpoint2, "--output", "quiet"})
+		out := r.Run(t, []string{"unikraft", "instance", "checkpoint", "get", checkpoint1, checkpoint2, "--output", "quiet"})
 		assert.Contains(t, out, checkpoint1)
 		assert.Contains(t, out, checkpoint2)
 
