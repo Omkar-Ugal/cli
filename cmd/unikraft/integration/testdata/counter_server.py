@@ -1,7 +1,10 @@
 import json
+import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-COUNTER_FILE = "/counter.txt"
+# Defaults to the root disk; tests that need the counter to survive a stop or
+# branch instead point this at a mounted volume, e.g. /data/counter.txt.
+COUNTER_FILE = os.environ.get("COUNTER_FILE", "/counter.txt")
 
 def load_counter():
     try:

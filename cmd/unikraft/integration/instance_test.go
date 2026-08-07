@@ -1245,13 +1245,15 @@ cmd: ["cat", "/marker.txt"]
 		r.Run(t, []string{"unikraft", "image", "delete", image})
 	})
 
-	// branch-stopped verifies --branch works when the source is stopped.
+	// branch-stopped verifies --branch works when the source is stopped. The
+	// counter is kept on an attached volume rather than the root disk, since
+	// the root disk never survives a stop (see stop-disk-reset) but branching
+	// copies attached volumes.
 	t.Run("branch-stopped", func(t *testing.T) {
-		// Counter lives on root disk, which never survives a stop (see stop-disk-reset).
-		t.Skip("counter lives on the source's root disk, which never survives a stop by design — see stop-disk-reset")
 		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		branchName := uniq()
+		volName := uniq()
 		domainName := uniq()
 		domainBranch := uniq()
 		imageTag := uniq()
@@ -1263,6 +1265,14 @@ cmd: ["cat", "/marker.txt"]
 		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
 
 		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + volName,
+			"--set", "size=20",
+			"--set", "metro=" + r.Config.MetroName,
+		})
+
+		r.Run(t, []string{
 			"unikraft", "instance", "create",
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
@@ -1270,6 +1280,8 @@ cmd: ["cat", "/marker.txt"]
 			"--set", "autostart=true",
 			"--set", "resources.memory=256",
 			"--set", "resources.vcpus=1",
+			"--set", "runtime.env=COUNTER_FILE=/data/counter.txt",
+			"--set", "volumes=test-" + volName + ":/data",
 			"--set", "service.services=443:8080/tls+http",
 			"--set", "service.domains=name=" + domainName,
 		})
@@ -1306,10 +1318,26 @@ cmd: ["cat", "/marker.txt"]
 		fqdnBranch := strings.TrimSpace(out)
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
 
-		// Won't hold: root disks are ephemeral by design (see stop-disk-reset).
+		// Branched counter should read 5, carried over by the copied volume.
 		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
 
+		// The branch's volume must be an independent copy, not a shared
+		// reference: mutating it and restarting the (still-stopped) source
+		// must not affect the source's own count.
+		integ.HTTPPost(t, "https://"+fqdnBranch+"/increment", "application/json", `{"delta":10}`)
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 15`)
+
+		r.Run(t, []string{"unikraft", "instance", "start", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 15`)
+
+		// The branch's own volume is unnamed and cleaned up by the sandbox's
+		// resource tracking; only the explicitly created source volume needs
+		// to be deleted here.
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 		r.Run(t, []string{"unikraft", "image", "delete", image})
 	})
 
