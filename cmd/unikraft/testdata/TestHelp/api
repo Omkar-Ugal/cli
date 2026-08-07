@@ -20,8 +20,8 @@ one of:
 
 NESTED JSON SYNTAX
 
-When you use the key=value / key:=raw forms, you can build complex nested
-structures using bracket notation:
+key=value / key:=raw forms can be used to build complex nested
+structures:
 
   key[sub]=value
       Sets a nested key inside an object. Multiple bracket segments create

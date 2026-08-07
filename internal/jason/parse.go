@@ -19,12 +19,13 @@ import (
 const maxArrayIndex = 10_000
 
 // parsedItem stores one parsed nested-item entry.
-//
-// path holds the bracketed segments, value holds the right-hand side, and isRaw
-// reports whether the value came from ':=' and should be decoded as JSON.
 type parsedItem struct {
-	path  []string
+	// path holds the bracketed segments.
+	path []string
+	// value holds the right-hand side.
 	value string
+	// isRaw reports whether the value came from ':=' and should be decoded
+	// as JSON.
 	isRaw bool
 }
 

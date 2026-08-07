@@ -20,13 +20,13 @@ import (
 // Example output for a Config value:
 //
 //	{
-//	  name = "HTTPie"
-//	  stars = 54000
-//	  apps = [
-//	    [0] = "Terminal"
-//	    [1] = "Desktop"
-//	    [2] = "Web"
-//	  ]
+//		name = "HTTPie"
+//		stars = 54000
+//		apps = [
+//			[0] = "Terminal"
+//			[1] = "Desktop"
+//			[2] = "Web"
+//		]
 //	}
 func (n *Jason[T]) Visualize() string {
 	var b strings.Builder
