@@ -120,7 +120,7 @@ func (u MeterUsage[T]) Render(opts value.RenderOpts) (string, error) {
 		return u.String(), nil
 	}
 	if u.Total == 0 {
-		return "N/A", nil
+		return "", nil
 	}
 
 	bar := meter.Render(u.clampedRatio(), meter.Width())
@@ -134,19 +134,19 @@ func (u MeterUsage[T]) Render(opts value.RenderOpts) (string, error) {
 
 func (u MeterUsage[T]) MarshalText() ([]byte, error) {
 	if u.Total == 0 {
-		return []byte("N/A"), nil
+		return []byte(""), nil
 	}
 	return fmt.Appendf(nil, "%v/%v", u.Used, u.Total), nil
 }
 
-// UnmarshalText parses MeterUsage back from the "used/total" or "N/A" form
+// UnmarshalText parses MeterUsage back from the "used/total" form
 // MarshalText produces, round-tripping it. As a convenience for ordering
 // filters (e.g. --filter "usage>0.5"), it also accepts a bare ratio (e.g.
 // "0.5") or percentage (e.g. "50%"), building a used/total pair with a
 // matching ratio at the same 1% resolution String renders at.
 func (u *MeterUsage[T]) UnmarshalText(text []byte) error {
 	s := strings.TrimSpace(string(text))
-	if s == "" || s == "N/A" {
+	if s == "" {
 		u.Used, u.Total = 0, 0
 		return nil
 	}
