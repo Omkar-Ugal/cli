@@ -117,16 +117,14 @@ func profileFromEnv(name string) Profile {
 
 // metroFromEnv parses the UKC_METRO environment variable into a Metro.
 func metroFromEnv(raw string) Metro {
-	endpoint := raw
-	var name string
-	if strings.Contains(endpoint, "://") {
-		_, host, _ := strings.Cut(endpoint, "://")
-		host = strings.TrimPrefix(host, "api.")
-		name, _, _ = strings.Cut(host, ".")
-		endpoint = strings.TrimSuffix(strings.TrimSuffix(endpoint, "/"), "/v1")
+	var name, endpoint string
+	if u, err := url.Parse(raw); err == nil && u.IsAbs() && u.Host != "" {
+		u.Path = strings.TrimSuffix(strings.TrimSuffix(u.Path, "/"), "/v1")
+		name, _, _ = strings.Cut(strings.TrimPrefix(u.Host, "api."), ".")
+		endpoint = u.String()
 	} else {
-		name = endpoint
-		endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", endpoint)
+		name = raw
+		endpoint = fmt.Sprintf("https://api.%s.unikraft.cloud", raw)
 	}
 
 	var insecure *bool

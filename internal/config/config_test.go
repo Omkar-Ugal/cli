@@ -71,6 +71,18 @@ func TestLegacyProfileParsing(t *testing.T) {
 			expectedEndpoint: "https://api.fra.unikraft.cloud",
 		},
 		{
+			name:             "full URL with trailing slash",
+			metroEnv:         "https://api.fra.unikraft.cloud/v1/",
+			expectedName:     "fra",
+			expectedEndpoint: "https://api.fra.unikraft.cloud",
+		},
+		{
+			name:             "local proxy URL",
+			metroEnv:         "http://localhost:8080/v1",
+			expectedName:     "localhost:8080",
+			expectedEndpoint: "http://localhost:8080",
+		},
+		{
 			name:             "short name",
 			metroEnv:         "fra",
 			expectedName:     "fra",
@@ -244,6 +256,13 @@ func TestEnvProfile(t *testing.T) {
 			metroEnv:         "https://api.fra.unikraft.cloud/v1",
 			expectedName:     "fra",
 			expectedEndpoint: "https://api.fra.unikraft.cloud",
+		},
+		{
+			name:             "truthy with local proxy URL",
+			profileEnv:       "true",
+			metroEnv:         "http://localhost:8080/v1",
+			expectedName:     "localhost:8080",
+			expectedEndpoint: "http://localhost:8080",
 		},
 		{
 			name:             "truthy with short name",
