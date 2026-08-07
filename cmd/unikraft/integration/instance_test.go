@@ -1196,18 +1196,59 @@ cmd: ["cat", "/marker.txt"]
 		r.Run(t, []string{"unikraft", "image", "delete", image})
 	})
 
-	// branch-stopped verifies that --branch also works when the source
-	// instance is stopped rather than running. Stopping an instance does not
-	// preserve a memory snapshot, so the branched instance always boots the
-	// application fresh; what carries over is the source's disk, so this
-	// checks the counter's on-disk value rather than its in-guest memory.
+	// stop-disk-reset verifies a plain stop/start also resets the root disk (by design, not just a --branch gap).
+	t.Run("stop-disk-reset", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		domainName := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+
+		r.Run(t, []string{"unikraft", "instance", "start", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Root disk is ephemeral per boot; only attached volumes persist.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 0`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	// branch-stopped verifies --branch works when the source is stopped.
 	t.Run("branch-stopped", func(t *testing.T) {
-		// NOTE: Remove once branching from a stopped source carries over its
-		// disk state on the backend. Verified live against staging: the
-		// branched instance always boots with a fresh, empty disk (count
-		// resets to 0) because stopping an instance does not currently
-		// preserve the disk for a subsequent branch to restore from.
-		t.Skip("stopped-instance branch does not carry over disk state on the backend yet")
+		// Counter lives on root disk, which never survives a stop (see stop-disk-reset).
+		t.Skip("counter lives on the source's root disk, which never survives a stop by design — see stop-disk-reset")
 		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
 		branchName := uniq()
@@ -1265,25 +1306,16 @@ cmd: ["cat", "/marker.txt"]
 		fqdnBranch := strings.TrimSpace(out)
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
 
-		// The branch boots the application fresh, but its counter is seeded
-		// from the on-disk value the source wrote before it stopped.
+		// Won't hold: root disks are ephemeral by design (see stop-disk-reset).
 		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
 		r.Run(t, []string{"unikraft", "image", "delete", image})
 	})
 
-	// branch-template verifies that --branch also works when the source is a
-	// template (a stopped instance converted via `instance template create`),
-	// and that the branched instance carries over the state the source had
-	// when the template was created.
+	// branch-template verifies --branch works when the source is a template.
 	t.Run("branch-template", func(t *testing.T) {
-		// NOTE: Remove once the backend resolves `branch_from` against
-		// templates. Verified live against staging: a template keeps the
-		// same name/UUID as its source instance, but branch_from lookups by
-		// either fail with "No instance with name/uuid ...", and even
-		// routing through --template (config-only, does carry state for
-		// other fields) does not restore in-guest memory state either way.
+		// branch_from can't resolve template names/UUIDs on the backend yet.
 		t.Skip("branching from a template is not resolvable via branch_from on the backend yet")
 		r := runner(t, true, []string{staging, stable})
 		instName := uniq()
@@ -1348,7 +1380,7 @@ cmd: ["cat", "/marker.txt"]
 		fqdnBranch := strings.TrimSpace(out)
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
 
-		// Branched counter should carry over the state frozen in the template.
+		// Assumes template create snapshots the disk rather than reading a reset instance.
 		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
