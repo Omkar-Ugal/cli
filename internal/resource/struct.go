@@ -138,6 +138,7 @@ func fieldFromValue(pf *ParsedField, v reflect.Value) (*Field, error) {
 		Name:      pf.Name,
 		Verbosity: pf.Verbosity,
 		Value:     v.Interface(),
+		KeepZero:  pf.KeepZero,
 		Create:    createPatch,
 		Edit:      editPatch,
 	}
@@ -293,6 +294,7 @@ type ParsedField struct {
 
 	Embed     bool
 	Valueless bool
+	KeepZero  bool
 
 	Edit   *Patch
 	Create *Patch
@@ -337,6 +339,7 @@ func ParseField(field reflect.StructField, value reflect.Value) (*ParsedField, e
 
 	embed := slices.Contains(opts, "embed")
 	valueless := slices.Contains(opts, "valueless")
+	keepZero := slices.Contains(opts, "keepzero")
 
 	return &ParsedField{
 		Name:      name,
@@ -344,6 +347,7 @@ func ParseField(field reflect.StructField, value reflect.Value) (*ParsedField, e
 		Type:      field.Type,
 		Embed:     embed,
 		Valueless: valueless,
+		KeepZero:  keepZero,
 		Edit:      edit,
 		Create:    create,
 	}, nil

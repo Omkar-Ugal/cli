@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/types"
 )
 
 // TestEnv holds all test state for TestResource operations.
@@ -68,6 +69,7 @@ type TestResource struct {
 	Settings  TestSettings
 	Authors   []TestAuthor
 	Tags      []string
+	Usage     types.MeterUsage[int]
 }
 
 var (
@@ -273,6 +275,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 		{
 			Name:      "tags",
 			Value:     t.Tags,
+			Verbosity: resource.FieldVerbosityLong,
+		},
+		{
+			Name:      "usage",
+			Value:     t.Usage,
 			Verbosity: resource.FieldVerbosityLong,
 		},
 	}, nil

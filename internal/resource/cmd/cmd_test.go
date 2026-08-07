@@ -28,6 +28,7 @@ import (
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 	resourcet "unikraft.com/cli/internal/resource/testing"
+	"unikraft.com/cli/internal/types"
 	xkong "unikraft.com/cli/internal/x/kong"
 	"unikraft.com/cloud/sdk/platform/group"
 )
@@ -53,7 +54,8 @@ func setupTestEnv() *resourcet.TestEnv {
 			{Name: "Alice", Email: "alice@example.com"},
 			{Name: "Bob", Email: "bob@example.com"},
 		},
-		Tags: []string{"prod", "web"},
+		Tags:  []string{"prod", "web"},
+		Usage: types.MeterUsage[int]{Used: 70, Total: 100},
 	})
 	env.Add(resourcet.TestResource{
 		ID:        "id-test2",
@@ -72,7 +74,8 @@ func setupTestEnv() *resourcet.TestEnv {
 			{Name: "Charlie", Email: "charlie@example.com"},
 			{Name: "Dana", Email: "dana@example.com"},
 		},
-		Tags: []string{"staging"},
+		Tags:  []string{"staging"},
+		Usage: types.MeterUsage[int]{Used: 30, Total: 100},
 	})
 	return env
 }
@@ -2299,5 +2302,58 @@ func TestFilterComparisonOperators(t *testing.T) {
 		output, err := runFilter(t, "created<notatimestamp")
 		require.NoError(t, err)
 		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	// test1 has usage 70/100 (70%), test2 has usage 30/100 (30%); see
+	// setupTestEnv. MeterUsage orders by used/total ratio, same as sorting.
+	t.Run("ratio_field_greater", func(t *testing.T) {
+		output, err := runFilter(t, "usage>0.5")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("ratio_field_less", func(t *testing.T) {
+		output, err := runFilter(t, "usage<0.5")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("ratio_field_percent", func(t *testing.T) {
+		output, err := runFilter(t, "usage>=50%")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("ratio_field_equal", func(t *testing.T) {
+		output, err := runFilter(t, "usage==70%")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("ratio_field_equal_rounds_to_display", func(t *testing.T) {
+		// 11/16 is 68.75%, which String rounds to display as "69%"; the
+		// filter should match on that displayed value, not the exact ratio.
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{
+			ID:    "id-test3",
+			Name:  "test3",
+			Usage: types.MeterUsage[int]{Used: 11, Total: 16},
+		})
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"usage==69%"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+		assert.Contains(t, out.String(), "test3")
 	})
 }

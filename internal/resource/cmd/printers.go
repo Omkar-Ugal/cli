@@ -441,7 +441,7 @@ func printQuiet(ctx context.Context, out io.Writer, specs []string, resources ..
 			if field.HasChildren() && field.Value == nil {
 				continue
 			}
-			s, err := field.Render(value.RenderOpts{})
+			s, err := field.Render(value.RenderOpts{Quiet: true})
 			if err != nil {
 				return err
 			}
