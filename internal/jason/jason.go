@@ -36,7 +36,11 @@ func Unmarshal[T any](data []byte, v *Jason[T]) error {
 	}
 	input := strings.TrimSpace(string(data))
 	if input == "" {
-		return json.Unmarshal([]byte("{}"), &v.Value)
+		// Best-effort: T may not be object-shaped (e.g. a slice or scalar),
+		// in which case this fails without touching v.Value, leaving it at
+		// its zero value.
+		_ = json.Unmarshal([]byte("{}"), &v.Value)
+		return nil
 	}
 	jsonData, err := buildNestedJSON(input)
 	if err != nil {

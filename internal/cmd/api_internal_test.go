@@ -57,6 +57,19 @@ func TestAPICmd_ResolveBody_TopLevelArray(t *testing.T) {
 	assert.Equal(t, "web", got[1]["name"])
 }
 
+func TestAPICmd_ResolveBody_TopLevelArrayRejectsMixedShallowKey(t *testing.T) {
+	// Regression guard: a plain key=value argument mixed in with top-level
+	// array syntax must be rejected end-to-end through resolveBody, not
+	// silently collapse the whole body down to the stray key's value.
+	c := &APICmd{Args: []string{
+		"[0][type]=platform",
+		"name=value",
+	}}
+	_, err := c.resolveBody(context.Background(), testStdio())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot perform key-based access on array")
+}
+
 func TestAPICmd_ResolveBody_AtFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "body.json")
 	require.NoError(t, os.WriteFile(path, []byte(`{"from":"file"}`), 0o644))

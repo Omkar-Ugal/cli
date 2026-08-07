@@ -69,7 +69,7 @@ func buildNestedJSON(input string) ([]byte, error) {
 			val = p.value
 		}
 		path := p.path
-		if hasArrayRoot && len(path) > 0 {
+		if len(path) > 0 && path[0] == "" {
 			path = path[1:]
 		}
 		// Empty path means a JSON literal (object or array) that should
@@ -166,7 +166,7 @@ func splitItemPrefix(s string) (item string, rest string, ok bool) {
 		if unicode.IsSpace(r) {
 			candidate := s[:i]
 			if candidate != "" {
-				if _, err := parseItem(candidate); err == nil {
+				if p, err := parseItem(candidate); err == nil && isCompleteCandidate(p) {
 					next := trimLeftIndex(s, i)
 					if next >= len(s) || startsItem(s[next:]) {
 						return candidate, s[next:], true
@@ -185,6 +185,22 @@ func splitItemPrefix(s string) (item string, rest string, ok bool) {
 		i += size
 	}
 	return "", "", false
+}
+
+// isCompleteCandidate reports whether p is safe to treat as a finished item
+// boundary while scanning whitespace-separated input.
+//
+// Literal ('=') values are arbitrary text, so any prefix is a plausible
+// boundary. Raw (':=') values must decode as JSON, so a truncated fragment
+// such as `{"a":` must never be accepted as a boundary merely because some
+// later token happens to look like the start of a new item — otherwise a
+// value like `data:={"a": 1 , "b": 2}` can be split apart at the interior
+// space before the comma.
+func isCompleteCandidate(p parsedItem) bool {
+	if !p.isRaw {
+		return true
+	}
+	return json.Valid([]byte(p.value))
 }
 
 // startsItem reports whether s begins with a valid nested-item input.

@@ -126,7 +126,7 @@ func debugTree(items []string) (string, error) {
 			val = p.value
 		}
 		path := p.path
-		if hasArrayRoot && len(path) > 0 {
+		if len(path) > 0 && path[0] == "" {
 			path = path[1:]
 		}
 

@@ -840,6 +840,525 @@ func TestFromNestedJSON_JSONArrayInMiddleReplacedByPath(t *testing.T) {
 	assert.InDelta(t, float64(5), n.Value[2], 0.01)
 }
 
+// --- Regression: array-root vs. shallow key/raw conflicts ---
+//
+// buildNestedJSON used to strip every item's leading path segment whenever
+// ANY item in the batch triggered array-root mode, instead of only stripping
+// items that themselves started with a bracket. A plain "key=value" mixed
+// into an array-rooted body would fall through the "empty path" branch and
+// silently replace the whole root with its own scalar (or, depending on
+// item order, produce a misleading "unexpected container type" error).
+
+func TestFromNestedJSON_ArrayRootRejectsShallowKeyAssignment(t *testing.T) {
+	var n Jason[any]
+	err := unmarshalItems(&n, []string{
+		"[]=x",
+		"name=y",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot perform key-based access on array")
+}
+
+func TestFromNestedJSON_ShallowKeyThenArrayRootRejectedSameError(t *testing.T) {
+	var n Jason[any]
+	err := unmarshalItems(&n, []string{
+		"name=y",
+		"[]=x",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot perform key-based access on array",
+		"order should not change the error family: both orderings must fail the same way")
+}
+
+func TestFromNestedJSON_ArrayRootRejectsShallowRawScalar(t *testing.T) {
+	var n Jason[any]
+	err := unmarshalItems(&n, []string{
+		"[0][type]=platform",
+		"count:=42",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot perform key-based access on array")
+}
+
+func TestFromNestedJSON_ArrayRootOnlyBracketItemsStillWorks(t *testing.T) {
+	var n Jason[any]
+	err := unmarshalItems(&n, []string{
+		"[0][type]=platform",
+		"[1][type]=desktop",
+	})
+	require.NoError(t, err)
+
+	arr, ok := n.Value.([]any)
+	require.True(t, ok)
+	require.Len(t, arr, 2)
+
+	item0, ok := arr[0].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "platform", item0["type"])
+}
+
+func TestDebugTree_ArrayRootRejectsShallowKeyAssignment(t *testing.T) {
+	_, err := debugTree([]string{
+		"[0][type]=platform",
+		"name=value",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot perform key-based access on array")
+}
+
+func TestDebugTree_ArrayRootOnlyBracketItems(t *testing.T) {
+	output, err := debugTree([]string{
+		"[0][type]=platform",
+	})
+	require.NoError(t, err)
+	assert.Contains(t, output, "Root is array: true")
+}
+
+// --- Regression: same-line raw JSON values with unusual (but valid) whitespace ---
+//
+// The same-line item splitter used to accept any prefix of a raw (":=")
+// value as a candidate split point, then asked "does the JSON decoder see a
+// complete value right after this space?" A bare scalar token like `1`
+// followed by a space satisfies that check even when it's still inside an
+// unclosed outer object, so `data:={"a": 1 , "b": 2} next=x` (space before
+// the comma) split apart in the middle of the JSON and failed with a
+// truncated, misleading error. The fix requires a raw candidate's value to
+// be complete, valid JSON before it can be accepted as a boundary at all.
+
+func TestFromNestedJSON_SameLineRawJSONSpaceBeforeComma(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`data:={"a": 1 , "b": 2} next=x`), &n)
+	require.NoError(t, err)
+
+	data, ok := n.Value["data"].(map[string]any)
+	require.True(t, ok)
+	assert.InDelta(t, float64(1), data["a"], 0.01)
+	assert.InDelta(t, float64(2), data["b"], 0.01)
+	assert.Equal(t, "x", n.Value["next"])
+}
+
+func TestFromNestedJSON_SameLineRawJSONSpaceBeforeClosingBrace(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`data:={"a": 1 } next=x`), &n)
+	require.NoError(t, err)
+
+	data, ok := n.Value["data"].(map[string]any)
+	require.True(t, ok)
+	assert.InDelta(t, float64(1), data["a"], 0.01)
+	assert.Equal(t, "x", n.Value["next"])
+}
+
+func TestFromNestedJSON_SameLineRawJSONCompleteNestedObjectInsideStillOpenOuter(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`data:={"nested": {"a": 1} , "b": 2} next=x`), &n)
+	require.NoError(t, err)
+
+	data, ok := n.Value["data"].(map[string]any)
+	require.True(t, ok)
+	assert.InDelta(t, float64(2), data["b"], 0.01)
+
+	nested, ok := data["nested"].(map[string]any)
+	require.True(t, ok)
+	assert.InDelta(t, float64(1), nested["a"], 0.01)
+
+	assert.Equal(t, "x", n.Value["next"])
+}
+
+func TestFromNestedJSON_SameLineRawJSONArrayWithSpacedNumbers(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`data:=[1, 2, 3] next=x`), &n)
+	require.NoError(t, err)
+
+	data, ok := n.Value["data"].([]any)
+	require.True(t, ok)
+	assert.Len(t, data, 3)
+	assert.Equal(t, "x", n.Value["next"])
+}
+
+func TestFromNestedJSON_SameLineRawJSONQuotedStringWithSpaces(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`msg:="hello world" next=x`), &n)
+	require.NoError(t, err)
+	assert.Equal(t, "hello world", n.Value["msg"])
+	assert.Equal(t, "x", n.Value["next"])
+}
+
+func TestFromNestedJSON_SameLineTwoRawJSONItemsUnambiguous(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`a:={"x":1} b:={"y":2}`), &n)
+	require.NoError(t, err)
+
+	a, ok := n.Value["a"].(map[string]any)
+	require.True(t, ok)
+	assert.InDelta(t, float64(1), a["x"], 0.01)
+
+	b, ok := n.Value["b"].(map[string]any)
+	require.True(t, ok)
+	assert.InDelta(t, float64(2), b["y"], 0.01)
+}
+
+func TestFromNestedJSON_GenuinelyMalformedSameLineRawJSONStillErrors(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte(`data:={"a": 1 , "b": 2 next=x`), &n)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid raw JSON value`)
+}
+
+// --- Escaping edge cases ---
+
+func TestFromNestedJSON_EscapedEqualsSignInKeyName(t *testing.T) {
+	// Documented in APICmd.Help() under ESCAPING as `key\=value=test`.
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`key\=value=test`,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "test", n.Value["key=value"])
+}
+
+func TestFromNestedJSON_EscapedColonAloneLeavesRealEqualsAsOperator(t *testing.T) {
+	// Escaping only the ':' of a `:=` pair does not escape the '=' that
+	// follows: `key\:=value` scans as key "key:" plus a literal ('=')
+	// assignment, not a raw-value assignment.
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`key\:=value`,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "value", n.Value["key:"])
+}
+
+func TestFromNestedJSON_EscapedColonAndEqualsEmbedsLiteralRawOperator(t *testing.T) {
+	// To get a literal ":=" inside a key, both characters must be escaped.
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`key\:\=extra=val`,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "val", n.Value["key:=extra"])
+}
+
+func TestFromNestedJSON_ColonNotFollowedByEqualsIsLiteral(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"time:val=x",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "x", n.Value["time:val"])
+}
+
+func TestFromNestedJSON_EscapeStripsBackslashForArbitraryCharacter(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`key\z=value`,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "value", n.Value["keyz"])
+}
+
+func TestFromNestedJSON_MultipleBackslashesCollapsePairwise(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`key[\\\\]=val`,
+	})
+	require.NoError(t, err)
+
+	key, ok := n.Value["key"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "val", key[`\\`])
+}
+
+func TestFromNestedJSON_EscapedLeadingBracketDoesNotTriggerArrayRoot(t *testing.T) {
+	var n Jason[any]
+	err := unmarshalItems(&n, []string{
+		`\[0\]=value`,
+	})
+	require.NoError(t, err)
+
+	m, ok := n.Value.(map[string]any)
+	require.True(t, ok, "root must stay an object, not become a top-level array")
+	assert.Equal(t, "value", m["[0]"])
+}
+
+func TestFromNestedJSON_IntermediateEscapedDigitSegmentForcesMapNotArray(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`data[\1][name]=value`,
+	})
+	require.NoError(t, err)
+
+	data, ok := n.Value["data"].(map[string]any)
+	require.True(t, ok, "escaping the digit segment must force an object, even though it is not the leaf")
+
+	inner, ok := data["1"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "value", inner["name"])
+}
+
+func TestFromNestedJSON_UnescapedDigitIntermediateSegmentForcesArray(t *testing.T) {
+	// Contrast with TestFromNestedJSON_IntermediateEscapedDigitSegmentForcesMapNotArray:
+	// without the backslash, the same shape produces an array.
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		`data[1][name]=value`,
+	})
+	require.NoError(t, err)
+
+	data, ok := n.Value["data"].([]any)
+	require.True(t, ok)
+	require.Len(t, data, 2)
+	assert.Nil(t, data[0])
+
+	inner, ok := data[1].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "value", inner["name"])
+}
+
+// --- Whitespace-splitting edge cases ---
+
+func TestFromNestedJSON_WhitespaceInsideBracketsBecomesLiteralStringKey(t *testing.T) {
+	// A space inside brackets is preserved literally rather than trimmed,
+	// so it fails the numeric-index check and produces a map with a
+	// space-containing key instead of an array.
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"foo[ 5]=x",
+	})
+	require.NoError(t, err)
+
+	foo, ok := n.Value["foo"].(map[string]any)
+	require.True(t, ok, "whitespace in the index must force map semantics, not array semantics")
+	assert.Equal(t, "x", foo[" 5"])
+}
+
+func TestFromNestedJSON_MultiWordValueWithNoOtherItems(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte("msg=one two three four"), &n)
+	require.NoError(t, err)
+	assert.Equal(t, "one two three four", n.Value["msg"])
+}
+
+func TestFromNestedJSON_ValueContainingLiteralEqualsThenSpaceThenNextItem(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal([]byte("note=x= y next=z"), &n)
+	require.NoError(t, err)
+	assert.Equal(t, "x= y", n.Value["note"])
+	assert.Equal(t, "z", n.Value["next"])
+}
+
+// --- Array index boundary edge cases ---
+
+func TestFromNestedJSON_LeadingZeroIndexIsDecimalNotOctal(t *testing.T) {
+	// arr[010] must land at index 10, not octal 8 - regression guard in
+	// case the index parser is ever changed to strconv.ParseInt(seg, 0, 64).
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"arr[010]=x",
+	})
+	require.NoError(t, err)
+
+	arr, ok := n.Value["arr"].([]any)
+	require.True(t, ok)
+	require.Len(t, arr, 11)
+	assert.Equal(t, "x", arr[10])
+}
+
+func TestFromNestedJSON_ArrayIndexBoundary_MaxAllowedSucceeds(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"arr[10000]=x",
+	})
+	require.NoError(t, err)
+
+	arr, ok := n.Value["arr"].([]any)
+	require.True(t, ok)
+	require.Len(t, arr, 10001)
+	assert.Equal(t, "x", arr[10000])
+}
+
+func TestFromNestedJSON_ArrayIndexBoundary_OneOverMaxFails(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"arr[10001]=x",
+	})
+	require.EqualError(t, err, "array index 10001 exceeds maximum allowed index 10000")
+}
+
+func TestFromNestedJSON_NegativeArrayIndexOverflowClassifiedAsRangeError(t *testing.T) {
+	// Mirrors TestFromNestedJSON_ArrayIndexOverflow but negative: a
+	// top-level bracket commits the root to array semantics unconditionally
+	// (it's syntactic, not content-dependent), so an unparseable index still
+	// reaches assignAtSlice's strconv.ParseInt and is correctly classified
+	// as a range error rather than a generic syntax error.
+	var n Jason[any]
+	err := unmarshalItems(&n, []string{"[-99999999999999999999]=x"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds maximum allowed index")
+	assert.NotContains(t, err.Error(), "key-based access")
+}
+
+func TestFromNestedJSON_OverflowingIndexNestedUnderNamedKeyBecomesStringKey(t *testing.T) {
+	// Contrast with the top-level case above: nested under a named key,
+	// array-vs-map is decided by isNumericKey (strconv.Atoi) *before* any
+	// index is actually assigned. Atoi fails the same way ParseInt would,
+	// but isNumericKey collapses every failure to "not numeric" - so rather
+	// than surfacing the overflow, it silently falls back to map semantics
+	// with the oversized number as a literal string key.
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{"items[99999999999999999999]=x"})
+	require.NoError(t, err)
+
+	items, ok := n.Value["items"].(map[string]any)
+	require.True(t, ok, "an index too large to parse must fall back to a map key, not error")
+	assert.Equal(t, "x", items["99999999999999999999"])
+}
+
+func TestFromNestedJSON_PlusSignedArrayIndex(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"arr[+5]=x",
+	})
+	require.NoError(t, err)
+
+	arr, ok := n.Value["arr"].([]any)
+	require.True(t, ok)
+	require.Len(t, arr, 6)
+	assert.Equal(t, "x", arr[5])
+}
+
+func TestFromNestedJSON_NegativeZeroArrayIndexIsIndexZero(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"arr[-0]=x",
+	})
+	require.NoError(t, err)
+
+	arr, ok := n.Value["arr"].([]any)
+	require.True(t, ok)
+	require.Len(t, arr, 1)
+	assert.Equal(t, "x", arr[0])
+}
+
+// --- Scalar/container escalation edge cases ---
+//
+// Once a path holds a scalar, assigning deeper under that same path
+// discards the scalar and builds the requested container instead - the
+// mirror image of the already-covered "last value wins" overwrite tests,
+// just at differing depths rather than the same depth.
+
+func TestFromNestedJSON_ScalarOverwrittenByNestedObjectAssignment(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"foo=bar",
+		"foo[baz]=qux",
+	})
+	require.NoError(t, err)
+
+	foo, ok := n.Value["foo"].(map[string]any)
+	require.True(t, ok, "the earlier scalar must be discarded, not preserved alongside the object")
+	assert.Equal(t, "qux", foo["baz"])
+}
+
+func TestFromNestedJSON_ScalarOverwrittenByArrayAppendAssignment(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{
+		"foo=bar",
+		"foo[]=x",
+	})
+	require.NoError(t, err)
+
+	foo, ok := n.Value["foo"].([]any)
+	require.True(t, ok, "the earlier scalar must be discarded, not preserved alongside the array")
+	require.Len(t, foo, 1)
+	assert.Equal(t, "x", foo[0])
+}
+
+// --- Boundary robustness edge cases: clean errors, never panics ---
+
+func TestFromNestedJSON_EmptyRawValueErrorsCleanly(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{"foo:="})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid raw JSON value ""`)
+}
+
+func TestFromNestedJSON_EmptyLiteralValueSucceeds(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{"foo="})
+	require.NoError(t, err)
+
+	foo, ok := n.Value["foo"].(string)
+	require.True(t, ok, "foo must be present as a string, not absent or nil")
+	assert.Empty(t, foo)
+}
+
+func TestFromNestedJSON_MinimalUnclosedBracketAtEOF(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{"foo["})
+	require.EqualError(t, err, `invalid path in "foo[": unclosed bracket`)
+}
+
+func TestFromNestedJSON_LoneOpenBracket(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{"["})
+	require.EqualError(t, err, `invalid path in "[": unclosed bracket`)
+}
+
+func TestFromNestedJSON_LoneCloseBracket(t *testing.T) {
+	var n Jason[map[string]any]
+	err := unmarshalItems(&n, []string{"]"})
+	require.EqualError(t, err, "invalid item: ]")
+}
+
+// --- Unmarshal: empty/whitespace input against non-object target types ---
+//
+// The empty-input fallback in Unmarshal attempts to decode the literal "{}",
+// which only satisfies object-shaped (or `any`) targets - that attempt's
+// error is discarded rather than propagated, so a slice or scalar T is just
+// left at its zero value instead of surfacing a spurious error.
+
+func TestUnmarshal_EmptyInputIntoSliceTargetLeavesZeroValue(t *testing.T) {
+	var n Jason[[]string]
+	err := Unmarshal([]byte(""), &n)
+	require.NoError(t, err)
+	assert.Nil(t, n.Value)
+}
+
+func TestUnmarshal_WhitespaceOnlyInputIntoSliceTargetLeavesZeroValue(t *testing.T) {
+	var n Jason[[]string]
+	err := Unmarshal([]byte("   \t\n  "), &n)
+	require.NoError(t, err)
+	assert.Nil(t, n.Value)
+}
+
+func TestUnmarshal_EmptyInputIntoScalarTargetLeavesZeroValue(t *testing.T) {
+	var n Jason[int]
+	err := Unmarshal([]byte(""), &n)
+	require.NoError(t, err)
+	assert.Zero(t, n.Value)
+}
+
+func TestUnmarshal_EmptyInputNeverClobbersAlreadyPopulatedSlice(t *testing.T) {
+	n := Jason[[]string]{Value: []string{"existing"}}
+	err := Unmarshal([]byte(""), &n)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"existing"}, n.Value)
+}
+
+func TestUnmarshal_EmptyInputIntoAnyTargetSucceeds(t *testing.T) {
+	var n Jason[any]
+	err := Unmarshal([]byte(""), &n)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]any{}, n.Value)
+}
+
+func TestUnmarshal_NilInputIntoMapTargetSucceeds(t *testing.T) {
+	var n Jason[map[string]any]
+	err := Unmarshal(nil, &n)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]any{}, n.Value)
+}
+
 func Example_debugTree() {
 	items := []string{
 		"name=HTTPie",
