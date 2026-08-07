@@ -60,6 +60,7 @@ func populate() (*Config, error) {
 		if len(profile.Metros) == 0 {
 			return
 		}
+		profile.Type = config.ProfileTypeCloud
 		profile.ControlPlane = ""
 		profile.Metros = profile.Metros[:1]
 		profile.Metros[0].Name = "test"

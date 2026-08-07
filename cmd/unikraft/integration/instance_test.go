@@ -792,6 +792,34 @@ rootfs:
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	t.Run("gpu", func(t *testing.T) {
+		t.Skip("gpus are not enabled in testing envs")
+
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--set", "type=full",
+			"--set", "resources.gpus=1",
+		})
+		assert.Regexp(t, `type:\s+full`, out)
+		assert.Regexp(t, `gpus:\s+1`, out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `type:\s+full`, out)
+		assert.Regexp(t, `gpus:\s+1`, out)
+		assert.Regexp(t, `model:\s+\S+`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
 	t.Run("tags", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		instName := uniq()

@@ -136,6 +136,12 @@ func instancesOutputTests(t *testing.T) {
 	sample.Networks[0].UUID = "net-uuid-1234"
 	sample.Networks[0].PrivateIP = "192.168.1.10"
 	sample.Networks[0].MAC = "aa:bb:cc:dd:ee:ff"
+	vmType := platform.InstanceTypeFull
+	sample.Type_ = &vmType
+	sample.Gpus = []cmd.InstanceGpu{
+		{UUID: "gpu-uuid-1234", Model: "10de:1eb8"},
+	}
+	sample.Resources.GPUs = len(sample.Gpus)
 	sample.Timing.Uptime = types.DurationMS(1500)
 	sample.Timing.BootTime = types.DurationUS(250000)
 	sample.Timing.NetTime = types.DurationUS(100000)
@@ -205,13 +211,17 @@ func instanceHistoryOutputTests(t *testing.T) {
 
 func volumesOutputTests(t *testing.T) {
 	sample := cmd.Volume{
-		Metro:       "fra",
-		Name:        "my-volume",
-		UUID:        "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-		Tags:        []string{"env-prod"},
-		State:       types.VolumeState(platform.VolumeStateAvailable),
-		Size:        50,
-		Free:        10,
+		Metro: "fra",
+		Name:  "my-volume",
+		UUID:  "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		Tags:  []string{"env-prod"},
+		State: types.VolumeState(platform.VolumeStateAvailable),
+		Size:  50,
+		Free:  10,
+		Usage: types.MeterUsage[types.SizeMebibytes]{
+			Used:  40,
+			Total: 50,
+		},
 		Filesystem:  "ext4",
 		QuotaPolicy: "hard",
 		Persistent:  true,

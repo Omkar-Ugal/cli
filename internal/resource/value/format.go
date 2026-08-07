@@ -23,6 +23,12 @@ type RenderOpts struct {
 	// digest), rather than with full detail. The zero value renders with
 	// full detail.
 	Short bool
+
+	// Quiet indicates the value is being rendered for quiet/scriptable
+	// output, where a plain, minimal representation (e.g. a raw percentage
+	// rather than a colored meter bar) is preferred over a rich
+	// human-readable one.
+	Quiet bool
 }
 
 // Renderer is implemented by types that want to customize their textual

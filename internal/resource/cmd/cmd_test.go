@@ -14,6 +14,7 @@ import (
 	"io"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -27,6 +28,7 @@ import (
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/resource"
 	resourcet "unikraft.com/cli/internal/resource/testing"
+	"unikraft.com/cli/internal/types"
 	xkong "unikraft.com/cli/internal/x/kong"
 	"unikraft.com/cloud/sdk/platform/group"
 )
@@ -41,14 +43,19 @@ func setupTestEnv() *resourcet.TestEnv {
 		URL:       "https://example.com",
 		Hidden:    "hidden-test1",
 		Invisible: "invisible-test1",
+		Created:   time.Now().Add(-3 * 24 * time.Hour),
 		Settings: resourcet.TestSettings{
-			Foo: 42,
-			Bar: "hello",
+			Foo:   42,
+			Bar:   "hello",
+			Score: 10.0,
+			Flag:  true,
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Alice", Email: "alice@example.com"},
 			{Name: "Bob", Email: "bob@example.com"},
 		},
+		Tags:  []string{"prod", "web"},
+		Usage: types.MeterUsage[int]{Used: 70, Total: 100},
 	})
 	env.Add(resourcet.TestResource{
 		ID:        "id-test2",
@@ -57,14 +64,18 @@ func setupTestEnv() *resourcet.TestEnv {
 		URL:       "https://example.org",
 		Hidden:    "hidden-test2",
 		Invisible: "invisible-test2",
+		Created:   time.Now().Add(-40 * 24 * time.Hour),
 		Settings: resourcet.TestSettings{
-			Foo: 7,
-			Bar: "world",
+			Foo:   7,
+			Bar:   "world",
+			Score: 1.2,
 		},
 		Authors: []resourcet.TestAuthor{
 			{Name: "Charlie", Email: "charlie@example.com"},
 			{Name: "Dana", Email: "dana@example.com"},
 		},
+		Tags:  []string{"staging"},
+		Usage: types.MeterUsage[int]{Used: 30, Total: 100},
 	})
 	return env
 }
@@ -2064,5 +2075,285 @@ func TestDeleteBulk(t *testing.T) {
 		// Only test1 should be deleted
 		assert.NotContains(t, env.Store, "test1")
 		assert.Contains(t, env.Store, "test2")
+	})
+}
+
+func TestFilterComparisonOperators(t *testing.T) {
+	env := setupTestEnv()
+	ctx := resourcet.WithTestEnv(context.Background(), env)
+	sandbox := &resource.Sandbox{}
+
+	runFilter := func(t *testing.T, filter string) (string, error) {
+		t.Helper()
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{filter},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		return out.String(), err
+	}
+
+	t.Run("equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo==7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("greater", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo>7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("greater_equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo>=7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("less", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo<42")
+		require.NoError(t, err)
+		assert.NotContains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("less_equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo<=7")
+		require.NoError(t, err)
+		assert.NotContains(t, output, "test1")
+		assert.Contains(t, output, "test2")
+	})
+
+	t.Run("float_field_vs_int_literal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.score<5")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("float_field_greater_equal", func(t *testing.T) {
+		output, err := runFilter(t, "settings.score>=10")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("invalid_literal_no_match_no_error", func(t *testing.T) {
+		output, err := runFilter(t, "settings.foo>notanumber")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	t.Run("string_field_ordering_no_op", func(t *testing.T) {
+		output, err := runFilter(t, "state>pending")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	t.Run("string_field_ordering_disallowed_even_with_differing_values", func(t *testing.T) {
+		for _, filter := range []string{
+			"settings.bar>hello",
+			"settings.bar>=hello",
+			"settings.bar<world",
+			"settings.bar<=world",
+		} {
+			output, err := runFilter(t, filter)
+			require.NoError(t, err)
+			assert.Empty(t, strings.TrimSpace(output), "filter %q should not match any resource", filter)
+		}
+
+		output, err := runFilter(t, "settings.bar==hello")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("scalar_slice_indexed_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.0==prod")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("scalar_slice_wildcard_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.*==staging")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("scalar_slice_wildcard_not_equal", func(t *testing.T) {
+		output, err := runFilter(t, "tags.*!=prod")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("bool_field_ordering_disallowed", func(t *testing.T) {
+		for _, filter := range []string{
+			"settings.flag>false",
+			"settings.flag>=false",
+			"settings.flag<true",
+			"settings.flag<=true",
+		} {
+			output, err := runFilter(t, filter)
+			require.NoError(t, err)
+			assert.Empty(t, strings.TrimSpace(output), "filter %q should not match any resource", filter)
+		}
+
+		output, err := runFilter(t, "settings.flag==true")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("combined_with_equality", func(t *testing.T) {
+		output, err := runFilter(t, "state==pending,settings.foo>7")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("relative_time_less_than", func(t *testing.T) {
+		// test1 was created 3 days ago, test2 40 days ago.
+		output, err := runFilter(t, "created<7d")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("relative_time_greater_than", func(t *testing.T) {
+		output, err := runFilter(t, "created>7d")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("relative_time_greater_equal_weeks", func(t *testing.T) {
+		output, err := runFilter(t, "created>=5w")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("relative_time_less_equal_compound_units", func(t *testing.T) {
+		output, err := runFilter(t, "created<=3d1h")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("relative_time_invalid_no_match_no_error", func(t *testing.T) {
+		output, err := runFilter(t, "created<notaduration")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	// cutoff sits between test1's creation time (3 days ago) and test2's (40
+	// days ago), so it splits the two resources regardless of when the test
+	// runs.
+	cutoff := time.Now().Add(-10 * 24 * time.Hour).UTC()
+
+	t.Run("absolute_time_rfc3339", func(t *testing.T) {
+		output, err := runFilter(t, "created>"+cutoff.Format(time.RFC3339))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("absolute_time_date_time_no_zone", func(t *testing.T) {
+		output, err := runFilter(t, "created<"+cutoff.Format("2006-01-02T15:04:05"))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("absolute_time_date_time_space", func(t *testing.T) {
+		// The space needs quoting: the filter grammar splits unquoted
+		// values on whitespace.
+		output, err := runFilter(t, `created>="`+cutoff.Format("2006-01-02 15:04:05")+`"`)
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("absolute_time_date_only", func(t *testing.T) {
+		output, err := runFilter(t, "created<="+cutoff.Format("2006-01-02"))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("absolute_time_unix_seconds", func(t *testing.T) {
+		output, err := runFilter(t, "created>"+strconv.FormatInt(cutoff.Unix(), 10))
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("absolute_time_invalid_no_match_no_error", func(t *testing.T) {
+		output, err := runFilter(t, "created<notatimestamp")
+		require.NoError(t, err)
+		assert.Empty(t, strings.TrimSpace(output))
+	})
+
+	// test1 has usage 70/100 (70%), test2 has usage 30/100 (30%); see
+	// setupTestEnv. MeterUsage orders by used/total ratio, same as sorting.
+	t.Run("ratio_field_greater", func(t *testing.T) {
+		output, err := runFilter(t, "usage>0.5")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("ratio_field_less", func(t *testing.T) {
+		output, err := runFilter(t, "usage<0.5")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test2")
+		assert.NotContains(t, output, "test1")
+	})
+
+	t.Run("ratio_field_percent", func(t *testing.T) {
+		output, err := runFilter(t, "usage>=50%")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("ratio_field_equal", func(t *testing.T) {
+		output, err := runFilter(t, "usage==70%")
+		require.NoError(t, err)
+		assert.Contains(t, output, "test1")
+		assert.NotContains(t, output, "test2")
+	})
+
+	t.Run("ratio_field_equal_rounds_to_display", func(t *testing.T) {
+		// 11/16 is 68.75%, which String rounds to display as "69%"; the
+		// filter should match on that displayed value, not the exact ratio.
+		env := resourcet.NewTestEnv()
+		env.Add(resourcet.TestResource{
+			ID:    "id-test3",
+			Name:  "test3",
+			Usage: types.MeterUsage[int]{Used: 11, Total: 16},
+		})
+		ctx := resourcet.WithTestEnv(context.Background(), env)
+
+		var out bytes.Buffer
+		cmd := &ResourceListCmd[resourcet.TestResource]{
+			Filter: []string{"usage==69%"},
+			FormatOpts: FormatOpts{
+				Output: Printer{Type: PrinterTypeQuiet},
+			},
+		}
+		err := cmd.Run(ctx, testStdio(&out), sandbox)
+		require.NoError(t, err)
+		assert.Contains(t, out.String(), "test3")
 	})
 }

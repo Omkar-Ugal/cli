@@ -9,6 +9,7 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alecthomas/kong v1.15.0
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de
 	github.com/charmbracelet/colorprofile v0.4.3
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/charmbracelet/x/term v0.2.2
@@ -49,9 +50,9 @@ require (
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.13.1
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.3.1-0.20260730110715-92b5bae5afbe
+	unikraft.com/cloud/sdk v0.3.1-0.20260805103859-eb7d6dc4c53c
 	unikraft.com/x/colors v0.0.0-20260710212606-b68ba398853d
-	unikraft.com/x/filters v0.0.0-20260416164455-ec39ae908f3f
+	unikraft.com/x/filters v0.0.0-20260804153219-d1b47a40e047
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/guesstermwidth v0.0.0-20260708141520-0cbb0a92056b
 	unikraft.com/x/iata v0.0.0-20260713183529-fd34645687a0

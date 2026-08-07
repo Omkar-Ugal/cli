@@ -14,13 +14,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/x/ansi"
 	"unikraft.com/x/filters"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
@@ -29,7 +26,6 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/patch"
-	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tui/watcher"
 	xkong "unikraft.com/cli/internal/x/kong"
 	"unikraft.com/cloud/sdk/platform/group"
@@ -410,84 +406,6 @@ func filterResources(ctx context.Context, resources []resource.Resource, filter 
 		}
 	}
 	return filtered, rerr
-}
-
-// newFieldAdaptor creates a filters.Adaptor that can traverse resource fields.
-// It handles both structured fields (with subfields) and slice values (like []string tags).
-func newFieldAdaptor(fields []resource.Field) filters.AdapterFunc {
-	return func(key []string) (string, []string, bool) {
-		matched := resource.GetFieldByPath(fields, key)
-		if len(matched) == 0 {
-			// GetFieldByPath may not find a match if we're looking up an index
-			// in a slice value (e.g., ["tags", "0"]). Try to handle this case.
-			if len(key) >= 2 {
-				parentMatched := resource.GetFieldByPath(fields, key[:len(key)-1])
-				if len(parentMatched) == 1 {
-					if slice, ok := getSliceValue(parentMatched[0].Value); ok {
-						idx, err := strconv.Atoi(key[len(key)-1])
-						if err == nil && idx >= 0 && idx < len(slice) {
-							return slice[idx], nil, true
-						}
-					}
-				}
-			}
-			return "", nil, false
-		}
-		if len(matched) == 1 {
-			field := matched[0]
-			// If the field has subfields, return their names as entries
-			// This enables wildcard filtering (e.g., nested.*.value)
-			if len(field.Subfields) > 0 {
-				entries := make([]string, len(field.Subfields))
-				for i, sub := range field.Subfields {
-					entries[i] = sub.Name
-				}
-				return "", entries, true
-			}
-			// Check if the field's value is a slice (e.g., []string tags)
-			// If so, return indices as entries for wildcard support
-			if slice, ok := getSliceValue(field.Value); ok {
-				entries := make([]string, len(slice))
-				for i := range slice {
-					entries[i] = strconv.Itoa(i)
-				}
-				return "", entries, true
-			}
-			// HACK: strip escape sequences from rendered output
-			out, _ := field.Render(value.RenderOpts{})
-			return ansi.Strip(out), nil, true
-		}
-		// >1 fields = ambiguous match, return entries for wildcard support
-		entries := make([]string, len(matched))
-		for i, field := range matched {
-			entries[i] = field.Name
-		}
-		return "", entries, true
-	}
-}
-
-// getSliceValue extracts a []string from a field value if possible.
-// It handles both []string and other slice types by converting to strings.
-func getSliceValue(value any) ([]string, bool) {
-	if value == nil {
-		return nil, false
-	}
-	rv := reflect.ValueOf(value)
-	if rv.Kind() != reflect.Slice {
-		return nil, false
-	}
-	result := make([]string, rv.Len())
-	for i := range rv.Len() {
-		elem := rv.Index(i)
-		if s, ok := elem.Interface().(string); ok {
-			result[i] = s
-		} else if s, ok := elem.Interface().(fmt.Stringer); ok {
-			result[i] = s.String()
-		} else {
-			result[i] = fmt.Sprintf("%v", elem.Interface())
-		}
-	}
-	return result, true
 }
 
 type ResourceRemoveCmd[R resource.DeletableResource] struct {

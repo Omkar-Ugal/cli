@@ -4,8 +4,9 @@ name:         my-volume
 uuid:         a1b2c3d4-e5f6-7890-abcd-ef1234567890
 tags:         ["env-prod"]
 state:        available
-size:         50MiB
+usage:        80%  ⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀
 free:         10MiB
+size:         50MiB
 filesystem:   ext4
 quota-policy: hard
 persistent:   true
@@ -17,8 +18,9 @@ name:         my-volume
 uuid:         a1b2c3d4-e5f6-7890-abcd-ef1234567890
 tags:         ["env-prod"]
 state:        available
-size:         50MiB
+usage:        80%  ⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀
 free:         10MiB
+size:         50MiB
 filesystem:   ext4
 quota-policy: hard
 persistent:   true
@@ -31,8 +33,8 @@ mounted-by:
 delete-lock:  false
 
 ==================================== table =====================================
-METRO  NAME       STATE      SIZE   CREATED
-fra    my-volume  available  50MiB  never
+METRO  NAME       STATE      USAGE            FREE   SIZE   CREATED
+fra    my-volume  available  80%  ⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀  10MiB  50MiB  never
 
 ==================================== debug =====================================
 [
@@ -89,6 +91,16 @@ fra    my-volume  available  50MiB  never
     "verbosity": "short"
   },
   {
+    "name": "usage",
+    "value": "40MiB/50MiB",
+    "verbosity": "short"
+  },
+  {
+    "name": "free",
+    "value": "10MiB",
+    "verbosity": "short"
+  },
+  {
     "name": "size",
     "value": "50MiB",
     "verbosity": "short",
@@ -98,11 +110,6 @@ fra    my-volume  available  50MiB  never
     "edit": {
       "set": "50MiB"
     }
-  },
-  {
-    "name": "free",
-    "value": "10MiB",
-    "verbosity": "long"
   },
   {
     "name": "filesystem",

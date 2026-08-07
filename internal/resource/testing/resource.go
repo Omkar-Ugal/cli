@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"unikraft.com/cli/internal/resource"
+	"unikraft.com/cli/internal/types"
 )
 
 // TestEnv holds all test state for TestResource operations.
@@ -63,8 +65,11 @@ type TestResource struct {
 	Hidden    string
 	Invisible string
 	Lazy      string // Computed via callback when requested
+	Created   time.Time
 	Settings  TestSettings
 	Authors   []TestAuthor
+	Tags      []string
+	Usage     types.MeterUsage[int]
 }
 
 var (
@@ -76,8 +81,10 @@ var (
 )
 
 type TestSettings struct {
-	Foo int
-	Bar string
+	Foo   int
+	Bar   string
+	Score float64
+	Flag  bool
 }
 
 type TestAuthor struct {
@@ -145,6 +152,11 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 			Verbosity: resource.FieldVerbosityShort,
 		},
 		{
+			Name:      "created",
+			Value:     t.Created,
+			Verbosity: resource.FieldVerbosityLong,
+		},
+		{
 			Name:      "hidden",
 			Value:     t.Hidden,
 			Verbosity: resource.FieldVerbosityHidden,
@@ -210,6 +222,16 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 						Set: t.Settings.Bar, // Use actual value
 					},
 				},
+				{
+					Name:      "score",
+					Value:     t.Settings.Score,
+					Verbosity: resource.FieldVerbosityLong,
+				},
+				{
+					Name:      "flag",
+					Value:     t.Settings.Flag,
+					Verbosity: resource.FieldVerbosityLong,
+				},
 			},
 		},
 		{
@@ -249,6 +271,16 @@ func (t TestResource) Fields(ctx context.Context) ([]resource.Field, error) {
 				}
 				return fields
 			}(),
+		},
+		{
+			Name:      "tags",
+			Value:     t.Tags,
+			Verbosity: resource.FieldVerbosityLong,
+		},
+		{
+			Name:      "usage",
+			Value:     t.Usage,
+			Verbosity: resource.FieldVerbosityLong,
 		},
 	}, nil
 }

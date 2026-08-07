@@ -41,6 +41,10 @@ func Compare(a, b any) int {
 		return 1
 	}
 
+	if result, ok := compareSelf(a, b); ok {
+		return result
+	}
+
 	// Try type-specific comparisons
 	switch av := a.(type) {
 	case time.Time:
@@ -144,6 +148,44 @@ func Compare(a, b any) int {
 		bStr = fmt.Sprint(b)
 	}
 	return cmp.Compare(aStr, bStr)
+}
+
+// compareSelf detects and invokes a "Compare(T) int" method on a's type,
+// where T is the same type as a, matching the cmp.Compare contract.
+func compareSelf(a, b any) (int, bool) {
+	av := reflect.ValueOf(a)
+	bv := reflect.ValueOf(b)
+	if av.Type() != bv.Type() {
+		return 0, false
+	}
+	if !hasSelfCompareMethod(av) {
+		return 0, false
+	}
+
+	method := av.MethodByName("Compare")
+	return int(method.Call([]reflect.Value{bv})[0].Int()), true
+}
+
+// HasSelfCompare reports whether v has a "Compare(T) int" method where T is
+// v's own type, matching the cmp.Compare contract. Compare uses this same
+// detection internally (see compareSelf) to dispatch to a type's own
+// ordering; callers that need to know upfront whether such ordering exists
+// (e.g. to decide whether a value can be used with an ordering filter) can
+// check it directly.
+func HasSelfCompare(v any) bool {
+	if v == nil {
+		return false
+	}
+	return hasSelfCompareMethod(reflect.ValueOf(v))
+}
+
+func hasSelfCompareMethod(rv reflect.Value) bool {
+	method := rv.MethodByName("Compare")
+	if !method.IsValid() {
+		return false
+	}
+	mt := method.Type()
+	return mt.NumIn() == 1 && mt.In(0) == rv.Type() && mt.NumOut() == 1 && mt.Out(0).Kind() == reflect.Int
 }
 
 // compareReflect attempts to compare values using reflection.
