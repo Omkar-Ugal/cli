@@ -116,7 +116,7 @@ delete-lock:     false
 
 ==================================== table =====================================
 METRO  NAME         STATE    IMAGE  ARGS              MEMORY  VCPUS  FQDN                  CREATED
-fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.unikraft.app
+fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.unikraft.app  never
 
 ==================================== debug =====================================
 [
@@ -831,6 +831,20 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
   },
   {
     "name": "template",
+    "verbosity": "invisible",
+    "create": {
+      "set": ""
+    }
+  },
+  {
+    "name": "branch",
+    "verbosity": "invisible",
+    "create": {
+      "set": ""
+    }
+  },
+  {
+    "name": "checkpoint",
     "verbosity": "invisible",
     "create": {
       "set": ""

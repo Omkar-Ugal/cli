@@ -1,29 +1,44 @@
 ====================================== kv ======================================
-metro:     fra
-name:      my-template
-uuid:      d4e5f6a7-b8c9-0123-def0-123456789abc
-tags:      ["env-staging"]
-state:     stopped
-image:     nginx
+metro:      fra
+name:       my-checkpoint
+uuid:       f6a7b8c9-d0e1-2345-f012-3456789abcde
+tags:       ["env-prod", "team-core"]
+state:      checkpoint
+image:      nginx
+runtime:
+  args:     ["arg1", "arg2"]
+  env:
+    KEY1:   val1
+    KEY2:   val2
 resources:
-  memory:  128MiB
-  vcpus:   1
+  memory:   256MiB
+  vcpus:    2
+volumes:
+- name:     my-volume
+  at:       /data
+  readonly: true
 
 ==================================== kv-all ====================================
 metro:           fra
-name:            my-template
-uuid:            d4e5f6a7-b8c9-0123-def0-123456789abc
-tags:            ["env-staging"]
-delete-lock:     false
-state:           stopped
+name:            my-checkpoint
+uuid:            f6a7b8c9-d0e1-2345-f012-3456789abcde
+tags:            ["env-prod", "team-core"]
+delete-lock:     true
+state:           checkpoint
 image:           nginx
 runtime:
-  args:
+  args:          ["arg1", "arg2"]
   env:
+    KEY1:        val1
+    KEY2:        val2
 resources:
-  memory:        128MiB
-  vcpus:         1
+  memory:        256MiB
+  vcpus:         2
 volumes:
+- name:          my-volume
+  uuid:
+  at:            /data
+  readonly:      true
 timestamps:
   created:       never
 scale-to-zero:
@@ -33,11 +48,11 @@ scale-to-zero:
   cooldown-time: 0s
   notify-time:   0s
 restart:
-  policy:
+  policy:        always
 
 ==================================== table =====================================
-METRO  NAME         STATE    IMAGE  ARGS  MEMORY  VCPUS  CREATED
-fra    my-template  stopped  nginx        128MiB  1      never
+METRO  NAME           STATE       IMAGE  ARGS              MEMORY  VCPUS  CREATED
+fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
 
 ==================================== debug =====================================
 [
@@ -54,23 +69,25 @@ fra    my-template  stopped  nginx        128MiB  1      never
   },
   {
     "name": "name",
-    "value": "my-template",
+    "value": "my-checkpoint",
     "verbosity": "short"
   },
   {
     "name": "uuid",
-    "value": "d4e5f6a7-b8c9-0123-def0-123456789abc",
+    "value": "f6a7b8c9-d0e1-2345-f012-3456789abcde",
     "verbosity": "long"
   },
   {
     "name": "tags",
     "value": [
-      "env-staging"
+      "env-prod",
+      "team-core"
     ],
     "verbosity": "long",
     "edit": {
       "set": [
-        "env-staging"
+        "env-prod",
+        "team-core"
       ],
       "add": null,
       "del": null
@@ -78,15 +95,15 @@ fra    my-template  stopped  nginx        128MiB  1      never
   },
   {
     "name": "delete-lock",
-    "value": false,
-    "verbosity": "long",
+    "value": true,
+    "verbosity": "hidden",
     "edit": {
-      "set": false
+      "set": true
     }
   },
   {
     "name": "state",
-    "value": "stopped",
+    "value": "checkpoint",
     "verbosity": "short"
   },
   {
@@ -105,12 +122,18 @@ fra    my-template  stopped  nginx        128MiB  1      never
     "subfields": [
       {
         "name": "args",
-        "value": null,
+        "value": [
+          "arg1",
+          "arg2"
+        ],
         "verbosity": "short"
       },
       {
         "name": "env",
-        "value": null,
+        "value": {
+          "KEY1": "val1",
+          "KEY2": "val2"
+        },
         "verbosity": "long"
       }
     ],
@@ -121,12 +144,12 @@ fra    my-template  stopped  nginx        128MiB  1      never
     "subfields": [
       {
         "name": "memory",
-        "value": "128MiB",
+        "value": "256MiB",
         "verbosity": "short"
       },
       {
         "name": "vcpus",
-        "value": 1,
+        "value": 2,
         "verbosity": "short"
       }
     ],
@@ -134,6 +157,47 @@ fra    my-template  stopped  nginx        128MiB  1      never
   },
   {
     "name": "volumes",
+    "subfields": [
+      {
+        "name": "0",
+        "subfields": [
+          {
+            "name": "name",
+            "value": "my-volume",
+            "verbosity": "long"
+          },
+          {
+            "name": "uuid",
+            "value": "",
+            "verbosity": "long"
+          },
+          {
+            "name": "at",
+            "value": "/data",
+            "verbosity": "long"
+          },
+          {
+            "name": "readonly",
+            "value": true,
+            "verbosity": "long"
+          },
+          {
+            "name": "size",
+            "verbosity": "invisible",
+            "create": {
+              "set": "0B"
+            }
+          }
+        ],
+        "links": [
+          {
+            "type": "volume",
+            "key": "my-volume"
+          }
+        ],
+        "verbosity": "long"
+      }
+    ],
     "elem": {
       "name": "",
       "subfields": [
@@ -216,7 +280,7 @@ fra    my-template  stopped  nginx        128MiB  1      never
     "subfields": [
       {
         "name": "policy",
-        "value": "",
+        "value": "always",
         "verbosity": "hidden"
       }
     ],
@@ -228,6 +292,13 @@ fra    my-template  stopped  nginx        128MiB  1      never
     "create": {
       "set": "",
       "required": true
+    }
+  },
+  {
+    "name": "wait-timeout",
+    "verbosity": "invisible",
+    "create": {
+      "set": "0s"
     }
   }
 ]

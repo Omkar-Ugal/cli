@@ -34,7 +34,7 @@ delete-lock:  false
 
 ==================================== table =====================================
 METRO  NAME       STATE      USAGE            FREE   SIZE   CREATED
-fra    my-volume  available  80%  ⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀  10MiB  50MiB
+fra    my-volume  available  80%  ⣿⣿⣿⣿⣿⣿⣿⣿⣀⣀  10MiB  50MiB  never
 
 ==================================== debug =====================================
 [

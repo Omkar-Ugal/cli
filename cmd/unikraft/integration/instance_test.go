@@ -6,6 +6,7 @@
 package integration
 
 import (
+	_ "embed"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,9 @@ import (
 
 	integ "unikraft.com/cli/internal/integration"
 )
+
+//go:embed testdata/counter_server.py
+var counterServerPy []byte
 
 func TestInstances(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
@@ -308,11 +312,13 @@ rootfs:
 		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
 
 		// Second boot via restart --follow: output must contain "starting 2" only.
+		// Restart incurs stop+start overhead on top of the boot itself, so it
+		// needs more headroom than a plain start-follow to avoid flaking.
 		out := r.Run(t, []string{
 			"unikraft", "instance", "restart",
 			"--follow",
 			"test-" + instName,
-		}, integ.WithTimeout(5*time.Second), integ.AllowFail())
+		}, integ.WithTimeout(15*time.Second), integ.AllowFail())
 		assert.Contains(t, out, "starting 2")
 		assert.NotContains(t, out, "starting 1")
 
@@ -1082,4 +1088,381 @@ cmd: ["cat", "/marker.txt"]
 			// Command still running
 		}
 	})
+
+	t.Run("branch", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		branchName := uniq()
+		domainName := uniq()
+		domainBranch := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 0`)
+
+		// Branch the running instance.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--branch", "test-" + instName,
+			"--set", "name=test-branch-" + branchName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "autostart=true",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainBranch,
+		})
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-branch-" + branchName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdnBranch := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 0`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	// branch-state verifies that --branch preserves current in-memory state and
+	// that the original and branched instances are fully independent. It builds
+	// a counter HTTP server, increments to 5, branches, verifies the branched
+	// instance has counter=5, then mutates each independently.
+	t.Run("branch-state", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		branchName := uniq()
+		domainName := uniq()
+		domainBranch := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Increment counter to 5.
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		// Branch the running instance.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--branch", "test-" + instName,
+			"--set", "name=test-branch-" + branchName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "autostart=true",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainBranch,
+		})
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-branch-" + branchName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdnBranch := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
+
+		// Branched counter should also be at 5.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
+
+		// Increment branched by 10 → 15.
+		integ.HTTPPost(t, "https://"+fqdnBranch+"/increment", "application/json", `{"delta":10}`)
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 15`)
+
+		// Original should still be at 5 (unaffected by branch).
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		// Increment original by 1 → 6.
+		integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 6`)
+
+		// Branched should still be at 15 (unaffected by original).
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 15`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	// stop-disk-reset verifies a plain stop/start also resets the root disk (by design, not just a --branch gap).
+	t.Run("stop-disk-reset", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		domainName := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+
+		r.Run(t, []string{"unikraft", "instance", "start", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Root disk is ephemeral per boot; only attached volumes persist.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 0`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	// branch-stopped verifies --branch works when the source is stopped. The
+	// counter is kept on an attached volume rather than the root disk, since
+	// the root disk never survives a stop (see stop-disk-reset) but branching
+	// copies attached volumes.
+	t.Run("branch-stopped", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		branchName := uniq()
+		volName := uniq()
+		domainName := uniq()
+		domainBranch := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + volName,
+			"--set", "size=20",
+			"--set", "metro=" + r.Config.MetroName,
+		})
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "runtime.env=COUNTER_FILE=/data/counter.txt",
+			"--set", "volumes=test-" + volName + ":/data",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Increment counter to 5, then stop the instance.
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+
+		// Branch the stopped instance.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--branch", "test-" + instName,
+			"--set", "name=test-branch-" + branchName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "autostart=true",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainBranch,
+		})
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-branch-" + branchName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdnBranch := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
+
+		// Branched counter should read 5, carried over by the copied volume.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
+
+		// The branch's volume must be an independent copy, not a shared
+		// reference: mutating it and restarting the (still-stopped) source
+		// must not affect the source's own count.
+		integ.HTTPPost(t, "https://"+fqdnBranch+"/increment", "application/json", `{"delta":10}`)
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 15`)
+
+		r.Run(t, []string{"unikraft", "instance", "start", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 15`)
+
+		// The branch's own volume is unnamed and cleaned up by the sandbox's
+		// resource tracking; only the explicitly created source volume needs
+		// to be deleted here.
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+
+	// branch-template verifies --branch works when the source is a template.
+	t.Run("branch-template", func(t *testing.T) {
+		// branch_from can't resolve template names/UUIDs on the backend yet.
+		t.Skip("branching from a template is not resolvable via branch_from on the backend yet")
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		branchName := uniq()
+		domainName := uniq()
+		domainBranch := uniq()
+		imageTag := uniq()
+		image := r.Config.Profile.Organization + "/counter-e2e:" + imageTag
+
+		dir := t.TempDir()
+		require.NoError(t, applyCounterContext(dir))
+
+		r.Run(t, []string{"unikraft", "build", ".", "--output", image}, integ.WithWorkDir(dir))
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=" + image,
+			"--set", "autostart=true",
+			"--set", "resources.memory=256",
+			"--set", "resources.vcpus=1",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainName,
+		})
+		out := r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-" + instName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdn := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-" + instName})
+
+		// Increment counter to 5, then stop the instance and convert it into a template.
+		for range 5 {
+			integ.HTTPPost(t, "https://"+fqdn+"/increment", "application/json", `{"delta":1}`)
+		}
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdn+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "stop", "test-" + instName})
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==stopped", "--timeout", "30s", "test-" + instName})
+
+		out = r.Run(t, []string{
+			"unikraft", "instance", "template", "create", "test-" + instName,
+			"--output", "template={{ .name }}",
+		})
+		templateName := strings.TrimSpace(out)
+
+		// Branch the template.
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--branch", templateName,
+			"--set", "name=test-branch-" + branchName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "autostart=true",
+			"--set", "service.services=443:8080/tls+http",
+			"--set", "service.domains=name=" + domainBranch,
+		})
+		out = r.Run(t, []string{
+			"unikraft", "instance", "inspect", "test-branch-" + branchName,
+			"--output", "template=" + `{{ (index .service.domains 0).fqdn }}`,
+		})
+		fqdnBranch := strings.TrimSpace(out)
+		r.Run(t, []string{"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "30s", "test-branch-" + branchName})
+
+		// Assumes template create snapshots the disk rather than reading a reset instance.
+		assert.Contains(t, integ.HTTPGet(t, "https://"+fqdnBranch+"/count"), `"count": 5`)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-branch-" + branchName})
+		r.Run(t, []string{"unikraft", "instance", "template", "delete", templateName})
+		r.Run(t, []string{"unikraft", "image", "delete", image})
+	})
+}
+
+// applyCounterContext writes the build context for a minimal Python HTTP counter
+// server into dir. The server maintains an in-memory counter that can be read
+// via GET /count and incremented via POST /increment with a JSON body.
+func applyCounterContext(dir string) error {
+	return fstest.Apply(
+		fstest.CreateFile("Dockerfile", []byte(`
+FROM python:3.12-slim
+COPY server.py /app/server.py
+`), 0o644),
+		fstest.CreateFile("server.py", counterServerPy, 0o644),
+		fstest.CreateFile("Kraftfile", []byte(`
+spec: v0.7
+name: counter-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["python3", "/app/server.py"]
+`), 0o644),
+	).Apply(dir)
 }

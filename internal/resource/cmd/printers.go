@@ -345,7 +345,16 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 				if field.Value == nil {
 					continue
 				}
-				if field.IsEmpty() {
+
+				// Render before deciding whether to skip: a value can be the
+				// reflect zero value yet still have a meaningful rendering
+				// (e.g. a zero RelativeTime renders as "never"), so emptiness
+				// must be judged by the rendered text, not field.IsEmpty().
+				rendered, err := field.Render(value.RenderOpts{Short: true})
+				if err != nil {
+					return err
+				}
+				if rendered == "" {
 					continue
 				}
 				fieldIdx++
@@ -357,22 +366,14 @@ func printTable(ctx context.Context, out io.Writer, fieldSpecs []string, base re
 					}
 				}
 
-				if field.Value == nil {
-					continue
-				}
-
-				value, err := field.Render(value.RenderOpts{Short: true})
-				if err != nil {
-					return err
-				}
 				if field.Hyperlink != "" {
 					// TODO: use lipgloss styles when it supports hyperlinks
 					// https://github.com/charmbracelet/lipgloss/issues/220
 					if color {
-						value = ansi.SetHyperlink(field.Hyperlink) + value + ansi.ResetHyperlink()
+						rendered = ansi.SetHyperlink(field.Hyperlink) + rendered + ansi.ResetHyperlink()
 					}
 				}
-				_, err = fmt.Fprint(out, value)
+				_, err = fmt.Fprint(out, rendered)
 				if err != nil {
 					return err
 				}

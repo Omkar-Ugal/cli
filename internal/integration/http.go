@@ -6,13 +6,16 @@
 package integration
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -51,6 +54,63 @@ func HTTPGet(t *testing.T, url string) string {
 		return string(body)
 	}
 	require.NoError(t, lastErr, "HTTP GET %s failed after retries", url)
+	return ""
+}
+
+// HTTPPost sends a POST request with the given body and content type, retrying
+// up to 10 times, and returns the response body. TLS verification is skipped so
+// self-signed certificates work.
+//
+// Retries reuse the same Idempotency-Key header value so that a server-side
+// handler can detect and dedupe repeated deliveries of the same logical
+// request (e.g. after a response is lost in transit), rather than
+// double-applying a non-idempotent operation.
+func HTTPPost(t *testing.T, url, contentType, body string) string {
+	t.Helper()
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //#nosec G402 -- test code
+		},
+		Timeout: 10 * time.Second,
+	}
+
+	keyBytes := make([]byte, 16)
+	_, err := rand.Read(keyBytes)
+	require.NoError(t, err, "failed to generate idempotency key")
+	idempotencyKey := hex.EncodeToString(keyBytes)
+
+	var lastErr error
+	for range 10 {
+		req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(body)) //#nosec G107 -- test code, URL from test
+		if err != nil {
+			lastErr = err
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		req.Header.Set("Content-Type", contentType)
+		req.Header.Set("Idempotency-Key", idempotencyKey)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = err
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		respBody, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = err
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		if resp.StatusCode >= 400 {
+			lastErr = fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		return string(respBody)
+	}
+	require.NoError(t, lastErr, "HTTP POST %s failed after retries", url)
 	return ""
 }
 
