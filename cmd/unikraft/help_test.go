@@ -41,6 +41,7 @@ func TestHelp(t *testing.T) {
 	run("images", imagesHelpTests)
 	run("resources", resourceHelpTests)
 	run("build", buildHelpTests)
+	run("run", runHelpTests)
 	run("config", configHelpTests)
 	run("api", apiHelpTests)
 }
@@ -101,6 +102,7 @@ func instancesHelpTests(t *testing.T, unikraftPath string) {
 		[]string{"unikraft", "instance", "wait", "--help"},
 		[]string{"unikraft", "instance", "create", "--help"},
 		[]string{"unikraft", "instance", "new", "--help"},
+		[]string{"unikraft", "instance", "run", "--help"},
 		[]string{"unikraft", "instance", "edit", "--help"},
 		[]string{"unikraft", "instance", "delete", "--help"},
 		[]string{"unikraft", "instance", "template", "--help"},
@@ -197,6 +199,13 @@ func buildHelpTests(t *testing.T, unikraftPath string) {
 	r := integ.NewTestEnv(t, unikraftPath)
 	integ.Gild(t, cli(r),
 		[]string{"unikraft", "build", "--help"},
+	)
+}
+
+func runHelpTests(t *testing.T, unikraftPath string) {
+	r := integ.NewTestEnv(t, unikraftPath)
+	integ.Gild(t, cli(r),
+		[]string{"unikraft", "run", "--help"},
 	)
 }
 

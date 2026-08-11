@@ -16,6 +16,8 @@ Resources:
           Remove a instance.
   create, new
           Create an instance.
+  run
+          Create an instance and optionally follow its logs.
   edit
           Edit an instance.
   logs
@@ -583,6 +585,197 @@ Flags:
           Specify which fields to include in the output.
   -o, --output
           Output format. One of: kv, table, json, yaml, raw, quiet, template.
+
+Global flags:
+  -h, --help
+          Show context-sensitive help.
+      --config=<file> ($UNIKRAFT_CONFIG)
+          Path to the configuration file.
+      --log-level=<level> ($UNIKRAFT_LOG_LEVEL)
+          Set the logging level.
+          [default: info, choices: trace, debug, info, warn, error, fatal]
+      --log-type=<type> ($UNIKRAFT_LOG_TYPE)
+          Set the log type.
+          [default: text, choices: text, json]
+      --profile=<name> ($UNIKRAFT_PROFILE)
+          Set the current profile.
+      --[no-]telemetry ($UNIKRAFT_TELEMETRY)
+          Toggle anonymous usage analytics.
+          [default: true]
+      --timeout=<duration> ($UNIKRAFT_TIMEOUT)
+          Set a deadline for the command (e.g. 30s, 5m, 1h).
+
+Create flags:
+      --metro=<metro>
+          Metro to deploy in.
+          [examples: fra, sfo, nyc]
+  -n, --name=<name>
+          Instance name.
+      --image=<name>:<tag>
+          Image to deploy.
+          [examples: nginx:latest, my-app:v1.2.3]
+      --pull-policy=<policy>
+          Image pull policy.
+          [examples: always, never, if_not_present]
+      --type=<type>
+          Type of virtual machine to run. "full" requires a plan with full VM support.
+          [examples: micro, full]
+      --args=<arg>
+          Arguments to pass to the instance.
+  -e, --env=<key>=<value>
+          Environment variables.
+          [examples: DEBUG=true, PORT=8080]
+  -m, --memory=<size>
+          Memory allocation.
+          [examples: 128MiB, 1GiB]
+      --vcpus=<n>
+          Number of vCPUs.
+          [examples: 1, 2, 4]
+      --gpus=<n>
+          Number of GPUs to attach. Requires type "full" and a plan with GPU support. Currently limited to 1.
+          [examples: 0, 1]
+      --sched-priority=<priority>
+          Scheduling priority for the instance.
+          [examples: normal, medium, high, admin]
+  -v, --volume=<name>:<path>[:<options>]
+          Attach volume.
+          [examples: my-vol:/data, cache:/tmp:ro, data:/mnt:size=10GiB]
+      --rom=image=<ref>,at=<path>
+          Attach ROM.
+          [examples: image=myuser/my-rom:latest,at=/rom0,name=my-rom, dir=./mydata,at=/rom]
+      --service=<name>
+          Service group name or key.
+  -p, --publish=<src>:<dest>[/<handlers>]
+          Publish port.
+          [examples: 443:8080/http+tls, 80:8080/http]
+      --domain=<fqdn>
+          Service domain.
+          [examples: example.com, api.example.com]
+      --scale-to-zero=<key>=<value>
+          Scale-to-zero options.
+            policy: on | idle | off
+            cooldown-time: cooldown in ms before scaling to zero
+            notify-time: notification time in ms before scaling to zero
+            stateful: true | false.
+          [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
+      --tags=<tag>
+          Instance tags.
+          [examples: env-prod, team-platform]
+      --restart=<policy>
+          Restart policy.
+          [examples: always, on-failure, never]
+      --autostart
+          Start instance automatically.
+      --replicas=<n>
+          Number of replicas.
+          [examples: 1, 3]
+      --features=<feature>
+          Instance features.
+      --template=<name>
+          Create from instance template.
+      --branch=<instance>
+          Branch from an existing instance.
+      --checkpoint=<checkpoint>
+          Create from a checkpoint.
+      --rm
+          Automatically delete the instance when it stops.
+
+$ unikraft instance run --help
+
+Create an instance and optionally follow its logs.
+
+Usage:
+  unikraft instances run [flags]
+
+Examples:
+  # Deploy a new instance and expose a HTTPS service
+  unikraft instance run --metro=sfo --image=nginx:latest -p 443:8080/http+tls
+
+  # Deploy a new instance and expose a HTTPS service and redirect from HTTP to
+  # HTTPS
+  unikraft instance run --metro=sfo --image=nginx:latest -p 443:8080/http+tls -p
+  80:443/http+redirect
+
+  # Deploy and tail logs from a new instance
+  unikraft instance run --metro=fra --image=nginx:latest --follow
+
+  # Preview instance creation without executing
+  unikraft instance run --metro=dal --image=nginx:latest --dry-run
+
+  # Deploy a new instance with environment variables
+  unikraft instance run --metro=was --image=my-app:latest -e KEY1=VALUE1 -e
+  KEY2=VALUE2
+
+  # Deploy a new instance with attached volume
+  unikraft instance run --metro=sin --image=my-app:latest -v my-volume:/data
+
+  # Deploy a new instance with attached volume which is read-only
+  unikraft instance run --metro=sin --image=my-app:latest -v my-volume:/data:ro
+
+  # Deploy a new instance with custom resource allocations
+  unikraft instance run --metro=sfo --image=my-app:latest -m 512MiB --vcpus 2
+
+  # Deploy a new instance with scale-to-zero enabled
+  unikraft instance run --metro=fra --image=my-app:latest --scale-to-zero
+  policy=on,cooldown-time=300
+
+  # Deploy a new instance with specific restart policy
+  unikraft instance run --metro=dal --image=my-app:latest --restart=on-failure
+
+Fields:
+  metro
+  name
+  uuid
+  tags
+  state
+  image
+  pull-policy
+  type
+  runtime, runtime.args, runtime.env
+  resources, resources.memory, resources.vcpus, resources.gpus
+  service, service.name, service.uuid, service.services, service.domains,
+  service.domains.*, service.domains.*.fqdn, service.domains.*.certificate,
+  service.domains.*.certificate.name, service.domains.*.certificate.uuid,
+  service.soft-limit, service.hard-limit
+  volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
+  volumes.*.readonly, volumes.*.size
+  roms, roms.*, roms.*.name, roms.*.image, roms.*.dir, roms.*.at
+  networks, networks.*, networks.*.uuid, networks.*.private-ip, networks.*.mac
+  gpus, gpus.*, gpus.*.uuid, gpus.*.model
+  timestamps, timestamps.created, timestamps.started, timestamps.stopped
+  scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
+  zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
+  timing, timing.uptime, timing.boot-time, timing.net-time
+  restart, restart.policy, restart.start-count, restart.restart-count
+  sched-priority
+  autostart
+  replicas
+  wait-timeout
+  features
+  vsock
+  template
+  branch
+  checkpoint
+  stop, stop.reason, stop.origin, stop.errno, stop.exit-code
+  delete-lock
+
+Flags:
+      --set=<name>=<value>, --set-file=<name>=<filename>
+          Key-value pairs to set on the instance.
+      --visual
+          Open an editor to modify fields visually.
+      --cmd
+          Run a command to edit fields (receives YAML on stdin, outputs edited YAML on stdout).
+      --load, --save=<FILE>
+          Load fields from a YAML file.
+      --dry-run
+          Print patches without applying them.
+  -f, --field
+          Specify which fields to include in the output.
+  -o, --output
+          Output format. One of: kv, table, json, yaml, raw, quiet, template.
+      --follow
+          Follow instance logs after creation.
 
 Global flags:
   -h, --help

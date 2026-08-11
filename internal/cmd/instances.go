@@ -50,6 +50,7 @@ type InstancesCmd struct {
 	cmd.BulkDeletableResourceCmd[Instance]
 
 	Create     InstanceCreateCmd      `cmd:"" aliases:"new" help:"Create an instance."`
+	Run        InstanceRunCmd         `cmd:"" help:"Create an instance and optionally follow its logs."`
 	Edit       InstanceEditCmd        `cmd:"" help:"Edit an instance."`
 	Template   InstanceTemplatesCmd   `cmd:"" group:"cmd-templates" help:"Manage instance templates." aliases:"templates" set:"name=instance-template" set:"names=instance-templates"`
 	Checkpoint InstanceCheckpointsCmd `cmd:"" group:"cmd-checkpoints" help:"Manage instance checkpoints." aliases:"checkpoints" set:"name=instance-checkpoint" set:"names=instance-checkpoints"`
