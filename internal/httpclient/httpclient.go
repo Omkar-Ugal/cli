@@ -6,11 +6,9 @@
 package httpclient
 
 import (
-	"crypto/tls"
 	"net/http"
-	"net/url"
 
-	"golang.org/x/net/http/httpproxy"
+	sdkhttpclient "unikraft.com/cloud/sdk/pkg/httpclient"
 
 	"unikraft.com/cli/internal/version"
 )
@@ -23,29 +21,17 @@ func GetClient(insecure bool) *http.Client {
 	return DefaultHTTPClient
 }
 
-// DefaultHTTPClient is the default HTTP client used by the Unikraft CLI.  It
-// sets a custom User-Agent header and uses the environment's proxy settings,
-// which allows for easy debugging.
-var DefaultHTTPClient = &http.Client{
-	Transport: &http.Transport{
-		DisableKeepAlives: true,
-		Proxy: func(req *http.Request) (*url.URL, error) {
-			req.Header.Set("User-Agent", version.UserAgent())
-			return httpproxy.FromEnvironment().ProxyFunc()(req.URL)
-		},
-	},
-}
+// DefaultHTTPClient is the default HTTP client used by the Unikraft CLI. It
+// uses the environment's proxy settings and sets the CLI's User-Agent on
+// requests that don't already set one.
+var DefaultHTTPClient = sdkhttpclient.NewHTTPClient(
+	sdkhttpclient.WithUserAgent(version.UserAgent()),
+)
 
 // InsecureHTTPClient is an HTTP client that skips TLS verification. It is
 // intended for use in development or testing environments where self-signed
 // certificates may be used.
-var InsecureHTTPClient = &http.Client{
-	Transport: &http.Transport{
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-		DisableKeepAlives: true,
-		Proxy: func(req *http.Request) (*url.URL, error) {
-			req.Header.Set("User-Agent", version.UserAgent())
-			return httpproxy.FromEnvironment().ProxyFunc()(req.URL)
-		},
-	},
-}
+var InsecureHTTPClient = sdkhttpclient.NewHTTPClient(
+	sdkhttpclient.WithUserAgent(version.UserAgent()),
+	sdkhttpclient.WithInsecure(),
+)

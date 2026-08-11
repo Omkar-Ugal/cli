@@ -44,13 +44,12 @@ require (
 	github.com/unikraft/go-archivefs v0.0.0-20260513151619-de2950d0a646
 	github.com/unikraft/go-cpio v0.0.0-20260415131742-4f1984ca41f3
 	golang.org/x/mod v0.38.0
-	golang.org/x/net v0.57.0
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 	gotest.tools/v3 v3.5.2
 	mvdan.cc/sh/v3 v3.13.1
 	sigs.k8s.io/yaml v1.6.0
-	unikraft.com/cloud/sdk v0.3.1-0.20260805103859-eb7d6dc4c53c
+	unikraft.com/cloud/sdk v0.3.1-0.20260810163828-9588bd3de22d
 	unikraft.com/x/colors v0.0.0-20260710212606-b68ba398853d
 	unikraft.com/x/filters v0.0.0-20260804153219-d1b47a40e047
 	unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679
@@ -63,6 +62,8 @@ require (
 	unikraft.com/x/log v0.0.0-20260527070319-f904d21cd6ea
 	unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679
 )
+
+require golang.org/x/net v0.57.0 // indirect
 
 require (
 	charm.land/fang/v2 v2.0.1 // indirect
