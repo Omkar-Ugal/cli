@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/cloud/sdk/platform/logs"
@@ -23,82 +24,82 @@ import (
 	resourcecmd "unikraft.com/cli/internal/resource/cmd"
 )
 
-// RunCmd is a convenience wrapper around `instance create` that adds log
-// following capability. All instance creation flags are inherited from
+// InstanceRunCmd is a convenience wrapper around `instance create` that adds
+// log following capability. All instance creation flags are inherited from
 // InstanceCreateCmd via embedding.
-type RunCmd struct {
+type InstanceRunCmd struct {
 	InstanceCreateCmd
 
 	// Follow is the only run-specific flag; it tails logs after creation.
 	Follow bool `help:"Follow instance logs after creation."`
 }
 
-func (RunCmd) Examples() []kingkong.Example {
+func (InstanceRunCmd) Examples() []kingkong.Example {
 	return []kingkong.Example{
 		{
 			Description: "Deploy a new instance and expose a HTTPS service",
 			Commands: []string{
-				"unikraft run --metro=sfo --image=nginx:latest -p 443:8080/http+tls",
+				"unikraft instance run --metro=sfo --image=nginx:latest -p 443:8080/http+tls",
 			},
 		},
 		{
 			Description: "Deploy a new instance and expose a HTTPS service and redirect from HTTP to HTTPS",
 			Commands: []string{
-				"unikraft run --metro=sfo --image=nginx:latest -p 443:8080/http+tls -p 80:443/http+redirect",
+				"unikraft instance run --metro=sfo --image=nginx:latest -p 443:8080/http+tls -p 80:443/http+redirect",
 			},
 		},
 		{
 			Description: "Deploy and tail logs from a new instance",
 			Commands: []string{
-				"unikraft run --metro=fra --image=nginx:latest --follow",
+				"unikraft instance run --metro=fra --image=nginx:latest --follow",
 			},
 		},
 		{
 			Description: "Preview instance creation without executing",
 			Commands: []string{
-				"unikraft run --metro=dal --image=nginx:latest --dry-run",
+				"unikraft instance run --metro=dal --image=nginx:latest --dry-run",
 			},
 		},
 		{
 			Description: "Deploy a new instance with environment variables",
 			Commands: []string{
-				"unikraft run --metro=was --image=my-app:latest -e KEY1=VALUE1 -e KEY2=VALUE2",
+				"unikraft instance run --metro=was --image=my-app:latest -e KEY1=VALUE1 -e KEY2=VALUE2",
 			},
 		},
 		{
 			Description: "Deploy a new instance with attached volume",
 			Commands: []string{
-				"unikraft run --metro=sin --image=my-app:latest -v my-volume:/data",
+				"unikraft instance run --metro=sin --image=my-app:latest -v my-volume:/data",
 			},
 		},
 		{
 			Description: "Deploy a new instance with attached volume which is read-only",
 			Commands: []string{
-				"unikraft run --metro=sin --image=my-app:latest -v my-volume:/data:ro",
+				"unikraft instance run --metro=sin --image=my-app:latest -v my-volume:/data:ro",
 			},
 		},
 		{
 			Description: "Deploy a new instance with custom resource allocations",
 			Commands: []string{
-				"unikraft run --metro=sfo --image=my-app:latest -m 512MiB --vcpus 2",
+				"unikraft instance run --metro=sfo --image=my-app:latest -m 512MiB --vcpus 2",
 			},
 		},
 		{
 			Description: "Deploy a new instance with scale-to-zero enabled",
 			Commands: []string{
-				"unikraft run --metro=fra --image=my-app:latest --scale-to-zero policy=on,cooldown-time=300",
+				"unikraft instance run --metro=fra --image=my-app:latest --scale-to-zero policy=on,cooldown-time=300",
 			},
 		},
 		{
 			Description: "Deploy a new instance with specific restart policy",
 			Commands: []string{
-				"unikraft run --metro=dal --image=my-app:latest --restart=on-failure",
+				"unikraft instance run --metro=dal --image=my-app:latest --restart=on-failure",
 			},
 		},
 	}
 }
 
-func (c *RunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
+func (c *InstanceRunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
 	// Apply shortcut flags first (only user-set flags)
 	if err := resourcecmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
 		return err
@@ -140,6 +141,31 @@ func (c *RunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.
 		return nil
 	}
 	return err
+}
+
+// RunCmd is a top-level alias for `instance run`.
+type RunCmd struct {
+	InstanceRunCmd `embed:""`
+}
+
+func (RunCmd) Examples() []kingkong.Example {
+	instanceExamples := InstanceRunCmd{}.Examples()
+	for i := range instanceExamples {
+		for j := range instanceExamples[i].Commands {
+			instanceExamples[i].Commands[j] = strings.Replace(
+				instanceExamples[i].Commands[j],
+				"unikraft instance run",
+				"unikraft run",
+				1,
+			)
+		}
+	}
+
+	return instanceExamples
+}
+
+func (c *RunCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
+	return c.InstanceRunCmd.Run(ctx, stdio, sandbox, kctx)
 }
 
 func newInstanceLogMux(ctx context.Context, keys multimetro.Keys, tail *int, follow bool) (*muxreader.Mux, context.CancelFunc, error) {
