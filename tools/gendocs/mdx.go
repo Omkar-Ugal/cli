@@ -85,12 +85,12 @@ func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 
 	if node.Parent == nil {
 		if help != "" {
-			buf.WriteString(help + "\n\n")
+			buf.WriteString(escapeMdx(help) + "\n\n")
 		}
 	} else if node.Detail != "" {
-		buf.WriteString(node.Detail + "\n\n")
+		buf.WriteString(escapeMdx(node.Detail) + "\n\n")
 	} else if help != "" {
-		buf.WriteString(help + "\n\n")
+		buf.WriteString(escapeMdx(help) + "\n\n")
 	}
 
 	if IsRunnable(node) {
@@ -125,7 +125,7 @@ func generateMarkdown(ctx context.Context, node *kong.Node, dir string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(buf, "* [`%s`](%s): %s\n", relatedName, link, related.Help)
+		fmt.Fprintf(buf, "* [`%s`](%s): %s\n", relatedName, link, escapeMdx(related.Help))
 	}
 	if hasSeeAlso {
 		buf.WriteString("\n")
@@ -169,7 +169,7 @@ func printDocsExamples(buf *bytes.Buffer, node *kong.Node) {
 	buf.WriteString("## Examples\n\n")
 	for _, example := range examples {
 		if example.Description != "" {
-			buf.WriteString(example.Description + ":\n\n")
+			buf.WriteString(escapeMdx(example.Description) + ":\n\n")
 		}
 		buf.WriteString("```bash\n")
 		buf.WriteString(formatExampleCommands(example))
