@@ -23,12 +23,12 @@ import (
 	jujuerrors "github.com/juju/errors"
 	"golang.org/x/mod/semver"
 	"unikraft.com/x/log"
+	"unikraft.com/x/version"
 
 	"unikraft.com/cli/internal/binorigin"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
 	"unikraft.com/cli/internal/tui/progdl"
-	"unikraft.com/cli/internal/version"
 )
 
 // ErrChecksumNotAvailable indicates the checksum file could not be fetched.

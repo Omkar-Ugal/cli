@@ -20,8 +20,8 @@ import (
 
 	"github.com/posthog/posthog-go"
 
-	"unikraft.com/cli/internal/version"
 	"unikraft.com/x/fingerprint"
+	"unikraft.com/x/version"
 )
 
 var (

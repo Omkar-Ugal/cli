@@ -2,6 +2,8 @@ module unikraft.com/cli
 
 go 1.26.2
 
+tool github.com/caarlos0/svu/v3
+
 require (
 	charm.land/bubbles/v2 v2.1.0
 	charm.land/bubbletea/v2 v2.0.6
@@ -61,9 +63,8 @@ require (
 	unikraft.com/x/kraftfile v0.0.0-20260522114044-e2da24d09716
 	unikraft.com/x/log v0.0.0-20260527070319-f904d21cd6ea
 	unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679
+	unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a
 )
-
-require golang.org/x/net v0.58.0 // indirect
 
 require (
 	charm.land/fang/v2 v2.0.1 // indirect
@@ -185,6 +186,7 @@ require (
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
@@ -194,5 +196,3 @@ require (
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	tailscale.com v1.94.1 // indirect
 )
-
-tool github.com/caarlos0/svu/v3

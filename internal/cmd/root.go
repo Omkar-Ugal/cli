@@ -26,13 +26,13 @@ import (
 	"github.com/sirupsen/logrus"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
+	"unikraft.com/x/version"
 
 	"unikraft.com/cli/internal/cmd/login"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/logfmt"
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
-	"unikraft.com/cli/internal/version"
 	xkong "unikraft.com/cli/internal/x/kong"
 	xmaps "unikraft.com/cli/internal/x/maps"
 )

@@ -9,8 +9,7 @@ import (
 	"net/http"
 
 	sdkhttpclient "unikraft.com/cloud/sdk/pkg/httpclient"
-
-	"unikraft.com/cli/internal/version"
+	"unikraft.com/x/version"
 )
 
 // GetClient returns an HTTP client based on the provided insecure flag.

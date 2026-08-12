@@ -515,3 +515,5 @@ unikraft.com/x/log v0.0.0-20260527070319-f904d21cd6ea h1:nI+37MA1awnJXdM38jM5Tjj
 unikraft.com/x/log v0.0.0-20260527070319-f904d21cd6ea/go.mod h1:Lq81MseYxHhX3SK7XSheX5QAZDOdKw1yhE84NTRZ5+g=
 unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679 h1:ohptI7loX492JCbbn6yk13hAxysZHyGIZWN8hTw3080=
 unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679/go.mod h1:une+KauhLNYkBFnT0R4bzVvD8bJ54xACjXMBPMnc5ig=
+unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a h1:9LSxTd51B9os9PWVa0je2YeQjG9NoBo6Ddg2c7EGpQU=
+unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a/go.mod h1:JFPFNcsa3935zxXNdL7Xm4Tfku/I4shRB1MMiNOU4p4=
