@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"context"
 	_ "embed"
 	"strings"
 	"testing"
@@ -15,11 +16,47 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"unikraft.com/cloud/sdk/platform"
+	"unikraft.com/cloud/sdk/platform/group"
+
+	"unikraft.com/cli/internal/config"
 	integ "unikraft.com/cli/internal/integration"
+	"unikraft.com/cli/internal/multimetro"
 )
 
 //go:embed testdata/counter_server.py
 var counterServerPy []byte
+
+// tunnelProxyUUIDs queries the platform directly (bypassing the CLI's
+// resource sandbox, which never tracks the tunnel command's internal proxy
+// instance since it's created via the raw platform client rather than
+// through a sandboxed resource) for every currently-running tunnel-service
+// instance in the given metro.
+func tunnelProxyUUIDs(t *testing.T, cfg *config.Config, metro string) map[string]struct{} {
+	t.Helper()
+	ctx := config.WithConfig(t.Context(), cfg)
+	g, err := multimetro.NewClient(ctx)
+	require.NoError(t, err)
+
+	uuids := make(map[string]struct{})
+	err = group.DoMetro(ctx, g, metro, func(ctx context.Context, c multimetro.MetroClient) error {
+		resp, err := c.GetInstances(ctx, nil, platform.GetInstancesOpts{Details: new(true)})
+		if err != nil {
+			return err
+		}
+		if resp == nil || resp.Data == nil {
+			return nil
+		}
+		for _, inst := range resp.Data.Instances {
+			if strings.Contains(inst.Image, "utils/tunnel") {
+				uuids[inst.Uuid] = struct{}{}
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err)
+	return uuids
+}
 
 func TestInstances(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
@@ -1087,6 +1124,75 @@ cmd: ["cat", "/marker.txt"]
 		case <-time.After(10 * time.Second):
 			// Command still running
 		}
+	})
+
+	t.Run("tunnel", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		instName2 := uniq()
+
+		// Create two nginx instances without a public service, in the same
+		// metro, so a single tunnel invocation with two targets exercises the
+		// proxy's port-grouping/sequential-assignment logic for real.
+		for _, name := range []string{instName, instName2} {
+			r.Run(t, []string{
+				"unikraft", "instance", "create",
+				"--output", "quiet",
+				"--set", "name=test-" + name,
+				"--set", "metro=" + r.Config.MetroName,
+				"--set", "image=nginx:latest",
+				"--set", "autostart=true",
+				"--set", "resources.memory=128",
+				"--set", "resources.vcpus=1",
+			})
+		}
+		r.Run(t, []string{
+			"unikraft", "instance", "wait", "--until", "state==running", "--timeout", "60s",
+			"test-" + instName, "test-" + instName2,
+		})
+
+		before := tunnelProxyUUIDs(t, r.Config.Config, r.Config.MetroName)
+
+		// Use metro/instance:port/tcp syntax for the tunnel targets.
+		tunnel := r.StartBackground(t,
+			[]string{
+				"unikraft", "instance", "tunnel",
+				"18081:" + r.Config.MetroName + "/test-" + instName + ":8080/tcp",
+				"18082:" + r.Config.MetroName + "/test-" + instName2 + ":8080/tcp",
+			},
+			"127.0.0.1:18081",
+			0,
+		)
+
+		// Verify that we can reach both instances through the tunnel.
+		body := integ.HTTPGet(t, "http://127.0.0.1:18081")
+		assert.Regexp(t, "Thank you for using nginx.", body)
+		body = integ.HTTPGet(t, "http://127.0.0.1:18082")
+		assert.Regexp(t, "Thank you for using nginx.", body)
+
+		// Identify the proxy instance the tunnel command created, so we can
+		// confirm below that tearing down the tunnel actually deletes it
+		// (a regression in Close() would otherwise go unnoticed, since the
+		// CLI's own sandboxed "instance list"/"inspect" never see this
+		// instance either way).
+		during := tunnelProxyUUIDs(t, r.Config.Config, r.Config.MetroName)
+		var proxyUUID string
+		for u := range during {
+			if _, ok := before[u]; ok {
+				continue
+			}
+			require.Empty(t, proxyUUID, "expected exactly one new tunnel proxy instance, found multiple")
+			proxyUUID = u
+		}
+		require.NotEmpty(t, proxyUUID, "expected a new tunnel proxy instance to appear while the tunnel is running")
+
+		tunnel.Stop()
+
+		after := tunnelProxyUUIDs(t, r.Config.Config, r.Config.MetroName)
+		_, stillThere := after[proxyUUID]
+		assert.False(t, stillThere, "tunnel proxy instance %s was not deleted after the tunnel was torn down", proxyUUID)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName, "test-" + instName2})
 	})
 
 	t.Run("branch", func(t *testing.T) {
