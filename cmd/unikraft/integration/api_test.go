@@ -69,14 +69,14 @@ func TestAPI(t *testing.T) {
 			"--metro=" + r.Config.MetroName,
 			"/v1/volumes",
 			"--method", "DELETE",
-			"--data", string(deletePayload),
+			string(deletePayload),
 		}
 
 		out := r.Run(t, []string{
 			"unikraft", "api",
 			"--metro=" + r.Config.MetroName,
 			"/v1/volumes",
-			"--data", "@" + payloadPath,
+			"@" + payloadPath,
 		})
 		t.Cleanup(func() {
 			out, err := r.RunRaw(t, deleteArgs, integ.WithoutCancel())
