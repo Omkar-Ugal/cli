@@ -107,6 +107,16 @@ func DetectSourceType(path string) (kraftfile.SourceType, error) {
 }
 
 func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr error) {
+	plats := opts.Platform
+	if len(plats) == 0 {
+		log.G(ctx).
+			Debug().
+			Str("platform", platforms.Format(DefaultPlatform)).
+			Msg("no platform specified for roms, using default")
+
+		plats = []ocispec.Platform{DefaultPlatform}
+	}
+
 	var romFiles []imagespec.File
 	for _, rom := range opts.Roms {
 		romBuildOpts := BuildOpts{
@@ -116,8 +126,7 @@ func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr er
 				Format: cmp.Or(rom.Format, kraftfile.FsTypeErofs),
 				Pad:    rom.Pad,
 			},
-			// roms are platform independent
-			Platform: []ocispec.Platform{DefaultPlatform},
+			Platform: plats,
 			// propagate BuildKit options from the parent build
 			BuildArg: opts.BuildArg,
 			Target:   opts.Target,

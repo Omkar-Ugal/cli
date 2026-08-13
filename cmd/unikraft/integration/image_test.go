@@ -10,7 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/containerd/continuity/fs/fstest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	integ "unikraft.com/cli/internal/integration"
 )
 
 func TestImages(t *testing.T) {
@@ -91,4 +95,39 @@ func TestImages(t *testing.T) {
 
 		r.Run(t, []string{"unikraft", "image", "delete", imageFull})
 	})
+
+	t.Run("build-architecture", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		imageName := r.Config.Profile.Organization + "/rom-arch-e2e:" + uniq()
+
+		dir := writeRomProject(t)
+
+		r.Run(t, []string{"unikraft", "build", "rom", "--arch", "arm64", "--output", imageName}, integ.WithWorkDir(dir))
+		out := r.Run(t, []string{"unikraft", "image", "inspect", imageName})
+		assert.Regexp(t, `platform:\s+kraftcloud/arm64`, out)
+		assert.NotRegexp(t, `platform:\s+kraftcloud/x86_64`, out)
+
+		r.Run(t, []string{"unikraft", "image", "delete", imageName})
+	})
+}
+
+// writeRomProject creates a ROM-only project, which builds for any
+// architecture without pulling a runtime kernel.
+func writeRomProject(t *testing.T) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	require.NoError(t, fstest.Apply(
+		fstest.CreateDir("rom", 0o755),
+		fstest.CreateDir("rom/myrom", 0o755),
+		fstest.CreateFile("rom/myrom/hello.txt", []byte("Hello from ROM!\n"), 0o644),
+		fstest.CreateFile("rom/Kraftfile", []byte(`
+spec: v0.7
+name: rom-arch-e2e
+roms:
+  - source: ./myrom
+    format: erofs
+`), 0o644),
+	).Apply(dir))
+	return dir
 }
