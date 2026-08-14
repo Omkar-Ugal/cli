@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	goerofs "github.com/unikraft/go-archivefs/erofs"
@@ -333,26 +334,77 @@ EOF
 }
 
 func TestRootfsMultiPlatform(t *testing.T) {
-	cpioPath := writeTestCpioFile(t)
+	ctx := rootfsIntegrationContext(t)
+	// $BUILDPLATFORM avoids emulation; TARGETARCH still varies per platform.
+	dockerfile := `
+FROM --platform=$BUILDPLATFORM busybox AS base
+ARG TARGETARCH
+RUN echo "$TARGETARCH" > /arch.txt
 
-	imgs := runBuildRootfs(t, BuildOpts{
+FROM scratch
+COPY --from=base /arch.txt /arch.txt
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	imgs := runBuildRootfsIntegration(t, ctx, BuildOpts{
 		Rootfs: FSOpts{
-			Path: cpioPath,
-			Type: kraftfile.SourceTypeCpio,
+			Format: kraftfile.FsTypeCpio,
+			Path:   rootfsPath,
+			Type:   kraftfile.SourceTypeDockerfile,
 		},
 		Platform: []ocispec.Platform{
 			{OS: "fc", Architecture: "x86_64"},
-			{OS: "qemu", Architecture: "x86_64"},
+			{OS: "fc", Architecture: "arm64"},
 		},
 	})
 	require.Len(t, imgs, 2)
 
-	// Both platform images should contain the same files.
+	// Each platform must produce distinct content, proving they were
+	// solved and exported independently rather than merged into one export.
+	content := make(map[string]string)
 	for _, img := range imgs {
 		files := readCpioInitrd(t, img)
-		require.Contains(t, files, "./hello.txt")
-		require.Equal(t, "hello\n", files["./hello.txt"])
+		require.Contains(t, files, "./arch.txt")
+		content[platforms.Format(img.Image.Platform)] = files["./arch.txt"]
 	}
+	require.Equal(t, "amd64\n", content["fc/x86_64"])
+	require.Equal(t, "arm64\n", content["fc/arm64"])
+}
+
+func TestRootfsMultiPlatformEmulation(t *testing.T) {
+	t.Skip("QEMU emulation is not reliably available across CI runners")
+
+	ctx := rootfsIntegrationContext(t)
+	// Unlike above, RUN executes under the target platform here, requiring
+	// QEMU emulation rather than just varying TARGETARCH.
+	dockerfile := `
+FROM busybox AS base
+RUN uname -m > /arch.txt
+
+FROM scratch
+COPY --from=base /arch.txt /arch.txt
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	imgs := runBuildRootfsIntegration(t, ctx, BuildOpts{
+		Rootfs: FSOpts{
+			Format: kraftfile.FsTypeCpio,
+			Path:   rootfsPath,
+			Type:   kraftfile.SourceTypeDockerfile,
+		},
+		Platform: []ocispec.Platform{
+			{OS: "fc", Architecture: "x86_64"},
+			{OS: "fc", Architecture: "arm64"},
+		},
+	})
+	require.Len(t, imgs, 2)
+
+	content := make(map[string]string)
+	for _, img := range imgs {
+		files := readCpioInitrd(t, img)
+		require.Contains(t, files, "./arch.txt")
+		content[platforms.Format(img.Image.Platform)] = files["./arch.txt"]
+	}
+	require.Equal(t, "x86_64\n", content["fc/x86_64"])
+	require.Equal(t, "aarch64\n", content["fc/arm64"])
 }
 
 func TestRootfsNoPlatform(t *testing.T) {

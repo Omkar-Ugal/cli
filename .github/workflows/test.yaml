@@ -86,6 +86,13 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
+      # Multi-platform rootfs builds run the target architecture's binaries,
+      # which needs a binfmt handler registered with the kernel.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Set Go variables
         id: goenv
         run: |
@@ -151,6 +158,13 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
+
+      # Multi-platform rootfs builds run the target architecture's binaries,
+      # which needs a binfmt handler registered with the kernel.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Set Go variables
         id: goenv

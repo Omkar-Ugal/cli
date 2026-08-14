@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -323,32 +324,6 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 		return nil, err
 	}
 
-	tarDest, err := os.CreateTemp("", "unikraft-buildkit-*.tar")
-	if err != nil {
-		return nil, fmt.Errorf("could not create temporary file: %w", err)
-	}
-	tarDestPath := tarDest.Name()
-	defer func() {
-		tarDest.Close()
-		os.Remove(tarDestPath)
-	}()
-
-	solveOpt := client.SolveOpt{
-		Ref:     identity.NewID(),
-		Session: session,
-		Exports: []client.ExportEntry{
-			{
-				Type: client.ExporterTar,
-				Output: func(map[string]string) (io.WriteCloser, error) {
-					return tarDest, nil
-				},
-			},
-		},
-		LocalDirs:     localDirs,
-		Frontend:      "dockerfile.v0",
-		FrontendAttrs: attrs,
-	}
-
 	c, cleanup, err := buildkit.ConnectToBuildkit(ctx)
 	if err != nil {
 		return nil, err
@@ -357,69 +332,91 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 		defer cleanup()
 	}
 
+	expPlatforms := getPlatforms(opts.Platform)
+
 	pw, err := progresswriter.NewPrinter(context.WithoutCancel(ctx), os.Stderr, "auto")
 	if err != nil {
 		return nil, err
 	}
+	mw := progresswriter.NewMultiWriter(pw)
 
-	expPlatforms := getPlatforms(opts.Platform)
+	// Create upfront to avoid deadlock hazard.
+	platformWriters := make([]progresswriter.Writer, len(expPlatforms))
+	for i, ep := range expPlatforms {
+		platformWriters[i] = mw.WithPrefix(ep.ID, true)
+	}
 
-	configs := make([]ocispec.Image, 0, len(expPlatforms))
-	_, err = c.Build(ctx, solveOpt, "buildctl", func(ctx context.Context, c gateway.Client) (*gateway.Result, error) {
-		res, err := c.Solve(ctx, gateway.SolveRequest{
-			Frontend:    solveOpt.Frontend,
-			FrontendOpt: solveOpt.FrontendAttrs,
-		})
+	// NOTE: solving all platforms in one export corrupts symlinks (a
+	// buildkit bug), so solve and export each platform separately:
+	// https://github.com/moby/buildkit/issues/6684
+	var imgs []*imagespec.Image
+	for i, p := range opts.Platform {
+		ep := expPlatforms[i]
+
+		platformAttrs := maps.Clone(attrs)
+		platformAttrs["platform"] = ep.ID
+
+		tarDest, err := os.CreateTemp("", "unikraft-buildkit-*.tar")
+		if err != nil {
+			return nil, fmt.Errorf("could not create temporary file: %w", err)
+		}
+		tarDestPath := tarDest.Name()
+		defer func() {
+			tarDest.Close()
+			os.Remove(tarDestPath)
+		}()
+
+		solveOpt := client.SolveOpt{
+			Ref:     identity.NewID(),
+			Session: session,
+			Exports: []client.ExportEntry{
+				{
+					Type: client.ExporterTar,
+					Output: func(map[string]string) (io.WriteCloser, error) {
+						return tarDest, nil
+					},
+				},
+			},
+			LocalDirs:     localDirs,
+			Frontend:      "dockerfile.v0",
+			FrontendAttrs: platformAttrs,
+		}
+
+		platformWriter := platformWriters[i]
+
+		var config ocispec.Image
+		_, err = c.Build(ctx, solveOpt, "buildctl", func(ctx context.Context, c gateway.Client) (*gateway.Result, error) {
+			res, err := c.Solve(ctx, gateway.SolveRequest{
+				Frontend:    solveOpt.Frontend,
+				FrontendOpt: solveOpt.FrontendAttrs,
+			})
+			if err != nil {
+				return nil, err
+			}
+			cfg := exptypes.ParseKey(res.Metadata, "containerimage.config", &ep)
+			if cfg == nil {
+				return nil, fmt.Errorf("could not find config for platform %s in build result metadata", ep.ID)
+			}
+			if err := json.Unmarshal(cfg, &config); err != nil {
+				return nil, err
+			}
+			return res, nil
+		}, platformWriter.Status())
 		if err != nil {
 			return nil, err
 		}
-		for _, p := range expPlatforms {
-			if cfg := exptypes.ParseKey(res.Metadata, "containerimage.config", &p); cfg != nil {
-				var config ocispec.Image
-				if err := json.Unmarshal(cfg, &config); err != nil {
-					return nil, err
-				}
-				configs = append(configs, config)
-			} else {
-				return nil, fmt.Errorf("could not find config for platform %s in build result metadata", p.ID)
-			}
+
+		// Reopen the tarball for reading.
+		tarFile, err := os.Open(tarDestPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not reopen tarball: %w", err)
 		}
-		return res, nil
-	}, pw.Status())
-	if err != nil {
-		return nil, err
-	}
+		defer tarFile.Close()
 
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-pw.Done():
-	}
-	if pw.Err() != nil {
-		return nil, pw.Err()
-	}
-
-	// Reopen the tarball for reading.
-	tarFile, err := os.Open(tarDestPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not reopen tarball: %w", err)
-	}
-	defer tarFile.Close()
-
-	srcFS, err := buildfs.TarballFS(tarFile)
-	if err != nil {
-		return nil, fmt.Errorf("could not open tarball as filesystem: %w", err)
-	}
-
-	var imgs []*imagespec.Image
-
-	for i, p := range opts.Platform {
-		ep := expPlatforms[i]
-		config := configs[i]
-
-		_ = ep
-		// HACK: only valid with multi-platform enabled
-		// srcFS would need to be scoped to the platform subdirectory
+		srcFS, err := buildfs.TarballFS(tarFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not open tarball as filesystem: %w", err)
+		}
 
 		f, err := os.CreateTemp("", "unikraft-rootfs-*."+string(opts.Rootfs.Format))
 		if err != nil {
@@ -453,6 +450,15 @@ func buildRootfsDockerfile(ctx context.Context, opts BuildOpts) (_ []*imagespec.
 			imagespec.WithPlatform(p),
 			imagespec.WithInitrd(imagespec.NewTempOSFile(f)),
 		))
+	}
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-pw.Done():
+	}
+	if pw.Err() != nil {
+		return nil, pw.Err()
 	}
 
 	return imgs, nil
@@ -519,21 +525,6 @@ func packageFS(ctx context.Context, format kraftfile.FsType, destFS *os.File, sr
 }
 
 func applyBuildOpts(attrs map[string]string, localDirs map[string]string, sessions *[]session.Attachable, opts BuildOpts) error {
-	var ps []string
-	for _, p := range getPlatforms(opts.Platform) {
-		ps = append(ps, p.ID)
-	}
-	slices.Sort(ps)
-	ps = slices.Compact(ps)
-	if len(ps) > 1 {
-		// HACK: disabled multi-platform mode due to buildkit symlink bug.
-		// https://github.com/moby/buildkit/issues/6684
-		return fmt.Errorf("multi-platform builds are currently not supported")
-	}
-	if len(ps) > 0 {
-		attrs["platform"] = strings.Join(ps, ",")
-	}
-
 	if opts.Rootfs.Dockerfile != "" {
 		localDirs["context"] = opts.Rootfs.Path
 		localDirs["dockerfile"] = filepath.Join(opts.Rootfs.Path, filepath.Dir(opts.Rootfs.Dockerfile))
