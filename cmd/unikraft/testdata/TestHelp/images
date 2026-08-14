@@ -67,12 +67,17 @@ Examples:
   unikraft image build . --secret id=npm,src=$HOME/.npmrc --ssh
   default=$SSH_AUTH_SOCK
 
+  # Build for arm64 and publish the image
+  unikraft image build . --arch arm64 --output my-org/my-app:latest
+
   # Build and save to a local OCI archive
   unikraft image build . --output ./dist/my-app.oci.tar
 
 Flags:
   -o, --output
           Output destination.
+      --arch
+          Only build the Kraftfile targets of these architectures (x86_64, arm64). Defaults to every target, or x86_64 when none are declared.
       --build-arg
           Set build-time variables.
       --no-cache

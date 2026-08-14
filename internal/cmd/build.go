@@ -23,8 +23,9 @@ import (
 )
 
 type ImageBuildCmd struct {
-	Input  string `arg:"" default:"." help:"Path to the input directory."`
-	Output string `short:"o" help:"Output destination"`
+	Input  string   `arg:"" default:"." help:"Path to the input directory."`
+	Output string   `short:"o" help:"Output destination"`
+	Arch   []string `help:"Only build the Kraftfile targets of these architectures (x86_64, arm64). Defaults to every target, or x86_64 when none are declared."`
 
 	// similar to docker compose build
 	BuildArg []string `sep:"none" help:"Set build-time variables."`
@@ -62,6 +63,12 @@ func (ImageBuildCmd) Examples() []kingkong.Example {
 			},
 		},
 		{
+			Description: "Build for arm64 and publish the image",
+			Commands: []string{
+				"unikraft image build . --arch arm64 --output my-org/my-app:latest",
+			},
+		},
+		{
 			Description: "Build and save to a local OCI archive",
 			Commands: []string{
 				"unikraft image build . --output ./dist/my-app.oci.tar",
@@ -89,6 +96,18 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, sandbox *re
 
 	buildOpts, err := builder.KraftfileToBuildOpts(c.Input, kf)
 	if err != nil {
+		return err
+	}
+
+	arches := make([]string, 0, len(c.Arch))
+	for _, a := range c.Arch {
+		arch, err := imagespec.NormalizeArch(a)
+		if err != nil {
+			return fmt.Errorf("%w: expected %s or %s", err, imagespec.ArchitectureIntel, imagespec.ArchitectureArm)
+		}
+		arches = append(arches, arch)
+	}
+	if err := buildOpts.FilterArch(arches...); err != nil {
 		return err
 	}
 

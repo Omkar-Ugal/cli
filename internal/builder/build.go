@@ -8,6 +8,7 @@ package builder
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -54,7 +55,40 @@ type FSOpts struct {
 }
 
 var DefaultPlatform = ocispec.Platform{
-	Architecture: "x86_64", OS: "kraftcloud",
+	Architecture: imagespec.ArchitectureIntel, OS: imagespec.PlatformKraftcloud,
+}
+
+func (o *BuildOpts) FilterArch(arches ...string) error {
+	if len(arches) == 0 {
+		return nil
+	}
+	if len(o.Platform) == 0 {
+		for _, arch := range arches {
+			if slices.ContainsFunc(o.Platform, func(p ocispec.Platform) bool {
+				return p.Architecture == arch
+			}) {
+				continue
+			}
+			o.Platform = append(o.Platform, ocispec.Platform{
+				Architecture: arch, OS: imagespec.PlatformKraftcloud,
+			})
+		}
+		return nil
+	}
+
+	available := make([]string, 0, len(o.Platform))
+	for _, p := range o.Platform {
+		available = append(available, platforms.Format(p))
+	}
+	o.Platform = slices.DeleteFunc(o.Platform, func(p ocispec.Platform) bool {
+		norm, err := imagespec.NormalizeArch(p.Architecture)
+		return err != nil || !slices.Contains(arches, norm)
+	})
+	if len(o.Platform) == 0 {
+		return fmt.Errorf("no target with architecture %s: targets are %s",
+			strings.Join(arches, ", "), strings.Join(available, ", "))
+	}
+	return nil
 }
 
 // erofsFeatureFlags are the OSFeatures that signal EROFS support in a runtime.
@@ -123,6 +157,9 @@ func Build(ctx context.Context, opts BuildOpts) ([]*imagespec.Image, error) {
 
 	// Without a kernel, use a default platform if none specified.
 	if len(opts.Platform) == 0 {
+		log.G(ctx).Info().
+			Str("platform", platforms.Format(DefaultPlatform)).
+			Msg("no target specified, using default platform")
 		opts.Platform = []ocispec.Platform{DefaultPlatform}
 	}
 
