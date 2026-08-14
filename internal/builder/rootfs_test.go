@@ -484,6 +484,7 @@ func TestRomDefaultFormat(t *testing.T) {
 				// Format intentionally omitted; should default to erofs.
 			},
 		},
+		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
 	})
 	require.NoError(t, err)
 	require.Len(t, romFiles, 1)

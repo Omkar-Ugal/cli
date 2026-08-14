@@ -14,7 +14,7 @@ import (
 
 	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"unikraft.com/x/image-spec"
+	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/kraftfile"
 	"unikraft.com/x/log"
 
@@ -52,10 +52,6 @@ type FSOpts struct {
 	Pad        int64 // pad file to specified size
 	Compress   bool
 	KeepOwners bool
-}
-
-var DefaultPlatform = ocispec.Platform{
-	Architecture: imagespec.ArchitectureIntel, OS: imagespec.PlatformKraftcloud,
 }
 
 func (o *BuildOpts) FilterArch(arches ...string) error {
@@ -155,12 +151,8 @@ func Build(ctx context.Context, opts BuildOpts) ([]*imagespec.Image, error) {
 		}
 	}
 
-	// Without a kernel, use a default platform if none specified.
 	if len(opts.Platform) == 0 {
-		log.G(ctx).Info().
-			Str("platform", platforms.Format(DefaultPlatform)).
-			Msg("no target specified, using default platform")
-		opts.Platform = []ocispec.Platform{DefaultPlatform}
+		return nil, fmt.Errorf("no platform targets specified")
 	}
 
 	// Build ROMs if any are specified.

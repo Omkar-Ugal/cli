@@ -33,7 +33,8 @@ Flags:
   -o, --output
           Output destination.
       --arch
-          Only build the Kraftfile targets of these architectures (x86_64, arm64). Defaults to every target, or x86_64 when none are declared.
+          Only build the Kraftfile targets of these architectures. Defaults to every declared target; required when none are declared.
+          [examples: x86_64, arm64]
       --build-arg
           Set build-time variables.
       --no-cache

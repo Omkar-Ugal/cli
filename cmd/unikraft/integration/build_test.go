@@ -71,7 +71,7 @@ roms:
 			).Apply(dir))
 
 			r.Run(t, []string{"unikraft", "build", "base", "--output", baseImage}, integ.WithWorkDir(dir))
-			r.Run(t, []string{"unikraft", "build", "rom", "--output", romImage}, integ.WithWorkDir(dir))
+			r.Run(t, []string{"unikraft", "build", "rom", "--arch", "x86_64", "--output", romImage}, integ.WithWorkDir(dir))
 			r.Run(t, []string{"unikraft", "run", "--name", "test-" + instName, "--metro", r.Config.MetroName, "--output", "quiet", "--image", baseImage, "--rom", romFlag})
 			r.Run(t, []string{"unikraft", "--timeout", "10s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
 
