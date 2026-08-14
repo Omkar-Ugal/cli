@@ -371,6 +371,8 @@ COPY --from=base /arch.txt /arch.txt
 }
 
 func TestRootfsMultiPlatformEmulation(t *testing.T) {
+	t.Skip("QEMU emulation is not reliably available across CI runners")
+
 	ctx := rootfsIntegrationContext(t)
 	// Unlike above, RUN executes under the target platform here, requiring
 	// QEMU emulation rather than just varying TARGETARCH.
