@@ -168,6 +168,15 @@ func Build(ctx context.Context, opts BuildOpts) ([]*imagespec.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		for _, perPlat := range romFiles {
+			for _, f := range perPlat {
+				if f != nil {
+					_ = f.Cleanup()
+				}
+			}
+		}
+	}()
 
 	// Build rootfs if a path is specified.
 	var roots []*imagespec.Image
@@ -246,21 +255,18 @@ func Build(ctx context.Context, opts BuildOpts) ([]*imagespec.Image, error) {
 		}
 		imgOpts = append(imgOpts, imagespec.WithImageConfig(cfg))
 
-		// Attach roms if available. ROMs are platform-independent so
-		// we attach them to every per-platform image. Each image gets
-		// its own file handle; the last platform receives the original
-		// handle that owns cleanup, earlier ones get a cloned handle.
-		for j, rom := range romFiles {
-			if i < len(opts.Platform)-1 {
-				clone, err := rom.Clone()
-				if err != nil {
-					return nil, fmt.Errorf("cloning rom file: %w", err)
-				}
-				imgOpts = append(imgOpts, imagespec.WithRom(clone))
-			} else {
-				imgOpts = append(imgOpts, imagespec.WithRom(rom))
-				romFiles[j] = nil
+		// Attach roms if available. A ROM payload is a compiled artifact, so
+		// each image gets the ROM that was built for its own platform.
+		for j := range romFiles {
+			if i >= len(romFiles[j]) || romFiles[j][i] == nil {
+				log.G(ctx).
+					Fatal().
+					Int("rom", j).
+					Str("platform", pID).
+					Msg("internal error: no rom built for this platform")
 			}
+			imgOpts = append(imgOpts, imagespec.WithRom(romFiles[j][i]))
+			romFiles[j][i] = nil // ownership moves to the image
 		}
 
 		images = append(images, imagespec.NewImage(imgOpts...))

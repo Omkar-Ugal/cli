@@ -487,10 +487,11 @@ func TestRomDefaultFormat(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, romFiles, 1)
-	t.Cleanup(func() { _ = romFiles[0].Cleanup() })
+	require.Len(t, romFiles[0], 1) // one platform: the default
+	t.Cleanup(func() { _ = romFiles[0][0].Cleanup() })
 
 	// Verify the rom was built as EROFS by reading it back.
-	rc, _, err := romFiles[0].Open(ctx)
+	rc, _, err := romFiles[0][0].Open(ctx)
 	require.NoError(t, err)
 	defer rc.Close()
 
@@ -510,6 +511,53 @@ func TestRomDefaultFormat(t *testing.T) {
 	require.Equal(t, "hello\n", files["hello.txt"])
 	require.Contains(t, files, "subdir/nested.txt")
 	require.Equal(t, "nested\n", files["subdir/nested.txt"])
+}
+
+// A ROM payload is a compiled artifact, so a multi-platform build must produce
+// one ROM per platform rather than reusing a single one everywhere. Reusing it
+// silently ships, say, an x86_64 binary inside the arm64 image.
+func TestRomPerPlatform(t *testing.T) {
+	dir := writeTestDirectory(t)
+
+	ctx := t.Context()
+	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.InfoLevel))
+
+	plats := []ocispec.Platform{
+		{Architecture: "amd64", OS: "linux"},
+		{Architecture: "arm64", OS: "linux"},
+	}
+
+	romFiles, err := BuildRoms(ctx, BuildOpts{
+		Roms: []FSOpts{
+			{
+				Path: dir,
+				Type: kraftfile.SourceTypeDirectory,
+			},
+		},
+		Platform: plats,
+	})
+	require.NoError(t, err)
+	require.Len(t, romFiles, 1)
+	require.Len(t, romFiles[0], len(plats), "one rom per platform")
+
+	t.Cleanup(func() {
+		for _, f := range romFiles[0] {
+			_ = f.Cleanup()
+		}
+	})
+
+	// Each platform must own a distinct artifact. Sharing a single handle
+	// across platforms is the bug this guards against: with a Dockerfile
+	// source the payload is compiled per $TARGETARCH, so reusing one would
+	// put the wrong architecture's binary in every image but the first.
+	//
+	// The bytes are legitimately identical here -- a directory source does
+	// not vary by platform -- so the assertion is on the handles, not on
+	// their contents.
+	for i, f := range romFiles[0] {
+		require.NotNil(t, f, "no rom for platform %d", i)
+	}
+	require.NotSame(t, romFiles[0][0], romFiles[0][1])
 }
 
 func TestRootfsUnsupportedType(t *testing.T) {

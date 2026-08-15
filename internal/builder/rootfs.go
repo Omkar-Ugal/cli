@@ -106,7 +106,7 @@ func DetectSourceType(path string) (kraftfile.SourceType, error) {
 	}
 }
 
-func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr error) {
+func BuildRoms(ctx context.Context, opts BuildOpts) (_ [][]imagespec.File, rerr error) {
 	plats := opts.Platform
 	if len(plats) == 0 {
 		log.G(ctx).
@@ -117,7 +117,22 @@ func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr er
 		plats = []ocispec.Platform{DefaultPlatform}
 	}
 
-	var romFiles []imagespec.File
+	var romFiles [][]imagespec.File
+
+	// Release anything already built if a later ROM fails.
+	defer func() {
+		if rerr == nil {
+			return
+		}
+		for _, perPlat := range romFiles {
+			for _, f := range perPlat {
+				if f != nil {
+					_ = f.Cleanup()
+				}
+			}
+		}
+	}()
+
 	for _, rom := range opts.Roms {
 		romBuildOpts := BuildOpts{
 			Rootfs: FSOpts{
@@ -139,17 +154,23 @@ func BuildRoms(ctx context.Context, opts BuildOpts) (_ []imagespec.File, rerr er
 		if err != nil {
 			return nil, fmt.Errorf("building rom from %q: %w", rom.Path, err)
 		}
-		if len(imgs) == 0 || imgs[0].Initrd == nil {
-			return nil, fmt.Errorf("rom build from %q produced no output", rom.Path)
+		if len(imgs) != len(plats) {
+			return nil, fmt.Errorf("rom build from %q produced %d images for %d platforms",
+				rom.Path, len(imgs), len(plats))
 		}
 
-		romFile := imgs[0].Initrd
-		imgs[0].Initrd = nil // detach so Close doesn't close it
-		for _, img := range imgs {
+		perPlat := make([]imagespec.File, len(imgs))
+		for i, img := range imgs {
+			if img.Initrd == nil {
+				return nil, fmt.Errorf("rom build from %q produced no output for platform %s",
+					rom.Path, platforms.Format(plats[i]))
+			}
+			perPlat[i] = img.Initrd
+			img.Initrd = nil // detach so Close doesn't close it
 			img.Close()
 		}
 
-		romFiles = append(romFiles, romFile)
+		romFiles = append(romFiles, perPlat)
 	}
 	return romFiles, nil
 }
