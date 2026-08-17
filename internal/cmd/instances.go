@@ -1009,6 +1009,7 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
 	var req platform.CreateInstanceRequest
 	var metro string
+	var imageURL string
 	var pullPolicy *platform.PullPolicy
 	for key, field := range resource.IterFields(fields) {
 		if field.Create == nil || field.Create.Set == nil {
@@ -1023,7 +1024,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "metro":
 			metro = string(field.Create.Set.(LinkName[Metro]))
 		case "image":
-			req.Image = &platform.ImageSpec{Url: field.Create.Set.(types.ImageRef[reference.Named]).Reference.String()}
+			imageURL = field.Create.Set.(types.ImageRef[reference.Named]).Reference.String()
 		case "pull-policy":
 			pullPolicy = field.Create.Set.(*platform.PullPolicy)
 		case "type":
@@ -1110,7 +1111,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 					}
 					reqRom.Files = files
 				} else {
-					reqRom.Image = &rom.Image
+					reqRom.Image = platform.ImageReference(rom.Image)
 				}
 				if rom.Name != "" {
 					reqRom.Name = rom.Name
@@ -1237,6 +1238,14 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		}
 	}
 
+	if imageURL != "" {
+		if pullPolicy != nil {
+			req.Image = platform.ImageSpec{Url: imageURL, PullPolicy: pullPolicy}
+		} else {
+			req.Image = platform.ImageReference(imageURL)
+		}
+	}
+
 	// Validate that exactly one of image, template, branch, or checkpoint is provided
 	sources := 0
 	if req.Image != nil {
@@ -1256,25 +1265,6 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 	}
 	if sources > 1 {
 		return nil, fmt.Errorf("only one of --image, --template, --branch, or --checkpoint may be specified")
-	}
-
-	if req.Image != nil {
-		if pullPolicy != nil {
-			// Apply pull policy to the image spec if provided.
-			req.Image.PullPolicy = pullPolicy
-		} else {
-			// HACK: old metros don't support the object type
-			// we should have this properly encoded in the sdk
-			img, err := json.Marshal(req.Image.Url)
-			if err != nil {
-				return nil, fmt.Errorf("could not marshal url: %w", err)
-			}
-			if req.AdditionalProperties == nil {
-				req.AdditionalProperties = make(map[string]jsontext.Value)
-			}
-			req.AdditionalProperties["image"] = jsontext.Value(img)
-			req.Image = nil
-		}
 	}
 
 	g, err := multimetro.NewClient(ctx)
