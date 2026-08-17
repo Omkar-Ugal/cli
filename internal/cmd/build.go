@@ -25,7 +25,7 @@ import (
 type ImageBuildCmd struct {
 	Input  string   `arg:"" default:"." help:"Path to the input directory."`
 	Output string   `short:"o" help:"Output destination"`
-	Arch   []string `help:"Only build the Kraftfile targets of these architectures (x86_64, arm64). Defaults to every target, or x86_64 when none are declared."`
+	Arch   []string `help:"Only build the Kraftfile targets of these architectures. Defaults to every declared target; required when none are declared." example:"x86_64,arm64"`
 
 	// similar to docker compose build
 	BuildArg []string `sep:"none" help:"Set build-time variables."`

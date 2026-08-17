@@ -18,11 +18,13 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/containerd/platforms"
 	"github.com/docker/go-units"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
+	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/kraftfile"
 	"unikraft.com/x/log"
@@ -748,6 +750,8 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 	if err != nil {
 		return fmt.Errorf("detecting source type for %q: %w", c.Source, err)
 	}
+	plat := platforms.DefaultSpec()
+	plat.OS = imagespec.PlatformKraftcloud
 	importOpts := &builder.BuildOpts{
 		Rootfs: builder.FSOpts{
 			Path: c.Source,
@@ -755,8 +759,7 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *
 			// Set format to CPIO as volimport expects a CPIO archive
 			Format: kraftfile.FsTypeCpio,
 		},
-		// Set platform as volimport makes sense only on UnikraftCloud
-		Platform: []ocispec.Platform{builder.DefaultPlatform},
+		Platform: []ocispec.Platform{plat},
 	}
 
 	// Build an import archive from the data source.
