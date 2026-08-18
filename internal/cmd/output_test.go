@@ -217,7 +217,7 @@ func volumesOutputTests(t *testing.T) {
 		Tags:  []string{"env-prod"},
 		State: types.VolumeState(platform.VolumeStateAvailable),
 		Size:  50,
-		Free:  10,
+		Free:  new(types.SizeMebibytes(10)),
 		Usage: types.MeterUsage[types.SizeMebibytes]{
 			Used:  40,
 			Total: 50,
