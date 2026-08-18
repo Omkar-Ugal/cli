@@ -251,7 +251,7 @@ type Volume struct {
 
 	State       types.VolumeState                     `mirror:"volume.state" field:",short"`
 	Usage       types.MeterUsage[types.SizeMebibytes] `field:"usage,short"`
-	Free        types.SizeMebibytes                   `mirror:"volume.free_mb" field:"free,short,keepzero"`
+	Free        *types.SizeMebibytes                  `mirror:"volume.free_mb" field:"free,short"`
 	Size        types.SizeMebibytes                   `mirror:"volume.size_mb" field:",short" create:"set" edit:"set"`
 	Filesystem  string                                `mirror:"volume.filesystem" field:",long" create:"set"`
 	QuotaPolicy string                                `mirror:"volume.quota_policy" field:"quota-policy,long" create:"set" edit:"set"`
@@ -390,9 +390,9 @@ func (Volume) load(ref *group.Ref, volume platform.Volume, metro *config.Metro) 
 		return Volume{}, fmt.Errorf("could not mirror volume data: %w", err)
 	}
 
-	if result.Size > 0 {
+	if result.Size > 0 && result.Free != nil {
 		result.Usage = types.MeterUsage[types.SizeMebibytes]{
-			Used:  result.Size - result.Free,
+			Used:  result.Size - *result.Free,
 			Total: result.Size,
 		}
 	}
