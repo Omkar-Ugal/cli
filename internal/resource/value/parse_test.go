@@ -17,6 +17,9 @@ type testStruct struct {
 	Value int    `name:"value" json:"value"`
 }
 
+// testStructWithSep's Labels and Meta carry a "sep" tag to confirm it has no
+// effect on slice/map struct fields (CSV splitting only applies to a
+// struct's own top-level fields); Env has no such tag and behaves the same.
 type testStructWithSep struct {
 	Labels []string          `name:"labels" sep:"|"`
 	Meta   map[string]string `name:"meta" sep:"|"`
@@ -74,10 +77,10 @@ func TestParseJSON(t *testing.T) {
 		assert.Equal(t, []string{"foo,bar", "baz"}, got)
 	})
 
-	t.Run("slice combined with csv", func(t *testing.T) {
+	t.Run("json array combined with a literal element", func(t *testing.T) {
 		got, err := Parse[[]string]([]string{`["foo", "bar"]`, "baz,qux"})
 		require.NoError(t, err)
-		assert.Equal(t, []string{"foo", "bar", "baz", "qux"}, got)
+		assert.Equal(t, []string{"foo", "bar", "baz,qux"}, got)
 	})
 
 	t.Run("int slice", func(t *testing.T) {
@@ -184,28 +187,28 @@ func TestParseCSV(t *testing.T) {
 		assert.Equal(t, []string{"foo"}, got)
 	})
 
-	t.Run("slice comma-separated", func(t *testing.T) {
+	t.Run("slice comma is not a separator", func(t *testing.T) {
 		got, err := Parse[[]string]([]string{"foo,bar"})
 		require.NoError(t, err)
-		assert.Equal(t, []string{"foo", "bar"}, got)
+		assert.Equal(t, []string{"foo,bar"}, got)
 	})
 
-	t.Run("slice multiple inputs", func(t *testing.T) {
+	t.Run("slice multiple inputs, one element each", func(t *testing.T) {
 		got, err := Parse[[]string]([]string{"foo,bar", "baz,qux"})
 		require.NoError(t, err)
-		assert.Equal(t, []string{"foo", "bar", "baz", "qux"}, got)
+		assert.Equal(t, []string{"foo,bar", "baz,qux"}, got)
 	})
 
-	t.Run("slice spaces trimmed", func(t *testing.T) {
+	t.Run("slice spaces preserved verbatim", func(t *testing.T) {
 		got, err := Parse[[]string]([]string{"foo, bar, baz"})
 		require.NoError(t, err)
-		assert.Equal(t, []string{"foo", "bar", "baz"}, got)
+		assert.Equal(t, []string{"foo, bar, baz"}, got)
 	})
 
-	t.Run("slice empty items skipped", func(t *testing.T) {
-		got, err := Parse[[]string]([]string{",foo,,bar,"})
+	t.Run("slice empty input is a single empty element, not skipped", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{""})
 		require.NoError(t, err)
-		assert.Equal(t, []string{"foo", "bar"}, got)
+		assert.Equal(t, []string{""}, got)
 	})
 
 	t.Run("map single pair", func(t *testing.T) {
@@ -243,19 +246,19 @@ func TestParseCSV(t *testing.T) {
 		require.ErrorContains(t, err, "unknown fields: [unknown]")
 	})
 
-	t.Run("struct slice field with custom separator", func(t *testing.T) {
+	t.Run("struct slice field ignores its sep tag, takes one verbatim element", func(t *testing.T) {
 		got, err := Parse[testStructWithSep]([]string{"labels=foo|bar|baz"})
 		require.NoError(t, err)
-		assert.Equal(t, testStructWithSep{Labels: []string{"foo", "bar", "baz"}}, got)
+		assert.Equal(t, testStructWithSep{Labels: []string{"foo|bar|baz"}}, got)
 	})
 
-	t.Run("struct map field with custom separator", func(t *testing.T) {
+	t.Run("struct map field ignores its sep tag, takes one verbatim pair", func(t *testing.T) {
 		got, err := Parse[testStructWithSep]([]string{"meta=a=1|b=2"})
 		require.NoError(t, err)
-		assert.Equal(t, testStructWithSep{Meta: map[string]string{"a": "1", "b": "2"}}, got)
+		assert.Equal(t, testStructWithSep{Meta: map[string]string{"a": "1|b=2"}}, got)
 	})
 
-	t.Run("struct map field without separator takes a single entry", func(t *testing.T) {
+	t.Run("struct map field without a sep tag behaves the same way", func(t *testing.T) {
 		got, err := Parse[testStructWithSep]([]string{"env=a=1|b=2"})
 		require.NoError(t, err)
 		assert.Equal(t, testStructWithSep{Env: map[string]string{"a": "1|b=2"}}, got)
@@ -273,16 +276,16 @@ func TestParseCSV(t *testing.T) {
 		assert.Equal(t, []string{`C:\Users\test`}, got)
 	})
 
-	t.Run("slice with equals signs", func(t *testing.T) {
+	t.Run("slice with equals signs stays one element", func(t *testing.T) {
 		got, err := Parse[[]string]([]string{"a=b,c=d"})
 		require.NoError(t, err)
-		assert.Equal(t, []string{"a=b", "c=d"}, got)
+		assert.Equal(t, []string{"a=b,c=d"}, got)
 	})
 
-	t.Run("slice with only whitespace items", func(t *testing.T) {
+	t.Run("slice whitespace-only input preserved verbatim", func(t *testing.T) {
 		got, err := Parse[[]string]([]string{" , , "})
 		require.NoError(t, err)
-		assert.Empty(t, got)
+		assert.Equal(t, []string{" , , "}, got)
 	})
 
 	t.Run("map value with equals signs", func(t *testing.T) {
@@ -319,6 +322,32 @@ func TestParseCSV(t *testing.T) {
 		got, err := Parse[testStruct]([]string{"name=hello world,value=42"})
 		require.NoError(t, err)
 		assert.Equal(t, testStruct{Name: "hello world", Value: 42}, got)
+	})
+}
+
+func TestParseSliceLiteralValues(t *testing.T) {
+	t.Run("value with comma", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{"a,b,c"})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"a,b,c"}, got)
+	})
+
+	t.Run("value with comma and equals", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{"key1=value1,key2=value2"})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"key1=value1,key2=value2"}, got)
+	})
+
+	t.Run("multiple repeated inputs, each verbatim", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{"a,b", "c,d"})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"a,b", "c,d"}, got)
+	})
+
+	t.Run("whitespace preserved, no trimming", func(t *testing.T) {
+		got, err := Parse[[]string]([]string{"  a,b  "})
+		require.NoError(t, err)
+		assert.Equal(t, []string{"  a,b  "}, got)
 	})
 }
 

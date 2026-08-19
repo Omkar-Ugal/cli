@@ -116,15 +116,6 @@ func parseReflectWithSeparator(input []string, value reflect.Value, sep string) 
 
 		elemType := output.Type().Elem()
 
-		// Check if the element type implements TextUnmarshaler. If so, each
-		// input string is a complete element (don't comma-split), since the
-		// element's own encoding may use commas internally.
-		checkType := elemType
-		if checkType.Kind() == reflect.Pointer {
-			checkType = checkType.Elem()
-		}
-		_, elemIsTextUnmarshaler := reflect.New(checkType).Interface().(encoding.TextUnmarshaler)
-
 		for _, input := range input {
 			// Try JSON array syntax first.
 			trimmed := strings.TrimSpace(input)
@@ -136,31 +127,13 @@ func parseReflectWithSeparator(input []string, value reflect.Value, sep string) 
 				}
 			}
 
-			if elemIsTextUnmarshaler {
-				// Element handles its own parsing; pass the whole input
-				// as a single element since the element's encoding may
-				// use commas internally. Use repeated flags for multiple
-				// elements.
-				val := reflect.New(elemType).Elem()
-				if err := parseReflect([]string{input}, val); err != nil {
-					return err
-				}
-				slice = reflect.Append(slice, val)
-				continue
+			// Each input string is exactly one element, passed on verbatim.
+			// Use repeated flags for multiple elements.
+			val := reflect.New(elemType).Elem()
+			if err := parseReflect([]string{input}, val); err != nil {
+				return err
 			}
-
-			for _, item := range splitValues(input, sep, ",") {
-				item = strings.TrimSpace(item)
-				if item == "" {
-					continue
-				}
-				val := reflect.New(elemType).Elem()
-				err := parseReflect([]string{item}, val)
-				if err != nil {
-					return err
-				}
-				slice = reflect.Append(slice, val)
-			}
+			slice = reflect.Append(slice, val)
 		}
 
 		output.Set(slice)
@@ -181,27 +154,25 @@ func parseReflectWithSeparator(input []string, value reflect.Value, sep string) 
 				}
 			}
 
-			// Unlike slices and structs, entries default to not being split:
-			// each input holds a single key=value pair whose value is passed
-			// on verbatim, and multiple entries come from repeated inputs.
-			// Only the key is trimmed, and empty keys are skipped so a bare
-			// "field=" adds no entry.
-			for _, item := range splitValues(input, sep, sepNone) {
-				k, v, _ := strings.Cut(item, "=")
-				k = strings.TrimSpace(k)
-				if k == "" {
-					continue
-				}
-				key := reflect.New(output.Type().Key()).Elem()
-				if err := parseReflect([]string{k}, key); err != nil {
-					return err
-				}
-				val := reflect.New(output.Type().Elem()).Elem()
-				if err := parseReflect([]string{v}, val); err != nil {
-					return err
-				}
-				mapp.SetMapIndex(key, val)
+			// Each input string is a single key=value entry. The value is
+			// passed on verbatim, so it may contain commas, "=", or any
+			// other character; multiple entries come from repeated inputs,
+			// not from splitting one input. Only the key is trimmed, and an
+			// empty key is skipped so a bare "field=" adds no entry.
+			k, v, _ := strings.Cut(input, "=")
+			k = strings.TrimSpace(k)
+			if k == "" {
+				continue
 			}
+			key := reflect.New(output.Type().Key()).Elem()
+			if err := parseReflect([]string{k}, key); err != nil {
+				return err
+			}
+			val := reflect.New(output.Type().Elem()).Elem()
+			if err := parseReflect([]string{v}, val); err != nil {
+				return err
+			}
+			mapp.SetMapIndex(key, val)
 		}
 
 		output.Set(mapp)

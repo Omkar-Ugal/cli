@@ -69,7 +69,7 @@ type VolumeCreateCmd struct {
 	Metro       string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
 	Name        string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
 	Size        types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
-	Tags        []string            `group:"flag-create" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
+	Tag         []string            `group:"flag-create" shortcut:"tags" sep:"none" help:"Volume tag." placeholder:"tag" example:"env-prod"`
 	Filesystem  string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
 	QuotaPolicy string              `group:"flag-create" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 	AccessMode  types.AccessMode    `group:"flag-create" shortcut:"access-mode" help:"Volume access mode." placeholder:"access-mode" example:"rwo,rox,rwx"`
@@ -91,7 +91,7 @@ type VolumeEditCmd struct {
 	cmd.ResourceEditCmd[Volume]
 
 	Size        types.SizeMebibytes `group:"flag-edit" shortcut:"size" help:"Volume size." placeholder:"size" example:"20GiB,100MiB"`
-	Tags        []string            `group:"flag-edit" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
+	Tag         []string            `group:"flag-edit" shortcut:"tags" sep:"none" help:"Volume tag." placeholder:"tag" example:"env-prod"`
 	QuotaPolicy string              `group:"flag-edit" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 	DeleteLock  *bool               `group:"flag-edit" shortcut:"delete-lock" help:"Prevent volume deletion until the lock is removed."`
 }
@@ -107,7 +107,7 @@ type VolumesCloneCmd struct {
 	Source string `arg:"" completion-predictor:"resource-key-volume" help:"Name or UUID of the volume to clone."`
 
 	Name string   `group:"flag-clone" shortcut:"name" short:"n" help:"New volume name." placeholder:"name"`
-	Tags []string `group:"flag-clone" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env=prod,team=platform"`
+	Tag  []string `group:"flag-clone" shortcut:"tags" sep:"none" help:"Volume tag." placeholder:"tag" example:"env-prod"`
 
 	cmd.SetArgs
 

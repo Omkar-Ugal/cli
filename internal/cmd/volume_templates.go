@@ -61,7 +61,7 @@ func (c *VolumeTemplateCreateCmd) Run(ctx context.Context, stdio config.Stdio, s
 type VolumeTemplateEditCmd struct {
 	cmd.ResourceEditCmd[VolumeTemplate]
 
-	Tags       []string `group:"flag-edit" shortcut:"tags" help:"Template tags." placeholder:"tag" example:"env-dev,team-platform"`
+	Tag        []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Template tag." placeholder:"tag" example:"env-dev"`
 	DeleteLock *bool    `group:"flag-edit" shortcut:"delete-lock" help:"Prevent deletion of the template."`
 }
 
