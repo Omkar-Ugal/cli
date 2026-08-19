@@ -6,6 +6,7 @@
 package cmd_test
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -134,6 +135,25 @@ func TestJSONRoundTrip(t *testing.T) {
 				return d
 			}(),
 			wantText: &cmd.Domain{FQDN: "example.com"},
+		},
+		{
+			// Whitespace around a key belongs to neither the metro nor the name;
+			// multimetro.ParseKey would otherwise keep it.
+			name:   "TextLinkPadded",
+			object: `{"name":"my-cert"}`,
+			text:   `"  my-cert  "`,
+			into:   func() any { return &cmd.TextLink[cmd.Certificate]{} },
+			wantObject: func() any {
+				l := &cmd.TextLink[cmd.Certificate]{}
+				l.Name = "my-cert"
+				return l
+			}(),
+			wantText: func() any {
+				l := &cmd.TextLink[cmd.Certificate]{}
+				l.Name = "my-cert"
+				return l
+			}(),
+			marshalsToObject: true,
 		},
 		{
 			// A certificate link keeps both name and uuid through JSON, and
@@ -393,4 +413,78 @@ func TestLinkCollection(t *testing.T) {
 			assert.Equal(t, []string{tt.want}, got, "link not collected for %s", tt.path)
 		})
 	}
+}
+
+// TestVisualNestedShortcuts guards the visual/--load path for shortcut flags
+// that target a nested field, such as --publish (service.services) and
+// --domain (service.domains). Their patches have to reach the editor at their
+// own path: presented one level up they no longer match any field, and the
+// reload fails outright or drops them.
+func TestVisualNestedShortcuts(t *testing.T) {
+	t.Parallel()
+
+	fields, err := cmd.Instance{}.Fields(t.Context())
+	require.NoError(t, err)
+
+	pending, err := patch.PatchedFields(fields, patch.PatchSpec{
+		Create: true,
+		Set: map[string][]string{
+			"metro":            {"fra"},
+			"name":             {"my-instance"},
+			"image":            {"nginx:latest"},
+			"service":          {"my-group"},
+			"service.domains":  {"a.com"},
+			"service.services": {"443:8080/tls"},
+		},
+	})
+	require.NoError(t, err)
+
+	var shown []byte
+	out, err := patch.Create(t.Context(), cmd.Instance{}, fields, pending,
+		func(_ context.Context, data []byte) ([]byte, error) {
+			shown = data
+			return data, nil
+		})
+	require.NoError(t, err)
+
+	assert.Equal(t, `# instance
+image: nginx
+metro: fra
+name: my-instance
+service:
+  domains:
+  - fqdn: a.com
+  name: my-group
+  services:
+  - destination: 8080
+    handlers:
+    - tls
+    source: 443
+`, string(shown))
+
+	got := map[string]string{}
+	for path, f := range resource.IterFields(out) {
+		if f.Create == nil || f.Create.Set == nil {
+			continue
+		}
+		rendered, err := value.Render(f.Create.Set, value.RenderOpts{})
+		require.NoError(t, err)
+		got[path.String()] = rendered
+	}
+	assert.Equal(t, map[string]string{
+		"metro":            "fra",
+		"name":             "my-instance",
+		"image":            "nginx",
+		"service":          "my-group",
+		"service.domains":  "[fqdn=a.com]",
+		"service.services": "[443:8080/tls]",
+	}, got)
+
+	// Consuming the ancestor last must still leave unmatched keys behind for
+	// the unknown-field check.
+	_, err = patch.Create(t.Context(), cmd.Instance{}, fields, pending,
+		func(_ context.Context, data []byte) ([]byte, error) {
+			return append(data, []byte("bogus: 1\n")...), nil
+		})
+	require.ErrorContains(t, err, "unknown fields: [bogus]")
 }

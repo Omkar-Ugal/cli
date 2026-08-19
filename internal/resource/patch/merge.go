@@ -6,13 +6,15 @@
 package patch
 
 import (
+	"slices"
+
 	"unikraft.com/cli/internal/resource"
 )
 
 // MergePatches merges patch values from src into dest fields.
 // For each field in dest, if src contains a patch at the same path,
 // the src patch value overrides the dest patch value.
-// Fields in src that don't exist in dest are appended.
+// Fields in src that don't exist in dest are inserted at their own path.
 func MergePatches(dest, src []resource.Field) []resource.Field {
 	dest = resource.CloneFields(dest)
 
@@ -50,25 +52,44 @@ func MergePatches(dest, src []resource.Field) []resource.Field {
 		}
 	}
 
-	// Append src fields that weren't in dest
+	// Insert src fields that weren't in dest
 	for key, field := range resource.IterFields(src) {
 		keyStr := key.String()
 		if appliedPatches[keyStr] {
 			continue
 		}
-		// Only append if there's a Set value
+		// Only insert if there's a Set value
 		hasSet := (field.Edit != nil && field.Edit.Set != nil) ||
 			(field.Create != nil && field.Create.Set != nil)
 		if !hasSet {
 			continue
 		}
-		dest = append(dest, resource.Field{
-			Name:   field.Name,
-			Edit:   field.Edit,
-			Create: field.Create,
-		})
+		dest = insertPatchAtPath(dest, key, field)
 	}
 
+	return dest
+}
+
+// insertPatchAtPath attaches src's patches to dest at path, walking into (and
+// where absent, creating) the fields the path passes through. Inserting on
+// name alone would move a nested field such as "service.domains" to the top
+// level, where nothing downstream can match it back to its real path.
+func insertPatchAtPath(dest []resource.Field, path resource.FieldPath, src *resource.Field) []resource.Field {
+	if len(path) == 0 {
+		return dest
+	}
+	fields, field := &dest, &resource.Field{}
+	for _, name := range path {
+		i := slices.IndexFunc(*fields, func(f resource.Field) bool { return f.Name == name })
+		if i < 0 {
+			*fields = append(*fields, resource.Field{Name: name})
+			i = len(*fields) - 1
+		}
+		field = &(*fields)[i]
+		fields = &field.Subfields
+	}
+	field.Edit = src.Edit
+	field.Create = src.Create
 	return dest
 }
 

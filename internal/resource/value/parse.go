@@ -148,11 +148,10 @@ func parseReflect(input []string, value reflect.Value) error {
 				}
 			}
 
-			// Each input string is a single key=value entry. The value is
-			// passed on verbatim, so it may contain commas, "=", or any
-			// other character; multiple entries come from repeated inputs,
-			// not from splitting one input. Only the key is trimmed, and an
-			// empty key is skipped so a bare "field=" adds no entry.
+			// One key=value entry per input; multiple entries come from
+			// repeated inputs, never from splitting one. The value reaches
+			// the element type unsplit, so a string element keeps commas and
+			// further "=" verbatim. An entry with no key is skipped.
 			k, v, _ := strings.Cut(input, "=")
 			k = strings.TrimSpace(k)
 			if k == "" {

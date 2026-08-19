@@ -179,7 +179,9 @@ func saveFields(res resource.Resource, fields []resource.Field, patches []resour
 		if patch.Del != nil {
 			return nil, fmt.Errorf("%s was deleted, but visual editing does not support this", key)
 		}
-		setNestedValue(result, key, normalizeValue(patch.Set))
+		if err := setNestedValue(result, key, normalizeValue(patch.Set)); err != nil {
+			return nil, fmt.Errorf("failed to serialize field %s: %w", key, err)
+		}
 	}
 
 	yamlBytes, err := yaml.Marshal(result)
@@ -314,22 +316,48 @@ func getNestedValue(m map[string]any, path resource.FieldPath) (any, bool) {
 }
 
 // setNestedValue sets a value in a nested map structure based on a field path.
-func setNestedValue(m map[string]any, path resource.FieldPath, value any) {
+func setNestedValue(m map[string]any, path resource.FieldPath, value any) error {
 	if len(path) == 0 {
-		return
+		return nil
 	}
 	if len(path) == 1 {
 		m[path[0]] = value
-		return
+		return nil
 	}
 	// Create nested map if needed
 	key := path[0]
-	if _, ok := m[key]; !ok {
-		m[key] = make(map[string]any)
+	nested, ok := m[key].(map[string]any)
+	if !ok {
+		// An ancestor field carries its own value (e.g. "service" holding an
+		// InstanceService alongside a "service.domains" field). Expand it so
+		// the descendant has somewhere to land; keys the descendant sets then
+		// win over the ones the ancestor's own value produced.
+		expanded, err := objectFields(m[key])
+		if err != nil {
+			return err
+		}
+		nested = expanded
+		m[key] = nested
 	}
-	if nested, ok := m[key].(map[string]any); ok {
-		setNestedValue(nested, path[1:], value)
+	return setNestedValue(nested, path[1:], value)
+}
+
+// objectFields re-expresses a value as the map its own marshaling produces.
+// A value that marshals to something other than an object contributes no
+// fields, so it yields an empty map; only a failure to marshal is an error.
+func objectFields(v any) (map[string]any, error) {
+	if v == nil {
+		return map[string]any{}, nil
 	}
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]any
+	if err := yaml.Unmarshal(data, &m); err != nil || m == nil {
+		return map[string]any{}, nil
+	}
+	return m, nil
 }
 
 // deleteNestedValue removes a value from a nested map structure and cleans up empty parents.

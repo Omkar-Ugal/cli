@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"strings"
 
 	"unikraft.com/cloud/sdk/platform/group"
 
@@ -59,7 +60,9 @@ func FormatLink[T resource.Resource](l Link[T]) ([]byte, error) {
 // ParseLink parses text as a multimetro key. Not a (*Link).UnmarshalText
 // method, for the same reason as FormatLink.
 func ParseLink[T resource.Resource](text []byte) (Link[T], error) {
-	key := multimetro.ParseKey(string(text))
+	// multimetro.ParseKey takes its input as-is, so surrounding whitespace
+	// would end up inside the name and fail every lookup.
+	key := multimetro.ParseKey(strings.TrimSpace(string(text)))
 	return Link[T]{
 		Metro: key.Metro,
 		Name:  key.Name,
