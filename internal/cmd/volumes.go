@@ -636,9 +636,11 @@ func (VolumeAttachCmd) Examples() []kingkong.Example {
 
 func (c *VolumeAttachCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	vol := &InstanceVolume{At: c.At, Readonly: c.Readonly}
-	if err := vol.Link.UnmarshalText([]byte(c.Volume)); err != nil {
+	link, err := ParseLink[Volume]([]byte(c.Volume))
+	if err != nil {
 		return err
 	}
+	vol.Link = link
 	volStr, err := vol.MarshalText()
 	if err != nil {
 		return err

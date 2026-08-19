@@ -17,12 +17,11 @@ type testStruct struct {
 	Value int    `name:"value" json:"value"`
 }
 
-// testStructWithSep's Labels and Meta carry a "sep" tag to confirm it has no
-// effect on slice/map struct fields (CSV splitting only applies to a
-// struct's own top-level fields); Env has no such tag and behaves the same.
-type testStructWithSep struct {
-	Labels []string          `name:"labels" sep:"|"`
-	Meta   map[string]string `name:"meta" sep:"|"`
+// testStructCollections confirms comma splitting applies only to a struct's
+// own top-level fields - a nested slice/map takes its value verbatim.
+type testStructCollections struct {
+	Labels []string          `name:"labels"`
+	Meta   map[string]string `name:"meta"`
 	Env    map[string]string `name:"env"`
 }
 
@@ -246,22 +245,22 @@ func TestParseCSV(t *testing.T) {
 		require.ErrorContains(t, err, "unknown fields: [unknown]")
 	})
 
-	t.Run("struct slice field ignores its sep tag, takes one verbatim element", func(t *testing.T) {
-		got, err := Parse[testStructWithSep]([]string{"labels=foo|bar|baz"})
+	t.Run("struct slice field takes one verbatim element", func(t *testing.T) {
+		got, err := Parse[testStructCollections]([]string{"labels=foo|bar|baz"})
 		require.NoError(t, err)
-		assert.Equal(t, testStructWithSep{Labels: []string{"foo|bar|baz"}}, got)
+		assert.Equal(t, testStructCollections{Labels: []string{"foo|bar|baz"}}, got)
 	})
 
-	t.Run("struct map field ignores its sep tag, takes one verbatim pair", func(t *testing.T) {
-		got, err := Parse[testStructWithSep]([]string{"meta=a=1|b=2"})
+	t.Run("struct map field takes one verbatim pair", func(t *testing.T) {
+		got, err := Parse[testStructCollections]([]string{"meta=a=1|b=2"})
 		require.NoError(t, err)
-		assert.Equal(t, testStructWithSep{Meta: map[string]string{"a": "1|b=2"}}, got)
+		assert.Equal(t, testStructCollections{Meta: map[string]string{"a": "1|b=2"}}, got)
 	})
 
-	t.Run("struct map field without a sep tag behaves the same way", func(t *testing.T) {
-		got, err := Parse[testStructWithSep]([]string{"env=a=1|b=2"})
+	t.Run("struct map field with another key behaves the same way", func(t *testing.T) {
+		got, err := Parse[testStructCollections]([]string{"env=a=1|b=2"})
 		require.NoError(t, err)
-		assert.Equal(t, testStructWithSep{Env: map[string]string{"a": "1|b=2"}}, got)
+		assert.Equal(t, testStructCollections{Env: map[string]string{"a": "1|b=2"}}, got)
 	})
 
 	t.Run("slice with quotes in values", func(t *testing.T) {

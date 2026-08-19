@@ -111,7 +111,8 @@ func TestInstanceTemplates(t *testing.T) {
 		r.Run(t, []string{
 			"unikraft", "instance", "template", "edit", templateName,
 			"--output", "quiet",
-			"--set", "tags=env-prod,team-core",
+			"--set", "tags=env-prod",
+			"--set", "tags=team-core",
 		})
 		out = r.Run(t, []string{"unikraft", "instance", "template", "inspect", templateName})
 		assert.Regexp(t, `tags:.*env-prod`, out)

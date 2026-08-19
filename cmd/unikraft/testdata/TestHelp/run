@@ -147,7 +147,7 @@ Create flags:
           [examples: normal, medium, high, admin]
   -v, --volume=<name>:<path>[:<options>]
           Attach volume.
-          [example: my-vol:/data]
+          [examples: my-vol:/data, cache:/tmp:ro, data:/mnt:size=10GiB]
       --rom=image=<ref>,at=<path>
           Attach ROM.
           [examples: image=myuser/my-rom:latest,at=/rom0,name=my-rom, dir=./mydata,at=/rom]

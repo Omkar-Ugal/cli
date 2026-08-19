@@ -344,8 +344,8 @@ func TestVolumes(t *testing.T) {
 			"--set", "name=test-" + volName,
 			"--set", "size=10",
 			"--set", "metro=" + r.Config.MetroName,
-			"--tags", "env-prod",
-			"--tags", "team-core",
+			"--tag", "env-prod",
+			"--tag", "team-core",
 		})
 
 		// Verify tags appear in inspect output.

@@ -413,7 +413,25 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
     ],
     "verbosity": "short",
     "create": {
-      "set": "my-service"
+      "set": {
+        "name": "my-service",
+        "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "services": [
+          {
+            "source": 443,
+            "destination": 8080,
+            "handlers": [
+              "tls",
+              "http"
+            ]
+          }
+        ],
+        "domains": [
+          {
+            "fqdn": "example.unikraft.app"
+          }
+        ]
+      }
     }
   },
   {
@@ -495,7 +513,11 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
     "verbosity": "long",
     "create": {
       "set": [
-        "my-volume"
+        {
+          "name": "my-volume",
+          "at": "/data",
+          "readonly": true
+        }
       ]
     },
     "edit": {

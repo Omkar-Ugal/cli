@@ -632,7 +632,7 @@ rootfs:
 		r.Run(t, []string{
 			"unikraft", "instance", "edit", "test-" + instName,
 			"--output", "quiet",
-			"--del", "roms=name=myrom",
+			"--del", "roms=myrom",
 		})
 
 		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
@@ -913,8 +913,8 @@ rootfs:
 			"--set", "autostart=false",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
-			"--tags", "env-prod",
-			"--tags", "team-core",
+			"--tag", "env-prod",
+			"--tag", "team-core",
 		})
 
 		// Verify tags appear in inspect output.
@@ -961,6 +961,57 @@ rootfs:
 		assert.Regexp(t, `tags:.*added-tag`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	// Each shortcut flag carries exactly one element, repeated for more.
+	t.Run("repeated-shortcut-flags", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		volName := uniq()
+		domainName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--name", "test-" + volName,
+			"--metro", r.Config.MetroName,
+			"--size", "10",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"--tag", "env-prod",
+			"--tag", "team-core",
+			"--publish", "443:8080/tls+http",
+			"--publish", "80:8080/http",
+			"--domain", domainName + ".unikraft.example",
+			"--volume", "test-" + volName + ":/data",
+			"--feature", "delete-on-stop",
+		})
+
+		// Ports and features are invisible fields on an instance, so a
+		// successful create is all --publish/--feature can be checked by here;
+		// service_test.go covers ports through the service group.
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Contains(t, out, domainName)
+		assert.Contains(t, out, "test-"+volName)
+
+		// An exact-match filter proves the two tags were not joined into one
+		// literal "env-prod,team-core" value.
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, "test-"+instName)
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==team-core"})
+		assert.Contains(t, out, "test-"+instName)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("delete-lock", func(t *testing.T) {

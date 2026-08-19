@@ -7,6 +7,7 @@ package patch
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"slices"
 
 	"sigs.k8s.io/yaml"
 
@@ -202,9 +204,32 @@ func loadFieldPatches(fields []resource.Field, data []byte, create bool) ([]reso
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
-	// Process all fields that have a patch template.
-	// For each field, convert the YAML value and compare with the original value.
+	// Process all fields that have a patch template, deepest paths first.
+	// A field such as "service" and a descendant such as "service.domains"
+	// can share the same YAML subtree; since each field's value is deleted
+	// from obj once consumed (to detect unknown fields below), an ancestor
+	// processed first would consume - and delete - the whole subtree before
+	// its descendants get a chance to read their own part of it.
+	//
+	// This is safe only because every such ancestor reads a disjoint part of
+	// its subtree (Instance.Create's "service" case takes just the name/uuid
+	// link). An ancestor wanting the whole subtree would find descendant
+	// values already deleted and silently patch partial data, so a new
+	// nested set field must claim values its descendants do not.
+	type fieldEntry struct {
+		key   resource.FieldPath
+		field *resource.Field
+	}
+	var entries []fieldEntry
 	for key, field := range resource.IterFields(fields) {
+		entries = append(entries, fieldEntry{key, field})
+	}
+	slices.SortStableFunc(entries, func(a, b fieldEntry) int {
+		return cmp.Compare(len(b.key), len(a.key))
+	})
+
+	for _, entry := range entries {
+		key, field := entry.key, entry.field
 		var patch *resource.Patch
 		if create {
 			patch = field.Create

@@ -190,9 +190,7 @@ type Domain struct {
 	FQDN string `name:"fqdn" json:"fqdn" mirror:"fqdn" field:",short"`
 	Name string `name:"name" json:"name,omitempty" field:"-"` // field:"-" excludes from field system, name:"name" allows --set parsing
 
-	Certificate struct {
-		Link[Certificate]
-	} `name:"certificate" json:"certificate,omitzero" mirror:"certificate"`
+	Certificate TextLink[Certificate] `name:"certificate" json:"certificate,omitzero" mirror:"certificate" field:",embed"`
 }
 
 func (d *Domain) UnmarshalText(text []byte) error {

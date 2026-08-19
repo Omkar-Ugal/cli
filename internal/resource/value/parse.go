@@ -18,8 +18,6 @@ import (
 	xmaps "unikraft.com/cli/internal/x/maps"
 )
 
-const sepNone = "none"
-
 func Parse[T any](input []string) (T, error) {
 	var t T
 	output, err := ParseNew(input, t)
@@ -47,10 +45,6 @@ func parseNewReflect(input []string, output reflect.Value) (reflect.Value, error
 }
 
 func parseReflect(input []string, value reflect.Value) error {
-	return parseReflectWithSeparator(input, value, "")
-}
-
-func parseReflectWithSeparator(input []string, value reflect.Value, sep string) error {
 	if input == nil {
 		return nil
 	}
@@ -195,7 +189,7 @@ func parseReflectWithSeparator(input []string, value reflect.Value, sep string) 
 		notFound := make(map[string]struct{})
 		for _, input := range input {
 		process:
-			for _, item := range splitValues(input, sep, ",") {
+			for item := range strings.SplitSeq(input, ",") {
 				item = strings.TrimSpace(item)
 				if item == "" {
 					continue
@@ -220,8 +214,7 @@ func parseReflectWithSeparator(input []string, value reflect.Value, sep string) 
 					}
 					if k == name {
 						fieldVal := s.Field(i)
-						fieldSep := field.Tag.Get("sep")
-						err := parseReflectWithSeparator([]string{v}, fieldVal, fieldSep)
+						err := parseReflect([]string{v}, fieldVal)
 						if err != nil {
 							return err
 						}
@@ -240,14 +233,4 @@ func parseReflectWithSeparator(input []string, value reflect.Value, sep string) 
 	default:
 		return fmt.Errorf("unsupported type: %T", value.Interface())
 	}
-}
-
-func splitValues(input, sep, def string) []string {
-	if sep == "" {
-		sep = def
-	}
-	if sep == sepNone {
-		return []string{input}
-	}
-	return strings.Split(input, sep)
 }
