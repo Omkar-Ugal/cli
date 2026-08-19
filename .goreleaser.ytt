@@ -228,9 +228,12 @@ builds:
   - -extldflags
   - -static-pie
   #@ end
-  - -X unikraft.com/cli/internal/version.Version={{ .Version }}
-  - -X unikraft.com/cli/internal/version.Commit={{ .Commit }}
-  - -X unikraft.com/cli/internal/version.BuildTime={{ .Date }}
+  - -X unikraft.com/x/version.Name=unikraft-cli
+  - -X unikraft.com/x/version.Docs=https://unikraft.com/docs/cli
+  - -X unikraft.com/x/version.Issues=https://github.com/unikraft-cloud/cli/issues
+  - -X unikraft.com/x/version.Version={{ .Version }}
+  - -X unikraft.com/x/version.Commit={{ .Commit }}
+  - -X unikraft.com/x/version.BuildTime={{ .Date }}
   - -X unikraft.com/cli/internal/telemetry.PostHogAPIKey={{ .Env.UNIKRAFT_POSTHOG_API_KEY }}
   - -X unikraft.com/cli/internal/telemetry.PostHogHost={{ .Env.UNIKRAFT_POSTHOG_HOST }}
 #@ end

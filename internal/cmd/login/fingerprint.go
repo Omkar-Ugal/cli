@@ -6,9 +6,9 @@
 package login
 
 import (
-	"unikraft.com/cli/internal/version"
 	"unikraft.com/cloud/sdk/controlplane"
 	"unikraft.com/x/fingerprint"
+	"unikraft.com/x/version"
 )
 
 func getFingerprint() (controlplane.RequestSigninRequest, error) {

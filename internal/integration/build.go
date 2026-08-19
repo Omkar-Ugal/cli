@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 
@@ -39,7 +40,13 @@ func BuildUnikraft(t *testing.T) string {
 			binaryName += ".exe"
 		}
 		binaryPath := filepath.Join(binaryDir, binaryName)
-		cmd := exec.Command("go", "build", "-buildvcs=false", "-o", binaryPath, "unikraft.com/cli/cmd/unikraft")
+		// Mirrors the identity vars set by the `cli` task in Taskfile.yml.
+		ldflags := strings.Join([]string{
+			`-X unikraft.com/x/version.Name=unikraft-cli`,
+			`-X unikraft.com/x/version.Docs=https://unikraft.com/docs/cli`,
+			`-X unikraft.com/x/version.Issues=https://github.com/unikraft-cloud/cli/issues`,
+		}, " ")
+		cmd := exec.Command("go", "build", "-buildvcs=false", "-ldflags", ldflags, "-o", binaryPath, "unikraft.com/cli/cmd/unikraft")
 		var stdout, stderr bytes.Buffer
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr

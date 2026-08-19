@@ -5,7 +5,6 @@ includes:
   go:
     taskfile: https://github.com/unikraft-cloud/x.git//Taskfile.go.yml?ref=prod-staging
     vars:
-      go_module: unikraft.com/cli
       goreleaser_version: v2.13.3
 
 vars:
@@ -40,6 +39,9 @@ tasks:
     - task: go:build
       vars:
         package: ./cmd/unikraft
+        name: unikraft-cli
+        docs: https://unikraft.com/docs/cli
+        issues: https://github.com/unikraft-cloud/cli/issues
 
   lint:
     desc: Lint the project.
