@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/alecthomas/kong"
 
@@ -50,8 +49,8 @@ func (c *VolumeTemplateCreateCmd) Run(ctx context.Context, stdio config.Stdio, s
 	if err := cmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
 		return err
 	}
-	if len(c.Targets) > 0 {
-		c.Set = append(c.Set, map[string]string{"volumes": strings.Join(c.Targets, ",")})
+	for _, target := range c.Targets {
+		c.Set = append(c.Set, map[string]string{"volumes": target})
 	}
 	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
 }
