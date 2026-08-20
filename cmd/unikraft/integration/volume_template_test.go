@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestVolumeTemplates(t *testing.T) {
@@ -45,33 +44,6 @@ func TestVolumeTemplates(t *testing.T) {
 		assert.Regexp(t, `state:\s+template`, out)
 
 		r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
-	})
-
-	t.Run("multiple-volumes", func(t *testing.T) {
-		r := runner(t, true, []string{staging, stable})
-		volName := uniq()
-
-		for _, suffix := range []string{"a", "b"} {
-			r.Run(t, []string{
-				"unikraft", "volume", "create",
-				"--output", "quiet",
-				"--set", "name=test-" + suffix + "-" + volName,
-				"--set", "metro=" + r.Config.MetroName,
-				"--set", "size=10",
-			})
-		}
-
-		out := r.Run(t, []string{
-			"unikraft", "volume", "template", "create",
-			"test-a-" + volName, "test-b-" + volName,
-			"--output", "template={{ .name }}",
-		})
-		templateNames := strings.Fields(out)
-		require.Len(t, templateNames, 2)
-
-		for _, templateName := range templateNames {
-			r.Run(t, []string{"unikraft", "volume", "template", "delete", templateName})
-		}
 	})
 
 	t.Run("create-from-template", func(t *testing.T) {

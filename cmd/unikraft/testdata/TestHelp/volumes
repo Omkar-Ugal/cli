@@ -736,7 +736,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Global flags:
   -h, --help
@@ -783,7 +783,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
   -w, --watch=<duration>
@@ -838,7 +838,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
       --filter
@@ -878,11 +878,11 @@ $ unikraft volume template create --help
 Create a volume template.
 
 Usage:
-  unikraft volumes template create [<volume> ...] [flags]
+  unikraft volumes template create [<volume>] [flags]
 
 Arguments:
-  [<volume> ...]
-          Volumes to convert into templates.
+  [<volume>]
+          Volume to convert into a template.
 
 Examples:
   # Convert a volume into a template
@@ -899,7 +899,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -962,7 +962,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
       --set=<name>=<value>, --set-file=<name>=<filename>
@@ -1036,7 +1036,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
       --all
