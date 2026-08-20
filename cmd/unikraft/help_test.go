@@ -233,8 +233,7 @@ func cli(env *integ.TestEnv) func(*testing.T, []string) string {
 		out, err := env.RunRaw(t, args)
 
 		var exitCode int
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			exitCode = exitErr.ExitCode()
 		} else if err != nil {
 			require.NoError(t, err, "command %q failed: %s", strings.Join(args, " "), out)
