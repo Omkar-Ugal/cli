@@ -455,8 +455,8 @@ Create flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          Environment variable.
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]
@@ -479,10 +479,10 @@ Create flags:
           Service group name or key.
   -p, --publish=<src>:<dest>[/<handlers>]
           Publish port.
-          [examples: 443:8080/http+tls, 80:8080/http]
+          [example: 443:8080/http+tls]
       --domain=<fqdn>
           Service domain.
-          [examples: example.com, api.example.com]
+          [example: example.com]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
             policy: on | idle | off
@@ -490,9 +490,9 @@ Create flags:
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
           [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
-      --tags=<tag>
-          Instance tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag>
+          Instance tag.
+          [example: env-prod]
       --restart=<policy>
           Restart policy.
           [examples: always, on-failure, never]
@@ -501,8 +501,8 @@ Create flags:
       --replicas=<n>
           Number of replicas.
           [examples: 1, 3]
-      --features=<feature>
-          Instance features.
+      --feature=<feature>
+          Instance feature.
       --template=<name>
           Create from instance template.
       --branch=<instance>
@@ -625,8 +625,8 @@ Create flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          Environment variable.
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]
@@ -649,10 +649,10 @@ Create flags:
           Service group name or key.
   -p, --publish=<src>:<dest>[/<handlers>]
           Publish port.
-          [examples: 443:8080/http+tls, 80:8080/http]
+          [example: 443:8080/http+tls]
       --domain=<fqdn>
           Service domain.
-          [examples: example.com, api.example.com]
+          [example: example.com]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
             policy: on | idle | off
@@ -660,9 +660,9 @@ Create flags:
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
           [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
-      --tags=<tag>
-          Instance tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag>
+          Instance tag.
+          [example: env-prod]
       --restart=<policy>
           Restart policy.
           [examples: always, on-failure, never]
@@ -671,8 +671,8 @@ Create flags:
       --replicas=<n>
           Number of replicas.
           [examples: 1, 3]
-      --features=<feature>
-          Instance features.
+      --feature=<feature>
+          Instance feature.
       --template=<name>
           Create from instance template.
       --branch=<instance>
@@ -816,8 +816,8 @@ Create flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          Environment variable.
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]
@@ -840,10 +840,10 @@ Create flags:
           Service group name or key.
   -p, --publish=<src>:<dest>[/<handlers>]
           Publish port.
-          [examples: 443:8080/http+tls, 80:8080/http]
+          [example: 443:8080/http+tls]
       --domain=<fqdn>
           Service domain.
-          [examples: example.com, api.example.com]
+          [example: example.com]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
             policy: on | idle | off
@@ -851,9 +851,9 @@ Create flags:
             notify-time: notification time in ms before scaling to zero
             stateful: true | false.
           [examples: on, policy=on,cooldown-time=300, policy=on,stateful=true,cooldown-time=500,notify-time=100]
-      --tags=<tag>
-          Instance tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag>
+          Instance tag.
+          [example: env-prod]
       --restart=<policy>
           Restart policy.
           [examples: always, on-failure, never]
@@ -862,8 +862,8 @@ Create flags:
       --replicas=<n>
           Number of replicas.
           [examples: 1, 3]
-      --features=<feature>
-          Instance features.
+      --feature=<feature>
+          Instance feature.
       --template=<name>
           Create from instance template.
       --branch=<instance>
@@ -897,7 +897,7 @@ Examples:
   	  --add roms=dir=./mydata,at=/rom
 
   # Remove a ROM from an instance by name
-  unikraft instance edit demo-instance --del roms=name=my-rom
+  unikraft instance edit demo-instance --del roms=my-rom
 
   # Attach a volume to an instance
   unikraft instance edit demo-instance --add volumes=my-vol:/data
@@ -988,8 +988,8 @@ Edit flags:
       --args=<arg>
           Arguments to pass to the instance.
   -e, --env=<key>=<value>
-          Environment variables.
-          [examples: DEBUG=true, PORT=8080]
+          Environment variable.
+          [example: DEBUG=true]
   -m, --memory=<size>
           Memory allocation.
           [examples: 128MiB, 1GiB]
@@ -1002,9 +1002,9 @@ Edit flags:
       --rom=image=<ref>,at=<path>
           Attach ROM.
           [examples: image=myuser/my-rom:latest,at=/rom0,name=my-rom, dir=./mydata,at=/rom]
-      --tags=<tag>
-          Instance tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag>
+          Instance tag.
+          [example: env-prod]
       --scale-to-zero=<key>=<value>
           Scale-to-zero options.
             policy: on | idle | off
@@ -1422,9 +1422,9 @@ Global flags:
           Set a deadline for the command (e.g. 30s, 5m, 1h).
 
 Edit flags:
-      --tags=<tag>
-          Template tags.
-          [examples: env-dev, team-platform]
+      --tag=<tag>
+          Template tag.
+          [example: env-dev]
       --delete-lock
           Prevent deletion of the template.
 
@@ -1886,9 +1886,9 @@ Global flags:
           Set a deadline for the command (e.g. 30s, 5m, 1h).
 
 Edit flags:
-      --tags=<tag>
-          Checkpoint tags.
-          [examples: env-dev, team-platform]
+      --tag=<tag>
+          Checkpoint tag.
+          [example: env-dev]
       --delete-lock
           Prevent deletion of the checkpoint.
 

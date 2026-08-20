@@ -71,7 +71,9 @@ func TestInstances(t *testing.T) {
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
-			"--set", "runtime.env=A=1,B=2,C=3",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
+			"--set", "runtime.env=C=3",
 			"--set", "autostart=true",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -95,6 +97,40 @@ func TestInstances(t *testing.T) {
 
 		out = r.Run(t, []string{"unikraft", "instance", "list", "--output", "quiet"})
 		assert.Empty(t, strings.TrimSpace(out))
+	})
+
+	t.Run("create-env", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		// Commas and further "=" signs belong to the value, so each variable
+		// needs its own flag.
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"-e", "LIST=a,b,c",
+			"-e", "PAIRS=k1=v1,k2=v2",
+			"--set", "runtime.env=VIA_SET=x,y",
+		})
+		assert.Regexp(t, `LIST:\s+a,b,c`, out)
+		assert.Regexp(t, `PAIRS:\s+k1=v1,k2=v2`, out)
+		assert.Regexp(t, `VIA_SET:\s+x,y`, out)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"-e", "LIST=d,e",
+		})
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `LIST:\s+d,e`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
 	t.Run("create-oom", func(t *testing.T) {
@@ -129,7 +165,9 @@ func TestInstances(t *testing.T) {
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
-			"--set", "runtime.env=A=1,B=2,C=3",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
+			"--set", "runtime.env=C=3",
 			"--set", "autostart=true",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -193,7 +231,9 @@ func TestInstances(t *testing.T) {
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
-			"--set", "runtime.env=A=1,B=2,C=3",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
+			"--set", "runtime.env=C=3",
 			"--set", "autostart=true",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -375,7 +415,8 @@ rootfs:
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
 			"--set", "runtime.args=before,first",
-			"--set", "runtime.env=A=1,B=2",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
 			"--set", "autostart=false",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -386,7 +427,8 @@ rootfs:
 			"--output", "quiet",
 			"--set", "image=redis:latest",
 			"--set", "runtime.args=after,second",
-			"--set", "runtime.env=A=3,B=4",
+			"--set", "runtime.env=A=3",
+			"--set", "runtime.env=B=4",
 			"--set", "resources.memory=256",
 		})
 
@@ -590,7 +632,7 @@ rootfs:
 		r.Run(t, []string{
 			"unikraft", "instance", "edit", "test-" + instName,
 			"--output", "quiet",
-			"--del", "roms=name=myrom",
+			"--del", "roms=myrom",
 		})
 
 		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
@@ -871,8 +913,8 @@ rootfs:
 			"--set", "autostart=false",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
-			"--tags", "env-prod",
-			"--tags", "team-core",
+			"--tag", "env-prod",
+			"--tag", "team-core",
 		})
 
 		// Verify tags appear in inspect output.
@@ -919,6 +961,57 @@ rootfs:
 		assert.Regexp(t, `tags:.*added-tag`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	// Each shortcut flag carries exactly one element, repeated for more.
+	t.Run("repeated-shortcut-flags", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		volName := uniq()
+		domainName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--name", "test-" + volName,
+			"--metro", r.Config.MetroName,
+			"--size", "10",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"--tag", "env-prod",
+			"--tag", "team-core",
+			"--publish", "443:8080/tls+http",
+			"--publish", "80:8080/http",
+			"--domain", domainName + ".unikraft.example",
+			"--volume", "test-" + volName + ":/data",
+			"--feature", "delete-on-stop",
+		})
+
+		// Ports and features are invisible fields on an instance, so a
+		// successful create is all --publish/--feature can be checked by here;
+		// service_test.go covers ports through the service group.
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Contains(t, out, domainName)
+		assert.Contains(t, out, "test-"+volName)
+
+		// An exact-match filter proves the two tags were not joined into one
+		// literal "env-prod,team-core" value.
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, "test-"+instName)
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==team-core"})
+		assert.Contains(t, out, "test-"+instName)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("delete-lock", func(t *testing.T) {

@@ -238,8 +238,8 @@ Examples:
   unikraft service create \
   	--name demo-service \
   	--metro fra \
-  	--domains demo \
-  	--services 443:8080/tls+http
+  	--domain demo \
+  	--service 443:8080/tls+http
 
 Fields:
   metro
@@ -302,12 +302,12 @@ Create flags:
       --hard-limit=<n>
           Hard limit.
           [examples: 10, 100]
-      --domains=<fqdn>
-          Service domains.
-          [examples: example.com, api.example.com]
-      --services=<src>:<dest>[/<handlers>]
-          Service ports.
-          [examples: 443:8080/http+tls, 80:8080/http]
+      --domain=<fqdn>
+          Service domain.
+          [example: example.com]
+      --service=<src>:<dest>[/<handlers>]
+          Service port.
+          [example: 443:8080/http+tls]
 
 $ unikraft service edit --help
 
@@ -322,7 +322,7 @@ Arguments:
 
 Examples:
   # Add a new service port
-  unikraft service edit demo-service --services 8443:8080/tls
+  unikraft service edit demo-service --service 8443:8080/tls
 
 Fields:
   metro
@@ -384,12 +384,12 @@ Edit flags:
       --hard-limit=<n>
           Hard limit.
           [examples: 10, 100]
-      --domains=<fqdn>
-          Service domains.
-          [examples: example.com, api.example.com]
-      --services=<src>:<dest>[/<handlers>]
-          Service ports.
-          [examples: 443:8080/http+tls, 80:8080/http]
+      --domain=<fqdn>
+          Service domain.
+          [example: example.com]
+      --service=<src>:<dest>[/<handlers>]
+          Service port.
+          [example: 443:8080/http+tls]
 
 $ unikraft service delete --help
 

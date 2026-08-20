@@ -64,7 +64,7 @@ func (c *InstanceCheckpointCreateCmd) Run(ctx context.Context, stdio config.Stdi
 type InstanceCheckpointEditCmd struct {
 	cmd.ResourceEditCmd[InstanceCheckpoint]
 
-	Tags       []string `group:"flag-edit" shortcut:"tags" help:"Checkpoint tags." placeholder:"tag" example:"env-dev,team-platform"`
+	Tag        []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Checkpoint tag." placeholder:"tag" example:"env-dev"`
 	DeleteLock *bool    `group:"flag-edit" shortcut:"delete-lock" help:"Prevent deletion of the checkpoint."`
 }
 

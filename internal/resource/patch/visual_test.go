@@ -7,6 +7,7 @@ package patch
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1084,4 +1085,55 @@ func TestEdit_TextMarshalerInequality(t *testing.T) {
 	assert.Equal(t, "image", result[0].Name)
 	assert.NotNil(t, result[0].Edit.Set)
 	assert.Equal(t, imageRef{ref: "alpine"}, result[0].Edit.Set)
+}
+
+func TestSetNestedValue_AncestorWithOwnValue(t *testing.T) {
+	type link struct {
+		Name string `json:"name"`
+	}
+
+	t.Run("expands so the descendant lands", func(t *testing.T) {
+		m := map[string]any{}
+		require.NoError(t, setNestedValue(m, resource.FieldPath{"service"}, link{Name: "my-group"}))
+		require.NoError(t, setNestedValue(m, resource.FieldPath{"service", "domains"}, []string{"a.com"}))
+
+		assert.Equal(t, map[string]any{"service": map[string]any{
+			"name":    "my-group",
+			"domains": []string{"a.com"},
+		}}, m)
+	})
+
+	t.Run("descendant wins over the ancestor's own key", func(t *testing.T) {
+		m := map[string]any{}
+		require.NoError(t, setNestedValue(m, resource.FieldPath{"service"}, link{Name: "from-ancestor"}))
+		require.NoError(t, setNestedValue(m, resource.FieldPath{"service", "name"}, "from-descendant"))
+
+		assert.Equal(t, map[string]any{"service": map[string]any{
+			"name": "from-descendant",
+		}}, m)
+	})
+
+	t.Run("ancestor without an object form still nests", func(t *testing.T) {
+		m := map[string]any{}
+		require.NoError(t, setNestedValue(m, resource.FieldPath{"service"}, "my-group"))
+		require.NoError(t, setNestedValue(m, resource.FieldPath{"service", "domains"}, []string{"a.com"}))
+
+		assert.Equal(t, map[string]any{"service": map[string]any{
+			"domains": []string{"a.com"},
+		}}, m)
+	})
+
+	// Expanding an unmarshalable ancestor into an empty map would drop its
+	// value while still emitting valid YAML.
+	t.Run("ancestor that cannot marshal errors", func(t *testing.T) {
+		m := map[string]any{"service": failingMarshaler{}}
+		err := setNestedValue(m, resource.FieldPath{"service", "domains"}, []string{"a.com"})
+		require.ErrorContains(t, err, "no compact form")
+	})
+}
+
+type failingMarshaler struct{}
+
+func (failingMarshaler) MarshalJSON() ([]byte, error) {
+	return nil, fmt.Errorf("no compact form")
 }

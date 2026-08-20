@@ -83,29 +83,29 @@ type InstanceCreateCmd struct {
 	Type       *platform.InstanceType `group:"flag-create" shortcut:"type" help:"Type of virtual machine to run. \"full\" requires a plan with full VM support." placeholder:"type" example:"micro,full"`
 
 	Args InstanceArgs `group:"flag-create" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
-	Env  []string     `group:"flag-create" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
+	Env  []string     `group:"flag-create" shortcut:"runtime.env" short:"e" sep:"none" help:"Environment variable." placeholder:"<key>=<value>" example:"DEBUG=true"`
 
 	Memory        types.SizeMebibytes     `group:"flag-create" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
 	Vcpus         int                     `group:"flag-create" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
 	Gpus          int                     `group:"flag-create" shortcut:"resources.gpus" help:"Number of GPUs to attach. Requires type \"full\" and a plan with GPU support. Currently limited to 1." placeholder:"n" example:"0,1"`
 	SchedPriority *platform.SchedPriority `group:"flag-create" shortcut:"sched-priority" help:"Scheduling priority for the instance." placeholder:"priority" example:"normal,medium,high,admin"`
 
-	Volume []InstanceVolume `group:"flag-create" shortcut:"volumes" short:"v" help:"Attach volume." placeholder:"<name>:<path>[:<options>]" example:"my-vol:/data,cache:/tmp:ro,data:/mnt:size=10GiB"`
+	Volume []InstanceVolume `group:"flag-create" shortcut:"volumes" short:"v" sep:"none" help:"Attach volume." placeholder:"<name>:<path>[:<options>]" example:"my-vol:/data,cache:/tmp:ro,data:/mnt:size=10GiB"`
 	Rom    []InstanceRom    `group:"flag-create" shortcut:"roms" sep:"none" help:"Attach ROM." placeholder:"image=<ref>,at=<path>" example:"image=myuser/my-rom:latest\\,at=/rom0\\,name=my-rom,dir=./mydata\\,at=/rom"`
 
 	Service InstanceService `group:"flag-create" shortcut:"service" help:"Service group name or key." placeholder:"name"`
-	Publish []Service       `group:"flag-create" shortcut:"service.services" short:"p" help:"Publish port." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls,80:8080/http"`
-	Domain  []Domain        `group:"flag-create" shortcut:"service.domains" help:"Service domain." placeholder:"fqdn" example:"example.com,api.example.com"`
+	Publish []Service       `group:"flag-create" shortcut:"service.services" short:"p" sep:"none" help:"Publish port." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls"`
+	Domain  []Domain        `group:"flag-create" shortcut:"service.domains" sep:"none" help:"Service domain." placeholder:"fqdn" example:"example.com"`
 
 	ScaleToZero InstanceScaleToZero `group:"flag-create" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 
-	Tags []string `group:"flag-create" shortcut:"tags" help:"Instance tags." placeholder:"tag" example:"env-prod,team-platform"`
+	Tag []string `group:"flag-create" shortcut:"tags" sep:"none" help:"Instance tag." placeholder:"tag" example:"env-prod"`
 
 	Restart string `group:"flag-create" shortcut:"restart.policy" help:"Restart policy." placeholder:"policy" example:"always,on-failure,never"`
 
 	Autostart    *bool          `group:"flag-create" shortcut:"autostart" help:"Start instance automatically."`
 	Replicas     int64          `group:"flag-create" shortcut:"replicas" help:"Number of replicas." placeholder:"n" example:"1,3"`
-	Features     []string       `group:"flag-create" shortcut:"features" help:"Instance features." placeholder:"feature"`
+	Feature      []string       `group:"flag-create" shortcut:"features" sep:"none" help:"Instance feature." placeholder:"feature"`
 	Template     string         `group:"flag-create" shortcut:"template" help:"Create from instance template." placeholder:"name"`
 	Branch       multimetro.Key `group:"flag-create" shortcut:"branch" help:"Branch from an existing instance." placeholder:"instance"`
 	Checkpoint   multimetro.Key `group:"flag-create" shortcut:"checkpoint" help:"Create from a checkpoint." placeholder:"checkpoint"`
@@ -141,7 +141,7 @@ type InstanceEditCmd struct {
 	Image string `group:"flag-edit" shortcut:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
 
 	Args InstanceArgs `group:"flag-edit" shortcut:"runtime.args" help:"Arguments to pass to the instance." placeholder:"arg"`
-	Env  []string     `group:"flag-edit" shortcut:"runtime.env" short:"e" help:"Environment variables." placeholder:"<key>=<value>" example:"DEBUG=true,PORT=8080"`
+	Env  []string     `group:"flag-edit" shortcut:"runtime.env" short:"e" sep:"none" help:"Environment variable." placeholder:"<key>=<value>" example:"DEBUG=true"`
 
 	Memory        types.SizeMebibytes     `group:"flag-edit" shortcut:"resources.memory" short:"m" help:"Memory allocation." placeholder:"size" example:"128MiB,1GiB"`
 	Vcpus         int                     `group:"flag-edit" shortcut:"resources.vcpus" help:"Number of vCPUs." placeholder:"n" example:"1,2,4"`
@@ -149,7 +149,7 @@ type InstanceEditCmd struct {
 
 	Rom []InstanceRom `group:"flag-edit" shortcut:"roms" sep:"none" help:"Attach ROM." placeholder:"image=<ref>,at=<path>" example:"image=myuser/my-rom:latest\\,at=/rom0\\,name=my-rom,dir=./mydata\\,at=/rom"`
 
-	Tags []string `group:"flag-edit" shortcut:"tags" help:"Instance tags." placeholder:"tag" example:"env-prod,team-platform"`
+	Tag []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Instance tag." placeholder:"tag" example:"env-prod"`
 
 	ScaleToZero InstanceScaleToZero `group:"flag-edit" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 
@@ -189,7 +189,7 @@ type Instance struct {
 
 	Service *InstanceService  `mirror:"instance.service_group" field:",embed" create:"set"`
 	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed" create:"set" edit:"add,del=strings"`
-	Roms    []*InstanceRom    `mirror:"instance.roms" field:",embed" create:"set" edit:"set,add,del"`
+	Roms    []*InstanceRom    `mirror:"instance.roms" field:",embed" create:"set" edit:"set,add,del=strings"`
 
 	Networks []InstanceNetwork `mirror:"instance.network_interfaces" field:",embed"`
 	Gpus     []InstanceGpu     `mirror:"instance.gpus" field:"gpus,embed"`
@@ -253,29 +253,39 @@ type InstanceGpu struct {
 
 type InstanceService struct {
 	Link[ServiceGroup]
-	Services  []*Service `mirror:"services" field:",invisible,valueless" create:"set"`
-	Domains   []Domain   `mirror:"domains" field:",short,embed" create:"set"`
-	SoftLimit uint32     `field:"soft-limit,invisible,valueless" create:"set"`
-	HardLimit uint32     `field:"hard-limit,invisible,valueless" create:"set"`
+	Services  []*Service `mirror:"services" json:"services,omitempty" field:",invisible,valueless" create:"set"`
+	Domains   []Domain   `mirror:"domains" json:"domains,omitempty" field:",short,embed" create:"set"`
+	SoftLimit uint32     `json:"soft-limit,omitempty" field:"soft-limit,invisible,valueless" create:"set"`
+	HardLimit uint32     `json:"hard-limit,omitempty" field:"hard-limit,invisible,valueless" create:"set"`
 }
 
+// UnmarshalText only links to a service group by name/key - use
+// --set service.domains=... etc. for nested fields.
 func (i *InstanceService) UnmarshalText(data []byte) error {
-	str := strings.TrimSpace(string(data))
-	if str == "" {
-		return nil
+	link, err := ParseLink[ServiceGroup](data)
+	if err != nil {
+		return err
 	}
-	if strings.Contains(str, "=") {
-		type instanceServiceAlias InstanceService
-		parsed, err := value.Parse[instanceServiceAlias]([]string{str})
-		if err != nil {
-			return err
-		}
-		*i = InstanceService(parsed)
-		return nil
-	}
-	return i.Link.UnmarshalText([]byte(str))
+	i.Link = link
+	return nil
 }
 
+// MarshalText renders the service group link, matching UnmarshalText.
+// Domains/Services/limits have no compact text form - use MarshalJSON or the
+// dotted-path fields for those.
+func (i InstanceService) MarshalText() ([]byte, error) {
+	return FormatLink(i.Link)
+}
+
+// MarshalJSON outputs the struct form (not the short text form).
+// This takes precedence over MarshalText for JSON/YAML serialization.
+func (i InstanceService) MarshalJSON() ([]byte, error) {
+	type instanceServiceJSON InstanceService // alias to avoid recursion
+	return json.Marshal(instanceServiceJSON(i))
+}
+
+// UnmarshalJSON parses both the struct form and the short text form.
+// This takes precedence over UnmarshalText for JSON/YAML deserialization.
 func (i *InstanceService) UnmarshalJSON(data []byte) error {
 	if len(data) != 0 && data[0] == '"' {
 		var text string
@@ -284,7 +294,7 @@ func (i *InstanceService) UnmarshalJSON(data []byte) error {
 		}
 		return i.UnmarshalText([]byte(text))
 	}
-	type instanceServiceJSON InstanceService
+	type instanceServiceJSON InstanceService // alias to avoid recursion
 	return json.Unmarshal(data, (*instanceServiceJSON)(i))
 }
 
@@ -293,11 +303,11 @@ type InstanceVolume struct {
 	At       string `name:"at" mirror:"at" json:"at" field:",long"`
 	Readonly bool   `name:"readonly" mirror:"readonly" json:"readonly,omitempty" field:",long"`
 
-	Size types.SizeMebibytes `name:"size" field:"size,invisible,valueless" create:"set"`
+	Size types.SizeMebibytes `name:"size" json:"size,omitempty" field:"size,invisible,valueless" create:"set"`
 }
 
 func (v *InstanceVolume) MarshalText() ([]byte, error) {
-	volKey, err := v.Link.MarshalText()
+	volKey, err := FormatLink(v.Link)
 	if err != nil {
 		return nil, err
 	}
@@ -373,9 +383,11 @@ func (v *InstanceVolume) UnmarshalText(data []byte) error {
 		}
 	}
 
-	if err := v.Link.UnmarshalText([]byte(name)); err != nil {
+	link, err := ParseLink[Volume]([]byte(name))
+	if err != nil {
 		return err
 	}
+	v.Link = link
 	v.At = at
 	v.Readonly = readonly
 	v.Size = size
@@ -414,6 +426,18 @@ func (r *InstanceRom) UnmarshalText(data []byte) error {
 		r.Name = b.String()
 	}
 	return nil
+}
+
+func (r *InstanceRom) UnmarshalJSON(data []byte) error {
+	if len(data) != 0 && data[0] == '"' {
+		var text string
+		if err := json.Unmarshal(data, &text); err != nil {
+			return err
+		}
+		return r.UnmarshalText([]byte(text))
+	}
+	type romJSON InstanceRom // alias to avoid recursion
+	return json.Unmarshal(data, (*romJSON)(r))
 }
 
 // inlineFilesFromDir walks a local directory and returns its contents as
@@ -964,16 +988,10 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 	case "vsock":
 		return "vsock", value.(bool), nil
 	case "roms":
-		roms := value.([]*InstanceRom)
 		if op == patchOpDel {
-			var names []string
-			for _, rom := range roms {
-				if rom.Name != "" {
-					names = append(names, rom.Name)
-				}
-			}
-			return platform.MutableInstancePropertyRoms, names, nil
+			return platform.MutableInstancePropertyRoms, value.([]string), nil
 		}
+		roms := value.([]*InstanceRom)
 		var reqRoms []map[string]any
 		for _, rom := range roms {
 			if rom.Image == "" && rom.Dir == "" {
@@ -1370,7 +1388,7 @@ func (Instance) Examples() map[cmd.CmdType][]kingkong.Example {
 			{
 				Description: "Remove a ROM from an instance by name",
 				Commands: []string{
-					"unikraft instance edit demo-instance --del roms=name=my-rom",
+					"unikraft instance edit demo-instance --del roms=my-rom",
 				},
 			},
 			{

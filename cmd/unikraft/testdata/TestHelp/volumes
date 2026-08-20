@@ -345,9 +345,9 @@ Create flags:
       --size=<size>
           Volume size.
           [examples: 10GiB, 100MiB]
-      --tags=<tag>
-          Volume tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag>
+          Volume tag.
+          [example: env-prod]
       --filesystem=<filesystem>
           Volume filesystem.
           [example: ext4]
@@ -405,9 +405,9 @@ Global flags:
 flag-clone
   -n, --name=<name>
           New volume name.
-      --tags=<tag>
-          Volume tags.
-          [examples: env=prod, team=platform]
+      --tag=<tag>
+          Volume tag.
+          [example: env-prod]
 
 $ unikraft volume attach --help
 
@@ -629,9 +629,9 @@ Edit flags:
       --size=<size>
           Volume size.
           [examples: 20GiB, 100MiB]
-      --tags=<tag>
-          Volume tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag>
+          Volume tag.
+          [example: env-prod]
       --quota-policy=<quota-policy>
           Volume quota policy.
           [examples: static, dynamic]
@@ -1004,9 +1004,9 @@ Global flags:
           Set a deadline for the command (e.g. 30s, 5m, 1h).
 
 Edit flags:
-      --tags=<tag>
-          Template tags.
-          [examples: env-dev, team-platform]
+      --tag=<tag>
+          Template tag.
+          [example: env-dev]
       --delete-lock
           Prevent deletion of the template.
 

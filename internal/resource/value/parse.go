@@ -110,15 +110,6 @@ func parseReflect(input []string, value reflect.Value) error {
 
 		elemType := output.Type().Elem()
 
-		// Check if the element type implements TextUnmarshaler. If so, each
-		// input string is a complete element (don't comma-split), since the
-		// element's own encoding may use commas internally.
-		checkType := elemType
-		if checkType.Kind() == reflect.Pointer {
-			checkType = checkType.Elem()
-		}
-		_, elemIsTextUnmarshaler := reflect.New(checkType).Interface().(encoding.TextUnmarshaler)
-
 		for _, input := range input {
 			// Try JSON array syntax first.
 			trimmed := strings.TrimSpace(input)
@@ -130,33 +121,15 @@ func parseReflect(input []string, value reflect.Value) error {
 				}
 			}
 
-			if elemIsTextUnmarshaler {
-				// Element handles its own parsing; pass the whole input
-				// as a single element since the element's encoding may
-				// use commas internally. Use repeated flags for multiple
-				// elements.
-				val := reflect.New(elemType).Elem()
-				if err := parseReflect([]string{input}, val); err != nil {
-					return err
-				}
-				slice = reflect.Append(slice, val)
-				continue
+			// Each input string is exactly one element, passed on verbatim.
+			// Use repeated flags for multiple elements.
+			val := reflect.New(elemType).Elem()
+			if err := parseReflect([]string{input}, val); err != nil {
+				return err
 			}
-
-			// Fall back to comma-separated parsing.
-			for item := range strings.SplitSeq(input, ",") {
-				item = strings.TrimSpace(item)
-				if item == "" {
-					continue
-				}
-				val := reflect.New(elemType).Elem()
-				err := parseReflect([]string{item}, val)
-				if err != nil {
-					return err
-				}
-				slice = reflect.Append(slice, val)
-			}
+			slice = reflect.Append(slice, val)
 		}
+
 		output.Set(slice)
 		return nil
 	case reflect.Map:
@@ -174,26 +147,27 @@ func parseReflect(input []string, value reflect.Value) error {
 					continue
 				}
 			}
-			// Fall back to comma-separated key=value parsing.
-			for item := range strings.SplitSeq(input, ",") {
-				item = strings.TrimSpace(item)
-				if item == "" {
-					continue
-				}
-				k, v, _ := strings.Cut(item, "=")
-				key := reflect.New(output.Type().Key()).Elem()
-				err := parseReflect([]string{k}, key)
-				if err != nil {
-					return err
-				}
-				val := reflect.New(output.Type().Elem()).Elem()
-				err = parseReflect([]string{v}, val)
-				if err != nil {
-					return err
-				}
-				mapp.SetMapIndex(key, val)
+
+			// One key=value entry per input; multiple entries come from
+			// repeated inputs, never from splitting one. The value reaches
+			// the element type unsplit, so a string element keeps commas and
+			// further "=" verbatim. An entry with no key is skipped.
+			k, v, _ := strings.Cut(input, "=")
+			k = strings.TrimSpace(k)
+			if k == "" {
+				continue
 			}
+			key := reflect.New(output.Type().Key()).Elem()
+			if err := parseReflect([]string{k}, key); err != nil {
+				return err
+			}
+			val := reflect.New(output.Type().Elem()).Elem()
+			if err := parseReflect([]string{v}, val); err != nil {
+				return err
+			}
+			mapp.SetMapIndex(key, val)
 		}
+
 		output.Set(mapp)
 		return nil
 	case reflect.Struct:
@@ -211,7 +185,6 @@ func parseReflect(input []string, value reflect.Value) error {
 			}
 		}
 
-		// Fall back to comma-separated key=value parsing.
 		notFound := make(map[string]struct{})
 		for _, input := range input {
 		process:
@@ -250,6 +223,7 @@ func parseReflect(input []string, value reflect.Value) error {
 				notFound[k] = struct{}{}
 			}
 		}
+
 		if len(notFound) > 0 {
 			return fmt.Errorf("unknown fields: %v", xmaps.OrderedKeys(notFound))
 		}
