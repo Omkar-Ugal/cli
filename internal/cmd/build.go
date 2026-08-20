@@ -16,6 +16,7 @@ import (
 	"unikraft.com/cli/internal/images"
 	"unikraft.com/cli/internal/resource"
 	imagespec "unikraft.com/x/image-spec"
+	"unikraft.com/x/image-spec/schemes"
 	"unikraft.com/x/kingkong"
 )
 
@@ -133,7 +134,7 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *
 	if c.Output == "" {
 		return nil
 	}
-	output, err := imagespec.GuessURI(c.Output)
+	output, err := imagespec.GuessLocation(c.Output)
 	if err != nil {
 		return err
 	}
@@ -156,7 +157,7 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *
 		return err
 	}
 
-	if partition != nil && output.Scheme == imagespec.URISchemeOCI {
+	if partition != nil && output.Scheme == schemes.OCI {
 		if err := addImageToPartition(ctx, partition, output.Path); err != nil {
 			return fmt.Errorf("adding built image to partition: %w", err)
 		}

@@ -11,8 +11,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/distribution/reference"
-
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
 	"unikraft.com/x/kingkong"
@@ -49,9 +47,9 @@ type InstanceTemplate struct {
 
 	Autokill Autokill `field:",embed" mirror:"instance.template_autokill" create:"set" edit:"set" flag:"autokill" help:"Autokill options.\n  time: time without a clone before the template is deleted" placeholder:"<key>=<value>" example:"time=24h"`
 
-	State types.InstanceState             `mirror:"instance.state" field:",short"`
-	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
-	Type_ *platform.InstanceType          `mirror:"instance.type" field:"type,long"`
+	State types.InstanceState    `mirror:"instance.state" field:",short"`
+	Image types.ImageRef         `mirror:"instance.image" field:",short"`
+	Type_ *platform.InstanceType `mirror:"instance.type" field:"type,long"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short"`

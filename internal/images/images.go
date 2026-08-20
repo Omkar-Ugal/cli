@@ -7,14 +7,12 @@ package images
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/containerd/containerd/v2/core/remotes/docker"
-	"github.com/distribution/reference"
 	imagespec "unikraft.com/x/image-spec"
+	"unikraft.com/x/image-spec/reference"
 
 	"unikraft.com/cli/internal/config"
-	xreference "unikraft.com/cli/internal/x/reference"
 )
 
 const DefaultRegistry = "unikraft.io"
@@ -56,7 +54,6 @@ func Accessor(ctx context.Context, opts ...AccessorOpt) (*imagespec.Accessor, er
 		imagespec.WithResolver(resolver),
 		imagespec.WithRegistryHosts(options.Hosts),
 		imagespec.WithRegistryHeaders(options.Headers),
-		imagespec.WithReferenceParser(ParseNormalizedNamed),
 	), nil
 }
 
@@ -80,33 +77,27 @@ func WithInsecureRegistries() AccessorOpt {
 	}
 }
 
-func ParseNormalizedNamed(key string) (reference.Named, error) {
-	return ParseNormalizedNamedMetro(nil, key)
+// ParseRef parses an image identifier without metro context.
+func ParseRef(key string) (reference.Reference, error) {
+	return ParseRefMetro(nil, key)
 }
 
-func ParseNormalizedNamedMetro(metro *config.Metro, key string) (reference.Named, error) {
-	if uri, err := imagespec.ParseURI(key); err == nil {
-		if uri.Scheme != imagespec.URISchemeOCI {
-			return nil, fmt.Errorf("%w: invalid scheme %q", reference.ErrReferenceInvalidFormat, uri.Scheme)
-		}
-		key = uri.Path
-	}
-
-	index := DefaultRegistry
+// ParseRefMetro parses an image identifier exchanged with metro, applying its
+// index as the default registry domain.
+func ParseRefMetro(metro *config.Metro, key string) (reference.Reference, error) {
+	domain := DefaultRegistry
 	if metro != nil {
-		index = metro.Index().Host
+		domain = metro.Index().Host
 	}
-	return xreference.ParseNormalizedNamed(
-		key,
-		xreference.WithDefaultDomain(index),
-		xreference.WithDefaultPrefix("official/"),
-	)
+	return reference.Parse(key, reference.WithDefaultDomain(domain))
 }
 
-func FamiliarString(ref reference.Reference) string {
-	return xreference.FamiliarString(
-		ref,
-		xreference.WithDefaultDomain(DefaultRegistry),
-		xreference.WithDefaultPrefix("official/"),
-	)
+// Format renders ref for display, in the short form a user types.
+func Format(ref reference.Reference) string {
+	return ref.WithoutDefaultTag().Format(reference.FormatOpts{})
+}
+
+// FormatShort renders ref for concise display, eliding the digest.
+func FormatShort(ref reference.Reference) string {
+	return ref.WithoutDefaultTag().Format(reference.FormatOpts{OmitDigest: true})
 }
