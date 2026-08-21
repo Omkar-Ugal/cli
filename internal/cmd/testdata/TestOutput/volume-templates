@@ -102,10 +102,10 @@ fra    my-vol-template  available  20MiB  never
     "verbosity": "short"
   },
   {
-    "name": "volumes",
+    "name": "volume",
     "verbosity": "invisible",
     "create": {
-      "set": null,
+      "set": "",
       "required": true
     }
   }

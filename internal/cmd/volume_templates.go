@@ -42,15 +42,15 @@ type VolumeTemplatesCmd struct {
 type VolumeTemplateCreateCmd struct {
 	cmd.ResourceCreateCmd[VolumeTemplate]
 
-	Targets []string `arg:"" name:"volume" optional:"" completion-predictor:"resource-key-volume" help:"Volumes to convert into templates."`
+	Target string `arg:"" name:"volume" optional:"" completion-predictor:"resource-key-volume" help:"Volume to convert into a template."`
 }
 
 func (c *VolumeTemplateCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
 	if err := cmd.ApplyShortcutFlags(&c.SetArgs, kctx.Flags()); err != nil {
 		return err
 	}
-	for _, target := range c.Targets {
-		c.Set = append(c.Set, map[string]string{"volumes": target})
+	if c.Target != "" {
+		c.Set = append(c.Set, map[string]string{"volume": c.Target})
 	}
 	return c.ResourceCreateCmd.Run(ctx, stdio, sandbox)
 }
@@ -88,7 +88,7 @@ type VolumeTemplate struct {
 		Created types.RelativeTime `mirror:"volume.created_at" field:",short"`
 	}
 
-	Volumes []string `field:"volumes,invisible,valueless" create:"set,required"`
+	VolumeRef string `field:"volume,invisible,valueless" create:"set,required"`
 
 	Volume  platform.Volume `field:"-" json:"volume"`
 	Profile *config.Profile `field:"-" json:"profile"`
@@ -306,98 +306,78 @@ func volumeTemplatePatchSpec(path string, op patchOp, value any) (platform.Mutab
 }
 
 func (VolumeTemplate) Create(ctx context.Context, fields []resource.Field) ([]resource.Resource, error) {
-	var volumes []string
+	var volume string
 	for key, field := range resource.IterFields(fields) {
 		if field.Create == nil || field.Create.Set == nil {
 			continue
 		}
-		if key.String() == "volumes" {
-			volumes = field.Create.Set.([]string)
+		if key.String() == "volume" {
+			volume = field.Create.Set.(string)
 		}
 	}
-	if len(volumes) == 0 {
-		return nil, fmt.Errorf("no volumes provided")
+	if volume == "" {
+		return nil, fmt.Errorf("no volume provided")
 	}
 
-	// First, get the volumes to verify they exist and to fully resolve their keys
-	foundVolumes, getErr := Volume{}.Get(ctx, volumes)
+	// First, get the volume to verify it exists and to fully resolve its key
+	foundVolumes, getErr := Volume{}.Get(ctx, []string{volume})
 	if getErr != nil && len(foundVolumes) == 0 {
 		return nil, getErr
 	}
 	if len(foundVolumes) == 0 {
-		return nil, fmt.Errorf("no volumes found")
+		return nil, fmt.Errorf("no volume found")
 	}
 
-	// Build refs grouped by metro from the found volumes
-	refsByMetro := make(map[string][]group.Ref)
-	for _, res := range foundVolumes {
-		vol := res.(Volume)
-		if vol.key.Metro == "" {
-			return nil, fmt.Errorf("volume key %q not fully resolved", vol.key.String())
-		}
-		refsByMetro[vol.key.Metro] = append(refsByMetro[vol.key.Metro], vol.key.Ref())
+	vol := foundVolumes[0].(Volume)
+	if vol.key.Metro == "" {
+		return nil, fmt.Errorf("volume key %q not fully resolved", vol.key.String())
 	}
+	ref := vol.key.Ref()
+	refStr := cmp.Or(ref.Name, ref.UUID)
 
 	g, err := multimetro.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var created multimetro.Keys
-	var errs []error
-	for metroName, refs := range refsByMetro {
-		keys, err := group.CollectMetro(ctx, g, metroName, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
-			var created multimetro.Keys
-			var errs []error
-			// Create templates one at a time since the platform API only accepts single operations
-			for _, ref := range refs {
-				refStr := cmp.Or(ref.Name, ref.UUID)
-				log.G(ctx).Trace().Str("ref", refStr).Msg("creating volume template")
-				resp, err := c.CreateTemplateVolume(ctx, []platform.NameOrUUID{ref.NameOrUUID()})
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to create template for %s: %w", refStr, err))
-					continue
-				}
-				if resp == nil || resp.Data == nil || len(resp.Data.Volumes) == 0 {
-					errs = append(errs, fmt.Errorf("no template created for %s", refStr))
-					continue
-				}
-				for _, tmpl := range resp.Data.Volumes {
-					status := tmpl.Status
-					if status != "" && status != platform.ResponseStatusSuccess {
-						name := cmp.Or(tmpl.Name, tmpl.Uuid)
-						message := ptr.ZeroIfNil(tmpl.Message)
-						if message == "" {
-							message = "unknown error"
-						}
-						errs = append(errs, fmt.Errorf("template create failed for %s: %s", name, message))
-						continue
-					}
-					created = append(created, multimetro.Key{
-						Metro: c.Metro.Name,
-						UUID:  tmpl.Uuid,
-						Name:  tmpl.Name,
-					})
-				}
-			}
-			return created, errors.Join(errs...)
-		})
+	created, err := group.CollectMetro(ctx, g, vol.key.Metro, func(ctx context.Context, c multimetro.MetroClient) (multimetro.Keys, error) {
+		log.G(ctx).Trace().Str("ref", refStr).Msg("creating volume template")
+		resp, err := c.CreateTemplateVolume(ctx, []platform.NameOrUUID{ref.NameOrUUID()})
 		if err != nil {
-			errs = append(errs, err)
-			continue
+			return nil, fmt.Errorf("failed to create template for %s: %w", refStr, err)
 		}
-		created = append(created, keys...)
-	}
-
-	if len(created) == 0 {
-		return nil, errors.Join(errs...)
-	}
-
-	results, err := VolumeTemplate{}.Get(ctx, created.Strings())
+		if resp == nil || resp.Data == nil || len(resp.Data.Volumes) == 0 {
+			return nil, fmt.Errorf("no template created for %s", refStr)
+		}
+		var created multimetro.Keys
+		var errs []error
+		for _, tmpl := range resp.Data.Volumes {
+			status := tmpl.Status
+			if status != "" && status != platform.ResponseStatusSuccess {
+				name := cmp.Or(tmpl.Name, tmpl.Uuid)
+				message := ptr.ZeroIfNil(tmpl.Message)
+				if message == "" {
+					message = "unknown error"
+				}
+				errs = append(errs, fmt.Errorf("template create failed for %s: %s", name, message))
+				continue
+			}
+			created = append(created, multimetro.Key{
+				Metro: c.Metro.Name,
+				UUID:  tmpl.Uuid,
+				Name:  tmpl.Name,
+			})
+		}
+		return created, errors.Join(errs...)
+	})
 	if err != nil {
-		errs = append(errs, err)
+		return nil, err
 	}
-	return results, errors.Join(errs...)
+	if len(created) == 0 {
+		return nil, fmt.Errorf("no template created for %s", refStr)
+	}
+
+	return VolumeTemplate{}.Get(ctx, created.Strings())
 }
 
 func (VolumeTemplate) Examples() map[cmd.CmdType][]kingkong.Example {
