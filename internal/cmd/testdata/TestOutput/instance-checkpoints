@@ -1,61 +1,67 @@
 ====================================== kv ======================================
-metro:       fra
-name:        my-checkpoint
-uuid:        f6a7b8c9-d0e1-2345-f012-3456789abcde
-tags:        ["env-prod", "team-core"]
-delete-lock: true
-state:       checkpoint
-image:       nginx
-type:        micro
+metro:              fra
+name:               my-checkpoint
+uuid:               f6a7b8c9-d0e1-2345-f012-3456789abcde
+tags:               ["env-prod", "team-core"]
+annotations:
+  env:              production
+  example.com/team: platform
+delete-lock:        true
+state:              checkpoint
+image:              nginx
+type:               micro
 runtime:
-  args:      ["arg1", "arg2"]
+  args:             ["arg1", "arg2"]
   env:
-    KEY1:    val1
-    KEY2:    val2
+    KEY1:           val1
+    KEY2:           val2
 resources:
-  memory:    256MiB
-  vcpus:     2
+  memory:           256MiB
+  vcpus:            2
 volumes:
-- name:      my-volume
-  at:        /data
-  readonly:  true
+- name:             my-volume
+  at:               /data
+  readonly:         true
 snapshot:
-  uuid:      2c3d4e5f-6a7b-8901-cdef-1234567890ab
+  uuid:             2c3d4e5f-6a7b-8901-cdef-1234567890ab
 
 ==================================== kv-all ====================================
-metro:           fra
-name:            my-checkpoint
-uuid:            f6a7b8c9-d0e1-2345-f012-3456789abcde
-tags:            ["env-prod", "team-core"]
-delete-lock:     true
-state:           checkpoint
-image:           nginx
-type:            micro
+metro:              fra
+name:               my-checkpoint
+uuid:               f6a7b8c9-d0e1-2345-f012-3456789abcde
+tags:               ["env-prod", "team-core"]
+annotations:
+  env:              production
+  example.com/team: platform
+delete-lock:        true
+state:              checkpoint
+image:              nginx
+type:               micro
 runtime:
-  args:          ["arg1", "arg2"]
+  args:             ["arg1", "arg2"]
   env:
-    KEY1:        val1
-    KEY2:        val2
+    KEY1:           val1
+    KEY2:           val2
 resources:
-  memory:        256MiB
-  vcpus:         2
+  memory:           256MiB
+  vcpus:            2
 volumes:
-- name:          my-volume
+- name:             my-volume
   uuid:
-  at:            /data
-  readonly:      true
+  at:               /data
+  readonly:         true
 snapshot:
-  uuid:          2c3d4e5f-6a7b-8901-cdef-1234567890ab
+  uuid:             2c3d4e5f-6a7b-8901-cdef-1234567890ab
 timestamps:
-  created:       never
+  created:          never
 scale-to-zero:
-  enabled:       false
+  enabled:          false
   policy:
-  stateful:      false
-  cooldown-time: 0s
-  notify-time:   0s
+  stateful:         false
+  cooldown-time:    0s
+  notify-time:      0s
 restart:
-  policy:        always
+  policy:           always
 
 ==================================== table =====================================
 METRO  NAME           STATE       IMAGE  ARGS              MEMORY  VCPUS  CREATED
@@ -99,6 +105,14 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
       "add": null,
       "del": null
     }
+  },
+  {
+    "name": "annotations",
+    "value": {
+      "env": "production",
+      "example.com/team": "platform"
+    },
+    "verbosity": "long"
   },
   {
     "name": "delete-lock",

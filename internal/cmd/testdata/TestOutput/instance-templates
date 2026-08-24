@@ -3,6 +3,8 @@ metro:       fra
 name:        my-template
 uuid:        d4e5f6a7-b8c9-0123-def0-123456789abc
 tags:        ["env-staging"]
+annotations:
+  env:       staging
 state:       template
 image:       nginx
 type:        micro
@@ -19,6 +21,8 @@ metro:           fra
 name:            my-template
 uuid:            d4e5f6a7-b8c9-0123-def0-123456789abc
 tags:            ["env-staging"]
+annotations:
+  env:           staging
 delete-lock:     false
 state:           template
 image:           nginx
@@ -86,6 +90,13 @@ fra    my-template  template  nginx        128MiB  1      never
       "add": null,
       "del": null
     }
+  },
+  {
+    "name": "annotations",
+    "value": {
+      "env": "staging"
+    },
+    "verbosity": "long"
   },
   {
     "name": "delete-lock",
