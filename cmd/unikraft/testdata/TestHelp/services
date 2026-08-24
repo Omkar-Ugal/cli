@@ -256,7 +256,7 @@ Fields:
   services.*.handlers
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the service.
       --visual
           Open an editor to modify fields visually.
@@ -302,10 +302,10 @@ Create flags:
       --hard-limit=<n>
           Hard limit.
           [examples: 10, 100]
-      --domain=<fqdn>
+      --domain=<fqdn> ...
           Service domain.
           [example: example.com]
-      --service=<src>:<dest>[/<handlers>]
+      --service=<src>:<dest>[/<handlers>] ...
           Service port.
           [example: 443:8080/http+tls]
 
@@ -339,11 +339,11 @@ Fields:
   services.*.handlers
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the service.
-      --add=<name>=<value>, --add-file=<name>=<filename>
+      --add=<name>=<value> ..., --add-file=<name>=<filename> ...
           Key-value pairs to add to the service.
-      --del=<name>=<value>, --del-file=<name>=<filename>
+      --del=<name>=<value> ..., --del-file=<name>=<filename> ...
           Keys to delete from the service.
       --visual
           Open an editor to modify fields visually.
@@ -384,10 +384,10 @@ Edit flags:
       --hard-limit=<n>
           Hard limit.
           [examples: 10, 100]
-      --domain=<fqdn>
+      --domain=<fqdn> ...
           Service domain.
           [example: example.com]
-      --service=<src>:<dest>[/<handlers>]
+      --service=<src>:<dest>[/<handlers>] ...
           Service port.
           [example: 443:8080/http+tls]
 
