@@ -196,3 +196,8 @@ require (
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	tailscale.com v1.94.1 // indirect
 )
+
+// Pin ultraviolet to the last revision before it started misbehaving.
+// Concretely every screen resize currently duplicates our table header.
+// See: https://github.com/charmbracelet/ultraviolet/issues/155
+replace github.com/charmbracelet/ultraviolet => github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7
