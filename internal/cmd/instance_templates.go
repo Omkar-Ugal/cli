@@ -424,7 +424,7 @@ func (InstanceTemplate) Examples() map[cmd.CmdType][]kingkong.Example {
 		},
 		cmd.CmdTypeCreate: {
 			{
-				Description: "Convert a stopped instance into a template",
+				Description: "Convert an instance into a template",
 				Commands:    []string{"unikraft instance template create demo-instance"},
 			},
 		},

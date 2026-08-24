@@ -1293,7 +1293,7 @@ Arguments:
           Instance to convert into a template.
 
 Examples:
-  # Convert a stopped instance into a template
+  # Convert an instance into a template
   unikraft instance template create demo-instance
 
 Fields:
