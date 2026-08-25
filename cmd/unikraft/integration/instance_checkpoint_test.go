@@ -169,6 +169,76 @@ func TestInstanceCheckpoints(t *testing.T) {
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
+	// volumes proves a checkpoint gets its own cloned copy of the source
+	// instance's volumes, that the clone is a volume template rather than a
+	// plain volume, and that the source volume is left untouched.
+	t.Run("volumes", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		volName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + volName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "size=10",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "volume", "inspect", "test-" + volName,
+			"--output", "template={{ .uuid }}",
+		})
+		srcVolUUID := strings.TrimSpace(out)
+		assert.NotEmpty(t, srcVolUUID)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--set", "volumes=test-" + volName + ":/data",
+		})
+
+		out = r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "create", "test-" + instName,
+			"--set", "wait-timeout=30s",
+			"--output", "template={{ .name }}",
+		})
+		checkpointName := strings.TrimSpace(out)
+		assert.NotEmpty(t, checkpointName)
+
+		out = r.Run(t, []string{"unikraft", "instance", "checkpoint", "inspect", checkpointName, "-f", "all"})
+		assert.Regexp(t, `at:\s+/data`, out)
+
+		// The checkpoint's volume is a clone, created without a name, so it is
+		// only addressable by UUID.
+		out = r.Run(t, []string{
+			"unikraft", "instance", "checkpoint", "inspect", checkpointName,
+			"--output", "template=" + `{{ (index .volumes 0).uuid }}`,
+		})
+		ckptVolUUID := strings.TrimSpace(out)
+		assert.NotEmpty(t, ckptVolUUID)
+		assert.NotEqual(t, srcVolUUID, ckptVolUUID)
+
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", ckptVolUUID})
+		assert.Regexp(t, `state:\s+template`, out)
+		r.Run(t, []string{"unikraft", "volume", "inspect", ckptVolUUID}, integ.ExpectFail())
+
+		// The source volume is unaffected: still a plain volume.
+		out = r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName})
+		assert.NotRegexp(t, `state:\s+template`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "checkpoint", "delete", checkpointName})
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "volume", "wait", "--until", "state==available", "test-" + volName})
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
+	})
+
 	t.Run("create-from-checkpoint", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		baseName := uniq()

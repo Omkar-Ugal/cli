@@ -1,13 +1,18 @@
 ====================================== kv ======================================
-metro:     fra
-name:      my-template
-uuid:      d4e5f6a7-b8c9-0123-def0-123456789abc
-tags:      ["env-staging"]
-state:     stopped
-image:     nginx
+metro:       fra
+name:        my-template
+uuid:        d4e5f6a7-b8c9-0123-def0-123456789abc
+tags:        ["env-staging"]
+state:       template
+image:       nginx
+type:        micro
 resources:
-  memory:  128MiB
-  vcpus:   1
+  memory:    128MiB
+  vcpus:     1
+snapshot:
+  uuid:      1b2c3d4e-5f6a-7890-bcde-f1234567890a
+timing:
+  boot-time: 12ms
 
 ==================================== kv-all ====================================
 metro:           fra
@@ -15,8 +20,9 @@ name:            my-template
 uuid:            d4e5f6a7-b8c9-0123-def0-123456789abc
 tags:            ["env-staging"]
 delete-lock:     false
-state:           stopped
+state:           template
 image:           nginx
+type:            micro
 runtime:
   args:
   env:
@@ -24,8 +30,13 @@ resources:
   memory:        128MiB
   vcpus:         1
 volumes:
+snapshot:
+  uuid:          1b2c3d4e-5f6a-7890-bcde-f1234567890a
 timestamps:
   created:       never
+timing:
+  boot-time:     12ms
+  net-time:      34ms
 scale-to-zero:
   enabled:       false
   policy:
@@ -36,8 +47,8 @@ restart:
   policy:
 
 ==================================== table =====================================
-METRO  NAME         STATE    IMAGE  ARGS  MEMORY  VCPUS  CREATED
-fra    my-template  stopped  nginx        128MiB  1      never
+METRO  NAME         STATE     IMAGE  ARGS  MEMORY  VCPUS  CREATED
+fra    my-template  template  nginx        128MiB  1      never
 
 ==================================== debug =====================================
 [
@@ -86,7 +97,7 @@ fra    my-template  stopped  nginx        128MiB  1      never
   },
   {
     "name": "state",
-    "value": "stopped",
+    "value": "template",
     "verbosity": "short"
   },
   {
@@ -99,6 +110,11 @@ fra    my-template  stopped  nginx        128MiB  1      never
       }
     ],
     "verbosity": "short"
+  },
+  {
+    "name": "type",
+    "value": "micro",
+    "verbosity": "long"
   },
   {
     "name": "runtime",
@@ -156,17 +172,21 @@ fra    my-template  stopped  nginx        128MiB  1      never
           "name": "readonly",
           "value": false,
           "verbosity": "long"
-        },
-        {
-          "name": "size",
-          "verbosity": "invisible",
-          "create": {
-            "set": "0B"
-          }
         }
       ],
       "verbosity": "long"
     },
+    "verbosity": "long"
+  },
+  {
+    "name": "snapshot",
+    "subfields": [
+      {
+        "name": "uuid",
+        "value": "1b2c3d4e-5f6a-7890-bcde-f1234567890a",
+        "verbosity": "long"
+      }
+    ],
     "verbosity": "long"
   },
   {
@@ -179,6 +199,22 @@ fra    my-template  stopped  nginx        128MiB  1      never
       }
     ],
     "verbosity": "short"
+  },
+  {
+    "name": "timing",
+    "subfields": [
+      {
+        "name": "boot-time",
+        "value": "12ms",
+        "verbosity": "long"
+      },
+      {
+        "name": "net-time",
+        "value": "34ms",
+        "verbosity": "hidden"
+      }
+    ],
+    "verbosity": "long"
   },
   {
     "name": "scale-to-zero",

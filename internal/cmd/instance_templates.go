@@ -82,6 +82,7 @@ type InstanceTemplate struct {
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
+	Type_ *platform.InstanceType          `mirror:"instance.type" field:"type,long"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short"`
@@ -93,10 +94,19 @@ type InstanceTemplate struct {
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short"`
 	}
 
-	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed"`
+	Volumes []InstanceTemplateVolume `mirror:"instance.volumes" field:",embed"`
+
+	Snapshot struct {
+		UUID string `mirror:"instance.snapshot.uuid" field:",long"`
+	}
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
+	}
+
+	Timing struct {
+		BootTime types.DurationUS `mirror:"instance.boot_time_us" field:",long"`
+		NetTime  types.DurationUS `mirror:"instance.net_time_us"`
 	}
 
 	ScaleToZero InstanceScaleToZero `field:",embed" mirror:"instance.scale_to_zero"`

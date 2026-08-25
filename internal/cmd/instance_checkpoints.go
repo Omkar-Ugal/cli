@@ -81,10 +81,11 @@ type InstanceCheckpoint struct {
 	UUID      string          `mirror:"instance.uuid" field:",long"`
 
 	Tags       []string `mirror:"instance.tags" field:",long" edit:"set,add,del"`
-	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,hidden" edit:"set"`
+	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,long" edit:"set"`
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
+	Type_ *platform.InstanceType          `mirror:"instance.type" field:"type,long"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short"`
@@ -96,7 +97,11 @@ type InstanceCheckpoint struct {
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short"`
 	}
 
-	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed"`
+	Volumes []InstanceTemplateVolume `mirror:"instance.volumes" field:",embed"`
+
+	Snapshot struct {
+		UUID string `mirror:"instance.snapshot.uuid" field:",long"`
+	}
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
