@@ -8,6 +8,8 @@ package integration
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -129,6 +131,105 @@ func TestInstances(t *testing.T) {
 
 		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
 		assert.Regexp(t, `LIST:\s+d,e`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	t.Run("create-annotations", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"--annotation", "my-key=value1",
+			"--annotation", "example.com/annotation2=value2",
+			"--set", "annotations=test.unikraft.com/via-set=value3",
+		})
+		assert.Regexp(t, `my-key:\s+value1`, out)
+		assert.Regexp(t, `example\.com/annotation2:\s+value2`, out)
+		assert.Regexp(t, `test\.unikraft\.com/via-set:\s+value3`, out)
+
+		// The shortcut flag maps to --set, which replaces the whole map.
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--annotation", "my-key=replaced",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `my-key:\s+replaced`, out)
+		assert.NotRegexp(t, `example\.com/annotation2`, out)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--add", "annotations=added-key=added-value",
+			"--add", "annotations=my-key=overwritten",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `added-key:\s+added-value`, out)
+		assert.Regexp(t, `my-key:\s+overwritten`, out)
+
+		// del takes bare keys, not key=value pairs.
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--del", "annotations=added-key",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.NotRegexp(t, `added-key`, out)
+		assert.Regexp(t, `my-key:\s+overwritten`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	t.Run("annotations-guest", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		image := r.Config.Profile.Organization + "/startdata-e2e:" + uniq()
+
+		dir := t.TempDir()
+		require.NoError(t, fstest.Apply(
+			fstest.CreateDir("base", 0o755),
+			fstest.CreateFile("base/Dockerfile", []byte(`FROM busybox:latest`), 0o644),
+			fstest.CreateFile("base/Kraftfile", []byte(`
+spec: v0.7
+name: startdata-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["cat", "/sys/class/uio/uio0/device/startdata"]
+`), 0o644),
+		).Apply(dir))
+
+		r.Run(t, []string{"unikraft", "build", "base", "--output", image}, integ.WithWorkDir(dir))
+		r.Run(t, []string{
+			"unikraft", "run",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--output", "quiet",
+			"--image", image,
+			"--annotation", "my-key=value1",
+			"--annotation", "example.com/annotation2=value2",
+		}, integ.WithWorkDir(dir))
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
+
+		out := r.Run(t, []string{"unikraft", "instance", "logs", "test-" + instName})
+		startdata := regexp.MustCompile(`"annotations":({[^}]*})`).FindStringSubmatch(out)
+		require.Len(t, startdata, 2, "no annotations object in startdata: %s", out)
+
+		var annotations map[string]string
+		require.NoError(t, json.Unmarshal([]byte(startdata[1]), &annotations))
+		assert.Equal(t, map[string]string{
+			"my-key":                  "value1",
+			"example.com/annotation2": "value2",
+		}, annotations)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
