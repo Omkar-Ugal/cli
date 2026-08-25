@@ -1,22 +1,23 @@
 ====================================== kv ======================================
-metro:      fra
-name:       my-checkpoint
-uuid:       f6a7b8c9-d0e1-2345-f012-3456789abcde
-tags:       ["env-prod", "team-core"]
-state:      checkpoint
-image:      nginx
+metro:       fra
+name:        my-checkpoint
+uuid:        f6a7b8c9-d0e1-2345-f012-3456789abcde
+tags:        ["env-prod", "team-core"]
+delete-lock: true
+state:       checkpoint
+image:       nginx
 runtime:
-  args:     ["arg1", "arg2"]
+  args:      ["arg1", "arg2"]
   env:
-    KEY1:   val1
-    KEY2:   val2
+    KEY1:    val1
+    KEY2:    val2
 resources:
-  memory:   256MiB
-  vcpus:    2
+  memory:    256MiB
+  vcpus:     2
 volumes:
-- name:     my-volume
-  at:       /data
-  readonly: true
+- name:      my-volume
+  at:        /data
+  readonly:  true
 
 ==================================== kv-all ====================================
 metro:           fra
@@ -96,7 +97,7 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
   {
     "name": "delete-lock",
     "value": true,
-    "verbosity": "hidden",
+    "verbosity": "long",
     "edit": {
       "set": true
     }
