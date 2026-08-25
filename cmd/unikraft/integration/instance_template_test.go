@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	integ "unikraft.com/cli/internal/integration"
 )
 
 func TestInstanceTemplates(t *testing.T) {
@@ -83,6 +85,60 @@ func TestInstanceTemplates(t *testing.T) {
 		assert.Regexp(t, `memory:\s+128`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "template", "delete", templateName})
+	})
+
+	// volumes proves the mountpoints survive the in-place conversion, and that
+	// the attached volume becomes a volume template - so it is reachable via
+	// `volume template` and no longer via `volume`.
+	t.Run("volumes", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		volName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + volName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "size=10",
+		})
+
+		r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--output", "quiet",
+			"--set", "name=test-" + instName,
+			"--set", "metro=" + r.Config.MetroName,
+			"--set", "image=nginx:latest",
+			"--set", "autostart=false",
+			"--set", "resources.memory=128",
+			"--set", "resources.vcpus=1",
+			"--set", "volumes=test-" + volName + ":/data",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "template", "create", "test-" + instName,
+			"--output", "template={{ .name }}",
+		})
+		templateName := strings.TrimSpace(out)
+
+		out = r.Run(t, []string{"unikraft", "instance", "template", "inspect", templateName, "-f", "all"})
+		assert.Contains(t, out, "test-"+volName)
+		assert.Regexp(t, `at:\s+/data`, out)
+
+		out = r.Run(t, []string{"unikraft", "volume", "template", "list", "--output", "quiet"})
+		assert.Contains(t, out, "test-"+volName)
+
+		out = r.Run(t, []string{"unikraft", "volume", "list", "--output", "quiet"})
+		assert.NotContains(t, out, "test-"+volName)
+
+		out = r.Run(t, []string{"unikraft", "volume", "template", "inspect", "test-" + volName})
+		assert.Regexp(t, `state:\s+template`, out)
+		r.Run(t, []string{"unikraft", "volume", "inspect", "test-" + volName}, integ.ExpectFail())
+
+		// Deleting the template takes its volume template with it: the
+		// conversion re-parented the volume to the template.
+		r.Run(t, []string{"unikraft", "instance", "template", "delete", templateName})
+		r.Run(t, []string{"unikraft", "volume", "template", "delete", "test-" + volName}, integ.AllowFail())
 	})
 
 	t.Run("tags", func(t *testing.T) {

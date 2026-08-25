@@ -298,6 +298,15 @@ func (i *InstanceService) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, (*instanceServiceJSON)(i))
 }
 
+// InstanceTemplateVolume is the read-only view of a volume attached to an
+// instance template or checkpoint. Converting an instance turns its volumes
+// into volume templates, so the link targets that type rather than Volume.
+type InstanceTemplateVolume struct {
+	Link[VolumeTemplate]
+	At       string `name:"at" mirror:"at" json:"at" field:",long"`
+	Readonly bool   `name:"readonly" mirror:"readonly" json:"readonly,omitempty" field:",long"`
+}
+
 type InstanceVolume struct {
 	Link[Volume]
 	At       string `name:"at" mirror:"at" json:"at" field:",long"`

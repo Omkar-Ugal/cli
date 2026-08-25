@@ -156,13 +156,6 @@ fra    my-template  stopped  nginx        128MiB  1      never
           "name": "readonly",
           "value": false,
           "verbosity": "long"
-        },
-        {
-          "name": "size",
-          "verbosity": "invisible",
-          "create": {
-            "set": "0B"
-          }
         }
       ],
       "verbosity": "long"

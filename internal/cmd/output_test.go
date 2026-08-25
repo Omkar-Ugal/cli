@@ -182,8 +182,8 @@ func instanceCheckpointsOutputTests(t *testing.T) {
 		Tags:       []string{"env-prod", "team-core"},
 		DeleteLock: true,
 		State:      types.InstanceState(platform.InstanceStateCheckpoint),
-		Volumes: []*cmd.InstanceVolume{
-			{Link: cmd.Link[cmd.Volume]{Name: "my-volume"}, At: "/data", Readonly: true},
+		Volumes: []cmd.InstanceTemplateVolume{
+			{Link: cmd.Link[cmd.VolumeTemplate]{Name: "my-volume"}, At: "/data", Readonly: true},
 		},
 	}
 	sample.Runtime.Args = cmd.InstanceArgs{"arg1", "arg2"}

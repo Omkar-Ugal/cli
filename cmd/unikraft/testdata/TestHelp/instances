@@ -1129,7 +1129,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1181,7 +1181,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1241,7 +1241,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1307,7 +1307,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1375,7 +1375,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1454,7 +1454,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1527,7 +1527,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1580,7 +1580,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1641,7 +1641,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1704,7 +1704,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1769,7 +1769,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1838,7 +1838,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time
@@ -1918,7 +1918,7 @@ Fields:
   runtime, runtime.args, runtime.env
   resources, resources.memory, resources.vcpus
   volumes, volumes.*, volumes.*.name, volumes.*.uuid, volumes.*.at,
-  volumes.*.readonly, volumes.*.size
+  volumes.*.readonly
   timestamps, timestamps.created
   scale-to-zero, scale-to-zero.enabled, scale-to-zero.policy, scale-to-
   zero.stateful, scale-to-zero.cooldown-time, scale-to-zero.notify-time

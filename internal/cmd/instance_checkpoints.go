@@ -96,7 +96,7 @@ type InstanceCheckpoint struct {
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short"`
 	}
 
-	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed"`
+	Volumes []InstanceTemplateVolume `mirror:"instance.volumes" field:",embed"`
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`

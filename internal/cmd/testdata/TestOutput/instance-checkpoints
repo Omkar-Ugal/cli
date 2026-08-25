@@ -181,18 +181,11 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
             "name": "readonly",
             "value": true,
             "verbosity": "long"
-          },
-          {
-            "name": "size",
-            "verbosity": "invisible",
-            "create": {
-              "set": "0B"
-            }
           }
         ],
         "links": [
           {
-            "type": "volume",
+            "type": "volume-template",
             "key": "my-volume"
           }
         ],
@@ -221,13 +214,6 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
           "name": "readonly",
           "value": false,
           "verbosity": "long"
-        },
-        {
-          "name": "size",
-          "verbosity": "invisible",
-          "create": {
-            "set": "0B"
-          }
         }
       ],
       "verbosity": "long"
