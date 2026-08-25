@@ -6,6 +6,7 @@ tags:        ["env-prod", "team-core"]
 delete-lock: true
 state:       checkpoint
 image:       nginx
+type:        micro
 runtime:
   args:      ["arg1", "arg2"]
   env:
@@ -18,6 +19,8 @@ volumes:
 - name:      my-volume
   at:        /data
   readonly:  true
+snapshot:
+  uuid:      2c3d4e5f-6a7b-8901-cdef-1234567890ab
 
 ==================================== kv-all ====================================
 metro:           fra
@@ -27,6 +30,7 @@ tags:            ["env-prod", "team-core"]
 delete-lock:     true
 state:           checkpoint
 image:           nginx
+type:            micro
 runtime:
   args:          ["arg1", "arg2"]
   env:
@@ -40,6 +44,8 @@ volumes:
   uuid:
   at:            /data
   readonly:      true
+snapshot:
+  uuid:          2c3d4e5f-6a7b-8901-cdef-1234567890ab
 timestamps:
   created:       never
 scale-to-zero:
@@ -117,6 +123,11 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
       }
     ],
     "verbosity": "short"
+  },
+  {
+    "name": "type",
+    "value": "micro",
+    "verbosity": "long"
   },
   {
     "name": "runtime",
@@ -218,6 +229,17 @@ fra    my-checkpoint  checkpoint  nginx  ["arg1", "arg2"]  256MiB  2      never
       ],
       "verbosity": "long"
     },
+    "verbosity": "long"
+  },
+  {
+    "name": "snapshot",
+    "subfields": [
+      {
+        "name": "uuid",
+        "value": "2c3d4e5f-6a7b-8901-cdef-1234567890ab",
+        "verbosity": "long"
+      }
+    ],
     "verbosity": "long"
   },
   {

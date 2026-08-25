@@ -165,10 +165,14 @@ func instanceTemplatesOutputTests(t *testing.T) {
 		Name:  "my-template",
 		UUID:  "d4e5f6a7-b8c9-0123-def0-123456789abc",
 		Tags:  []string{"env-staging"},
-		State: types.InstanceState(platform.InstanceStateStopped),
+		State: types.InstanceState(platform.InstanceStateTemplate),
+		Type_: new(platform.InstanceTypeMicro),
 	}
 	sample.Resources.Memory = 128
 	sample.Resources.VCPUs = 1
+	sample.Snapshot.UUID = "1b2c3d4e-5f6a-7890-bcde-f1234567890a"
+	sample.Timing.BootTime = 12000
+	sample.Timing.NetTime = 34000
 	require.NoError(t, sample.Image.UnmarshalText([]byte("nginx:latest")))
 
 	integ.Gild[resource.Resource](t, dumpResource, sample)
@@ -182,6 +186,7 @@ func instanceCheckpointsOutputTests(t *testing.T) {
 		Tags:       []string{"env-prod", "team-core"},
 		DeleteLock: true,
 		State:      types.InstanceState(platform.InstanceStateCheckpoint),
+		Type_:      new(platform.InstanceTypeMicro),
 		Volumes: []cmd.InstanceTemplateVolume{
 			{Link: cmd.Link[cmd.VolumeTemplate]{Name: "my-volume"}, At: "/data", Readonly: true},
 		},
@@ -191,6 +196,7 @@ func instanceCheckpointsOutputTests(t *testing.T) {
 	sample.Resources.Memory = 256
 	sample.Resources.VCPUs = 2
 	sample.Restart.Policy = "always"
+	sample.Snapshot.UUID = "2c3d4e5f-6a7b-8901-cdef-1234567890ab"
 	require.NoError(t, sample.Image.UnmarshalText([]byte("nginx:latest")))
 
 	integ.Gild[resource.Resource](t, dumpResource, sample)

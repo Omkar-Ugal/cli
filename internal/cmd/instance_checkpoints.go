@@ -85,6 +85,7 @@ type InstanceCheckpoint struct {
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
+	Type_ *platform.InstanceType          `mirror:"instance.type" field:"type,long"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short"`
@@ -97,6 +98,10 @@ type InstanceCheckpoint struct {
 	}
 
 	Volumes []InstanceTemplateVolume `mirror:"instance.volumes" field:",embed"`
+
+	Snapshot struct {
+		UUID string `mirror:"instance.snapshot.uuid" field:",long"`
+	}
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
