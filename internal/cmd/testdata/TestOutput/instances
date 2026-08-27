@@ -1,118 +1,124 @@
 ====================================== kv ======================================
-metro:           fra
-name:            my-instance
-uuid:            7b79b250-0658-4d10-8dc0-d854399d7e74
-tags:            ["env-prod", "team-core"]
-state:           running
-image:           nginx
-type:            full
+metro:              fra
+name:               my-instance
+uuid:               7b79b250-0658-4d10-8dc0-d854399d7e74
+tags:               ["env-prod", "team-core"]
+annotations:
+  env:              production
+  example.com/team: platform
+state:              running
+image:              nginx
+type:               full
 runtime:
-  args:          ["arg1", "arg2"]
+  args:             ["arg1", "arg2"]
   env:
-    KEY1:        val1
-    KEY2:        val2
+    KEY1:           val1
+    KEY2:           val2
 resources:
-  memory:        256MiB
-  vcpus:         2
-  gpus:          1
+  memory:           256MiB
+  vcpus:            2
+  gpus:             1
 service:
-  name:          my-service
-  uuid:          a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  name:             my-service
+  uuid:             a1b2c3d4-e5f6-7890-abcd-ef1234567890
   domains:
-  - fqdn:        example.unikraft.app
+  - fqdn:           example.unikraft.app
 volumes:
-- name:          my-volume
-  at:            /data
-  readonly:      true
+- name:             my-volume
+  at:               /data
+  readonly:         true
 roms:
-- name:          my-rom
-  image:         myuser/my-rom:latest
-  at:            /rom
+- name:             my-rom
+  image:            myuser/my-rom:latest
+  at:               /rom
 networks:
-- uuid:          net-uuid-1234
-  private-ip:    192.168.1.10
-  mac:           aa:bb:cc:dd:ee:ff
+- uuid:             net-uuid-1234
+  private-ip:       192.168.1.10
+  mac:              aa:bb:cc:dd:ee:ff
 gpus:
-- uuid:          gpu-uuid-1234
-  model:         10de:1eb8
+- uuid:             gpu-uuid-1234
+  model:            10de:1eb8
 scale-to-zero:
-  policy:        on
-  stateful:      true
-  cooldown-time: 500ms
-  notify-time:   100ms
+  policy:           on
+  stateful:         true
+  cooldown-time:    500ms
+  notify-time:      100ms
 timing:
-  boot-time:     250ms
-sched-priority:  high
+  boot-time:        250ms
+sched-priority:     high
 stop:
-  reason:        crashed
-  exit-code:     1
+  reason:           crashed
+  exit-code:        1
 
 ==================================== kv-all ====================================
-metro:           fra
-name:            my-instance
-uuid:            7b79b250-0658-4d10-8dc0-d854399d7e74
-tags:            ["env-prod", "team-core"]
-state:           running
-image:           nginx
-type:            full
+metro:              fra
+name:               my-instance
+uuid:               7b79b250-0658-4d10-8dc0-d854399d7e74
+tags:               ["env-prod", "team-core"]
+annotations:
+  env:              production
+  example.com/team: platform
+state:              running
+image:              nginx
+type:               full
 runtime:
-  args:          ["arg1", "arg2"]
+  args:             ["arg1", "arg2"]
   env:
-    KEY1:        val1
-    KEY2:        val2
+    KEY1:           val1
+    KEY2:           val2
 resources:
-  memory:        256MiB
-  vcpus:         2
-  gpus:          1
+  memory:           256MiB
+  vcpus:            2
+  gpus:             1
 service:
-  name:          my-service
-  uuid:          a1b2c3d4-e5f6-7890-abcd-ef1234567890
+  name:             my-service
+  uuid:             a1b2c3d4-e5f6-7890-abcd-ef1234567890
   domains:
-  - fqdn:        example.unikraft.app
+  - fqdn:           example.unikraft.app
     certificate:
       name:
       uuid:
 volumes:
-- name:          my-volume
+- name:             my-volume
   uuid:
-  at:            /data
-  readonly:      true
+  at:               /data
+  readonly:         true
 roms:
-- name:          my-rom
-  image:         myuser/my-rom:latest
-  at:            /rom
+- name:             my-rom
+  image:            myuser/my-rom:latest
+  at:               /rom
 networks:
-- uuid:          net-uuid-1234
-  private-ip:    192.168.1.10
-  mac:           aa:bb:cc:dd:ee:ff
+- uuid:             net-uuid-1234
+  private-ip:       192.168.1.10
+  mac:              aa:bb:cc:dd:ee:ff
 gpus:
-- uuid:          gpu-uuid-1234
-  model:         10de:1eb8
+- uuid:             gpu-uuid-1234
+  model:            10de:1eb8
 timestamps:
-  created:       never
-  started:       never
-  stopped:       never
+  created:          never
+  started:          never
+  stopped:          never
 scale-to-zero:
-  enabled:       false
-  policy:        on
-  stateful:      true
-  cooldown-time: 500ms
-  notify-time:   100ms
+  enabled:          false
+  policy:           on
+  stateful:         true
+  cooldown-time:    500ms
+  notify-time:      100ms
 timing:
-  uptime:        1.5s
-  boot-time:     250ms
-  net-time:      100ms
+  uptime:           1.5s
+  boot-time:        250ms
+  net-time:         100ms
 restart:
-  policy:        always
-  start-count:   3
-  restart-count: 1
-sched-priority:  high
+  policy:           always
+  start-count:      3
+  restart-count:    1
+sched-priority:     high
 stop:
-  reason:        crashed
-  origin:        kernel
+  reason:           crashed
+  origin:           kernel
   errno:
-  exit-code:     1
-delete-lock:     false
+  exit-code:        1
+delete-lock:        false
 
 ==================================== table =====================================
 METRO  NAME         STATE    IMAGE  ARGS              MEMORY  VCPUS  FQDN                  CREATED
@@ -166,6 +172,28 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
         "env-prod",
         "team-core"
       ],
+      "add": null,
+      "del": null
+    }
+  },
+  {
+    "name": "annotations",
+    "value": {
+      "env": "production",
+      "example.com/team": "platform"
+    },
+    "verbosity": "long",
+    "create": {
+      "set": {
+        "env": "production",
+        "example.com/team": "platform"
+      }
+    },
+    "edit": {
+      "set": {
+        "env": "production",
+        "example.com/team": "platform"
+      },
       "add": null,
       "del": null
     }

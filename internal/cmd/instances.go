@@ -99,7 +99,8 @@ type InstanceCreateCmd struct {
 
 	ScaleToZero InstanceScaleToZero `group:"flag-create" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 
-	Tag []string `group:"flag-create" shortcut:"tags" sep:"none" help:"Instance tag." placeholder:"tag" example:"env-prod"`
+	Tag        []string `group:"flag-create" shortcut:"tags" sep:"none" help:"Instance tag." placeholder:"tag" example:"env-prod"`
+	Annotation []string `group:"flag-create" shortcut:"annotations" sep:"none" help:"Instance annotation." placeholder:"<key>=<value>" example:"env=production,example.com/team=platform"`
 
 	Restart string `group:"flag-create" shortcut:"restart.policy" help:"Restart policy." placeholder:"policy" example:"always,on-failure,never"`
 
@@ -149,7 +150,8 @@ type InstanceEditCmd struct {
 
 	Rom []InstanceRom `group:"flag-edit" shortcut:"roms" sep:"none" help:"Attach ROM." placeholder:"image=<ref>,at=<path>" example:"image=myuser/my-rom:latest\\,at=/rom0\\,name=my-rom,dir=./mydata\\,at=/rom"`
 
-	Tag []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Instance tag." placeholder:"tag" example:"env-prod"`
+	Tag        []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Instance tag." placeholder:"tag" example:"env-prod"`
+	Annotation []string `group:"flag-edit" shortcut:"annotations" sep:"none" help:"Instance annotation." placeholder:"<key>=<value>" example:"env=production,example.com/team=platform"`
 
 	ScaleToZero InstanceScaleToZero `group:"flag-edit" shortcut:"scale-to-zero" help:"Scale-to-zero options.\n  policy: on | idle | off\n  cooldown-time: cooldown in ms before scaling to zero\n  notify-time: notification time in ms before scaling to zero\n  stateful: true | false" placeholder:"<key>=<value>" example:"on,policy=on\\,cooldown-time=300,policy=on\\,stateful=true\\,cooldown-time=500\\,notify-time=100"`
 
@@ -168,7 +170,8 @@ type Instance struct {
 	Name  string          `mirror:"instance.name" field:",short" create:"set"`
 	UUID  string          `mirror:"instance.uuid" field:",long"`
 
-	Tags []string `mirror:"instance.tags" field:",long" create:"set" edit:"set,add,del"`
+	Tags        []string          `mirror:"instance.tags" field:",long" create:"set" edit:"set,add,del"`
+	Annotations map[string]string `mirror:"instance.annotations" field:",long" create:"set" edit:"set,add,del=keys"`
 
 	State types.InstanceState `mirror:"instance.state" field:",short" edit:"set"`
 
@@ -963,6 +966,11 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 	switch path {
 	case "tags":
 		return platform.MutableInstancePropertyTags, value.([]string), nil
+	case "annotations":
+		if op == patchOpDel {
+			return platform.MutableInstancePropertyAnnotations, value.([]string), nil
+		}
+		return platform.MutableInstancePropertyAnnotations, value.(map[string]string), nil
 	case "image":
 		return platform.MutableInstancePropertyImage, value.(types.ImageRef[reference.Named]).Reference.String(), nil
 	case "runtime.args":
@@ -1048,6 +1056,8 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 			req.Name = &name
 		case "tags":
 			req.Tags = field.Create.Set.([]string)
+		case "annotations":
+			req.Annotations = field.Create.Set.(map[string]string)
 		case "metro":
 			metro = string(field.Create.Set.(LinkName[Metro]))
 		case "image":

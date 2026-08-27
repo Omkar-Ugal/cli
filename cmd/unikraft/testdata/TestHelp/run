@@ -44,6 +44,7 @@ Fields:
   name
   uuid
   tags
+  annotations
   state
   image
   pull-policy
@@ -169,6 +170,9 @@ Create flags:
       --tag=<tag> ...
           Instance tag.
           [example: env-prod]
+      --annotation=<key>=<value> ...
+          Instance annotation.
+          [examples: env=production, example.com/team=platform]
       --restart=<policy>
           Restart policy.
           [examples: always, on-failure, never]

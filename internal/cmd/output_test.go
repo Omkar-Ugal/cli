@@ -102,6 +102,10 @@ func instancesOutputTests(t *testing.T) {
 		Name:  "my-instance",
 		UUID:  "7b79b250-0658-4d10-8dc0-d854399d7e74",
 		Tags:  []string{"env-prod", "team-core"},
+		Annotations: map[string]string{
+			"env":              "production",
+			"example.com/team": "platform",
+		},
 		State: types.InstanceState(platform.InstanceStateRunning),
 		Service: &cmd.InstanceService{
 			Link: cmd.Link[cmd.ServiceGroup]{
@@ -165,6 +169,9 @@ func instanceTemplatesOutputTests(t *testing.T) {
 		Name:  "my-template",
 		UUID:  "d4e5f6a7-b8c9-0123-def0-123456789abc",
 		Tags:  []string{"env-staging"},
+		Annotations: map[string]string{
+			"env": "staging",
+		},
 		State: types.InstanceState(platform.InstanceStateTemplate),
 		Type_: new(platform.InstanceTypeMicro),
 	}
@@ -180,10 +187,14 @@ func instanceTemplatesOutputTests(t *testing.T) {
 
 func instanceCheckpointsOutputTests(t *testing.T) {
 	sample := cmd.InstanceCheckpoint{
-		MetroName:  "fra",
-		Name:       "my-checkpoint",
-		UUID:       "f6a7b8c9-d0e1-2345-f012-3456789abcde",
-		Tags:       []string{"env-prod", "team-core"},
+		MetroName: "fra",
+		Name:      "my-checkpoint",
+		UUID:      "f6a7b8c9-d0e1-2345-f012-3456789abcde",
+		Tags:      []string{"env-prod", "team-core"},
+		Annotations: map[string]string{
+			"env":              "production",
+			"example.com/team": "platform",
+		},
 		DeleteLock: true,
 		State:      types.InstanceState(platform.InstanceStateCheckpoint),
 		Type_:      new(platform.InstanceTypeMicro),
