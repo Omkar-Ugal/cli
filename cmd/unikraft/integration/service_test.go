@@ -38,13 +38,14 @@ func TestServices(t *testing.T) {
 		assert.Regexp(t, `destination:\s+443`, out)
 		assert.Regexp(t, `fqdn:`, out)
 
+		// Same shape as above, via shortcut flags rather than --set entries.
 		out = r.Run(t, []string{
 			"unikraft", "service", "create",
-			"--set", "name=test-" + svcNameB,
-			"--set", "metro=" + r.Config.MetroName,
-			"--set", "domains=fqdn=" + domainB + ".unikraft.example",
-			"--set", "services=443:8080/tls+http",
-			"--set", "services=80:443/http+redirect",
+			"--name", "test-" + svcNameB,
+			"--metro", r.Config.MetroName,
+			"--domain", domainB + ".unikraft.example",
+			"--service", "443:8080/tls+http",
+			"--service", "80:443/http+redirect",
 		})
 		assert.Regexp(t, `name:\s+test-`, out)
 		assert.Regexp(t, `source:\s+443`, out)
@@ -112,8 +113,8 @@ func TestServices(t *testing.T) {
 			"--output", "quiet",
 			"--name", "test-" + svcName,
 			"--metro", r.Config.MetroName,
-			"--domains", domainName + ".unikraft.example",
-			"--services", "443:8080/tls+http",
+			"--domain", domainName + ".unikraft.example",
+			"--service", "443:8080/tls+http",
 		})
 
 		r.Run(t, []string{

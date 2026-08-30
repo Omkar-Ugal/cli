@@ -238,8 +238,8 @@ Examples:
   unikraft service create \
   	--name demo-service \
   	--metro fra \
-  	--domains demo \
-  	--services 443:8080/tls+http
+  	--domain demo \
+  	--service 443:8080/tls+http
 
 Fields:
   metro
@@ -256,7 +256,7 @@ Fields:
   services.*.handlers
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the service.
       --visual
           Open an editor to modify fields visually.
@@ -302,12 +302,12 @@ Create flags:
       --hard-limit=<n>
           Hard limit.
           [examples: 10, 100]
-      --domains=<fqdn>
-          Service domains.
-          [examples: example.com, api.example.com]
-      --services=<src>:<dest>[/<handlers>]
-          Service ports.
-          [examples: 443:8080/http+tls, 80:8080/http]
+      --domain=<fqdn> ...
+          Service domain.
+          [example: example.com]
+      --service=<src>:<dest>[/<handlers>] ...
+          Service port.
+          [example: 443:8080/http+tls]
 
 $ unikraft service edit --help
 
@@ -322,7 +322,7 @@ Arguments:
 
 Examples:
   # Add a new service port
-  unikraft service edit demo-service --services 8443:8080/tls
+  unikraft service edit demo-service --service 8443:8080/tls
 
 Fields:
   metro
@@ -339,11 +339,11 @@ Fields:
   services.*.handlers
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the service.
-      --add=<name>=<value>, --add-file=<name>=<filename>
+      --add=<name>=<value> ..., --add-file=<name>=<filename> ...
           Key-value pairs to add to the service.
-      --del=<name>=<value>, --del-file=<name>=<filename>
+      --del=<name>=<value> ..., --del-file=<name>=<filename> ...
           Keys to delete from the service.
       --visual
           Open an editor to modify fields visually.
@@ -384,12 +384,12 @@ Edit flags:
       --hard-limit=<n>
           Hard limit.
           [examples: 10, 100]
-      --domains=<fqdn>
-          Service domains.
-          [examples: example.com, api.example.com]
-      --services=<src>:<dest>[/<handlers>]
-          Service ports.
-          [examples: 443:8080/http+tls, 80:8080/http]
+      --domain=<fqdn> ...
+          Service domain.
+          [example: example.com]
+      --service=<src>:<dest>[/<handlers>] ...
+          Service port.
+          [example: 443:8080/http+tls]
 
 $ unikraft service delete --help
 

@@ -7,6 +7,7 @@ package patch
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"slices"
 
 	"sigs.k8s.io/yaml"
 
@@ -177,7 +179,9 @@ func saveFields(res resource.Resource, fields []resource.Field, patches []resour
 		if patch.Del != nil {
 			return nil, fmt.Errorf("%s was deleted, but visual editing does not support this", key)
 		}
-		setNestedValue(result, key, normalizeValue(patch.Set))
+		if err := setNestedValue(result, key, normalizeValue(patch.Set)); err != nil {
+			return nil, fmt.Errorf("failed to serialize field %s: %w", key, err)
+		}
 	}
 
 	yamlBytes, err := yaml.Marshal(result)
@@ -202,9 +206,32 @@ func loadFieldPatches(fields []resource.Field, data []byte, create bool) ([]reso
 		return nil, fmt.Errorf("failed to unmarshal edited data: %w", err)
 	}
 
-	// Process all fields that have a patch template.
-	// For each field, convert the YAML value and compare with the original value.
+	// Process all fields that have a patch template, deepest paths first.
+	// A field such as "service" and a descendant such as "service.domains"
+	// can share the same YAML subtree; since each field's value is deleted
+	// from obj once consumed (to detect unknown fields below), an ancestor
+	// processed first would consume - and delete - the whole subtree before
+	// its descendants get a chance to read their own part of it.
+	//
+	// This is safe only because every such ancestor reads a disjoint part of
+	// its subtree (Instance.Create's "service" case takes just the name/uuid
+	// link). An ancestor wanting the whole subtree would find descendant
+	// values already deleted and silently patch partial data, so a new
+	// nested set field must claim values its descendants do not.
+	type fieldEntry struct {
+		key   resource.FieldPath
+		field *resource.Field
+	}
+	var entries []fieldEntry
 	for key, field := range resource.IterFields(fields) {
+		entries = append(entries, fieldEntry{key, field})
+	}
+	slices.SortStableFunc(entries, func(a, b fieldEntry) int {
+		return cmp.Compare(len(b.key), len(a.key))
+	})
+
+	for _, entry := range entries {
+		key, field := entry.key, entry.field
 		var patch *resource.Patch
 		if create {
 			patch = field.Create
@@ -289,22 +316,48 @@ func getNestedValue(m map[string]any, path resource.FieldPath) (any, bool) {
 }
 
 // setNestedValue sets a value in a nested map structure based on a field path.
-func setNestedValue(m map[string]any, path resource.FieldPath, value any) {
+func setNestedValue(m map[string]any, path resource.FieldPath, value any) error {
 	if len(path) == 0 {
-		return
+		return nil
 	}
 	if len(path) == 1 {
 		m[path[0]] = value
-		return
+		return nil
 	}
 	// Create nested map if needed
 	key := path[0]
-	if _, ok := m[key]; !ok {
-		m[key] = make(map[string]any)
+	nested, ok := m[key].(map[string]any)
+	if !ok {
+		// An ancestor field carries its own value (e.g. "service" holding an
+		// InstanceService alongside a "service.domains" field). Expand it so
+		// the descendant has somewhere to land; keys the descendant sets then
+		// win over the ones the ancestor's own value produced.
+		expanded, err := objectFields(m[key])
+		if err != nil {
+			return err
+		}
+		nested = expanded
+		m[key] = nested
 	}
-	if nested, ok := m[key].(map[string]any); ok {
-		setNestedValue(nested, path[1:], value)
+	return setNestedValue(nested, path[1:], value)
+}
+
+// objectFields re-expresses a value as the map its own marshaling produces.
+// A value that marshals to something other than an object contributes no
+// fields, so it yields an empty map; only a failure to marshal is an error.
+func objectFields(v any) (map[string]any, error) {
+	if v == nil {
+		return map[string]any{}, nil
 	}
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]any
+	if err := yaml.Unmarshal(data, &m); err != nil || m == nil {
+		return map[string]any{}, nil
+	}
+	return m, nil
 }
 
 // deleteNestedValue removes a value from a nested map structure and cleans up empty parents.

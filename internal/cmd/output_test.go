@@ -102,6 +102,10 @@ func instancesOutputTests(t *testing.T) {
 		Name:  "my-instance",
 		UUID:  "7b79b250-0658-4d10-8dc0-d854399d7e74",
 		Tags:  []string{"env-prod", "team-core"},
+		Annotations: map[string]string{
+			"env":              "production",
+			"example.com/team": "platform",
+		},
 		State: types.InstanceState(platform.InstanceStateRunning),
 		Service: &cmd.InstanceService{
 			Link: cmd.Link[cmd.ServiceGroup]{
@@ -165,10 +169,17 @@ func instanceTemplatesOutputTests(t *testing.T) {
 		Name:  "my-template",
 		UUID:  "d4e5f6a7-b8c9-0123-def0-123456789abc",
 		Tags:  []string{"env-staging"},
-		State: types.InstanceState(platform.InstanceStateStopped),
+		Annotations: map[string]string{
+			"env": "staging",
+		},
+		State: types.InstanceState(platform.InstanceStateTemplate),
+		Type_: new(platform.InstanceTypeMicro),
 	}
 	sample.Resources.Memory = 128
 	sample.Resources.VCPUs = 1
+	sample.Snapshot.UUID = "1b2c3d4e-5f6a-7890-bcde-f1234567890a"
+	sample.Timing.BootTime = 12000
+	sample.Timing.NetTime = 34000
 	require.NoError(t, sample.Image.UnmarshalText([]byte("nginx:latest")))
 
 	integ.Gild[resource.Resource](t, dumpResource, sample)
@@ -176,14 +187,19 @@ func instanceTemplatesOutputTests(t *testing.T) {
 
 func instanceCheckpointsOutputTests(t *testing.T) {
 	sample := cmd.InstanceCheckpoint{
-		MetroName:  "fra",
-		Name:       "my-checkpoint",
-		UUID:       "f6a7b8c9-d0e1-2345-f012-3456789abcde",
-		Tags:       []string{"env-prod", "team-core"},
+		MetroName: "fra",
+		Name:      "my-checkpoint",
+		UUID:      "f6a7b8c9-d0e1-2345-f012-3456789abcde",
+		Tags:      []string{"env-prod", "team-core"},
+		Annotations: map[string]string{
+			"env":              "production",
+			"example.com/team": "platform",
+		},
 		DeleteLock: true,
 		State:      types.InstanceState(platform.InstanceStateCheckpoint),
-		Volumes: []*cmd.InstanceVolume{
-			{Link: cmd.Link[cmd.Volume]{Name: "my-volume"}, At: "/data", Readonly: true},
+		Type_:      new(platform.InstanceTypeMicro),
+		Volumes: []cmd.InstanceTemplateVolume{
+			{Link: cmd.Link[cmd.VolumeTemplate]{Name: "my-volume"}, At: "/data", Readonly: true},
 		},
 	}
 	sample.Runtime.Args = cmd.InstanceArgs{"arg1", "arg2"}
@@ -191,6 +207,7 @@ func instanceCheckpointsOutputTests(t *testing.T) {
 	sample.Resources.Memory = 256
 	sample.Resources.VCPUs = 2
 	sample.Restart.Policy = "always"
+	sample.Snapshot.UUID = "2c3d4e5f-6a7b-8901-cdef-1234567890ab"
 	require.NoError(t, sample.Image.UnmarshalText([]byte("nginx:latest")))
 
 	integ.Gild[resource.Resource](t, dumpResource, sample)
@@ -217,7 +234,7 @@ func volumesOutputTests(t *testing.T) {
 		Tags:  []string{"env-prod"},
 		State: types.VolumeState(platform.VolumeStateAvailable),
 		Size:  50,
-		Free:  10,
+		Free:  new(types.SizeMebibytes(10)),
 		Usage: types.MeterUsage[types.SizeMebibytes]{
 			Used:  40,
 			Total: 50,

@@ -55,12 +55,12 @@ func TestVersion(t *testing.T) {
 	env := integ.NewTestEnv(t, unikraftPath)
 	out := env.Run(t, []string{"unikraft", "version"})
 
-	assert.Regexp(t, `version:\s+\S+`, out)
-	assert.Regexp(t, `commit:\s+\S+`, out)
-	assert.Regexp(t, `platform:\s+\S+`, out)
-	assert.Regexp(t, `go version:\s+go\d+\.\d+`, out)
-	assert.Regexp(t, `docs:\s+https://`, out)
-	assert.Regexp(t, `issues:\s+https://`, out)
+	assert.Regexp(t, `version\s*:\s+\S+`, out)
+	assert.Regexp(t, `commit\s*:\s+\S+`, out)
+	assert.Regexp(t, `platform\s*:\s+\S+`, out)
+	assert.Regexp(t, `go version\s*:\s+go\d+\.\d+`, out)
+	assert.Regexp(t, `docs\s*:\s+https://`, out)
+	assert.Regexp(t, `issues\s*:\s+https://`, out)
 }
 
 // generalHelpTests checks that top-level help and error output stays stable.
@@ -233,8 +233,7 @@ func cli(env *integ.TestEnv) func(*testing.T, []string) string {
 		out, err := env.RunRaw(t, args)
 
 		var exitCode int
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			exitCode = exitErr.ExitCode()
 		} else if err != nil {
 			require.NoError(t, err, "command %q failed: %s", strings.Join(args, " "), out)

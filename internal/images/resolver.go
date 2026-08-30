@@ -18,7 +18,7 @@ import (
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
-	"unikraft.com/cli/internal/version"
+	"unikraft.com/x/version"
 )
 
 func resolverOptions(profile *config.Profile, insecureRegistries []string, allInsecure bool) docker.ResolverOptions {

@@ -61,7 +61,7 @@ func (c *InstanceTemplateCreateCmd) Run(ctx context.Context, stdio config.Stdio,
 type InstanceTemplateEditCmd struct {
 	cmd.ResourceEditCmd[InstanceTemplate]
 
-	Tags       []string `group:"flag-edit" shortcut:"tags" help:"Template tags." placeholder:"tag" example:"env-dev,team-platform"`
+	Tag        []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Template tag." placeholder:"tag" example:"env-dev"`
 	DeleteLock *bool    `group:"flag-edit" shortcut:"delete-lock" help:"Prevent deletion of the template."`
 }
 
@@ -77,11 +77,13 @@ type InstanceTemplate struct {
 	Name  string          `mirror:"instance.name" field:",short"`
 	UUID  string          `mirror:"instance.uuid" field:",long"`
 
-	Tags       []string `mirror:"instance.tags" field:",long" edit:"set,add,del"`
-	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,long" edit:"set"`
+	Tags        []string          `mirror:"instance.tags" field:",long" edit:"set,add,del"`
+	Annotations map[string]string `mirror:"instance.annotations" field:",long"`
+	DeleteLock  bool              `mirror:"instance.delete_lock" field:"delete-lock,long" edit:"set"`
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
+	Type_ *platform.InstanceType          `mirror:"instance.type" field:"type,long"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short"`
@@ -93,10 +95,19 @@ type InstanceTemplate struct {
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short"`
 	}
 
-	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed"`
+	Volumes []InstanceTemplateVolume `mirror:"instance.volumes" field:",embed"`
+
+	Snapshot struct {
+		UUID string `mirror:"instance.snapshot.uuid" field:",long"`
+	}
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`
+	}
+
+	Timing struct {
+		BootTime types.DurationUS `mirror:"instance.boot_time_us" field:",long"`
+		NetTime  types.DurationUS `mirror:"instance.net_time_us"`
 	}
 
 	ScaleToZero InstanceScaleToZero `field:",embed" mirror:"instance.scale_to_zero"`
@@ -424,7 +435,7 @@ func (InstanceTemplate) Examples() map[cmd.CmdType][]kingkong.Example {
 		},
 		cmd.CmdTypeCreate: {
 			{
-				Description: "Convert a stopped instance into a template",
+				Description: "Convert an instance into a template",
 				Commands:    []string{"unikraft instance template create demo-instance"},
 			},
 		},

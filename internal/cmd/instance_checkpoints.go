@@ -64,7 +64,7 @@ func (c *InstanceCheckpointCreateCmd) Run(ctx context.Context, stdio config.Stdi
 type InstanceCheckpointEditCmd struct {
 	cmd.ResourceEditCmd[InstanceCheckpoint]
 
-	Tags       []string `group:"flag-edit" shortcut:"tags" help:"Checkpoint tags." placeholder:"tag" example:"env-dev,team-platform"`
+	Tag        []string `group:"flag-edit" shortcut:"tags" sep:"none" help:"Checkpoint tag." placeholder:"tag" example:"env-dev"`
 	DeleteLock *bool    `group:"flag-edit" shortcut:"delete-lock" help:"Prevent deletion of the checkpoint."`
 }
 
@@ -80,11 +80,13 @@ type InstanceCheckpoint struct {
 	Name      string          `mirror:"instance.name" field:",short"`
 	UUID      string          `mirror:"instance.uuid" field:",long"`
 
-	Tags       []string `mirror:"instance.tags" field:",long" edit:"set,add,del"`
-	DeleteLock bool     `mirror:"instance.delete_lock" field:"delete-lock,hidden" edit:"set"`
+	Tags        []string          `mirror:"instance.tags" field:",long" edit:"set,add,del"`
+	Annotations map[string]string `mirror:"instance.annotations" field:",long"`
+	DeleteLock  bool              `mirror:"instance.delete_lock" field:"delete-lock,long" edit:"set"`
 
 	State types.InstanceState             `mirror:"instance.state" field:",short"`
 	Image types.ImageRef[reference.Named] `mirror:"instance.image" field:",short"`
+	Type_ *platform.InstanceType          `mirror:"instance.type" field:"type,long"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short"`
@@ -96,7 +98,11 @@ type InstanceCheckpoint struct {
 		VCPUs  int                 `mirror:"instance.vcpus" field:"vcpus,short"`
 	}
 
-	Volumes []*InstanceVolume `mirror:"instance.volumes" field:",embed"`
+	Volumes []InstanceTemplateVolume `mirror:"instance.volumes" field:",embed"`
+
+	Snapshot struct {
+		UUID string `mirror:"instance.snapshot.uuid" field:",long"`
+	}
 
 	Timestamps struct {
 		Created types.RelativeTime `mirror:"instance.created_at" field:",short"`

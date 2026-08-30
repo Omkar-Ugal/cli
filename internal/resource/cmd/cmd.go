@@ -389,8 +389,7 @@ func filterResources(ctx context.Context, resources []resource.Resource, filter 
 		fields, _ := res.Fields(ctx)
 		matched, err := filter.Match(newFieldAdaptor(fields))
 		if err != nil {
-			var fieldErr *filters.FieldNotFoundError
-			if errors.As(err, &fieldErr) {
+			if fieldErr, ok := errors.AsType[*filters.FieldNotFoundError](err); ok {
 				// Deduplicate field-not-found errors by path
 				pathKey := strings.Join(fieldErr.Path, ".")
 				if !seenPaths[pathKey] {
@@ -444,8 +443,7 @@ func (cmd *ResourceRemoveCmd[R]) Run(ctx context.Context, stdio config.Stdio, sa
 
 	toPrint := resources
 	if deleteErr != nil {
-		var notFound group.ErrRefNotFound
-		if errors.As(deleteErr, &notFound) {
+		if notFound, ok := errors.AsType[group.ErrRefNotFound](deleteErr); ok {
 			missing := make(map[string]struct{}, len(notFound.Refs))
 			for _, ref := range notFound.Refs {
 				missing[multimetro.Key(ref).String()] = struct{}{}

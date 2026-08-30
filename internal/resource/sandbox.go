@@ -134,8 +134,7 @@ func (s *Sandbox) Teardown(ctx context.Context) (rerr error) {
 
 		err := r.Delete(ctx, targets)
 		if err != nil {
-			var notFoundErr group.ErrRefNotFound
-			if !errors.As(err, &notFoundErr) {
+			if _, ok := errors.AsType[group.ErrRefNotFound](err); !ok {
 				rerr = errors.Join(rerr, fmt.Errorf("failed to delete resources for cleanup: %w", err))
 			}
 			continue

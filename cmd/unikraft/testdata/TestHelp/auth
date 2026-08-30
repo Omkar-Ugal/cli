@@ -442,7 +442,7 @@ Usage:
   unikraft quotas [flags]
 
 Flags:
-  -m, --metro=<metro>
+  -m, --metro=<metro> ...
           Show quotas for specific metros only.
   -w, --watch=<duration>
           Watch for changes and refresh output. Defaults to 2s.

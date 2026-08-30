@@ -80,8 +80,7 @@ func instanceClient(ctx context.Context, ref group.Ref) (platform.Client, error)
 		return nil, nil, nil
 	})
 	if err != nil {
-		var notFound group.ErrRefNotFound
-		if errors.As(err, &notFound) {
+		if _, ok := errors.AsType[group.ErrRefNotFound](err); ok {
 			return nil, fmt.Errorf("instance not found")
 		}
 		return nil, err

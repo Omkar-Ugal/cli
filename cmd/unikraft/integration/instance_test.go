@@ -8,6 +8,8 @@ package integration
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -71,7 +73,9 @@ func TestInstances(t *testing.T) {
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
-			"--set", "runtime.env=A=1,B=2,C=3",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
+			"--set", "runtime.env=C=3",
 			"--set", "autostart=true",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -95,6 +99,139 @@ func TestInstances(t *testing.T) {
 
 		out = r.Run(t, []string{"unikraft", "instance", "list", "--output", "quiet"})
 		assert.Empty(t, strings.TrimSpace(out))
+	})
+
+	t.Run("create-env", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		// Commas and further "=" signs belong to the value, so each variable
+		// needs its own flag.
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"-e", "LIST=a,b,c",
+			"-e", "PAIRS=k1=v1,k2=v2",
+			"--set", "runtime.env=VIA_SET=x,y",
+		})
+		assert.Regexp(t, `LIST:\s+a,b,c`, out)
+		assert.Regexp(t, `PAIRS:\s+k1=v1,k2=v2`, out)
+		assert.Regexp(t, `VIA_SET:\s+x,y`, out)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"-e", "LIST=d,e",
+		})
+
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `LIST:\s+d,e`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	t.Run("create-annotations", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"--annotation", "my-key=value1",
+			"--annotation", "example.com/annotation2=value2",
+			"--set", "annotations=test.unikraft.com/via-set=value3",
+		})
+		assert.Regexp(t, `my-key:\s+value1`, out)
+		assert.Regexp(t, `example\.com/annotation2:\s+value2`, out)
+		assert.Regexp(t, `test\.unikraft\.com/via-set:\s+value3`, out)
+
+		// The shortcut flag maps to --set, which replaces the whole map.
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--annotation", "my-key=replaced",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `my-key:\s+replaced`, out)
+		assert.NotRegexp(t, `example\.com/annotation2`, out)
+
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--add", "annotations=added-key=added-value",
+			"--add", "annotations=my-key=overwritten",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.Regexp(t, `added-key:\s+added-value`, out)
+		assert.Regexp(t, `my-key:\s+overwritten`, out)
+
+		// del takes bare keys, not key=value pairs.
+		r.Run(t, []string{
+			"unikraft", "instance", "edit", "test-" + instName,
+			"--output", "quiet",
+			"--del", "annotations=added-key",
+		})
+		out = r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
+		assert.NotRegexp(t, `added-key`, out)
+		assert.Regexp(t, `my-key:\s+overwritten`, out)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	t.Run("annotations-guest", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		image := r.Config.Profile.Organization + "/startdata-e2e:" + uniq()
+
+		dir := t.TempDir()
+		require.NoError(t, fstest.Apply(
+			fstest.CreateDir("base", 0o755),
+			fstest.CreateFile("base/Dockerfile", []byte(`FROM busybox:latest`), 0o644),
+			fstest.CreateFile("base/Kraftfile", []byte(`
+spec: v0.7
+name: startdata-e2e
+runtime: base-compat:latest
+rootfs:
+  format: erofs
+  source: ./Dockerfile
+cmd: ["cat", "/sys/class/uio/uio0/device/startdata"]
+`), 0o644),
+		).Apply(dir))
+
+		r.Run(t, []string{"unikraft", "build", "base", "--output", image}, integ.WithWorkDir(dir))
+		r.Run(t, []string{
+			"unikraft", "run",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--output", "quiet",
+			"--image", image,
+			"--annotation", "my-key=value1",
+			"--annotation", "example.com/annotation2=value2",
+		}, integ.WithWorkDir(dir))
+		r.Run(t, []string{"unikraft", "--timeout", "30s", "instance", "wait", "--until", "state==stopped", "test-" + instName})
+
+		out := r.Run(t, []string{"unikraft", "instance", "logs", "test-" + instName})
+		startdata := regexp.MustCompile(`"annotations":({[^}]*})`).FindStringSubmatch(out)
+		require.Len(t, startdata, 2, "no annotations object in startdata: %s", out)
+
+		var annotations map[string]string
+		require.NoError(t, json.Unmarshal([]byte(startdata[1]), &annotations))
+		assert.Equal(t, map[string]string{
+			"my-key":                  "value1",
+			"example.com/annotation2": "value2",
+		}, annotations)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
 	})
 
 	t.Run("create-oom", func(t *testing.T) {
@@ -129,7 +266,9 @@ func TestInstances(t *testing.T) {
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
-			"--set", "runtime.env=A=1,B=2,C=3",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
+			"--set", "runtime.env=C=3",
 			"--set", "autostart=true",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -193,7 +332,9 @@ func TestInstances(t *testing.T) {
 			"--set", "name=test-" + instName,
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
-			"--set", "runtime.env=A=1,B=2,C=3",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
+			"--set", "runtime.env=C=3",
 			"--set", "autostart=true",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -375,7 +516,8 @@ rootfs:
 			"--set", "metro=" + r.Config.MetroName,
 			"--set", "image=nginx:latest",
 			"--set", "runtime.args=before,first",
-			"--set", "runtime.env=A=1,B=2",
+			"--set", "runtime.env=A=1",
+			"--set", "runtime.env=B=2",
 			"--set", "autostart=false",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
@@ -386,7 +528,8 @@ rootfs:
 			"--output", "quiet",
 			"--set", "image=redis:latest",
 			"--set", "runtime.args=after,second",
-			"--set", "runtime.env=A=3,B=4",
+			"--set", "runtime.env=A=3",
+			"--set", "runtime.env=B=4",
 			"--set", "resources.memory=256",
 		})
 
@@ -590,7 +733,7 @@ rootfs:
 		r.Run(t, []string{
 			"unikraft", "instance", "edit", "test-" + instName,
 			"--output", "quiet",
-			"--del", "roms=name=myrom",
+			"--del", "roms=myrom",
 		})
 
 		out := r.Run(t, []string{"unikraft", "instance", "inspect", "test-" + instName})
@@ -871,8 +1014,8 @@ rootfs:
 			"--set", "autostart=false",
 			"--set", "resources.memory=128",
 			"--set", "resources.vcpus=1",
-			"--tags", "env-prod",
-			"--tags", "team-core",
+			"--tag", "env-prod",
+			"--tag", "team-core",
 		})
 
 		// Verify tags appear in inspect output.
@@ -919,6 +1062,57 @@ rootfs:
 		assert.Regexp(t, `tags:.*added-tag`, out)
 
 		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+	})
+
+	// Each shortcut flag carries exactly one element, repeated for more.
+	t.Run("repeated-shortcut-flags", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		instName := uniq()
+		volName := uniq()
+		domainName := uniq()
+
+		r.Run(t, []string{
+			"unikraft", "volume", "create",
+			"--output", "quiet",
+			"--name", "test-" + volName,
+			"--metro", r.Config.MetroName,
+			"--size", "10",
+		})
+
+		out := r.Run(t, []string{
+			"unikraft", "instance", "create",
+			"--name", "test-" + instName,
+			"--metro", r.Config.MetroName,
+			"--image", "nginx:latest",
+			"--memory", "128",
+			"--vcpus", "1",
+			"--set", "autostart=false",
+			"--tag", "env-prod",
+			"--tag", "team-core",
+			"--publish", "443:8080/tls+http",
+			"--publish", "80:8080/http",
+			"--domain", domainName + ".unikraft.example",
+			"--volume", "test-" + volName + ":/data",
+			"--feature", "delete-on-stop",
+		})
+
+		// Ports and features are invisible fields on an instance, so a
+		// successful create is all --publish/--feature can be checked by here;
+		// service_test.go covers ports through the service group.
+		assert.Regexp(t, `tags:.*env-prod`, out)
+		assert.Regexp(t, `tags:.*team-core`, out)
+		assert.Contains(t, out, domainName)
+		assert.Contains(t, out, "test-"+volName)
+
+		// An exact-match filter proves the two tags were not joined into one
+		// literal "env-prod,team-core" value.
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==env-prod"})
+		assert.Contains(t, out, "test-"+instName)
+		out = r.Run(t, []string{"unikraft", "instance", "list", "--filter", "tags.*==team-core"})
+		assert.Contains(t, out, "test-"+instName)
+
+		r.Run(t, []string{"unikraft", "instance", "delete", "test-" + instName})
+		r.Run(t, []string{"unikraft", "volume", "delete", "test-" + volName})
 	})
 
 	t.Run("delete-lock", func(t *testing.T) {

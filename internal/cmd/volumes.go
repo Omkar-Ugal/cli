@@ -69,7 +69,7 @@ type VolumeCreateCmd struct {
 	Metro       string              `group:"flag-create" shortcut:"metro" help:"Metro to create in." placeholder:"metro" example:"fra,sfo,nyc"`
 	Name        string              `group:"flag-create" shortcut:"name" short:"n" help:"Volume name." placeholder:"name"`
 	Size        types.SizeMebibytes `group:"flag-create" shortcut:"size" help:"Volume size." placeholder:"size" example:"10GiB,100MiB"`
-	Tags        []string            `group:"flag-create" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
+	Tag         []string            `group:"flag-create" shortcut:"tags" sep:"none" help:"Volume tag." placeholder:"tag" example:"env-prod"`
 	Filesystem  string              `group:"flag-create" shortcut:"filesystem" help:"Volume filesystem." placeholder:"filesystem" example:"ext4"`
 	QuotaPolicy string              `group:"flag-create" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 	AccessMode  types.AccessMode    `group:"flag-create" shortcut:"access-mode" help:"Volume access mode." placeholder:"access-mode" example:"rwo,rox,rwx"`
@@ -91,7 +91,7 @@ type VolumeEditCmd struct {
 	cmd.ResourceEditCmd[Volume]
 
 	Size        types.SizeMebibytes `group:"flag-edit" shortcut:"size" help:"Volume size." placeholder:"size" example:"20GiB,100MiB"`
-	Tags        []string            `group:"flag-edit" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env-prod,team-platform"`
+	Tag         []string            `group:"flag-edit" shortcut:"tags" sep:"none" help:"Volume tag." placeholder:"tag" example:"env-prod"`
 	QuotaPolicy string              `group:"flag-edit" shortcut:"quota-policy" help:"Volume quota policy." placeholder:"quota-policy" example:"static,dynamic"`
 	DeleteLock  *bool               `group:"flag-edit" shortcut:"delete-lock" help:"Prevent volume deletion until the lock is removed."`
 }
@@ -107,7 +107,7 @@ type VolumesCloneCmd struct {
 	Source string `arg:"" completion-predictor:"resource-key-volume" help:"Name or UUID of the volume to clone."`
 
 	Name string   `group:"flag-clone" shortcut:"name" short:"n" help:"New volume name." placeholder:"name"`
-	Tags []string `group:"flag-clone" shortcut:"tags" help:"Volume tags." placeholder:"tag" example:"env=prod,team=platform"`
+	Tag  []string `group:"flag-clone" shortcut:"tags" sep:"none" help:"Volume tag." placeholder:"tag" example:"env-prod"`
 
 	cmd.SetArgs
 
@@ -251,7 +251,7 @@ type Volume struct {
 
 	State       types.VolumeState                     `mirror:"volume.state" field:",short"`
 	Usage       types.MeterUsage[types.SizeMebibytes] `field:"usage,short"`
-	Free        types.SizeMebibytes                   `mirror:"volume.free_mb" field:"free,short,keepzero"`
+	Free        *types.SizeMebibytes                  `mirror:"volume.free_mb" field:"free,short"`
 	Size        types.SizeMebibytes                   `mirror:"volume.size_mb" field:",short" create:"set" edit:"set"`
 	Filesystem  string                                `mirror:"volume.filesystem" field:",long" create:"set"`
 	QuotaPolicy string                                `mirror:"volume.quota_policy" field:"quota-policy,long" create:"set" edit:"set"`
@@ -390,9 +390,9 @@ func (Volume) load(ref *group.Ref, volume platform.Volume, metro *config.Metro) 
 		return Volume{}, fmt.Errorf("could not mirror volume data: %w", err)
 	}
 
-	if result.Size > 0 {
+	if result.Size > 0 && result.Free != nil {
 		result.Usage = types.MeterUsage[types.SizeMebibytes]{
-			Used:  result.Size - result.Free,
+			Used:  result.Size - *result.Free,
 			Total: result.Size,
 		}
 	}
@@ -636,9 +636,11 @@ func (VolumeAttachCmd) Examples() []kingkong.Example {
 
 func (c *VolumeAttachCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox) error {
 	vol := &InstanceVolume{At: c.At, Readonly: c.Readonly}
-	if err := vol.Link.UnmarshalText([]byte(c.Volume)); err != nil {
+	link, err := ParseLink[Volume]([]byte(c.Volume))
+	if err != nil {
 		return err
 	}
+	vol.Link = link
 	volStr, err := vol.MarshalText()
 	if err != nil {
 		return err

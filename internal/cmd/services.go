@@ -54,8 +54,8 @@ type ServiceCreateCmd struct {
 	SoftLimit uint64 `group:"flag-create" shortcut:"limits.soft" help:"Soft limit." placeholder:"n" example:"1,5"`
 	HardLimit uint64 `group:"flag-create" shortcut:"limits.hard" help:"Hard limit." placeholder:"n" example:"10,100"`
 
-	Domains  []Domain  `group:"flag-create" shortcut:"domains" help:"Service domains." placeholder:"fqdn" example:"example.com,api.example.com"`
-	Services []Service `group:"flag-create" shortcut:"services" help:"Service ports." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls,80:8080/http"`
+	Domain  []Domain  `group:"flag-create" shortcut:"domains" sep:"none" help:"Service domain." placeholder:"fqdn" example:"example.com"`
+	Service []Service `group:"flag-create" shortcut:"services" sep:"none" help:"Service port." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls"`
 }
 
 func (c *ServiceCreateCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -75,8 +75,8 @@ type ServiceEditCmd struct {
 	SoftLimit uint64 `group:"flag-edit" shortcut:"limits.soft" help:"Soft limit." placeholder:"n" example:"1,5"`
 	HardLimit uint64 `group:"flag-edit" shortcut:"limits.hard" help:"Hard limit." placeholder:"n" example:"10,100"`
 
-	Domains  []Domain  `group:"flag-edit" shortcut:"domains" help:"Service domains." placeholder:"fqdn" example:"example.com,api.example.com"`
-	Services []Service `group:"flag-edit" shortcut:"services" help:"Service ports." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls,80:8080/http"`
+	Domain  []Domain  `group:"flag-edit" shortcut:"domains" sep:"none" help:"Service domain." placeholder:"fqdn" example:"example.com"`
+	Service []Service `group:"flag-edit" shortcut:"services" sep:"none" help:"Service port." placeholder:"<src>:<dest>[/<handlers>]" example:"443:8080/http+tls"`
 }
 
 func (c *ServiceEditCmd) Run(ctx context.Context, stdio config.Stdio, sandbox *resource.Sandbox, kctx *kong.Context) error {
@@ -190,9 +190,7 @@ type Domain struct {
 	FQDN string `name:"fqdn" json:"fqdn" mirror:"fqdn" field:",short"`
 	Name string `name:"name" json:"name,omitempty" field:"-"` // field:"-" excludes from field system, name:"name" allows --set parsing
 
-	Certificate struct {
-		Link[Certificate]
-	} `name:"certificate" json:"certificate,omitzero" mirror:"certificate"`
+	Certificate TextLink[Certificate] `name:"certificate" json:"certificate,omitzero" mirror:"certificate" field:",embed"`
 }
 
 func (d *Domain) UnmarshalText(text []byte) error {
@@ -508,8 +506,8 @@ func (ServiceGroup) Examples() map[cmd.CmdType][]kingkong.Example {
 					`unikraft service create \
 	--name demo-service \
 	--metro fra \
-	--domains demo \
-	--services 443:8080/tls+http`,
+	--domain demo \
+	--service 443:8080/tls+http`,
 				},
 			},
 		},
@@ -518,7 +516,7 @@ func (ServiceGroup) Examples() map[cmd.CmdType][]kingkong.Example {
 				Description: "Add a new service port",
 				Commands: []string{
 					// "unikraft service edit demo-service --add services=8443:8080/tls",
-					"unikraft service edit demo-service --services 8443:8080/tls",
+					"unikraft service edit demo-service --service 8443:8080/tls",
 				},
 			},
 		},

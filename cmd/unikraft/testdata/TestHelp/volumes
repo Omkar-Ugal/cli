@@ -302,7 +302,7 @@ Fields:
   delete-lock
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the volume.
       --visual
           Open an editor to modify fields visually.
@@ -345,9 +345,9 @@ Create flags:
       --size=<size>
           Volume size.
           [examples: 10GiB, 100MiB]
-      --tags=<tag>
-          Volume tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag> ...
+          Volume tag.
+          [example: env-prod]
       --filesystem=<filesystem>
           Volume filesystem.
           [example: ext4]
@@ -376,7 +376,7 @@ Examples:
   unikraft volume clone demo-volume --name demo-volume-clone
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the volume.
   -f, --field
           Specify which fields to include in the output.
@@ -405,9 +405,9 @@ Global flags:
 flag-clone
   -n, --name=<name>
           New volume name.
-      --tags=<tag>
-          Volume tags.
-          [examples: env=prod, team=platform]
+      --tag=<tag> ...
+          Volume tag.
+          [example: env-prod]
 
 $ unikraft volume attach --help
 
@@ -587,11 +587,11 @@ Fields:
   delete-lock
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the volume.
-      --add=<name>=<value>, --add-file=<name>=<filename>
+      --add=<name>=<value> ..., --add-file=<name>=<filename> ...
           Key-value pairs to add to the volume.
-      --del=<name>=<value>, --del-file=<name>=<filename>
+      --del=<name>=<value> ..., --del-file=<name>=<filename> ...
           Keys to delete from the volume.
       --visual
           Open an editor to modify fields visually.
@@ -629,9 +629,9 @@ Edit flags:
       --size=<size>
           Volume size.
           [examples: 20GiB, 100MiB]
-      --tags=<tag>
-          Volume tags.
-          [examples: env-prod, team-platform]
+      --tag=<tag> ...
+          Volume tag.
+          [example: env-prod]
       --quota-policy=<quota-policy>
           Volume quota policy.
           [examples: static, dynamic]
@@ -736,7 +736,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Global flags:
   -h, --help
@@ -783,7 +783,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
   -w, --watch=<duration>
@@ -838,7 +838,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
       --filter
@@ -878,11 +878,11 @@ $ unikraft volume template create --help
 Create a volume template.
 
 Usage:
-  unikraft volumes template create [<volume> ...] [flags]
+  unikraft volumes template create [<volume>] [flags]
 
 Arguments:
-  [<volume> ...]
-          Volumes to convert into templates.
+  [<volume>]
+          Volume to convert into a template.
 
 Examples:
   # Convert a volume into a template
@@ -899,10 +899,10 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the volume-template.
       --visual
           Open an editor to modify fields visually.
@@ -962,14 +962,14 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
-      --set=<name>=<value>, --set-file=<name>=<filename>
+      --set=<name>=<value> ..., --set-file=<name>=<filename> ...
           Key-value pairs to set on the volume-template.
-      --add=<name>=<value>, --add-file=<name>=<filename>
+      --add=<name>=<value> ..., --add-file=<name>=<filename> ...
           Key-value pairs to add to the volume-template.
-      --del=<name>=<value>, --del-file=<name>=<filename>
+      --del=<name>=<value> ..., --del-file=<name>=<filename> ...
           Keys to delete from the volume-template.
       --visual
           Open an editor to modify fields visually.
@@ -1004,9 +1004,9 @@ Global flags:
           Set a deadline for the command (e.g. 30s, 5m, 1h).
 
 Edit flags:
-      --tags=<tag>
-          Template tags.
-          [examples: env-dev, team-platform]
+      --tag=<tag> ...
+          Template tag.
+          [example: env-dev]
       --delete-lock
           Prevent deletion of the template.
 
@@ -1036,7 +1036,7 @@ Fields:
   filesystem
   persistent
   timestamps, timestamps.created
-  volumes
+  volume
 
 Flags:
       --all
