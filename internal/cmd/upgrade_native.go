@@ -8,16 +8,17 @@
 package cmd
 
 import (
-	"archive/tar"
-	"compress/gzip"
+	"archive/zip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"unikraft.com/x/version"
 
 	"unikraft.com/cli/internal/binorigin"
+	"unikraft.com/cli/internal/builder/buildfs"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
 	"unikraft.com/cli/internal/tui/progdl"
@@ -176,7 +178,12 @@ func fetchLatestVersion(ctx context.Context, baseURL, channel string) (string, e
 
 // downloadAndInstall downloads the CLI binary and installs it.
 func downloadAndInstall(ctx context.Context, stdio config.Stdio, force bool, baseURL, ver, plat, arch, destDir string) error {
-	asset := fmt.Sprintf("unikraft-%s-%s.tar.gz", plat, arch)
+	// Windows releases are zip archives, as Windows tools expect.
+	ext := ".tar.gz"
+	if plat == "windows" {
+		ext = ".zip"
+	}
+	asset := fmt.Sprintf("unikraft-%s-%s%s", plat, arch, ext)
 	assetURL := fmt.Sprintf("%s/endpoints/cli/content/%s/%s", baseURL, ver, asset)
 	checksumURL := assetURL + ".sha256"
 
@@ -354,7 +361,7 @@ func verifyChecksum(ctx context.Context, filePath, checksumURL string) error {
 	return nil
 }
 
-// extractBinary extracts the unikraft binary from a tar.gz archive.
+// extractBinary extracts the unikraft binary from a tar.gz or zip archive.
 func extractBinary(archivePath, destDir string) (string, error) {
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -362,45 +369,66 @@ func extractBinary(archivePath, destDir string) (string, error) {
 	}
 	defer f.Close()
 
-	gzr, err := gzip.NewReader(f)
+	info, err := f.Stat()
 	if err != nil {
-		return "", jujuerrors.Annotate(err, "creating gzip reader")
+		return "", jujuerrors.Annotate(err, "opening archive")
 	}
-	defer gzr.Close()
 
-	tr := tar.NewReader(gzr)
+	var fsys fs.FS
+	if strings.HasSuffix(archivePath, ".zip") {
+		fsys, err = zip.NewReader(f, info.Size())
+	} else {
+		fsys, err = buildfs.TarballFS(f)
+	}
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "reading archive")
+	}
 
+	return copyBinary(fsys, destDir)
+}
+
+// copyBinary copies the unikraft binary from the files of an archive to destDir.
+func copyBinary(fsys fs.FS, destDir string) (string, error) {
 	binaryName := "unikraft"
 	if runtime.GOOS == "windows" {
 		binaryName = "unikraft.exe"
 	}
 
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
+	var name string
+	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return "", jujuerrors.Annotate(err, "reading tar entry")
+			return err
 		}
-
-		// Look for the unikraft binary
-		if header.Typeflag == tar.TypeReg && filepath.Base(header.Name) == binaryName {
-			destPath := filepath.Join(destDir, binaryName)
-			outFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY, 0o755)
-			if err != nil {
-				return "", jujuerrors.Annotate(err, "creating output file")
-			}
-			if _, err := io.Copy(outFile, tr); err != nil {
-				outFile.Close()
-				return "", jujuerrors.Annotate(err, "extracting binary")
-			}
-			outFile.Close()
-			return destPath, nil
+		if d.Type().IsRegular() && path.Base(p) == binaryName {
+			name = p
+			return fs.SkipAll
 		}
+		return nil
+	})
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "reading archive")
+	}
+	if name == "" {
+		return "", jujuerrors.New("binary not found in archive")
 	}
 
-	return "", jujuerrors.New("binary not found in archive")
+	src, err := fsys.Open(name)
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "reading archive entry")
+	}
+	defer src.Close()
+
+	destPath := filepath.Join(destDir, binaryName)
+	outFile, err := os.OpenFile(destPath, os.O_CREATE|os.O_WRONLY, 0o755)
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "creating output file")
+	}
+	if _, err := io.Copy(outFile, src); err != nil {
+		outFile.Close()
+		return "", jujuerrors.Annotate(err, "extracting binary")
+	}
+	outFile.Close()
+	return destPath, nil
 }
 
 // installBinary copies the new binary to the destination, handling the case
@@ -429,8 +457,25 @@ func installBinary(srcPath, destPath string) error {
 	// Create a backup path
 	backupPath := filepath.Join(destDir, "."+destBase+".old")
 
-	// Remove any existing backup
-	_ = os.Remove(backupPath)
+	// Remove any existing backup, including the ones with a unique name.
+	backupBase := filepath.Base(backupPath)
+	entries, _ := os.ReadDir(destDir)
+	for _, entry := range entries {
+		if entry.Name() == backupBase || strings.HasPrefix(entry.Name(), backupBase+".") {
+			_ = os.Remove(filepath.Join(destDir, entry.Name()))
+		}
+	}
+
+	// On Windows, a process that still runs an old binary keeps its backup,
+	// so give the new backup a unique name.
+	if _, err := os.Lstat(backupPath); err == nil {
+		f, err := os.CreateTemp(destDir, backupBase+".*")
+		if err != nil {
+			return jujuerrors.Annotate(err, "creating backup")
+		}
+		f.Close()
+		backupPath = f.Name()
+	}
 
 	// Rename current executable to backup (skip if destination doesn't exist)
 	destExists := true
@@ -451,6 +496,7 @@ func installBinary(srcPath, destPath string) error {
 	}
 
 	// Remove backup if we made one
+	// On Windows, this fails for the running binary and the next upgrade removes it.
 	if destExists {
 		_ = os.Remove(backupPath)
 	}
