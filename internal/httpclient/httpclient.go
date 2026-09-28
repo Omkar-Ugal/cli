@@ -39,11 +39,11 @@ var InsecureHTTPClient = sdkhttpclient.NewHTTPClient(
 
 var registryOptions = []sdkhttpclient.Option{
 	sdkhttpclient.WithUserAgent(version.UserAgent()),
-	sdkhttpclient.WithResponseHeaderTimeout(5 * time.Minute),
+	sdkhttpclient.WithResponseHeaderTimeout(3 * time.Minute),
 }
 
 // RegistryHTTPClient is the HTTP client used for container registry traffic.
-// It waits up to 5 minutes for response headers.
+// It waits up to 3 minutes for response headers.
 var RegistryHTTPClient = sdkhttpclient.NewHTTPClient(registryOptions...)
 
 // InsecureRegistryHTTPClient is RegistryHTTPClient with TLS verification
