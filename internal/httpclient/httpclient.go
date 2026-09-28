@@ -7,6 +7,8 @@ package httpclient
 
 import (
 	"net/http"
+	"slices"
+	"time"
 
 	sdkhttpclient "unikraft.com/cloud/sdk/pkg/httpclient"
 	"unikraft.com/x/version"
@@ -35,27 +37,17 @@ var InsecureHTTPClient = sdkhttpclient.NewHTTPClient(
 	sdkhttpclient.WithInsecure(),
 )
 
-// RegistryHTTPClient is the HTTP client used for container registry traffic.
-// Unlike DefaultHTTPClient it sets no response header timeout.
-// Pushes remain bounded by the request context.
-var RegistryHTTPClient = sdkhttpclient.NewHTTPClient(
+var registryOptions = []sdkhttpclient.Option{
 	sdkhttpclient.WithUserAgent(version.UserAgent()),
-	sdkhttpclient.WithTransport(newRegistryTransport()),
-)
+	sdkhttpclient.WithResponseHeaderTimeout(5 * time.Minute),
+}
+
+// RegistryHTTPClient is the HTTP client used for container registry traffic.
+// It waits up to 5 minutes for response headers.
+var RegistryHTTPClient = sdkhttpclient.NewHTTPClient(registryOptions...)
 
 // InsecureRegistryHTTPClient is RegistryHTTPClient with TLS verification
 // skipped.
 var InsecureRegistryHTTPClient = sdkhttpclient.NewHTTPClient(
-	sdkhttpclient.WithUserAgent(version.UserAgent()),
-	sdkhttpclient.WithTransport(newRegistryTransport()),
-	sdkhttpclient.WithInsecure(),
+	append(slices.Clone(registryOptions), sdkhttpclient.WithInsecure())...,
 )
-
-func newRegistryTransport() *http.Transport {
-	transport, ok := sdkhttpclient.NewHTTPClient().Transport.(*http.Transport)
-	if !ok {
-		transport = http.DefaultTransport.(*http.Transport).Clone()
-	}
-	transport.ResponseHeaderTimeout = 0
-	return transport
-}

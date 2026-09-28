@@ -1340,8 +1340,8 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 					return nil, err
 				}
 				reqPlugin := platform.CreateInstanceRequestPlugin{
-					Name: plugin.Name,
-					Rom:  platform.ImageReference(plugin.Image),
+					Name:  plugin.Name,
+					Image: platform.ImageReference(plugin.Image),
 				}
 				if plugin.Config != "" {
 					var config any = jsontext.Value(plugin.Config)

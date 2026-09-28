@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/browser"
 	"unikraft.com/cloud/sdk/controlplane"
 	"unikraft.com/x/log"
+	"unikraft.com/x/ptr"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/logfmt"
@@ -78,7 +79,7 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 			return jujuerrors.Annotate(err, "getting authentication token")
 		}
 		if resp.Status == controlplane.ResponseStatusError {
-			return jujuerrors.Annotate(jujuerrors.New(resp.Message), "authentication failed")
+			return jujuerrors.Annotate(jujuerrors.New(ptr.ZeroIfNil(resp.Message)), "authentication failed")
 		}
 		if resp.Data == nil {
 			return jujuerrors.New("no data received from control plane, please try again")
@@ -245,7 +246,7 @@ func (cmd *LoginCmd) generateUniqueProfileName(cfg *config.Config, organization 
 	}
 }
 
-func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.Response[controlplane.CheckAuthorizationResponseData], error) {
+func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*controlplane.CheckAuthorizationResponse, error) {
 	client, err := multimetro.NewControlClientFromProfile(profile)
 	if err != nil {
 		return nil, err
@@ -281,7 +282,7 @@ func (cmd *LoginCmd) getAuth(ctx context.Context, profile *config.Profile) (*con
 
 	checkResp, err := client.CheckAuthorization(ctx, controlplane.CheckAuthorizationRequest{
 		RequestId: signinResp.Data.RequestId,
-	})
+	}, controlplane.CheckAuthorizationOpts{})
 	if err != nil {
 		return nil, jujuerrors.Annotate(err, "checking authorization")
 	}

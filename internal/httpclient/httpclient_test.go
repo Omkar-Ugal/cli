@@ -25,35 +25,19 @@ func TestRegistryClientHasNoRequestTimeout(t *testing.T) {
 	assert.Zero(t, InsecureRegistryHTTPClient.Timeout)
 }
 
-// TestRegistryTransportDefaults pins that the registry transport waits forever
-// for response headers, which a registry needs while it commits a large blob,
-// and that supplying our own transport did not drop the connection pool tuning
-// the SDK applies to its default one.
-func TestRegistryTransportDefaults(t *testing.T) {
-	transport := newRegistryTransport()
-
-	assert.Zero(t, transport.ResponseHeaderTimeout)
-	assert.Equal(t, 500, transport.MaxIdleConns)
-	assert.Equal(t, 100, transport.MaxIdleConnsPerHost)
-	assert.NotNil(t, transport.DialContext)
-}
-
-// TestRegistryTransportReachesClient pins the SDK behaviour the registry
-// clients rely on: a transport passed with WithTransport is the one that
+// TestResponseHeaderTimeoutReachesClient pins the SDK behaviour the registry
+// clients rely on: WithResponseHeaderTimeout applies to the transport that
 // serves requests.
-func TestRegistryTransportReachesClient(t *testing.T) {
+func TestResponseHeaderTimeoutReachesClient(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(200 * time.Millisecond)
 		w.WriteHeader(http.StatusCreated)
 	}))
 	defer server.Close()
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.ResponseHeaderTimeout = 20 * time.Millisecond
-
 	_, err := sdkhttpclient.NewHTTPClient(
 		sdkhttpclient.WithUserAgent("test"),
-		sdkhttpclient.WithTransport(transport),
+		sdkhttpclient.WithResponseHeaderTimeout(20*time.Millisecond),
 	).Get(server.URL)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "timeout awaiting response headers")

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/go-json-experiment/json/jsontext"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -129,10 +128,8 @@ func TestInstancePluginConfigMirror(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := platform.InstancePlugin{
-				Name: "logger",
-				AdditionalProperties: map[string]jsontext.Value{
-					"image": jsontext.Value(`"plugins/logger:latest"`),
-				},
+				Name:  "logger",
+				Image: "plugins/logger:latest",
 			}
 			if tt.config != nil {
 				cfg := tt.config
