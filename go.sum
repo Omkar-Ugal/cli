@@ -476,8 +476,8 @@ unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260922063024-475f714ff2f8 h1:DXf
 unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260922063024-475f714ff2f8/go.mod h1:BE1PGrMcr6Tm4voiRdhtYfhSjomPN/AyLJJHaC7MAkQ=
 unikraft.com/x/colors v0.0.0-20260904140856-1944f6df62e1 h1:J/UPM/Eq37GA6yi9AzyKqNeae0wIiuvN00NgQrKoAaM=
 unikraft.com/x/colors v0.0.0-20260904140856-1944f6df62e1/go.mod h1:RyIaCazBKPgA04x/CRAgpO1ZA/WfPW8S8Z0UMp4Pxs8=
-unikraft.com/x/filters v0.0.0-20260804153219-d1b47a40e047 h1:ZeMtVwVhGtiEIwnHXbzp4NAtiZp2pCAhEro0qPN+Vgs=
-unikraft.com/x/filters v0.0.0-20260804153219-d1b47a40e047/go.mod h1:deba9Bu2u3ibYXGbsO1QRxFPuXHQXoiuY6eFmwTbuLU=
+unikraft.com/x/filters v0.0.0-20260929150216-7e946e02e58b h1:9ixkamFqXxVHrMTmYfu7Yf25klhCaoI5q7sq8PG5rY8=
+unikraft.com/x/filters v0.0.0-20260929150216-7e946e02e58b/go.mod h1:pbu4ESfJ6pjKV85+NxIRL7xY5D+UcAmeGshuGAh2aso=
 unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679 h1:zdvJjNkjsriS8RM46FcdgcRoCh4EYM66PGjqVgi/ups=
 unikraft.com/x/fingerprint v0.0.0-20260126094137-ab6e717e5679/go.mod h1:FP7uOxux/W5PKqSRQsR4tyjNuLq4Cfio7mc5QVH1kW8=
 unikraft.com/x/guesstermwidth v0.0.0-20260904140856-1944f6df62e1 h1:1gkowpZPI25+G+lpuNbjdcUxQZPXnAuJA1e03WAt998=
