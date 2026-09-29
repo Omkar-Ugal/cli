@@ -7,6 +7,8 @@ package httpclient
 
 import (
 	"net/http"
+	"slices"
+	"time"
 
 	sdkhttpclient "unikraft.com/cloud/sdk/pkg/httpclient"
 	"unikraft.com/x/version"
@@ -33,4 +35,19 @@ var DefaultHTTPClient = sdkhttpclient.NewHTTPClient(
 var InsecureHTTPClient = sdkhttpclient.NewHTTPClient(
 	sdkhttpclient.WithUserAgent(version.UserAgent()),
 	sdkhttpclient.WithInsecure(),
+)
+
+var registryOptions = []sdkhttpclient.Option{
+	sdkhttpclient.WithUserAgent(version.UserAgent()),
+	sdkhttpclient.WithResponseHeaderTimeout(3 * time.Minute),
+}
+
+// RegistryHTTPClient is the HTTP client used for container registry traffic.
+// It waits up to 3 minutes for response headers.
+var RegistryHTTPClient = sdkhttpclient.NewHTTPClient(registryOptions...)
+
+// InsecureRegistryHTTPClient is RegistryHTTPClient with TLS verification
+// skipped.
+var InsecureRegistryHTTPClient = sdkhttpclient.NewHTTPClient(
+	append(slices.Clone(registryOptions), sdkhttpclient.WithInsecure())...,
 )
