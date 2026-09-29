@@ -53,7 +53,7 @@ type Image struct {
 	Metadata ImageMetadata `field:",long,embed"`
 
 	Kernel      *ImageFile  `field:",long,embed"`
-	KernelDebug *ImageFile  `field:"kernel.dbg,long,embed"`
+	KernelDebug *ImageFile  `field:"kernel-dbg,long,embed"`
 	Initrd      *ImageFile  `field:",long,embed"`
 	Roms        []ImageFile `field:",long,embed"`
 
