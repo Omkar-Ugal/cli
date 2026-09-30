@@ -240,7 +240,13 @@ func (i Volume) Raw() any {
 
 func (i Volume) Fields(ctx context.Context) ([]resource.Field, error) {
 	i.Metro = LinkName[Metro](defaultMetro(ctx, string(i.Metro)))
-	return resource.FieldsFromStruct(i)
+	result, err := resource.FieldsFromStruct(i)
+	if err != nil {
+		return nil, err
+	}
+	profile, _ := config.G(ctx).CurrentProfile()
+	linkToConsole(ctx, result, profile, "volumes", i.Metro, i.Name)
+	return result, nil
 }
 
 func (Volume) List(ctx context.Context) ([]resource.Resource, error) {

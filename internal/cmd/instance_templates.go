@@ -106,7 +106,12 @@ func (i InstanceTemplate) Raw() any {
 }
 
 func (i InstanceTemplate) Fields(ctx context.Context) ([]resource.Field, error) {
-	return resource.FieldsFromStruct(i)
+	result, err := resource.FieldsFromStruct(i)
+	if err != nil {
+		return nil, err
+	}
+	linkToConsole(ctx, result, i.Profile, "instances/templates", i.Metro, i.Name)
+	return result, nil
 }
 
 func (InstanceTemplate) List(ctx context.Context) ([]resource.Resource, error) {
