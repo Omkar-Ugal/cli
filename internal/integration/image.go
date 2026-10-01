@@ -163,7 +163,7 @@ func cleanupSharedImages() {
 	}
 
 	for _, ref := range refs {
-		uri, err := imagespec.GuessURI(ref)
+		uri, err := imagespec.GuessLocation(ref)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to parse shared image %s: %v\n", ref, err)
 			continue

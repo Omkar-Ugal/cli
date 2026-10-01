@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/distribution/reference"
 	"github.com/go-json-experiment/json/jsontext"
 	"mvdan.cc/sh/v3/shell"
 
@@ -108,9 +107,9 @@ type Instance struct {
 
 	State types.InstanceState `mirror:"instance.state" field:",short" edit:"set"`
 
-	Image      types.ImageRef[reference.Named] `mirror:"instance.image" field:",short" create:"set" edit:"set" flag:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
-	PullPolicy *platform.PullPolicy            `field:"pull-policy,invisible,valueless" create:"set" flag:"pull-policy" help:"Image pull policy." placeholder:"policy" example:"always,never,if_not_present"`
-	Type_      *platform.InstanceType          `mirror:"instance.type" field:"type,long" create:"set" flag:"type" help:"Type of virtual machine to run. \"full\" requires a plan with full VM support." placeholder:"type" example:"micro,full"`
+	Image      types.ImageRef         `mirror:"instance.image" field:",short" create:"set" edit:"set" flag:"image" help:"Image to deploy." placeholder:"<name>:<tag>" example:"nginx:latest,my-app:v1.2.3"`
+	PullPolicy *platform.PullPolicy   `field:"pull-policy,invisible,valueless" create:"set" flag:"pull-policy" help:"Image pull policy." placeholder:"policy" example:"always,never,if_not_present"`
+	Type_      *platform.InstanceType `mirror:"instance.type" field:"type,long" create:"set" flag:"type" help:"Type of virtual machine to run. \"full\" requires a plan with full VM support." placeholder:"type" example:"micro,full"`
 
 	Runtime struct {
 		Args InstanceArgs      `mirror:"instance.args" field:",short" create:"set" edit:"set" flag:"args" help:"Arguments to pass to the instance." placeholder:"arg"`
@@ -1093,8 +1092,8 @@ func instancePatchSpec(path string, op patchOp, value any) (platform.MutableInst
 		}
 		return platform.MutableInstancePropertyAnnotations, value.(map[string]string), nil
 	case "image":
-		ref := value.(types.ImageRef[reference.Named]).Reference
-		if ref == nil {
+		ref := value.(types.ImageRef)
+		if ref.Reference().IsZero() {
 			return zero, nil, fmt.Errorf("image cannot be empty")
 		}
 		return platform.MutableInstancePropertyImage, ref.String(), nil
@@ -1218,7 +1217,7 @@ func (Instance) Create(ctx context.Context, fields []resource.Field) ([]resource
 		case "metro":
 			metro = string(field.Create.Set.(LinkName[Metro]))
 		case "image":
-			if ref := field.Create.Set.(types.ImageRef[reference.Named]).Reference; ref != nil {
+			if ref := field.Create.Set.(types.ImageRef); !ref.Reference().IsZero() {
 				imageURL = ref.String()
 			}
 		case "pull-policy":
