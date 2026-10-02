@@ -26,9 +26,9 @@ func RequireBuildkit(t testing.TB) {
 	}
 }
 
-// SkipUnlessSupportedServer skips the test when the server is
+// RequireSupportedServer skips the test when the server is
 // not supported.
-func SkipUnlessSupportedServer(t testing.TB, servers []string) {
+func RequireSupportedServer(t testing.TB, servers []string) {
 	t.Helper()
 
 	if GetTestServer(servers) == nil {

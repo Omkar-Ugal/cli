@@ -356,6 +356,7 @@ LABEL com.example.source=dockerfile com.example.only=dockerfile
 func integrationContext(t *testing.T) context.Context {
 	t.Helper()
 	integration.SkipUnlessIntegration(t)
+	integration.RequireBuildkit(t)
 	t.Setenv("BUILDKIT_PROGRESS", "quiet")
 
 	ctx := t.Context()

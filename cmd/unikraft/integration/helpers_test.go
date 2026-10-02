@@ -60,7 +60,7 @@ func uniq() string {
 func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	t.Helper()
 	integ.SkipUnlessIntegration(t)
-	integ.SkipUnlessSupportedServer(t, servers)
+	integ.RequireSupportedServer(t, servers)
 	t.Parallel()
 
 	unikraftPath := integ.BuildUnikraft(t)
