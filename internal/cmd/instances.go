@@ -731,29 +731,8 @@ func (i Instance) Fields(ctx context.Context) ([]resource.Field, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	for key, field := range resource.IterFields(result) {
-		if key.String() == "name" {
-			field.Hyperlink = i.hyperlink()
-		}
-	}
-
+	linkToConsole(ctx, result, i.Profile, "instances", i.Metro, i.Name)
 	return result, nil
-}
-
-func (i Instance) hyperlink() string {
-	if i.Profile == nil || i.Profile.ControlPlane == "" {
-		return ""
-	}
-	if i.Name == "" || i.Profile.Organization == "" {
-		return ""
-	}
-	return fmt.Sprintf(
-		"https://console.unikraft.cloud/org/%s/instances/%s/%s",
-		i.Profile.Organization,
-		i.Metro,
-		i.Name,
-	)
 }
 
 func (Instance) List(ctx context.Context) ([]resource.Resource, error) {
