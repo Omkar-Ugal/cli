@@ -52,19 +52,19 @@ require (
 	sigs.k8s.io/yaml v1.6.0
 	unikraft.com/cloud/plugins/sandbox v0.0.0-20260916204449-fe2a902ae04c
 	unikraft.com/cloud/sdk v0.3.1-0.20260928125536-cabf4afa223a
-	unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260922063024-475f714ff2f8
+	unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260924135025-aabba46ee20a
 	unikraft.com/x/colors v0.0.0-20260904140856-1944f6df62e1
 	unikraft.com/x/filters v0.0.0-20260929150216-7e946e02e58b
 	unikraft.com/x/fingerprint v0.0.0-20261001064809-1661668e8c87
-	unikraft.com/x/guesstermwidth v0.0.0-20260904140856-1944f6df62e1
+	unikraft.com/x/guesstermwidth v0.0.0-20260924124354-cba1e2dc1921
 	unikraft.com/x/image-spec v0.0.0-20260930145451-e11e6b4df7f4
-	unikraft.com/x/io v0.0.0-20260917141509-02a61e7c1812
+	unikraft.com/x/io v0.0.0-20260924124354-cba1e2dc1921
 	unikraft.com/x/joinerrgroup v0.0.0-20260304162956-523940cab1de
 	unikraft.com/x/kingkong v0.0.0-20260824095305-c69507b68d29
 	unikraft.com/x/kraftfile v0.0.0-20260922102225-cfab838c8e73
 	unikraft.com/x/log v0.0.0-20260904140856-1944f6df62e1
 	unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679
-	unikraft.com/x/shell v0.0.0-20260923095132-d4fa916204af
+	unikraft.com/x/shell v0.0.0-20260924124354-cba1e2dc1921
 	unikraft.com/x/signal v0.0.0-20260917103502-010252eb5050
 	unikraft.com/x/stdio v0.0.0-20260917103502-010252eb5050
 	unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a
