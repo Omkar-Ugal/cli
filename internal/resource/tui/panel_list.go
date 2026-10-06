@@ -17,7 +17,7 @@ import (
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/tui/styles"
 	"unikraft.com/cli/internal/tui/uitui"
-	xslices "unikraft.com/cli/internal/x/slices"
+	wslices "unikraft.com/cli/internal/w/slices"
 )
 
 type listPanel struct {
@@ -171,7 +171,7 @@ func (p *listPanel) applyResources(resources []resource.Resource) {
 		fields[i] = resource.PruneFields(fields[i])
 	}
 
-	paths, headers := xslices.Collect2(resource.IterFields(fields))
+	paths, headers := wslices.Collect2(resource.IterFields(fields))
 	colPaths := make([]resource.FieldPath, 0, len(headers))
 	colHeaders := make([]string, 0, len(headers))
 	for i, header := range headers {

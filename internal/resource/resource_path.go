@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	xslices "unikraft.com/cli/internal/x/slices"
+	wslices "unikraft.com/cli/internal/w/slices"
 )
 
 // FieldPath represents a dot-separated path to a field in a resource.
@@ -171,7 +171,7 @@ func FilterFieldsByPath(fields []Field, specs []FieldPath, strict bool) ([]Field
 	field, missing := filterFieldsByPath(Field{
 		Subfields: fields,
 	}, specs, strict)
-	return field.Subfields, xslices.DedupeStringer(missing)
+	return field.Subfields, wslices.DedupeStringer(missing)
 }
 
 func filterFieldsByPath(field Field, specs []FieldPath, strict bool) (result Field, missing []FieldPath) {
