@@ -25,7 +25,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/types"
-	xkong "unikraft.com/cli/internal/x/kong"
+	wkong "unikraft.com/cli/internal/w/kong"
 	"unikraft.com/cli/pkg/shellbuiltins"
 )
 
@@ -179,7 +179,7 @@ func formatOpts(f builtins.Format) (cmd.FormatOpts, error) {
 	if err != nil {
 		return cmd.FormatOpts{}, err
 	}
-	return cmd.FormatOpts{Field: xkong.GreedyStrings(f.Field), Output: printer}, nil
+	return cmd.FormatOpts{Field: wkong.GreedyStrings(f.Field), Output: printer}, nil
 }
 
 func stopOpts(o shellbuiltins.StopOpts) StopOpts {
