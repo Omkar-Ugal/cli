@@ -19,6 +19,7 @@ import (
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/builder/buildflags"
+	wplatforms "unikraft.com/cli/internal/w/platforms"
 )
 
 type BuildOpts struct {
@@ -27,7 +28,10 @@ type BuildOpts struct {
 
 	Runtime string
 
-	Platform []ocispec.Platform
+	// Platform lists the targets to build. When empty, PlatformMatcher
+	// selects them from the runtime's targets.
+	Platform        []ocispec.Platform
+	PlatformMatcher platforms.MatchComparer
 
 	Cmd    []string
 	Env    kraftfile.Map
@@ -59,6 +63,10 @@ func (o *BuildOpts) FilterArch(arches ...string) error {
 		return nil
 	}
 	if len(o.Platform) == 0 {
+		if o.Runtime != "" {
+			o.PlatformMatcher = wplatforms.OnlyArch(arches...)
+			return nil
+		}
 		for _, arch := range arches {
 			if slices.ContainsFunc(o.Platform, func(p ocispec.Platform) bool {
 				return p.Architecture == arch
