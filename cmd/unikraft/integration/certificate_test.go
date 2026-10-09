@@ -19,6 +19,15 @@ import (
 )
 
 func TestCertificates(t *testing.T) {
+	t.Run("inspect-missing", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		missing := "test-" + uniq()
+
+		out := r.Run(t, []string{"unikraft", "certificate", "inspect", missing}, integ.ExpectFail())
+		assert.Contains(t, out, "references not found: ["+missing+"]")
+		assert.NotContains(t, out, "could not mirror certificate data")
+	})
+
 	t.Run("create", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		certNameA := uniq()

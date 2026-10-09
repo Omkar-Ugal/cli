@@ -85,6 +85,14 @@ func tunnelProxyUUIDs(t *testing.T, cfg *config.Config, metro string) map[string
 }
 
 func TestInstances(t *testing.T) {
+	t.Run("inspect-missing", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		missing := "test-" + uniq()
+
+		out := r.Run(t, []string{"unikraft", "instance", "inspect", missing}, integ.ExpectFail())
+		assert.Contains(t, out, "references not found: ["+missing+"]")
+	})
+
 	t.Run("create", func(t *testing.T) {
 		// TODO: Add 'prod' back when it runs platform version 13. Older
 		// versions send a duplicate "status" member that breaks every wait.
