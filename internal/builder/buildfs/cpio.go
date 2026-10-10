@@ -59,6 +59,11 @@ func CreateCPIO(ctx context.Context, w io.Writer, fsys fs.FS, opts ...CreateOpti
 			// Populate platform specific information
 			fileInfoToCPIOHeader(info, header)
 
+			if c.allRoot {
+				header.Uid = 0
+				header.Guid = 0
+			}
+
 			if err := cw.WriteHeader(header); err != nil {
 				return fmt.Errorf("could not write CPIO header: %w", err)
 			}
