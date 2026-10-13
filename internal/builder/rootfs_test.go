@@ -13,11 +13,13 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/containerd/platforms"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	archivefs "github.com/unikraft/go-archivefs"
 	goerofs "github.com/unikraft/go-archivefs/erofs"
 	"github.com/unikraft/go-cpio"
 	imagespec "unikraft.com/x/image-spec"
@@ -962,4 +964,178 @@ func runBuildRootfs(t *testing.T, opts BuildOpts) []*imagespec.Image {
 		}
 	})
 	return imgs
+}
+
+func TestRootfsTarballKeepsOwners(t *testing.T) {
+	tarPath := writeOwnedTarball(t, 1000, 1000)
+
+	for _, format := range []kraftfile.FsType{kraftfile.FsTypeCpio, kraftfile.FsTypeErofs} {
+		t.Run(string(format), func(t *testing.T) {
+			imgs := runBuildRootfs(t, BuildOpts{
+				Rootfs: FSOpts{
+					Path:   tarPath,
+					Type:   kraftfile.SourceTypeTarball,
+					Format: format,
+				},
+				Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+			})
+			require.Len(t, imgs, 1)
+
+			owners := readOwners(t, imgs[0].Initrd, format)
+			require.Equal(t, owner{1000, 1000}, owners["owned"])
+			require.Equal(t, owner{1000, 1000}, owners["owned/file.txt"])
+		})
+	}
+}
+
+func TestRootfsDirectoryIsOwnedByRoot(t *testing.T) {
+	srcDir := writeTestDirectory(t)
+
+	for _, format := range []kraftfile.FsType{kraftfile.FsTypeCpio, kraftfile.FsTypeErofs} {
+		t.Run(string(format), func(t *testing.T) {
+			imgs := runBuildRootfs(t, BuildOpts{
+				Rootfs: FSOpts{
+					Path:   srcDir,
+					Type:   kraftfile.SourceTypeDirectory,
+					Format: format,
+				},
+				Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+			})
+			require.Len(t, imgs, 1)
+
+			// The checkout's owners mean nothing in the guest, directories included.
+			owners := readOwners(t, imgs[0].Initrd, format)
+			require.Contains(t, owners, "subdir")
+			for name, o := range owners {
+				require.Equal(t, owner{0, 0}, o, name)
+			}
+		})
+	}
+}
+
+func TestRomTarballKeepsOwners(t *testing.T) {
+	tarPath := writeOwnedTarball(t, 1000, 1000)
+
+	for _, format := range []kraftfile.FsType{kraftfile.FsTypeCpio, kraftfile.FsTypeErofs} {
+		t.Run(string(format), func(t *testing.T) {
+			romFiles, err := BuildRoms(builderTestContext(t), BuildOpts{
+				Roms: []FSOpts{{
+					Path:   tarPath,
+					Type:   kraftfile.SourceTypeTarball,
+					Format: format,
+					Pad:    4096,
+				}},
+				Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+			})
+			require.NoError(t, err)
+			require.Len(t, romFiles, 1)
+			require.Len(t, romFiles[0], 1)
+			t.Cleanup(func() { _ = romFiles[0][0].Cleanup() })
+
+			owners := readOwners(t, romFiles[0][0], format)
+			require.Equal(t, owner{1000, 1000}, owners["owned"])
+			require.Equal(t, owner{1000, 1000}, owners["owned/file.txt"])
+		})
+	}
+}
+
+func TestRootfsDockerfileKeepsOwnersIntegration(t *testing.T) {
+	ctx := rootfsIntegrationContext(t)
+	dockerfile := `
+FROM scratch
+
+COPY --chown=1000:1000 <<'EOF' /owned.txt
+owned
+EOF
+`
+	rootfsPath := writeDockerfile(t, dockerfile)
+	imgs := runBuildRootfsIntegration(t, ctx, BuildOpts{
+		Rootfs: FSOpts{
+			Format: kraftfile.FsTypeErofs,
+			Path:   rootfsPath,
+			Type:   kraftfile.SourceTypeDockerfile,
+		},
+		Platform: []ocispec.Platform{{OS: "fc", Architecture: "x86_64"}},
+	})
+	require.Len(t, imgs, 1)
+
+	owners := readOwners(t, imgs[0].Initrd, kraftfile.FsTypeErofs)
+	require.Equal(t, owner{1000, 1000}, owners["owned.txt"])
+}
+
+// owner is the uid and gid of an entry in a built root filesystem.
+type owner struct{ uid, gid int }
+
+// readOwners returns the owner of every entry in the filesystem image f.
+func readOwners(t *testing.T, f imagespec.File, format kraftfile.FsType) map[string]owner {
+	t.Helper()
+	require.NotNil(t, f)
+
+	rc, _, err := f.Open(t.Context())
+	require.NoError(t, err)
+	defer rc.Close()
+
+	owners := make(map[string]owner)
+	switch format {
+	case kraftfile.FsTypeCpio:
+		cr := cpio.NewReader(rc)
+		for {
+			hdr, err := cr.Next()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			require.NoError(t, err)
+			_, err = io.Copy(io.Discard, cr)
+			require.NoError(t, err)
+			owners[strings.TrimPrefix(hdr.Name, "./")] = owner{hdr.Uid, hdr.Guid}
+		}
+	case kraftfile.FsTypeErofs:
+		// EROFS needs io.ReaderAt; copy the stream into a temporary file.
+		tmp, err := os.CreateTemp(t.TempDir(), "erofs-*.img")
+		require.NoError(t, err)
+		defer tmp.Close()
+		_, err = io.Copy(tmp, rc)
+		require.NoError(t, err)
+
+		fsys, err := goerofs.Open(tmp)
+		require.NoError(t, err)
+		require.NoError(t, fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil || path == "." {
+				return err
+			}
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			owners[path] = owner{archivefs.GetUID(info.Sys()), archivefs.GetGID(info.Sys())}
+			return nil
+		}))
+	default:
+		t.Fatalf("unknown format %q", format)
+	}
+	return owners
+}
+
+// writeOwnedTarball writes a tarball whose directory and file belong to uid:gid.
+func writeOwnedTarball(t *testing.T, uid, gid int) string {
+	t.Helper()
+	tarPath := filepath.Join(t.TempDir(), "owned.tar")
+	f, err := os.Create(tarPath)
+	require.NoError(t, err)
+	defer f.Close()
+
+	tw := tar.NewWriter(f)
+	defer tw.Close()
+
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeDir, Name: "owned/", Mode: 0o755, Uid: uid, Gid: gid,
+	}))
+	data := []byte("owned\n")
+	require.NoError(t, tw.WriteHeader(&tar.Header{
+		Typeflag: tar.TypeReg, Name: "owned/file.txt", Mode: 0o644,
+		Size: int64(len(data)), Uid: uid, Gid: gid,
+	}))
+	_, err = tw.Write(data)
+	require.NoError(t, err)
+	return tarPath
 }

@@ -52,10 +52,9 @@ type FSOpts struct {
 	Dockerfile string
 
 	// Output params
-	Format     kraftfile.FsType
-	Pad        int64 // pad file to specified size
-	Compress   bool
-	KeepOwners bool
+	Format   kraftfile.FsType
+	Pad      int64 // pad file to specified size
+	Compress bool
 }
 
 func (o *BuildOpts) FilterArch(arches ...string) error {

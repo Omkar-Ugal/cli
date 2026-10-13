@@ -692,6 +692,10 @@ func packageFS(ctx context.Context, format kraftfile.FsType, destFS *os.File, sr
 		Str("format", string(format)).
 		Msg("packaging rootfs")
 
+	// Directory owners apply only to the host, so set them to root.
+	// Keep the owners from all other sources, as Docker does.
+	allRoot := opts.Type == kraftfile.SourceTypeDirectory
+
 	switch format {
 	case kraftfile.FsTypeCpio:
 		var gw *gzip.Writer
@@ -702,7 +706,7 @@ func packageFS(ctx context.Context, format kraftfile.FsType, destFS *os.File, sr
 		}
 
 		if err := buildfs.CreateCPIO(ctx, w, srcFS,
-			buildfs.WithAllRoot(!opts.KeepOwners),
+			buildfs.WithAllRoot(allRoot),
 		); err != nil {
 			return fmt.Errorf("could not create CPIO archive: %w", err)
 		}
@@ -718,7 +722,7 @@ func packageFS(ctx context.Context, format kraftfile.FsType, destFS *os.File, sr
 		}
 
 		if err := buildfs.CreateEROFS(destFS, srcFS,
-			buildfs.WithAllRoot(!opts.KeepOwners),
+			buildfs.WithAllRoot(allRoot),
 		); err != nil {
 			return fmt.Errorf("could not create EroFS archive: %w", err)
 		}
