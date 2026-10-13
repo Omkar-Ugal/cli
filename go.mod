@@ -29,7 +29,6 @@ require (
 	github.com/juju/errors v1.0.0
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/moby/buildkit v0.31.1
-	github.com/moby/moby/client v0.6.0
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
@@ -55,6 +54,7 @@ require (
 	unikraft.com/cloud/plugins/sandbox v0.0.0-20260916204449-fe2a902ae04c
 	unikraft.com/cloud/sdk v0.3.1-0.20260928125536-cabf4afa223a
 	unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260925102313-8051b659e1ce
+	unikraft.com/x/buildkit v0.0.0-20261016091434-6ed7891be538
 	unikraft.com/x/colors v0.0.0-20261007115714-ef931437a206
 	unikraft.com/x/filters v0.0.0-20260929150216-7e946e02e58b
 	unikraft.com/x/fingerprint v0.0.0-20261001064809-1661668e8c87
@@ -137,6 +137,7 @@ require (
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/moby/api v1.56.0 // indirect
+	github.com/moby/moby/client v0.6.0 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/sys/signal v0.7.1 // indirect
 	github.com/morikuni/aec v1.1.0 // indirect

@@ -7,6 +7,7 @@ package builder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,16 +20,32 @@ import (
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progresswriter"
 
-	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/images"
+	"unikraft.com/x/buildkit"
 	ukio "unikraft.com/x/io"
+	"unikraft.com/x/log"
 )
+
+// localBuildkit is the buildkitd that builds run on.
+var localBuildkit = buildkit.Fallback{buildkit.Host{}, buildkit.Docker{}}
+
+type buildkitContextKey struct{}
+
+// withBuildkit makes the builds under ctx share d instead of acquiring their own.
+func withBuildkit(ctx context.Context, d *buildkit.Daemon) context.Context {
+	return context.WithValue(ctx, buildkitContextKey{}, d)
+}
+
+func buildkitFromContext(ctx context.Context) *buildkit.Daemon {
+	d, _ := ctx.Value(buildkitContextKey{}).(*buildkit.Daemon)
+	return d
+}
 
 // solver holds one BuildKit connection for several solves.
 type solver struct {
 	client  *client.Client
-	cleanup func()
+	release func() error
 	session []session.Attachable
 }
 
@@ -39,14 +56,24 @@ func newSolver(ctx context.Context) (*solver, error) {
 	}
 	dockerConfig := dockerconfig.LoadDefaultConfigFile(os.Stderr)
 
-	c, cleanup, err := buildkit.ConnectToBuildkit(ctx)
-	if err != nil {
-		return nil, err
+	release := func() error { return nil }
+	d := buildkitFromContext(ctx)
+	if d == nil {
+		d, err = localBuildkit.Acquire(ctx, buildkit.Key{})
+		if errors.Is(err, buildkit.ErrUnavailable) {
+			log.G(ctx).Debug().Err(err).Msg("no buildkit")
+			return nil, errors.New("buildkit not found; please start a docker or buildkit daemon, or set BUILDKIT_HOST")
+		}
+		if err != nil {
+			return nil, err
+		}
+		log.G(ctx).Info().Str("addr", d.Addr).Msg("found buildkit")
+		release = d.Release
 	}
 
 	return &solver{
-		client:  c,
-		cleanup: cleanup,
+		client:  d.Client,
+		release: release,
 		session: []session.Attachable{
 			authprovider.NewDockerAuthProvider(authprovider.DockerAuthProviderConfig{
 				AuthConfigProvider: images.LoadBuildkitAuthConfig(dockerConfig, profile),
@@ -56,9 +83,7 @@ func newSolver(ctx context.Context) (*solver, error) {
 }
 
 func (s *solver) close() {
-	if s.cleanup != nil {
-		s.cleanup()
-	}
+	_ = s.release()
 }
 
 // solveToTar runs build, exporting an uncompressed tarball of the result to

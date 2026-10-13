@@ -18,12 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	goerofs "github.com/unikraft/go-archivefs/erofs"
 	"github.com/unikraft/go-cpio"
+	"unikraft.com/x/buildkit"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/kraftfile"
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/builder/buildflags"
-	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/integration"
 )
@@ -392,14 +392,12 @@ func writeSecretFile(t *testing.T, contents string) string {
 
 func runBuild(t *testing.T, ctx context.Context, opts BuildOpts) []*imagespec.Image {
 	t.Helper()
-	bkc, cleanup, err := buildkit.ConnectToBuildkit(ctx)
+	d, err := localBuildkit.Acquire(ctx, buildkit.Key{})
 	if err != nil {
 		t.Skipf("buildkit unavailable: %v", err)
 	}
-	if cleanup != nil {
-		t.Cleanup(cleanup)
-	}
-	ctx = buildkit.WithBuildkitContext(ctx, bkc)
+	t.Cleanup(func() { _ = d.Release() })
+	ctx = withBuildkit(ctx, d)
 
 	imgs, err := Build(ctx, opts)
 	require.NoError(t, err)

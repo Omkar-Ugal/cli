@@ -22,11 +22,11 @@ import (
 	archivefs "github.com/unikraft/go-archivefs"
 	goerofs "github.com/unikraft/go-archivefs/erofs"
 	"github.com/unikraft/go-cpio"
+	"unikraft.com/x/buildkit"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/log"
 
 	"unikraft.com/cli/internal/builder/buildfs"
-	"unikraft.com/cli/internal/buildkit"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/integration"
 	"unikraft.com/x/kraftfile"
@@ -776,14 +776,12 @@ func rootfsIntegrationContext(t *testing.T) context.Context {
 // runBuildRootfsIntegration calls BuildRootfs with a BuildKit-enabled context.
 func runBuildRootfsIntegration(t *testing.T, ctx context.Context, opts BuildOpts) []*imagespec.Image {
 	t.Helper()
-	bkc, cleanup, err := buildkit.ConnectToBuildkit(ctx)
+	d, err := localBuildkit.Acquire(ctx, buildkit.Key{})
 	if err != nil {
 		t.Skipf("buildkit unavailable: %v", err)
 	}
-	if cleanup != nil {
-		t.Cleanup(cleanup)
-	}
-	ctx = buildkit.WithBuildkitContext(ctx, bkc)
+	t.Cleanup(func() { _ = d.Release() })
+	ctx = withBuildkit(ctx, d)
 
 	imgs, err := BuildRootfs(ctx, opts)
 	require.NoError(t, err)
