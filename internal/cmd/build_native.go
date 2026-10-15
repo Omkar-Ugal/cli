@@ -91,7 +91,7 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *
 	if err != nil {
 		return err
 	}
-	err = access.Save(ctx, output, imgs...)
+	_, err = access.Save(ctx, output, imgs...)
 	if err != nil {
 		return err
 	}
