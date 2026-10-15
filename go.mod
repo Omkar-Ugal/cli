@@ -1,6 +1,6 @@
 module unikraft.com/cli
 
-go 1.27.1
+go 1.27.2
 
 tool github.com/caarlos0/svu/v3
 
