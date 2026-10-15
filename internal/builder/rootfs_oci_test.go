@@ -47,7 +47,8 @@ func writeUnikraftOCIArchive(t *testing.T, srcDir string, extra ...imagespec.New
 	}, extra...)...)
 
 	archivePath := filepath.Join(t.TempDir(), "unikraft-image.tar")
-	require.NoError(t, imagespec.SaveTarball(ctx, archivePath, img))
+	_, err = imagespec.SaveTarball(ctx, archivePath, img)
+	require.NoError(t, err)
 	return archivePath
 }
 
@@ -186,9 +187,10 @@ func TestRootfsOCIRegularImageNonRegistry(t *testing.T) {
 	integration.RequireBuildkit(t)
 	archivePath := filepath.Join(t.TempDir(), "regular-image.tar")
 	img := imagespec.NewImage(imagespec.WithPlatform(ocispec.Platform{OS: "linux", Architecture: "amd64"}))
-	require.NoError(t, imagespec.SaveTarball(t.Context(), archivePath, img))
+	_, err := imagespec.SaveTarball(t.Context(), archivePath, img)
+	require.NoError(t, err)
 
-	_, err := BuildRootfs(builderTestContext(t), BuildOpts{
+	_, err = BuildRootfs(builderTestContext(t), BuildOpts{
 		Rootfs: FSOpts{
 			Path:   "oci-archive://" + archivePath,
 			Type:   kraftfile.SourceTypeOCI,

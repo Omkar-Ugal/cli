@@ -18,6 +18,7 @@ import (
 	"unikraft.com/cli/internal/resource"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/image-spec/schemes"
+	"unikraft.com/x/log"
 )
 
 func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *resource.Partition) error {
@@ -91,10 +92,13 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *
 	if err != nil {
 		return err
 	}
-	err = access.Save(ctx, output, imgs...)
+	_, err = access.Save(ctx, output, imgs...)
 	if err != nil {
 		return err
 	}
+	log.G(ctx).Info().
+		Str("output", output.String()).
+		Msg("saved image")
 
 	if partition != nil && output.Scheme == schemes.OCI {
 		if err := addImageToPartition(ctx, partition, output.Path); err != nil {
