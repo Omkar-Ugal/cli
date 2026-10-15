@@ -60,7 +60,7 @@ func uniq() string {
 func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	t.Helper()
 	integ.SkipUnlessIntegration(t)
-	integ.SkipUnlessSupportedServer(t, servers)
+	integ.RequireSupportedServer(t, servers)
 	t.Parallel()
 
 	unikraftPath := integ.BuildUnikraft(t)
@@ -83,7 +83,9 @@ func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	}
 
 	ctx := t.Context()
-	ctx = log.WithLogger(ctx, log.New(t.Output(), log.TextType, log.TraceLevel))
+	logger, err := log.New(ctx, log.Config{Sink: t.Output(), Type: log.TextType, Level: log.TraceLevel})
+	require.NoError(t, err)
+	ctx = log.WithLogger(ctx, logger)
 
 	partitionPath := filepath.Join(t.TempDir(), "partition.json")
 	t.Cleanup(func() {

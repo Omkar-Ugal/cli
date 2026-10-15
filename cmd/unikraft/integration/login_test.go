@@ -41,7 +41,7 @@ func TestAuth(t *testing.T) {
 // hardcoded (empty) configuration file.
 func TestLoginProd(t *testing.T) {
 	integ.SkipUnlessIntegration(t)
-	integ.SkipUnlessSupportedServer(t, []string{prod})
+	integ.RequireSupportedServer(t, []string{prod})
 	t.Parallel()
 
 	unikraftPath := integ.BuildUnikraft(t)

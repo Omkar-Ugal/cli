@@ -183,6 +183,7 @@ func TestRootfsOCISinglePlatformImageMultiplePlatforms(t *testing.T) {
 func TestRootfsOCIRegularImageNonRegistry(t *testing.T) {
 	// Without an initrd component the image is a regular one, which only
 	// BuildKit can flatten, and that needs a registry to pull from.
+	integration.RequireBuildkit(t)
 	archivePath := filepath.Join(t.TempDir(), "regular-image.tar")
 	img := imagespec.NewImage(imagespec.WithPlatform(ocispec.Platform{OS: "linux", Architecture: "amd64"}))
 	require.NoError(t, imagespec.SaveTarball(t.Context(), archivePath, img))
