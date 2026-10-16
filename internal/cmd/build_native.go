@@ -9,20 +9,73 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 
-	"unikraft.com/cli/internal/builder"
-	"unikraft.com/cli/internal/builder/buildflags"
-	"unikraft.com/cli/internal/config"
-	"unikraft.com/cli/internal/images"
-	"unikraft.com/cli/internal/resource"
+	dockerconfig "github.com/docker/cli/cli/config"
+	"github.com/moby/buildkit/client"
+	"github.com/moby/buildkit/session"
+	"github.com/moby/buildkit/session/auth/authprovider"
+	"github.com/moby/buildkit/util/progress/progresswriter"
+	"unikraft.com/x/build"
+	"unikraft.com/x/build/buildflags"
+	"unikraft.com/x/buildkit"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/image-spec/schemes"
 	"unikraft.com/x/log"
+
+	"unikraft.com/cli/internal/config"
+	"unikraft.com/cli/internal/images"
+	"unikraft.com/cli/internal/resource"
 )
 
+// localBuildkit is the buildkitd that builds run on.
+var localBuildkit = buildkit.Fallback{buildkit.Host{}, buildkit.Docker{}}
+
+// newBuilder gives a builder that uses the current profile, the local BuildKit
+// and stderr. It gets each of them only when the build needs it.
+func newBuilder() build.Builder {
+	return build.Builder{
+		Images: func(ctx context.Context) (*imagespec.Accessor, error) {
+			return images.Accessor(ctx)
+		},
+		Buildkit: func(ctx context.Context) (*client.Client, func(), error) {
+			d, err := localBuildkit.Acquire(ctx, buildkit.Key{})
+			if errors.Is(err, buildkit.ErrUnavailable) {
+				log.G(ctx).Debug().Err(err).Msg("no buildkit")
+				return nil, nil, errors.New("buildkit not found; please start a docker or buildkit daemon, or set BUILDKIT_HOST")
+			}
+			if err != nil {
+				return nil, nil, err
+			}
+			log.G(ctx).Info().Str("addr", d.Addr).Msg("found buildkit")
+			return d.Client, func() { _ = d.Release() }, nil
+		},
+		Session: func(ctx context.Context) ([]session.Attachable, error) {
+			profile, err := config.G(ctx).CurrentProfile()
+			if err != nil {
+				return nil, err
+			}
+			dockerConfig := dockerconfig.LoadDefaultConfigFile(os.Stderr)
+			return []session.Attachable{
+				authprovider.NewDockerAuthProvider(authprovider.DockerAuthProviderConfig{
+					AuthConfigProvider: images.LoadBuildkitAuthConfig(dockerConfig, profile),
+				}),
+			}, nil
+		},
+		Progress: func(ctx context.Context, prefix string) (progresswriter.Writer, error) {
+			pw, err := progresswriter.NewPrinter(context.WithoutCancel(ctx), os.Stderr, "auto")
+			if err != nil {
+				return nil, err
+			}
+			return progresswriter.NewMultiWriter(pw).WithPrefix(prefix, true), nil
+		},
+	}
+}
+
 func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *resource.Partition) error {
-	buildOpts, err := builder.LoadBuildOpts(ctx, c.Input)
+	buildOpts, err := build.LoadBuildOpts(ctx, c.Input)
 	if err != nil {
 		return err
 	}
@@ -61,8 +114,10 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *
 		buildOpts.SSH = ssh
 	}
 
-	imgs, err := builder.Build(ctx, buildOpts)
-	if err != nil {
+	imgs, err := newBuilder().Build(ctx, buildOpts)
+	if errors.Is(err, build.ErrNoRuntimeTarget) {
+		return fmt.Errorf("use --arch to select another target: %w", err)
+	} else if err != nil {
 		return err
 	}
 	defer func() {
