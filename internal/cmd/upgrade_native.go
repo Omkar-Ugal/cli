@@ -9,6 +9,8 @@ package cmd
 
 import (
 	"archive/zip"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -24,12 +26,12 @@ import (
 	"strings"
 
 	jujuerrors "github.com/juju/errors"
+	"github.com/unikraft/go-archivefs/tarfs"
 	"golang.org/x/mod/semver"
 	"unikraft.com/x/log"
 	"unikraft.com/x/version"
 
 	"unikraft.com/cli/internal/binorigin"
-	"unikraft.com/cli/internal/builder/buildfs"
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/httpclient"
 	"unikraft.com/cli/internal/tui/progdl"
@@ -369,22 +371,35 @@ func extractBinary(archivePath, destDir string) (string, error) {
 	}
 	defer f.Close()
 
-	info, err := f.Stat()
-	if err != nil {
-		return "", jujuerrors.Annotate(err, "opening archive")
+	if strings.HasSuffix(archivePath, ".zip") {
+		info, err := f.Stat()
+		if err != nil {
+			return "", jujuerrors.Annotate(err, "opening archive")
+		}
+		zr, err := zip.NewReader(f, info.Size())
+		if err != nil {
+			return "", jujuerrors.Annotate(err, "reading archive")
+		}
+		return copyBinary(zr, destDir)
 	}
 
-	var fsys fs.FS
-	if strings.HasSuffix(archivePath, ".zip") {
-		fsys, err = zip.NewReader(f, info.Size())
-	} else {
-		fsys, err = buildfs.TarballFS(f)
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "reading archive")
 	}
+	defer gzr.Close()
+
+	data, err := io.ReadAll(gzr)
 	if err != nil {
 		return "", jujuerrors.Annotate(err, "reading archive")
 	}
 
-	return copyBinary(fsys, destDir)
+	tr, err := tarfs.Open(bytes.NewReader(data))
+	if err != nil {
+		return "", jujuerrors.Annotate(err, "reading archive")
+	}
+
+	return copyBinary(tr, destDir)
 }
 
 // copyBinary copies the unikraft binary from the files of an archive to destDir.
