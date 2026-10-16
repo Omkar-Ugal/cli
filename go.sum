@@ -480,6 +480,8 @@ unikraft.com/cloud/sdk v0.3.1-0.20260928125536-cabf4afa223a h1:e0c5UBPbQmiQoS1RF
 unikraft.com/cloud/sdk v0.3.1-0.20260928125536-cabf4afa223a/go.mod h1:CfOyGEmBAi8pA013wv+hd3CSWmAsqwaGjDEIkFGV4XY=
 unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260925102313-8051b659e1ce h1:8FyDc0aUycxmazS64bOzjCtMIeCgaodTxXUhQkmgDcY=
 unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260925102313-8051b659e1ce/go.mod h1:FmqgK+oA/ujOKGzcdZm3LeVS02rFkbt08DWY0BqKziM=
+unikraft.com/x/buildkit v0.0.0-20261016091434-6ed7891be538 h1:hqwzD2mY8iDnSlEisVOka0BY681O0kj60cCUpmVh0PY=
+unikraft.com/x/buildkit v0.0.0-20261016091434-6ed7891be538/go.mod h1:JHFqrP+N1B4Lu8VXmt0lKuhX6LCqZIEvIzM5NkOnAAw=
 unikraft.com/x/colors v0.0.0-20261007115714-ef931437a206 h1:5ib843DltfcnYQZ+S2kpR1+atvum3Js/zE1nAz4f2Xs=
 unikraft.com/x/colors v0.0.0-20261007115714-ef931437a206/go.mod h1:21D4S0qGuffQi3xdL24P8AoHhXT/Oo6neAvkaYnD5/Q=
 unikraft.com/x/filters v0.0.0-20260929150216-7e946e02e58b h1:9ixkamFqXxVHrMTmYfu7Yf25klhCaoI5q7sq8PG5rY8=
