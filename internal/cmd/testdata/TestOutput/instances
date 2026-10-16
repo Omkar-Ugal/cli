@@ -1012,16 +1012,6 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
     }
   },
   {
-    "name": "vsock",
-    "verbosity": "invisible",
-    "create": {
-      "set": false
-    },
-    "edit": {
-      "set": false
-    }
-  },
-  {
     "name": "template",
     "verbosity": "invisible",
     "create": {
@@ -1040,6 +1030,16 @@ fra    my-instance  running  nginx  ["arg1", "arg2"]  256MiB  2      example.uni
     "verbosity": "invisible",
     "create": {
       "set": ""
+    }
+  },
+  {
+    "name": "vsock",
+    "verbosity": "invisible",
+    "create": {
+      "set": false
+    },
+    "edit": {
+      "set": false
     }
   },
   {

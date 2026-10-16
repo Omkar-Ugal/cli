@@ -160,10 +160,13 @@ type Instance struct {
 	Autostart     bool                    `field:"autostart,invisible,valueless" create:"set" flag:"autostart" help:"Start instance automatically."`
 	Replicas      int64                   `field:"replicas,invisible,valueless" create:"set" flag:"replicas" help:"Number of replicas." placeholder:"n" example:"1,3"`
 	Features      []string                `field:"features,invisible,valueless" create:"set" flag:"feature" sep:"none" help:"Instance feature." placeholder:"feature"`
-	Vsock         bool                    `field:"vsock,invisible,valueless" create:"set" edit:"set"`
 	Template      string                  `field:"template,invisible,valueless" create:"set" flag:"template" help:"Create from instance template." placeholder:"name"`
 	Branch        multimetro.Key          `field:"branch,invisible,valueless" create:"set" flag:"branch" help:"Branch from an existing instance." placeholder:"instance"`
 	Checkpoint    multimetro.Key          `field:"checkpoint,invisible,valueless" create:"set" flag:"checkpoint" help:"Create from a checkpoint." placeholder:"checkpoint"`
+
+	// NOTE: not supported on prod-staging/prod-stable
+	// this needs a custom platform build
+	Vsock bool `field:"vsock,invisible,valueless" create:"set" edit:"set"`
 
 	Stop struct {
 		Reason string     `field:",long"`
