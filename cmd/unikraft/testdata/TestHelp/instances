@@ -86,10 +86,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -160,10 +160,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -242,10 +242,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -326,10 +326,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -435,10 +435,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -634,10 +634,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -841,10 +841,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -1036,10 +1036,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 
@@ -1175,10 +1175,10 @@ Fields:
   autostart
   replicas
   features
-  vsock
   template
   branch
   checkpoint
+  vsock
   stop, stop.reason, stop.origin, stop.errno, stop.exit-code
   delete-lock
 

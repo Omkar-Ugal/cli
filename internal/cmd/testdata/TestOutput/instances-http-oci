@@ -626,16 +626,6 @@ fra    my-instance  running  https+oci://cdn.example.com/me/app/@sha256:43d3d758
     }
   },
   {
-    "name": "vsock",
-    "verbosity": "invisible",
-    "create": {
-      "set": false
-    },
-    "edit": {
-      "set": false
-    }
-  },
-  {
     "name": "template",
     "verbosity": "invisible",
     "create": {
@@ -654,6 +644,16 @@ fra    my-instance  running  https+oci://cdn.example.com/me/app/@sha256:43d3d758
     "verbosity": "invisible",
     "create": {
       "set": ""
+    }
+  },
+  {
+    "name": "vsock",
+    "verbosity": "invisible",
+    "create": {
+      "set": false
+    },
+    "edit": {
+      "set": false
     }
   },
   {
