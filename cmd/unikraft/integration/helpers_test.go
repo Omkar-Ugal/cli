@@ -65,7 +65,7 @@ func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 
 	unikraftPath := integ.BuildUnikraft(t)
 
-	baseCfg, err := integ.LoadConfig(t)
+	baseCfg, err := integ.LoadRemote(t)
 	require.NoError(t, err)
 
 	if online && baseCfg == nil {
@@ -73,11 +73,11 @@ func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	}
 
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
-	var testCfg *integ.Config
+	var testCfg *integ.Remote
 	if baseCfg != nil {
 		cloned, err := copystructure.Copy(baseCfg)
 		require.NoError(t, err)
-		testCfg = cloned.(*integ.Config)
+		testCfg = cloned.(*integ.Remote)
 		testCfg.Config.Path = configPath
 		require.NoError(t, testCfg.Config.Save())
 	}
@@ -106,6 +106,6 @@ func runner(t *testing.T, online bool, servers []string) *integ.TestEnv {
 	})
 
 	return integ.NewTestEnv(t, unikraftPath).
-		WithConfig(testCfg, configPath).
+		WithRemote(testCfg, configPath).
 		WithPartitionPath(partitionPath)
 }

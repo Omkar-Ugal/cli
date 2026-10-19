@@ -314,7 +314,7 @@ func buildIntegrationContext(t *testing.T) context.Context {
 	logger, err := log.New(ctx, log.Config{Sink: t.Output(), Type: log.TextType, Level: log.InfoLevel})
 	require.NoError(t, err)
 	ctx = log.WithLogger(ctx, logger)
-	cfg, err := integration.LoadConfig(t)
+	cfg, err := integration.LoadRemote(t)
 	if errors.Is(err, os.ErrNotExist) {
 		t.Skip("integration config not found")
 	}
