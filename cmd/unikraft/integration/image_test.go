@@ -75,6 +75,16 @@ func TestImages(t *testing.T) {
 		assert.Contains(t, out, imageName)
 	})
 
+	t.Run("list-without-metro", func(t *testing.T) {
+		r := runner(t, true, []string{staging, stable})
+		profile := r.Config.Config.Profiles[r.Config.Profile.Name]
+		profile.Metros = nil
+		r.Config.Config.Profiles[r.Config.Profile.Name] = profile
+		require.NoError(t, r.Config.Config.Save())
+
+		r.Run(t, []string{"unikraft", "image", "list"})
+	})
+
 	t.Run("copy-local-archive", func(t *testing.T) {
 		r := runner(t, true, []string{staging, stable})
 		archive := filepath.Join(t.TempDir(), "nginx.oci.tar")

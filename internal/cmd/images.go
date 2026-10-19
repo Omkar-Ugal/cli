@@ -362,6 +362,10 @@ func (ImageEntry) List(ctx context.Context) ([]resource.Resource, error) {
 
 func listPlatformImages(ctx context.Context) ([]resource.Resource, error) {
 	g, err := multimetro.NewClient(ctx)
+	if _, ok := errors.AsType[multimetro.ErrNoMetros](err); ok {
+		log.G(ctx).Trace().Err(err).Msg("skipping image-store listing")
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
