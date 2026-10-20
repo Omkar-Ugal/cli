@@ -26,6 +26,7 @@ import (
 	"github.com/unikraft/go-cpio"
 	"unikraft.com/x/build"
 	"unikraft.com/x/build/buildflags"
+	"unikraft.com/x/build/progress"
 	"unikraft.com/x/buildkit"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/kraftfile"
@@ -377,7 +378,7 @@ func integrationBuilder(t *testing.T, ctx context.Context) build.Builder {
 	}
 	t.Cleanup(func() { _ = d.Release() })
 
-	b := newBuilder()
+	b := newBuilder(progress.Discard)
 	b.Buildkit = func(context.Context) (*client.Client, func(), error) {
 		return d.Client, nil, nil
 	}

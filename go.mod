@@ -39,7 +39,7 @@ require (
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/gjson v1.19.0
-	github.com/unikraft/go-archivefs v0.0.0-20260513151619-de2950d0a646
+	github.com/unikraft/go-archivefs v0.0.0-20261019091157-8981da32f72d
 	github.com/unikraft/go-cpio v0.0.0-20260415131742-4f1984ca41f3
 	golang.org/x/mod v0.41.0
 	golang.org/x/sync v0.23.0
@@ -52,17 +52,17 @@ require (
 	unikraft.com/cloud/plugins/sandbox v0.0.0-20260916204449-fe2a902ae04c
 	unikraft.com/cloud/sdk v0.3.1-0.20261009142745-7dfb3d62cb8b
 	unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260925102313-8051b659e1ce
-	unikraft.com/x/build v0.0.0-20261015093711-79ba442484bf
+	unikraft.com/x/build v0.0.0-20261020121654-15b23b7bb4a5
 	unikraft.com/x/buildkit v0.0.0-20261016091434-6ed7891be538
 	unikraft.com/x/colors v0.0.0-20261007115714-ef931437a206
 	unikraft.com/x/filters v0.0.0-20260929150216-7e946e02e58b
 	unikraft.com/x/fingerprint v0.0.0-20261001064809-1661668e8c87
 	unikraft.com/x/guesstermwidth v0.0.0-20260924124354-cba1e2dc1921
-	unikraft.com/x/image-spec v0.0.0-20261015155405-ab6c229743e5
-	unikraft.com/x/io v0.0.0-20260924124354-cba1e2dc1921
+	unikraft.com/x/image-spec v0.0.0-20261020121654-15b23b7bb4a5
+	unikraft.com/x/io v0.0.0-20261013095502-1607ff4bc624
 	unikraft.com/x/joinerrgroup v0.0.0-20260304162956-523940cab1de
 	unikraft.com/x/kingkong v0.0.0-20261007115714-ef931437a206
-	unikraft.com/x/kraftfile v0.0.0-20260922102225-cfab838c8e73
+	unikraft.com/x/kraftfile v0.0.0-20261020121654-15b23b7bb4a5
 	unikraft.com/x/log v0.0.0-20261007115714-ef931437a206
 	unikraft.com/x/ptr v0.0.0-20260126094137-ab6e717e5679
 	unikraft.com/x/shell v0.0.0-20261007115714-ef931437a206
