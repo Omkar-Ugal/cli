@@ -17,9 +17,10 @@ import (
 	"github.com/moby/buildkit/client"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
-	"github.com/moby/buildkit/util/progress/progresswriter"
+	"github.com/moby/buildkit/util/progress/progressui"
 	"unikraft.com/x/build"
 	"unikraft.com/x/build/buildflags"
+	"unikraft.com/x/build/progress"
 	"unikraft.com/x/buildkit"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/image-spec/schemes"
@@ -33,9 +34,10 @@ import (
 // localBuildkit is the buildkitd that builds run on.
 var localBuildkit = buildkit.Fallback{buildkit.Host{}, buildkit.Docker{}}
 
-// newBuilder gives a builder that uses the current profile, the local BuildKit
-// and stderr. It gets each of them only when the build needs it.
-func newBuilder() build.Builder {
+// newBuilder gives a builder that uses the current profile and the local
+// BuildKit, and reports its progress to pw. It gets each of them only when the
+// build needs it.
+func newBuilder(pw progress.Writer) build.Builder {
 	return build.Builder{
 		Images: func(ctx context.Context) (*imagespec.Accessor, error) {
 			return images.Accessor(ctx)
@@ -64,14 +66,22 @@ func newBuilder() build.Builder {
 				}),
 			}, nil
 		},
-		Progress: func(ctx context.Context, prefix string) (progresswriter.Writer, error) {
-			pw, err := progresswriter.NewPrinter(context.WithoutCancel(ctx), os.Stderr, "auto")
-			if err != nil {
-				return nil, err
-			}
-			return progresswriter.NewMultiWriter(pw).WithPrefix(prefix, true), nil
-		},
+		Progress: pw,
 	}
+}
+
+// buildWithProgress runs fn on a builder that draws its progress to stderr,
+// and returns once the display has finished drawing.
+func buildWithProgress(ctx context.Context, fn func(build.Builder) error) error {
+	disp, err := progress.NewDisplay(ctx, os.Stderr, progressui.AutoMode)
+	if err != nil {
+		return err
+	}
+	err = fn(newBuilder(disp))
+	if cerr := disp.Close(); err == nil {
+		err = cerr
+	}
+	return err
 }
 
 func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *resource.Partition) error {
@@ -114,7 +124,11 @@ func (c *ImageBuildCmd) Run(ctx context.Context, cfg *config.Config, partition *
 		buildOpts.SSH = ssh
 	}
 
-	imgs, err := newBuilder().Build(ctx, buildOpts)
+	var imgs []*imagespec.Image
+	err = buildWithProgress(ctx, func(b build.Builder) (err error) {
+		imgs, err = b.Build(ctx, buildOpts)
+		return err
+	})
 	if errors.Is(err, build.ErrNoRuntimeTarget) {
 		return fmt.Errorf("use --arch to select another target: %w", err)
 	} else if err != nil {

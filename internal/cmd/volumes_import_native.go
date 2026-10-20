@@ -88,7 +88,11 @@ func (c *VolumeImportCmd) Run(ctx context.Context, stdio config.Stdio, partition
 
 	// Build an import archive from the data source.
 	log.G(ctx).Trace().Str("source", c.Source).Msg("packaging source as import archive")
-	images, err := newBuilder().BuildRootfs(ctx, *importOpts)
+	var images []*imagespec.Image
+	err = buildWithProgress(ctx, func(b build.Builder) (err error) {
+		images, err = b.BuildRootfs(ctx, *importOpts)
+		return err
+	})
 	if err != nil {
 		return fmt.Errorf("packaging source as import archive: %w", err)
 	}
