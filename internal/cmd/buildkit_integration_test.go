@@ -33,7 +33,7 @@ import (
 // metro and deletes it afterwards.
 func TestBuildkitPlatformAcquire(t *testing.T) {
 	integration.SkipUnlessIntegration(t)
-	cfg, err := integration.LoadConfig(t)
+	cfg, err := integration.LoadRemote(t)
 	if errors.Is(err, os.ErrNotExist) {
 		t.Skip("integration config not found")
 	}

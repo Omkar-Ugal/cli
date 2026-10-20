@@ -46,7 +46,7 @@ func TestLoginProd(t *testing.T) {
 
 	unikraftPath := integ.BuildUnikraft(t)
 
-	baseCfg, err := integ.LoadConfig(t)
+	baseCfg, err := integ.LoadRemote(t)
 	require.NoError(t, err)
 	if baseCfg == nil || baseCfg.Profile.Token == "" {
 		t.Skip("test requires a configured profile with a token")
@@ -59,7 +59,7 @@ func TestLoginProd(t *testing.T) {
 	configPath := filepath.Join(t.TempDir(), "config.yaml")
 	partitionPath := filepath.Join(t.TempDir(), "partition.json")
 	r := integ.NewTestEnv(t, unikraftPath).
-		WithConfig(nil, configPath).
+		WithRemote(nil, configPath).
 		WithPartitionPath(partitionPath)
 
 	out := r.Run(t, []string{
