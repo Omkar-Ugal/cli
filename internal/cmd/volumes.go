@@ -213,7 +213,7 @@ type Volume struct {
 
 	MountedBy []struct {
 		Link[Instance]
-		ReadOnly bool `mirror:"read_only" field:",long"`
+		ReadOnly bool `mirror:"readonly" field:",long"`
 	} `mirror:"volume.mounted_by"`
 
 	Volume platform.Volume `field:"-" json:"volume"`
