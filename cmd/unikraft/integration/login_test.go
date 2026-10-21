@@ -20,10 +20,7 @@ import (
 func TestAuth(t *testing.T) {
 	r := runner(t, true, []string{staging, stable})
 
-	out := r.Run(t, []string{"unikraft", "login", "--check"})
-	assert.Regexp(t, `authentication token found`, out)
-
-	out = r.Run(t, []string{"unikraft", "profile", "list"})
+	out := r.Run(t, []string{"unikraft", "profile", "list"})
 	assert.Regexp(t, `true`, out)
 
 	out = r.Run(t, []string{"unikraft", "metro", "list"})

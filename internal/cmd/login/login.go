@@ -27,8 +27,6 @@ import (
 )
 
 type LoginCmd struct {
-	Check bool `name:"check" help:"Check if the user is already logged in."`
-
 	ControlPlane  string `name:"controlplane" default:"https://controlplane.unikraft.cloud" help:"Control plane URL to use for login."`
 	AllowInsecure bool   `name:"allow-insecure" short:"k" help:"Allow insecure server connections when using SSL."`
 
@@ -48,20 +46,6 @@ func (cmd *LoginCmd) Run(ctx context.Context, cfg *config.Config) error {
 		Type:         config.ProfileTypeCloud,
 		ControlPlane: cmp.Or(cmd.ControlPlane, controlplane.DefaultEndpoint),
 		Insecure:     cmd.AllowInsecure,
-	}
-
-	if cmd.Check {
-		profile, err := cfg.CurrentProfile()
-		if err != nil {
-			return jujuerrors.Errorf("no existing authentication token found")
-		}
-		if profile.Token != "" {
-			log.G(ctx).Info().
-				Str("organization", profile.Organization).
-				Msg("existing authentication token found")
-			return nil
-		}
-		return jujuerrors.Errorf("no existing authentication token found")
 	}
 
 	// Get the token either from file or via browser authentication
