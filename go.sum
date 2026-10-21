@@ -513,5 +513,9 @@ unikraft.com/x/signal v0.0.0-20260917103502-010252eb5050 h1:hs1tg9QrQf+S0Xch8HRN
 unikraft.com/x/signal v0.0.0-20260917103502-010252eb5050/go.mod h1:S0cdyYEpi1FUKmxZPr4jQKeGQhNQvrppYTfyKdhHl98=
 unikraft.com/x/stdio v0.0.0-20260917103502-010252eb5050 h1:H5mvC13Yi8nCf7s9WEoMBL2MYE0qSWO9SWA7l6AFWPo=
 unikraft.com/x/stdio v0.0.0-20260917103502-010252eb5050/go.mod h1:Q94QG/NSNW2VdvK+t2Fwo/0QmO/iODO+sm/jXirsCbc=
+unikraft.com/x/timeouts v0.0.0-20261021140217-179ddd3341e3 h1:e4OkbYNum+QB4G2OxeY+crMg/mY3Vrkoutn5VOUIYo4=
+unikraft.com/x/timeouts v0.0.0-20261021140217-179ddd3341e3/go.mod h1:kczzphib3F4oE3Z2ux6l2Ft9sOG8ZeAJIhKos6PeUA0=
 unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a h1:9LSxTd51B9os9PWVa0je2YeQjG9NoBo6Ddg2c7EGpQU=
 unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a/go.mod h1:JFPFNcsa3935zxXNdL7Xm4Tfku/I4shRB1MMiNOU4p4=
+unikraft.com/x/volimport v0.0.0-20261021140217-179ddd3341e3 h1:UBpjFBiZkG7f+hF2IHX74AhGZyGRTOM1TZih5mL2yaA=
+unikraft.com/x/volimport v0.0.0-20261021140217-179ddd3341e3/go.mod h1:zAFvORI1xj1LyXt/CR1GpDaLQMvzxjBgGWUOxlAn9wk=
