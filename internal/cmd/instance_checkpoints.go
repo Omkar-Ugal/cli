@@ -14,10 +14,10 @@ import (
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/timeouts"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
-	"unikraft.com/x/timeouts"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/mirror"

@@ -18,9 +18,9 @@ import (
 	"unikraft.com/cli/internal/multimetro"
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/volimport"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
-	"unikraft.com/x/volimport"
 )
 
 // Target describes a single forwarding destination parsed from the CLI
