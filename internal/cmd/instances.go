@@ -80,19 +80,24 @@ type InstanceCreateCmd struct {
 }
 
 func (c *InstanceCreateCmd) Run(ctx context.Context, stdio config.Stdio, partition *resource.Partition) error {
+	_, err := c.RunResources(ctx, stdio, partition)
+	return err
+}
+
+func (c *InstanceCreateCmd) RunResources(ctx context.Context, stdio config.Stdio, partition *resource.Partition) ([]resource.Resource, error) {
 	if c.DeleteOnStop {
 		c.Set = append(c.Set, map[string]string{"features": string(platform.InstanceFeatureDeleteOnStop)})
 	}
 	flags := c.GeneratedFlags()
 	if flags.IsSet("service") {
 		if flags.IsSet("service.services") {
-			return fmt.Errorf("--publish cannot be used with --service")
+			return nil, fmt.Errorf("--publish cannot be used with --service")
 		}
 		if flags.IsSet("service.domains") {
-			return fmt.Errorf("--domain cannot be used with --service")
+			return nil, fmt.Errorf("--domain cannot be used with --service")
 		}
 	}
-	return c.ResourceCreateCmd.Run(ctx, stdio, partition)
+	return c.ResourceCreateCmd.RunResources(ctx, stdio, partition)
 }
 
 type Instance struct {
