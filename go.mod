@@ -68,7 +68,9 @@ require (
 	unikraft.com/x/shell v0.0.0-20261007115714-ef931437a206
 	unikraft.com/x/signal v0.0.0-20260917103502-010252eb5050
 	unikraft.com/x/stdio v0.0.0-20260917103502-010252eb5050
+	unikraft.com/x/timeouts v0.0.0-20261021140217-179ddd3341e3
 	unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a
+	unikraft.com/x/volimport v0.0.0-20261021140217-179ddd3341e3
 )
 
 require (
