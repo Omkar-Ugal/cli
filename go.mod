@@ -50,7 +50,7 @@ require (
 	mvdan.cc/sh/v3 v3.14.1
 	sigs.k8s.io/yaml v1.6.0
 	unikraft.com/cloud/plugins/sandbox v0.0.0-20260916204449-fe2a902ae04c
-	unikraft.com/cloud/sdk v0.3.1-0.20261009142745-7dfb3d62cb8b
+	unikraft.com/cloud/sdk v0.3.1-0.20261021152129-3431e7639ef3
 	unikraft.com/cloud/sdk/plugins/sandbox v0.0.0-20260925102313-8051b659e1ce
 	unikraft.com/x/build v0.0.0-20261020121654-15b23b7bb4a5
 	unikraft.com/x/buildkit v0.0.0-20261016091434-6ed7891be538
@@ -68,9 +68,7 @@ require (
 	unikraft.com/x/shell v0.0.0-20261007115714-ef931437a206
 	unikraft.com/x/signal v0.0.0-20260917103502-010252eb5050
 	unikraft.com/x/stdio v0.0.0-20260917103502-010252eb5050
-	unikraft.com/x/timeouts v0.0.0-20261021140217-179ddd3341e3
 	unikraft.com/x/version v0.0.0-20260819081122-82fdef94867a
-	unikraft.com/x/volimport v0.0.0-20261021140217-179ddd3341e3
 )
 
 require (

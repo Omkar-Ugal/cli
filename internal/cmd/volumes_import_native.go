@@ -21,12 +21,12 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/volimport"
 	"unikraft.com/x/build"
 	imagespec "unikraft.com/x/image-spec"
 	"unikraft.com/x/kraftfile"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
-	"unikraft.com/x/volimport"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/multimetro"

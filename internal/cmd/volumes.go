@@ -17,10 +17,10 @@ import (
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
+	"unikraft.com/cloud/sdk/platform/volimport"
 	"unikraft.com/x/kingkong"
 	"unikraft.com/x/log"
 	"unikraft.com/x/ptr"
-	"unikraft.com/x/volimport"
 
 	"unikraft.com/cli/internal/config"
 	"unikraft.com/cli/internal/mirror"
