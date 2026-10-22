@@ -22,7 +22,6 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/go-json-experiment/json/jsontext"
-	"mvdan.cc/sh/v3/shell"
 
 	"unikraft.com/cloud/sdk/platform"
 	"unikraft.com/cloud/sdk/platform/group"
@@ -41,6 +40,7 @@ import (
 	"unikraft.com/cli/internal/resource/cmd"
 	"unikraft.com/cli/internal/resource/value"
 	"unikraft.com/cli/internal/types"
+	wshell "unikraft.com/cli/internal/w/shell"
 )
 
 type InstancesCmd struct {
@@ -702,7 +702,7 @@ func (a *InstanceArgs) UnmarshalText(data []byte) error {
 		*a = s
 		return nil
 	}
-	fields, err := shell.Fields(s, func(string) string { return "" })
+	fields, err := wshell.Split(s)
 	if err != nil {
 		return fmt.Errorf("parsing args: %w", err)
 	}
