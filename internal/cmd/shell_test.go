@@ -167,9 +167,6 @@ func (deafWriter) Write([]byte) (int, error) {
 }
 
 func TestAFailedCommandLineIsTheCLIsStatus(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("instance shell is not available on Windows")
-	}
 	target := fakeSandboxTarget(t, &onePlugin{code: 3})
 
 	code, err := shell.Run(t.Context(), shell.Config{
